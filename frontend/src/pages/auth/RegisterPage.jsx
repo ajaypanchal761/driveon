@@ -1,0 +1,242 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button, Input } from '../../components/common';
+import { authService } from '../../services';
+import toastUtils from '../../config/toast';
+
+/**
+ * Register Schema Validation
+ */
+const registerSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit phone number')
+    .transform((val) => val.replace(/\D/g, '')), // Remove non-digits
+  referralCode: z.string().optional(),
+  termsAccepted: z
+    .boolean()
+    .refine((val) => val === true, {
+      message: 'You must accept the terms and conditions',
+    }),
+});
+
+/**
+ * RegisterPage Component
+ * Mobile-first registration page with theme colors
+ * Fully responsive design
+ */
+const RegisterPage = () => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: '',
+      phone: '',
+      referralCode: '',
+      termsAccepted: false,
+    },
+  });
+
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+
+    try {
+      // Call register API
+      const response = await authService.register({
+        email: data.email,
+        phone: data.phone,
+        referralCode: data.referralCode || undefined,
+      });
+
+      toastUtils.success('Registration successful! Please verify OTP.');
+      
+      // Navigate to OTP verification with email/phone
+      navigate('/verify-otp', {
+        state: {
+          email: data.email,
+          phone: data.phone,
+        },
+        replace: true,
+      });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      toastUtils.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div 
+      className="h-screen w-screen flex items-center justify-center px-4 overflow-hidden m-0 p-0" 
+      style={{ backgroundColor: '#3d096d', margin: 0, padding: 0 }}
+    >
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Create Account
+          </h1>
+          <p className="text-white/90 text-sm md:text-base">
+            Sign up to get started with DriveOn
+          </p>
+        </div>
+
+        {/* Register Card */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-2xl" style={{ boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(61, 9, 109, 0.05)' }}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Email Input */}
+            <Input
+              type="email"
+              label="Email Address"
+              placeholder="Enter your email"
+              error={errors.email?.message}
+              {...register('email')}
+              autoComplete="email"
+              autoFocus
+            />
+
+            {/* Phone Input */}
+            <Input
+              type="tel"
+              label="Phone Number"
+              placeholder="Enter your 10-digit phone number"
+              error={errors.phone?.message}
+              helperText="Enter 10-digit mobile number"
+              {...register('phone')}
+              autoComplete="tel"
+              maxLength={10}
+            />
+
+            {/* Referral Code Input (Optional) */}
+            <Input
+              type="text"
+              label="Referral Code (Optional)"
+              placeholder="Enter referral code if you have one"
+              error={errors.referralCode?.message}
+              {...register('referralCode')}
+            />
+
+            {/* Terms and Conditions */}
+            <div>
+              <label className="flex items-start cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('termsAccepted')}
+                  className="mt-1 w-4 h-4 rounded focus:ring-2"
+                  style={{ 
+                    accentColor: '#3d096d',
+                    borderColor: '#d0d0d0'
+                  }}
+                />
+                <span className="ml-3 text-sm text-gray-700">
+                  I agree to the{' '}
+                  <Link
+                    to="/terms"
+                    className="font-medium hover:underline"
+                    style={{ color: '#3d096d' }}
+                    target="_blank"
+                  >
+                    Terms and Conditions
+                  </Link>
+                  {' '}and{' '}
+                  <Link
+                    to="/privacy"
+                    className="font-medium hover:underline"
+                    style={{ color: '#3d096d' }}
+                    target="_blank"
+                  >
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+              {errors.termsAccepted && (
+                <p className="mt-1 text-sm text-error" role="alert">
+                  {errors.termsAccepted.message}
+                </p>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              isLoading={isLoading}
+              disabled={isLoading}
+              className="mt-6"
+            >
+              Create Account
+            </Button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border-default"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Or sign up with
+              </span>
+            </div>
+          </div>
+
+          {/* Social Register Buttons (Optional - for future) */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              fullWidth
+              disabled
+              className="text-sm"
+            >
+              Google
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              fullWidth
+              disabled
+              className="text-sm"
+            >
+              Facebook
+            </Button>
+          </div>
+        </div>
+
+        {/* Sign In Link */}
+        <div className="mt-6 text-center">
+          <p className="text-white/90 text-sm md:text-base">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className="text-white font-semibold hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RegisterPage;

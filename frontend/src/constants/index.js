@@ -1,0 +1,93 @@
+// App Constants
+
+// API Endpoints
+export const API_ENDPOINTS = {
+  AUTH: {
+    REGISTER: '/auth/register',
+    LOGIN: '/auth/login',
+    VERIFY_OTP: '/auth/verify-otp',
+    REFRESH_TOKEN: '/auth/refresh-token',
+    LOGOUT: '/auth/logout',
+  },
+  USER: {
+    PROFILE: '/user/profile',
+    UPDATE_PROFILE: '/user/profile',
+    KYC_STATUS: '/user/kyc-status',
+    UPLOAD_PHOTO: '/user/upload-photo',
+  },
+  CARS: {
+    LIST: '/cars',
+    DETAILS: '/cars',
+    FILTERS: '/cars/filters',
+  },
+  BOOKING: {
+    CREATE: '/booking',
+    DETAILS: '/booking',
+    LIST: '/bookings',
+    START: '/booking',
+    END: '/booking',
+  },
+  PAYMENT: {
+    CREATE_ORDER: '/payment/create-order',
+    VERIFY: '/payment/verify',
+  },
+  KYC: {
+    DIGILOCKER_AUTH: '/kyc/digilocker-auth',
+    CALLBACK: '/kyc/callback',
+    STATUS: '/kyc/status',
+  },
+  GUARANTOR: {
+    ADD: '/guarantor/add',
+    STATUS: '/guarantor/status',
+  },
+  PRICING: {
+    CALCULATE: '/pricing/calculate',
+  },
+};
+
+// User Roles
+export const USER_ROLES = {
+  USER: 'user',
+  ADMIN: 'admin',
+  OWNER: 'owner',
+  GUARANTOR: 'guarantor',
+};
+
+// Booking Status
+export const BOOKING_STATUS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  ACTIVE: 'active',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+};
+
+// Payment Types
+export const PAYMENT_TYPES = {
+  FULL: 'full',
+  PARTIAL: 'partial', // 35% advance
+};
+
+// Mobile Breakpoints (for JavaScript use)
+export const BREAKPOINTS = {
+  MOBILE: 0,
+  TABLET: 768,
+  DESKTOP: 1024,
+  LARGE_DESKTOP: 1280,
+};
+
+// Touch Target Minimum Size (in pixels)
+export const TOUCH_TARGET_MIN = 44;
+
+// OTP Configuration
+export const OTP_CONFIG = {
+  LENGTH: 6,
+  RESEND_DELAY: 60, // seconds
+};
+
+// Pagination
+export const PAGINATION = {
+  DEFAULT_PAGE_SIZE: 10,
+  MOBILE_PAGE_SIZE: 5,
+};
+

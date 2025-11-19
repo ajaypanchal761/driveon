@@ -1,1 +1,123 @@
 @import "tailwindcss";
+
+/* Mobile-First Base Styles */
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply h-full w-full;
+    /* Mobile viewport fix */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    @apply h-full w-full m-0 p-0 font-sans antialiased;
+    /* Mobile optimizations */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
+    /* Touch-friendly */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Mobile-first typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+
+  /* Ensure touch targets are at least 44x44px on mobile */
+  button, a, input[type="button"], input[type="submit"] {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Mobile-friendly form inputs */
+  input, textarea, select {
+    @apply text-base; /* Prevents zoom on iOS */
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2;
+    outline-color: var(--color-primary);
+  }
+
+  /* Apply theme background */
+  body {
+    background-color: var(--color-background-primary);
+    color: var(--color-text-primary);
+  }
+}
+
+/* Mobile-First Responsive Utilities */
+@layer utilities {
+  /* Container with mobile-first padding */
+  .container-mobile {
+    @apply w-full px-4 mx-auto;
+  }
+
+  /* Mobile: full width, Desktop: max-width */
+  @media (min-width: 1024px) {
+    .container-mobile {
+      @apply max-w-7xl;
+    }
+  }
+
+  /* Touch target utility */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Custom OTP Input Styles */
+.otp-input-container {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .otp-input-container {
+    gap: 0.75rem;
+  }
+}
+
+/* Auth Page Styles */
+.auth-page-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+@media (min-width: 768px) {
+  .auth-page-container {
+    padding: 3rem 1rem;
+  }
+}
+
+/* Mobile Bottom Navbar Spacing */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 64px; /* Space for bottom navbar */
+  }
+}
+
+/* Mobile Header Spacing */
+@media (max-width: 767px) {
+  main {
+    padding-top: 0; /* Header handles its own spacing */
+  }
+}
