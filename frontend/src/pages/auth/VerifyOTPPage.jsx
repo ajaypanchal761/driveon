@@ -6,6 +6,7 @@ import { useAppDispatch } from '../../hooks/redux';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * VerifyOTPPage Component
@@ -150,7 +151,7 @@ const VerifyOTPPage = () => {
     <div 
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{ 
-        backgroundColor: '#3d096d',
+        backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -201,7 +202,16 @@ const VerifyOTPPage = () => {
                 renderInput={(props) => (
                   <input
                     {...props}
-                    className="w-11 h-12 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-2 border-gray-300 rounded-lg shadow-sm focus:border-[#3d096d] focus:ring-2 focus:ring-[#3d096d]/20 bg-white text-gray-900 transition-all hover:shadow-md"
+                    className="w-11 h-12 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-2 border-gray-300 rounded-lg shadow-sm focus:ring-2 bg-white text-gray-900 transition-all hover:shadow-md"
+                    style={{ '--focus-border': theme.colors.primary, '--focus-ring': `${theme.colors.primary}33` }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = theme.colors.primary;
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.colors.primary}33`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = '';
+                    }}
                     style={{
                       minWidth: '44px',
                       minHeight: '44px',
@@ -219,7 +229,7 @@ const VerifyOTPPage = () => {
             {timer > 0 ? (
               <p className="text-sm text-gray-600">
                 Resend code in{' '}
-                <span className="font-semibold" style={{ color: '#3d096d' }}>
+                <span className="font-semibold" style={{ color: theme.colors.primary }}>
                   {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
                 </span>
               </p>
@@ -227,7 +237,7 @@ const VerifyOTPPage = () => {
               <button
                 onClick={handleResendOTP}
                 className="text-sm font-medium hover:underline"
-                style={{ color: '#3d096d' }}
+                style={{ color: theme.colors.primary }}
                 disabled={isLoading}
               >
                 Resend OTP
@@ -244,7 +254,7 @@ const VerifyOTPPage = () => {
             onClick={handleVerifyOTP}
             isLoading={isLoading}
             disabled={isLoading || otp.length !== 6}
-            style={{ backgroundColor: '#3d096d' }}
+            style={{ backgroundColor: theme.colors.primary }}
           >
             Verify OTP
           </Button>
@@ -254,7 +264,7 @@ const VerifyOTPPage = () => {
             <button
               onClick={() => navigate(type === 'login' ? '/login' : '/register')}
               className="text-sm hover:underline transition-colors"
-              style={{ color: '#3d096d' }}
+              style={{ color: theme.colors.primary }}
             >
               Change {type === 'login' ? 'email/phone' : 'email/phone number'}
             </button>

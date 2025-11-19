@@ -3,6 +3,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { logout } from '../../store/slices/authSlice';
 import { clearUser } from '../../store/slices/userSlice';
 import toastUtils from '../../config/toast';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * ProfileDashboardPage Component
@@ -13,10 +14,14 @@ import toastUtils from '../../config/toast';
 const ProfileDashboardPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state) => state.user);
+  const { user, isLoading } = useAppSelector((state) => state.user);
   const { profileComplete, kycStatus, guarantor, referralCode, points } = useAppSelector(
     (state) => state.user
   );
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // Show loading only if explicitly loading, otherwise show page with default data
+  // Don't block rendering if user data is not loaded yet
 
   const handleLogout = () => {
     dispatch(logout());
@@ -85,7 +90,7 @@ const ProfileDashboardPage = () => {
       ),
       path: '/profile/referrals',
       badge: points > 0 ? `${points} pts` : null,
-      badgeColor: 'bg-[#3d096d]',
+      badgeColor: 'bg-primary',
     },
     {
       id: 'bookings',
@@ -116,29 +121,29 @@ const ProfileDashboardPage = () => {
   ];
 
   const userName = user?.name || 'User';
-  const userEmail = user?.email || 'user@example.com';
+  const userEmail = user?.email || user?.phone || 'user@example.com';
   const userPhoto = user?.profilePhoto;
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0" style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
       {/* Header Section - Purple Background */}
-      <header className="bg-[#3d096d] text-white relative overflow-hidden">
+      <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
         {/* Abstract purple pattern background */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full -ml-24 -mb-24"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
         </div>
 
         {/* Header Content */}
-        <div className="relative px-4 py-6">
+        <div className="relative px-4 py-3">
           {/* Back Button */}
           <button
             onClick={() => navigate(-1)}
-            className="mb-4 p-2 -ml-2 touch-target"
+            className="mb-2 p-1.5 -ml-1 touch-target"
             aria-label="Go back"
           >
             <svg
-              className="w-6 h-6 text-white"
+              className="w-5 h-5 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -153,19 +158,19 @@ const ProfileDashboardPage = () => {
           </button>
 
           {/* User Info */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Profile Photo */}
             <div className="relative">
               {userPhoto ? (
                 <img
                   src={userPhoto}
                   alt={userName}
-                  className="w-20 h-20 rounded-full border-4 border-white object-cover shadow-lg"
+                  className="w-14 h-14 rounded-full border-2 border-white object-cover shadow-md"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-white/20 border-4 border-white flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white flex items-center justify-center shadow-md">
                   <svg
-                    className="w-10 h-10 text-white"
+                    className="w-7 h-7 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -180,9 +185,9 @@ const ProfileDashboardPage = () => {
                 </div>
               )}
               {profileComplete && (
-                <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-2 border-[#3d096d] flex items-center justify-center">
+                <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 flex items-center justify-center" style={{ borderColor: theme.colors.primary }}>
                   <svg
-                    className="w-3 h-3 text-white"
+                    className="w-2 h-2 text-white"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -197,23 +202,23 @@ const ProfileDashboardPage = () => {
             </div>
 
             {/* Name and Email */}
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white mb-1">{userName}</h1>
-              <p className="text-sm text-white/80">{userEmail}</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold text-white mb-0.5 truncate">{userName}</h1>
+              <p className="text-xs text-white/80 truncate">{userEmail}</p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="px-4 py-6">
+      <main className="px-3 py-3 w-full" style={{ backgroundColor: '#ffffff' }}>
         {/* Profile Completion Status Card */}
         {!profileComplete && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+            <div className="flex items-start gap-2">
+              <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-5 h-5 text-yellow-900"
+                  className="w-4 h-4 text-yellow-900"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -226,11 +231,11 @@ const ProfileDashboardPage = () => {
                   />
                 </svg>
               </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs font-semibold text-yellow-900 mb-0.5">
                   Complete Your Profile
                 </h3>
-                <p className="text-xs text-yellow-700 mb-2">
+                <p className="text-xs text-yellow-700 mb-1.5">
                   Complete your profile to start booking cars
                 </p>
                 <button
@@ -245,18 +250,19 @@ const ProfileDashboardPage = () => {
         )}
 
         {/* Menu Options */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {menuOptions.map((option) => (
             <button
               key={option.id}
               onClick={() => navigate(option.path)}
-              className="w-full bg-white rounded-xl p-4 flex items-center justify-between shadow-sm border border-gray-100 hover:shadow-md transition-all touch-target group"
+              className="w-full bg-white rounded-lg p-3 flex items-center justify-between shadow-sm border border-gray-100 hover:shadow-md transition-all touch-target group"
             >
-              <div className="flex items-center gap-4 flex-1">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Icon */}
-                <div className="w-12 h-12 bg-[#3d096d]/10 rounded-lg flex items-center justify-center group-hover:bg-[#3d096d]/20 transition-colors">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${theme.colors.primary}1A`, '--hover-bg': `${theme.colors.primary}33` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>
                   <svg
-                    className="w-6 h-6 text-[#3d096d]"
+                    className="w-5 h-5"
+                    style={{ color: theme.colors.primary }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -266,20 +272,23 @@ const ProfileDashboardPage = () => {
                 </div>
 
                 {/* Label */}
-                <span className="text-base font-medium text-gray-900">{option.label}</span>
+                <span className="text-sm font-medium text-gray-900 truncate">{option.label}</span>
               </div>
 
               {/* Badge and Arrow */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {option.badge && (
                   <span
-                    className={`${option.badgeColor} text-white text-xs font-semibold px-2 py-1 rounded-full`}
+                    className={`${option.badgeColor} text-white text-xs font-semibold px-1.5 py-0.5 rounded-full`}
                   >
                     {option.badge}
                   </span>
                 )}
                 <svg
-                  className="w-5 h-5 text-gray-400 group-hover:text-[#3d096d] transition-colors"
+                  className="w-4 h-4 text-gray-400 transition-colors"
+                  style={{ '--hover-color': theme.colors.primary }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.primary}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -298,13 +307,13 @@ const ProfileDashboardPage = () => {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="w-full bg-red-50 rounded-xl p-4 flex items-center justify-between shadow-sm border border-red-100 hover:shadow-md transition-all touch-target group mt-4"
+            className="w-full bg-red-50 rounded-lg p-3 flex items-center justify-between shadow-sm border border-red-100 hover:shadow-md transition-all touch-target group mt-3"
           >
-            <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Icon */}
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors flex-shrink-0">
                 <svg
-                  className="w-6 h-6 text-red-600"
+                  className="w-5 h-5 text-red-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -319,12 +328,12 @@ const ProfileDashboardPage = () => {
               </div>
 
               {/* Label */}
-              <span className="text-base font-medium text-red-600">Logout</span>
+              <span className="text-sm font-medium text-red-600">Logout</span>
             </div>
 
             {/* Arrow */}
             <svg
-              className="w-5 h-5 text-red-400 group-hover:text-red-600 transition-colors"
+              className="w-4 h-4 text-red-400 group-hover:text-red-600 transition-colors flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -341,22 +350,22 @@ const ProfileDashboardPage = () => {
 
         {/* Referral Code Display */}
         {referralCode && (
-          <div className="mt-6 bg-gradient-to-r from-[#3d096d] to-[#5d0d8a] rounded-xl p-4 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-white/80 mb-1">Your Referral Code</p>
-                <p className="text-lg font-bold font-mono">{referralCode}</p>
+          <div className="mt-3 rounded-lg p-3 text-white" style={{ background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.primaryLight})` }}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-white/80 mb-0.5">Your Referral Code</p>
+                <p className="text-sm font-bold font-mono truncate">{referralCode}</p>
               </div>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(referralCode);
                   toastUtils.success('Referral code copied!');
                 }}
-                className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 touch-target"
                 aria-label="Copy referral code"
               >
                 <svg
-                  className="w-5 h-5 text-white"
+                  className="w-4 h-4 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

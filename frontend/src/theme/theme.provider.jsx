@@ -80,6 +80,14 @@ export const ThemeProvider = ({ children }) => {
       // White and black
       root.style.setProperty('--color-white', colors.white);
       root.style.setProperty('--color-black', colors.black);
+      
+      // Additional theme colors for inline styles
+      root.style.setProperty('--theme-primary', colors.primary.DEFAULT);
+      root.style.setProperty('--theme-primary-dark', colors.primary.dark);
+      root.style.setProperty('--theme-primary-light', colors.primary.light);
+      root.style.setProperty('--theme-background', colors.background.primary);
+      root.style.setProperty('--theme-text-primary', colors.text.primary);
+      root.style.setProperty('--theme-text-inverse', colors.text.inverse);
     }
   };
 

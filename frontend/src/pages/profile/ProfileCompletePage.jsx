@@ -1,13 +1,667 @@
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAppSelector, useAppDispatch } from '../../hooks/redux';
+import { updateUser, setProfileComplete } from '../../store/slices/userSlice';
+import { Input, Button } from '../../components/common';
+import { userService } from '../../services';
+import toastUtils from '../../config/toast';
+import { theme } from '../../theme/theme.constants';
+
+/**
+ * Profile Completion Schema
+ */
+const profileSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  phone: z
+    .string()
+    .min(10, 'Phone number must be 10 digits')
+    .regex(/^[6-9]\d{9}$/, 'Please enter a valid 10-digit phone number'),
+  age: z
+    .string()
+    .min(1, 'Age is required')
+    .refine((val) => {
+      const age = parseInt(val);
+      return age >= 18 && age <= 100;
+    }, 'Age must be between 18 and 100'),
+  gender: z.enum(['male', 'female', 'other'], {
+    required_error: 'Please select your gender',
+  }),
+  address: z.string().min(10, 'Address must be at least 10 characters'),
+});
+
+/**
+ * ProfileCompletePage Component
+ * Multi-step form to complete user profile (100% required for booking)
+ * Mobile-first design with purple theme
+ */
 const ProfileCompletePage = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.user);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(user?.profilePhoto || null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      age: user?.age || '',
+      gender: user?.gender || '',
+      address: user?.address || '',
+    },
+  });
+
+  const totalSteps = 3;
+  const progress = (currentStep / totalSteps) * 100;
+
+  // Handle photo upload
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toastUtils.error('Image size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toastUtils.error('Please select an image file');
+        return;
+      }
+      setProfilePhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload profile photo (Mock mode - no backend)
+  const handlePhotoUpload = async () => {
+    if (!profilePhoto) {
+      // Allow skipping if photo already exists
+      if (photoPreview) {
+        setCurrentStep(3);
+        return;
+      }
+      toastUtils.error('Please select a photo');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Mock mode - just use the preview URL
+      const formData = new FormData();
+      formData.append('photo', profilePhoto);
+      formData.append('file', profilePhoto);
+      formData.append('image', profilePhoto);
+
+      const response = await userService.uploadPhoto(formData);
+      
+      // Handle different response formats
+      const uploadedPhotoUrl = 
+        response.profilePhoto || 
+        response.photo || 
+        response.imageUrl || 
+        response.url ||
+        photoPreview; // Fallback to preview if API doesn't return URL
+      
+      // Store in Redux and localStorage for mock mode
+      dispatch(updateUser({ profilePhoto: uploadedPhotoUrl }));
+      localStorage.setItem('userProfilePhoto', uploadedPhotoUrl);
+      
+      toastUtils.success('Profile photo uploaded successfully!');
+      setCurrentStep(3);
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      
+      // In mock mode, even if there's an error, use the preview
+      if (photoPreview) {
+        dispatch(updateUser({ profilePhoto: photoPreview }));
+        localStorage.setItem('userProfilePhoto', photoPreview);
+        toastUtils.success('Profile photo saved!');
+        setCurrentStep(3);
+      } else {
+        toastUtils.error('Failed to upload photo. You can skip and continue.');
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Handle DigiLocker KYC
+  const handleDigiLockerKYC = async (documentType) => {
+    try {
+      // Redirect to DigiLocker OAuth
+      // This will be implemented when DigiLocker integration is ready
+      toastUtils.info('DigiLocker integration coming soon');
+      // For now, simulate success
+      dispatch(
+        updateUser({
+          [`${documentType}Verified`]: true,
+        })
+      );
+    } catch (error) {
+      toastUtils.error('Failed to verify document');
+    }
+  };
+
+  // Submit profile completion (Mock mode - no backend)
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    try {
+      // Update profile (mock mode)
+      const response = await userService.updateProfile({
+        ...data,
+        age: parseInt(data.age),
+      });
+
+      // Update Redux store
+      dispatch(updateUser(response.user));
+      dispatch(setProfileComplete(true));
+      
+      // Store in localStorage for mock mode
+      localStorage.setItem('userProfile', JSON.stringify(response.user));
+      localStorage.setItem('profileComplete', 'true');
+      
+      toastUtils.success('Profile completed successfully!');
+      navigate('/profile');
+    } catch (error) {
+      console.error('Profile update error:', error);
+      
+      // In mock mode, still update local state even if API fails
+      const mockUser = {
+        ...data,
+        age: parseInt(data.age),
+        id: 'mock_user',
+        profilePhoto: photoPreview,
+      };
+      
+      dispatch(updateUser(mockUser));
+      dispatch(setProfileComplete(true));
+      localStorage.setItem('userProfile', JSON.stringify(mockUser));
+      localStorage.setItem('profileComplete', 'true');
+      
+      toastUtils.success('Profile completed successfully!');
+      navigate('/profile');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Check if step 1 is complete
+  const isStep1Complete = () => {
+    const values = watch();
+    return (
+      values.name &&
+      values.email &&
+      values.phone &&
+      values.age &&
+      values.gender &&
+      values.address &&
+      !errors.name &&
+      !errors.email &&
+      !errors.phone &&
+      !errors.age &&
+      !errors.gender &&
+      !errors.address
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-background-primary">
-      <div className="container-mobile py-8">
-        <h1 className="text-3xl font-bold text-primary mb-8">Complete Your Profile</h1>
-        <p className="text-text-secondary">Coming soon</p>
-      </div>
+    <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0">
+      {/* Header Section - Purple Background */}
+      <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+        </div>
+
+        <div className="relative px-4 py-3">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate('/profile')}
+            className="mb-2 p-1.5 -ml-1 touch-target"
+            aria-label="Go back"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+
+          {/* Title */}
+          <h1 className="text-lg font-bold text-white mb-2">Complete Your Profile</h1>
+
+          {/* Progress Bar */}
+          <div className="w-full bg-white/20 rounded-full h-2 mb-1">
+            <div
+              className="bg-white rounded-full h-2 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-white/80">
+            Step {currentStep} of {totalSteps}
+          </p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="px-3 py-4 w-full">
+        {/* Step 1: Basic Information */}
+        {currentStep === 1 && (
+          <form onSubmit={handleSubmit(() => setCurrentStep(2))} className="space-y-4">
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Basic Information</h2>
+
+              {/* Name */}
+              <div className="mb-4">
+                <Input
+                  label="Full Name"
+                  placeholder="Enter your full name"
+                  error={errors.name?.message}
+                  {...register('name')}
+                  autoComplete="name"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="mb-4">
+                <Input
+                  type="email"
+                  label="Email Address"
+                  placeholder="Enter your email"
+                  error={errors.email?.message}
+                  {...register('email')}
+                  autoComplete="email"
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="mb-4">
+                <Input
+                  type="tel"
+                  label="Phone Number"
+                  placeholder="Enter 10-digit phone number"
+                  error={errors.phone?.message}
+                  {...register('phone')}
+                  autoComplete="tel"
+                  maxLength={10}
+                />
+              </div>
+
+              {/* Age */}
+              <div className="mb-4">
+                <Input
+                  type="number"
+                  label="Age"
+                  placeholder="Enter your age"
+                  error={errors.age?.message}
+                  {...register('age')}
+                  min={18}
+                  max={100}
+                />
+              </div>
+
+              {/* Gender */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['male', 'female', 'other'].map((gender) => {
+                    const isSelected = watch('gender') === gender;
+                    return (
+                      <label
+                        key={gender}
+                        className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                          isSelected ? '' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        style={isSelected ? {
+                          borderColor: theme.colors.primary,
+                          backgroundColor: `${theme.colors.primary}1A`,
+                        } : {}}
+                      >
+                        <input
+                          type="radio"
+                          value={gender}
+                          {...register('gender')}
+                          className="sr-only"
+                        />
+                        <span className="text-sm font-medium text-gray-900 capitalize">{gender}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {errors.gender && (
+                  <p className="mt-1 text-xs text-red-500">{errors.gender.message}</p>
+                )}
+              </div>
+
+              {/* Address */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  {...register('address')}
+                  placeholder="Enter your complete address"
+                  rows={3}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.address ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  style={!errors.address ? {
+                    '--focus-border': theme.colors.primary,
+                    '--focus-ring': `${theme.colors.primary}33`,
+                  } : {}}
+                  onFocus={!errors.address ? (e) => {
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.colors.primary}33`;
+                  } : undefined}
+                  onBlur={!errors.address ? (e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.boxShadow = '';
+                  } : undefined}
+                />
+                {errors.address && (
+                  <p className="mt-1 text-xs text-red-500">{errors.address.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Continue Button */}
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={!isStep1Complete()}
+            >
+              Continue
+            </Button>
+          </form>
+        )}
+
+        {/* Step 2: Profile Photo */}
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">Profile Photo</h2>
+
+              {/* Photo Preview */}
+              <div className="flex flex-col items-center mb-4">
+                <div className="relative">
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt="Profile"
+                      className="w-32 h-32 rounded-full border-4 object-cover shadow-lg"
+                    style={{ borderColor: theme.colors.primary }}
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full border-4 border-gray-300 bg-gray-100 flex items-center justify-center">
+                      <svg
+                        className="w-16 h-16 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Upload a clear profile photo
+                </p>
+              </div>
+
+              {/* Upload Button */}
+              <label className="block">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                <div className="w-full border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors" style={{ backgroundColor: `${theme.colors.primary}1A`, borderColor: theme.colors.primary }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>
+                  <svg
+                    className="w-8 h-8 mx-auto mb-2"
+                    style={{ color: theme.colors.primary }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  <p className="text-sm font-medium" style={{ color: theme.colors.primary }}>
+                    {photoPreview ? 'Change Photo' : 'Select Photo'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
+                </div>
+              </label>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                fullWidth
+                onClick={() => setCurrentStep(1)}
+              >
+                Back
+              </Button>
+              {profilePhoto ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={handlePhotoUpload}
+                  isLoading={isUploading}
+                  disabled={isUploading}
+                >
+                  Upload & Continue
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setCurrentStep(3)}
+                  >
+                    Skip
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => {
+                      // Trigger file input click
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    Select Photo
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: DigiLocker KYC */}
+        {currentStep === 3 && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900 mb-2">KYC Verification</h2>
+              <p className="text-xs text-gray-600 mb-4">
+                Verify your identity using DigiLocker. All documents are required for booking.
+              </p>
+
+              {/* Aadhaar */}
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Aadhaar Card</p>
+                      <p className="text-xs text-gray-500">Verify via DigiLocker</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDigiLockerKYC('aadhaar')}
+                    className="px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Verify
+                  </button>
+                </div>
+              </div>
+
+              {/* PAN */}
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">PAN Card</p>
+                      <p className="text-xs text-gray-500">Verify via DigiLocker</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDigiLockerKYC('pan')}
+                    className="px-3 py-1.5 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors"
+                  >
+                    Verify
+                  </button>
+                </div>
+              </div>
+
+              {/* Driving License */}
+              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Driving License</p>
+                      <p className="text-xs text-gray-500">Verify via DigiLocker</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDigiLockerKYC('drivingLicense')}
+                    className="px-3 py-1.5 bg-green-500 text-white text-xs font-medium rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    Verify
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                fullWidth
+                onClick={() => setCurrentStep(2)}
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                fullWidth
+                isLoading={isSubmitting}
+                disabled={isSubmitting}
+              >
+                Complete Profile
+              </Button>
+            </div>
+          </form>
+        )}
+      </main>
     </div>
   );
 };
 
 export default ProfileCompletePage;
-

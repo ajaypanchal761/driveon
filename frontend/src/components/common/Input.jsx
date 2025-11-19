@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * Input Component
@@ -46,7 +47,7 @@ const Input = forwardRef(
     // Border and focus classes based on error state
     const borderClasses = error
       ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
-      : 'border-gray-300 focus:border-[#3d096d] focus:ring-[#3d096d]/20';
+      : `border-gray-300`;
 
     const classes = `
       ${baseClasses}
@@ -70,6 +71,18 @@ const Input = forwardRef(
           id={inputId}
           type={type}
           className={classes}
+          style={!error ? {
+            '--focus-border': theme.colors.primary,
+            '--focus-ring': `${theme.colors.primary}33`,
+          } : {}}
+          onFocus={!error ? (e) => {
+            e.currentTarget.style.borderColor = theme.colors.primary;
+            e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.colors.primary}33`;
+          } : undefined}
+          onBlur={!error ? (e) => {
+            e.currentTarget.style.borderColor = '#d1d5db';
+            e.currentTarget.style.boxShadow = '';
+          } : undefined}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
           {...props}

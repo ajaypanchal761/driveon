@@ -90,7 +90,7 @@ const Button = forwardRef(
 
     // Apply primary color style for primary variant
     const buttonStyle = variant === 'primary' 
-      ? { backgroundColor: '#3d096d' }
+      ? { backgroundColor: theme.colors.primary }
       : {};
 
     return (

@@ -115,7 +115,7 @@ const LoginPage = () => {
     <div 
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{ 
-        backgroundColor: '#3d096d',
+        backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -170,7 +170,7 @@ const LoginPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-6"
-              style={{ backgroundColor: '#3d096d' }}
+              style={{ backgroundColor: theme.colors.primary }}
             >
               Send OTP
             </Button>

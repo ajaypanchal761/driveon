@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * BottomNavbar Component
  * Mobile-only bottom navigation bar
- * Matches the design: Home, Chat, Add (center button), Explore, Profile
+ * Tabs: Home, Search, Add (center button), Bookings, Profile
  */
 const BottomNavbar = () => {
   const location = useLocation();
@@ -24,17 +25,16 @@ const BottomNavbar = () => {
       ),
     },
     {
-      path: '/chat',
-      label: 'Chat',
+      path: '/cars',
+      label: 'Search',
       icon: (
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
         />
       ),
-      requiresAuth: true,
     },
     {
       type: 'add',
@@ -47,16 +47,17 @@ const BottomNavbar = () => {
       },
     },
     {
-      path: '/explore',
-      label: 'Explore',
+      path: '/bookings',
+      label: 'Bookings',
       icon: (
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
         />
       ),
+      requiresAuth: true,
     },
     {
       path: '/profile',
@@ -114,7 +115,7 @@ const BottomNavbar = () => {
                 className="flex flex-col items-center justify-center -mt-6 touch-target"
                 aria-label={item.label}
               >
-                <div className="w-14 h-14 bg-[#3d096d] rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: theme.colors.primary }}>
                   <svg
                     className="w-7 h-7 text-white"
                     fill="none"
@@ -143,21 +144,20 @@ const BottomNavbar = () => {
               onClick={(e) => handleClick(item, e)}
               className={`
                 flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-lg transition-colors touch-target
-                ${active ? 'text-[#3d096d]' : 'text-gray-500'}
                 ${disabled ? 'opacity-50' : ''}
-                ${active ? 'bg-[#3d096d]/10' : ''}
               `}
               aria-label={item.label}
             >
               <svg
-                className={`w-6 h-6 ${active ? 'text-[#3d096d]' : 'text-gray-500'}`}
+                className="w-6 h-6"
+                style={{ color: active ? theme.colors.primary : '#6b7280' }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 {item.icon}
               </svg>
-              <span className={`text-xs font-medium ${active ? 'text-[#3d096d]' : 'text-gray-500'}`}>
+              <span className="text-xs font-medium" style={{ color: active ? theme.colors.primary : '#6b7280' }}>
                 {item.label}
               </span>
             </Link>

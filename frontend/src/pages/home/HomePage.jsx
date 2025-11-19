@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * HomePage Component
@@ -28,10 +29,10 @@ const HomePage = () => {
   return (
     <div className="min-h-screen bg-white pb-20">
       {/* Status Bar Spacing */}
-      <div className="h-6 bg-[#3d096d]"></div>
+      <div className="h-6" style={{ backgroundColor: theme.colors.primary }}></div>
 
       {/* Header Section - Purple Background */}
-      <header className="bg-[#3d096d] text-white relative overflow-hidden md:rounded-none rounded-b-3xl">
+      <header className="text-white relative overflow-hidden md:rounded-none rounded-b-3xl" style={{ backgroundColor: theme.colors.primary }}>
         {/* Abstract purple pattern background */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
@@ -143,7 +144,7 @@ const HomePage = () => {
         </div>
 
         {/* Top Chart of the Day Banner */}
-        <div className="bg-[#3d096d] rounded-xl p-4 relative overflow-hidden">
+        <div className="rounded-xl p-4 relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-5">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
@@ -190,7 +191,7 @@ const HomePage = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Top Brands</h3>
-            <button className="text-sm text-[#3d096d] font-medium hover:underline">See All</button>
+            <button className="text-sm font-medium hover:underline" style={{ color: theme.colors.primary }}>See All</button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {[1, 2, 3, 4].map((brand) => (
@@ -212,7 +213,7 @@ const HomePage = () => {
         </div>
 
         {/* Identify the Closest Vehicle Card */}
-        <div className="bg-[#3d096d] rounded-xl p-4 flex items-center justify-between">
+        <div className="rounded-xl p-4 flex items-center justify-between" style={{ backgroundColor: theme.colors.primary }}>
           <div className="flex items-center gap-3">
             <div className="relative w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
               <svg
@@ -228,7 +229,7 @@ const HomePage = () => {
                   d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
                 />
               </svg>
-              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#3d096d]"></div>
+              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2" style={{ borderColor: theme.colors.primary }}></div>
             </div>
             <span className="text-white font-medium text-sm">Identify the closest vehicle</span>
           </div>
@@ -251,7 +252,7 @@ const HomePage = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Available Near You</h3>
-            <button className="text-sm text-[#3d096d] font-medium hover:underline">See All</button>
+            <button className="text-sm font-medium hover:underline" style={{ color: theme.colors.primary }}>See All</button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {vehicles.map((vehicle) => (
