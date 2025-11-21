@@ -1,51 +1,82 @@
-import { createBrowserRouter } from 'react-router-dom';
-import { lazy } from 'react';
-import ProtectedRoute from '../components/layout/ProtectedRoute';
-import AdminRoute from '../components/layout/AdminRoute';
-import OwnerRoute from '../components/layout/OwnerRoute';
-import ProfileCompleteRoute from '../components/layout/ProfileCompleteRoute';
-import PageLayout from '../components/layout/PageLayout';
+import { createBrowserRouter } from "react-router-dom";
+import { lazy } from "react";
+import ProtectedRoute from "../components/layout/ProtectedRoute";
+import AdminRoute from "../components/layout/AdminRoute";
+import OwnerRoute from "../components/layout/OwnerRoute";
+import ProfileCompleteRoute from "../components/layout/ProfileCompleteRoute";
+import PageLayout from "../components/layout/PageLayout";
 
 // Lazy load pages for code splitting (better performance)
-const HomePage = lazy(() => import('../pages/home/HomePage'));
-const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
-const RegisterPage = lazy(() => import('../pages/auth/RegisterPage'));
-const VerifyOTPPage = lazy(() => import('../pages/auth/VerifyOTPPage'));
-const CarListingPage = lazy(() => import('../pages/cars/CarListingPage'));
-const CarDetailsPage = lazy(() => import('../pages/cars/CarDetailsPage'));
-const CarReviewsPage = lazy(() => import('../pages/cars/CarReviewsPage'));
-const BookingFormPage = lazy(() => import('../pages/booking/BookingFormPage'));
-const BookingDateTimePage = lazy(() => import('../pages/booking/BookingDateTimePage'));
-const BookingPaymentOptionPage = lazy(() => import('../pages/booking/BookingPaymentOptionPage'));
-const BookingGuarantorPage = lazy(() => import('../pages/booking/BookingGuarantorPage'));
-const BookingPaymentPage = lazy(() => import('../pages/booking/BookingPaymentPage'));
-const BookingConfirmationPage = lazy(() => import('../pages/booking/BookingConfirmationPage'));
-const ActiveBookingPage = lazy(() => import('../pages/booking/ActiveBookingPage'));
-const BookingHistoryPage = lazy(() => import('../pages/booking/BookingHistoryPage'));
-const ReviewFormPage = lazy(() => import('../pages/booking/ReviewFormPage'));
-const ProfileDashboardPage = lazy(() => import('../pages/profile/ProfileDashboardPage'));
-const ProfileCompletePage = lazy(() => import('../pages/profile/ProfileCompletePage'));
-const KYCStatusPage = lazy(() => import('../pages/profile/KYCStatusPage'));
-const GuarantorManagementPage = lazy(() => import('../pages/profile/GuarantorManagementPage'));
-const ReferralDashboardPage = lazy(() => import('../pages/profile/ReferralDashboardPage'));
-const SettingsPage = lazy(() => import('../pages/profile/SettingsPage'));
-const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'));
-const AdminUsersPage = lazy(() => import('../pages/admin/AdminUsersPage'));
-const AdminKYCPage = lazy(() => import('../pages/admin/AdminKYCPage'));
-const AdminCarsPage = lazy(() => import('../pages/admin/AdminCarsPage'));
-const AdminBookingsPage = lazy(() => import('../pages/admin/AdminBookingsPage'));
-const AdminPricingPage = lazy(() => import('../pages/admin/AdminPricingPage'));
-const AdminReportsPage = lazy(() => import('../pages/admin/AdminReportsPage'));
-const OwnerDashboardPage = lazy(() => import('../pages/owner/OwnerDashboardPage'));
-const OwnerAddCarPage = lazy(() => import('../pages/owner/OwnerAddCarPage'));
-const OwnerEditCarPage = lazy(() => import('../pages/owner/OwnerEditCarPage'));
-const OwnerBookingsPage = lazy(() => import('../pages/owner/OwnerBookingsPage'));
-const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
+const HomePage = lazy(() => import("../pages/home/HomePage"));
+const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
+const VerifyOTPPage = lazy(() => import("../pages/auth/VerifyOTPPage"));
+const CarListingPage = lazy(() => import("../pages/cars/CarListingPage"));
+const CarDetailsPage = lazy(() => import("../pages/cars/CarDetailsPage"));
+const CarReviewsPage = lazy(() => import("../pages/cars/CarReviewsPage"));
+const BookingFormPage = lazy(() => import("../pages/booking/BookingFormPage"));
+const BookingDateTimePage = lazy(() =>
+  import("../pages/booking/BookingDateTimePage")
+);
+const BookingPaymentOptionPage = lazy(() =>
+  import("../pages/booking/BookingPaymentOptionPage")
+);
+const BookingGuarantorPage = lazy(() =>
+  import("../pages/booking/BookingGuarantorPage")
+);
+const BookingPaymentPage = lazy(() =>
+  import("../pages/booking/BookingPaymentPage")
+);
+const BookingConfirmationPage = lazy(() =>
+  import("../pages/booking/BookingConfirmationPage")
+);
+const ActiveBookingPage = lazy(() =>
+  import("../pages/booking/ActiveBookingPage")
+);
+const BookingHistoryPage = lazy(() =>
+  import("../pages/booking/BookingHistoryPage")
+);
+const ReviewFormPage = lazy(() => import("../pages/booking/ReviewFormPage"));
+const ProfileDashboardPage = lazy(() =>
+  import("../pages/profile/ProfileDashboardPage")
+);
+const ProfileCompletePage = lazy(() =>
+  import("../pages/profile/ProfileCompletePage")
+);
+const KYCStatusPage = lazy(() => import("../pages/profile/KYCStatusPage"));
+const GuarantorManagementPage = lazy(() =>
+  import("../pages/profile/GuarantorManagementPage")
+);
+const ReferralDashboardPage = lazy(() =>
+  import("../pages/profile/ReferralDashboardPage")
+);
+const SettingsPage = lazy(() => import("../pages/profile/SettingsPage"));
+const AdminLoginPage = lazy(() => import("../pages/admin/AdminLoginPage"));
+const AdminDashboardPage = lazy(() =>
+  import("../pages/admin/AdminDashboardPage")
+);
+const AdminUsersPage = lazy(() => import("../pages/admin/AdminUsersPage"));
+const AdminKYCPage = lazy(() => import("../pages/admin/AdminKYCPage"));
+const AdminCarsPage = lazy(() => import("../pages/admin/AdminCarsPage"));
+const AdminBookingsPage = lazy(() =>
+  import("../pages/admin/AdminBookingsPage")
+);
+const AdminPricingPage = lazy(() => import("../pages/admin/AdminPricingPage"));
+const AdminReportsPage = lazy(() => import("../pages/admin/AdminReportsPage"));
+const OwnerDashboardPage = lazy(() =>
+  import("../pages/owner/OwnerDashboardPage")
+);
+const OwnerAddCarPage = lazy(() => import("../pages/owner/OwnerAddCarPage"));
+const OwnerEditCarPage = lazy(() => import("../pages/owner/OwnerEditCarPage"));
+const OwnerBookingsPage = lazy(() =>
+  import("../pages/owner/OwnerBookingsPage")
+);
+const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 
 // Create router configuration
 export const router = createBrowserRouter([
   {
-    path: '/',
+    path: "/",
     element: <PageLayout />,
     children: [
       // Public Routes
@@ -54,35 +85,39 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
-        path: 'login',
+        path: "login",
         element: <LoginPage />,
       },
       {
-        path: 'register',
+        path: "register",
         element: <RegisterPage />,
       },
       {
-        path: 'verify-otp',
+        path: "verify-otp",
         element: <VerifyOTPPage />,
       },
       {
-        path: 'cars',
+        path: "admin/login",
+        element: <AdminLoginPage />,
+      },
+      {
+        path: "cars",
         element: <CarListingPage />,
       },
       {
-        path: 'cars/:id',
+        path: "cars/:id",
         element: <CarDetailsPage />,
       },
       {
-        path: 'cars/:id/reviews',
+        path: "cars/:id/reviews",
         element: <CarReviewsPage />,
       },
       {
-        path: 'booking/:carId',
+        path: "booking/:carId",
         element: <BookingFormPage />,
       },
       {
-        path: 'booking/:carId/payment',
+        path: "booking/:carId/payment",
         element: <BookingPaymentPage />,
       },
 
@@ -92,35 +127,35 @@ export const router = createBrowserRouter([
         children: [
           // Profile Routes
           {
-            path: 'profile',
+            path: "profile",
             element: <ProfileDashboardPage />,
           },
           {
-            path: 'profile/complete',
+            path: "profile/complete",
             element: <ProfileCompletePage />,
           },
           {
-            path: 'profile/kyc',
+            path: "profile/kyc",
             element: <KYCStatusPage />,
           },
           {
-            path: 'profile/guarantor',
+            path: "profile/guarantor",
             element: <GuarantorManagementPage />,
           },
           {
-            path: 'profile/referrals',
+            path: "profile/referrals",
             element: <ReferralDashboardPage />,
           },
           {
-            path: 'profile/settings',
+            path: "profile/settings",
             element: <SettingsPage />,
           },
           {
-            path: 'bookings',
+            path: "bookings",
             element: <BookingHistoryPage />,
           },
           {
-            path: 'booking/:id/active',
+            path: "booking/:id/active",
             element: <ActiveBookingPage />,
           },
 
@@ -129,25 +164,25 @@ export const router = createBrowserRouter([
             element: <ProfileCompleteRoute />,
             children: [
               {
-                path: 'booking/:carId/date-time',
+                path: "booking/:carId/date-time",
                 element: <BookingDateTimePage />,
               },
               {
-                path: 'booking/:carId/payment-option',
+                path: "booking/:carId/payment-option",
                 element: <BookingPaymentOptionPage />,
               },
               {
-                path: 'booking/:carId/guarantor',
+                path: "booking/:carId/guarantor",
                 element: <BookingGuarantorPage />,
               },
               {
-                path: 'booking/:id/confirm',
+                path: "booking/:id/confirm",
                 element: <BookingConfirmationPage />,
               },
             ],
           },
           {
-            path: 'booking/:bookingId/review',
+            path: "booking/:bookingId/review",
             element: <ReviewFormPage />,
           },
 
@@ -156,31 +191,31 @@ export const router = createBrowserRouter([
             element: <AdminRoute />,
             children: [
               {
-                path: 'admin',
+                path: "admin",
                 element: <AdminDashboardPage />,
               },
               {
-                path: 'admin/users',
+                path: "admin/users",
                 element: <AdminUsersPage />,
               },
               {
-                path: 'admin/kyc',
+                path: "admin/kyc",
                 element: <AdminKYCPage />,
               },
               {
-                path: 'admin/cars',
+                path: "admin/cars",
                 element: <AdminCarsPage />,
               },
               {
-                path: 'admin/bookings',
+                path: "admin/bookings",
                 element: <AdminBookingsPage />,
               },
               {
-                path: 'admin/pricing',
+                path: "admin/pricing",
                 element: <AdminPricingPage />,
               },
               {
-                path: 'admin/reports',
+                path: "admin/reports",
                 element: <AdminReportsPage />,
               },
             ],
@@ -191,19 +226,19 @@ export const router = createBrowserRouter([
             element: <OwnerRoute />,
             children: [
               {
-                path: 'owner',
+                path: "owner",
                 element: <OwnerDashboardPage />,
               },
               {
-                path: 'owner/cars/new',
+                path: "owner/cars/new",
                 element: <OwnerAddCarPage />,
               },
               {
-                path: 'owner/cars/:id/edit',
+                path: "owner/cars/:id/edit",
                 element: <OwnerEditCarPage />,
               },
               {
-                path: 'owner/bookings',
+                path: "owner/bookings",
                 element: <OwnerBookingsPage />,
               },
             ],
@@ -213,10 +248,9 @@ export const router = createBrowserRouter([
 
       // 404 Page
       {
-        path: '*',
+        path: "*",
         element: <NotFoundPage />,
       },
     ],
   },
 ]);
-
