@@ -554,23 +554,23 @@ const CouponManagementPage = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2 md:w-48">
+                <div className="flex flex-col gap-2 md:w-40">
                   <button
                     onClick={() => handleViewUsage(coupon)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: theme.colors.primary }}
                   >
                     View Usage
                   </button>
                   <button
                     onClick={() => handleEditCoupon(coupon)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleToggleCoupon(coupon.id)}
-                    className={`w-full px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       coupon.isActive
                         ? 'bg-gray-600 text-white hover:bg-gray-700'
                         : 'bg-green-600 text-white hover:bg-green-700'
@@ -580,7 +580,7 @@ const CouponManagementPage = () => {
                   </button>
                   <button
                     onClick={() => handleDeleteCoupon(coupon.id)}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                   >
                     Delete
                   </button>

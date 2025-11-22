@@ -644,7 +644,7 @@ const CarListPage = () => {
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => handleViewCar(car)}
-                    className="flex-1 px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: theme.colors.primary }}
                   >
                     View
@@ -653,13 +653,13 @@ const CarListPage = () => {
                     <>
                       <button
                         onClick={() => handleApprove(car.id)}
-                        className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => handleReject(car.id)}
-                        className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
                         Reject
                       </button>
@@ -668,7 +668,7 @@ const CarListPage = () => {
                   {car.status === 'active' && (
                     <button
                       onClick={() => handleSuspend(car.id)}
-                      className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
                     >
                       Suspend
                     </button>
@@ -676,7 +676,7 @@ const CarListPage = () => {
                   {(car.status === 'suspended' || car.status === 'inactive') && (
                     <button
                       onClick={() => handleActivate(car.id)}
-                      className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Activate
                     </button>
@@ -766,13 +766,13 @@ const CarListPage = () => {
                         <>
                           <button
                             onClick={() => handleApprove(car.id)}
-                            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => handleReject(car.id)}
-                            className="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                           >
                             Reject
                           </button>
@@ -781,7 +781,7 @@ const CarListPage = () => {
                       {car.status === 'active' && (
                         <button
                           onClick={() => handleSuspend(car.id)}
-                          className="flex-1 px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
+                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
                         >
                           Suspend
                         </button>
@@ -789,7 +789,7 @@ const CarListPage = () => {
                       {(car.status === 'suspended' || car.status === 'inactive') && (
                         <button
                           onClick={() => handleActivate(car.id)}
-                          className="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
                           Activate
                         </button>
@@ -800,7 +800,7 @@ const CarListPage = () => {
                             handleDelete(car.id);
                           }
                         }}
-                        className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                       >
                         Delete
                       </button>

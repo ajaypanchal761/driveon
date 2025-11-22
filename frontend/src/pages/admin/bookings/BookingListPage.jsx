@@ -688,10 +688,10 @@ const BookingListPage = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2 md:w-48">
+                <div className="flex flex-col gap-2 md:w-40">
                   <button
                     onClick={() => handleViewBooking(booking)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: theme.colors.primary }}
                   >
                     View Details
@@ -700,7 +700,7 @@ const BookingListPage = () => {
                   {booking.status === 'active' && (
                     <button
                       onClick={() => navigate(`/admin/bookings/${booking.id}/tracking`)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Live Tracking
                     </button>
@@ -710,13 +710,13 @@ const BookingListPage = () => {
                     <>
                       <button
                         onClick={() => handleApprove(booking.id)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => handleReject(booking.id)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
                         Reject
                       </button>
@@ -726,7 +726,7 @@ const BookingListPage = () => {
                   {(booking.status === 'confirmed' || booking.status === 'active') && (
                     <button
                       onClick={() => handleCancel(booking.id)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                     >
                       Cancel Booking
                     </button>
@@ -735,7 +735,7 @@ const BookingListPage = () => {
                   {booking.status === 'cancelled' && booking.paymentStatus === 'paid' && booking.paymentStatus !== 'refunded' && (
                     <button
                       onClick={() => handleProcessRefund(booking.id)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       Process Refund
                     </button>

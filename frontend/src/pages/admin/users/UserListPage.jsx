@@ -484,7 +484,7 @@ const UserListPage = () => {
                       e.stopPropagation();
                       handleUserAction(user.id, 'suspend');
                     }}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium text-yellow-700 bg-yellow-50 rounded hover:bg-yellow-100 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm font-medium text-yellow-700 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
                   >
                     Suspend
                   </button>
@@ -494,7 +494,7 @@ const UserListPage = () => {
                       e.stopPropagation();
                       handleUserAction(user.id, 'activate');
                     }}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
                   >
                     Activate
                   </button>
@@ -504,7 +504,7 @@ const UserListPage = () => {
                     e.stopPropagation();
                     handleUserAction(user.id, 'ban');
                   }}
-                  className="flex-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                 >
                   Ban
                 </button>
@@ -513,7 +513,7 @@ const UserListPage = () => {
                     e.stopPropagation();
                     handleViewUser(user);
                   }}
-                  className="flex-1 px-3 py-1.5 text-xs font-medium text-white rounded hover:opacity-90 transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                   style={{ backgroundColor: theme.colors.primary }}
                 >
                   View

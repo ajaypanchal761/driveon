@@ -185,19 +185,19 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-screen w-64 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Logo Section */}
-        <div className="h-16 flex items-center justify-center border-b border-gray-200 px-4">
+        <div className="h-16 flex items-center justify-center border-b border-gray-200 px-4 flex-shrink-0">
           <h2 className="text-xl font-bold" style={{ color: theme.colors.primary }}>
             Admin Panel
           </h2>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 min-h-0">
           <div className="space-y-1">
             {menuItems.map((item) => {
               const active = isActive(item.path);
@@ -232,7 +232,7 @@ const AdminSidebar = () => {
         </nav>
 
         {/* Footer Section */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-gray-200 p-4 flex-shrink-0">
           <div className="text-xs text-gray-500 text-center">
             <p>DriveOn Admin</p>
             <p className="mt-1">Version 1.0</p>

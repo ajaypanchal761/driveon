@@ -630,10 +630,10 @@ const PaymentListPage = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2 md:w-48">
+                <div className="flex flex-col gap-2 md:w-40">
                   <button
                     onClick={() => handleViewPayment(payment)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: theme.colors.primary }}
                   >
                     View Details
@@ -642,7 +642,7 @@ const PaymentListPage = () => {
                   {payment.status === 'success' && !payment.invoiceGenerated && (
                     <button
                       onClick={() => handleGenerateInvoice(payment.id)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Generate Invoice
                     </button>
@@ -651,7 +651,7 @@ const PaymentListPage = () => {
                   {payment.status === 'success' && payment.status !== 'refunded' && (
                     <button
                       onClick={() => handleProcessRefund(payment.id)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       Process Refund
                     </button>
@@ -660,7 +660,7 @@ const PaymentListPage = () => {
                   {payment.status === 'pending' && (
                     <button
                       onClick={() => handleMarkAsReceived(payment.id)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Mark as Received
                     </button>

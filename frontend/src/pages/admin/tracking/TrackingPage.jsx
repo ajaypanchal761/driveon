@@ -321,23 +321,23 @@ const TrackingPage = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-2 md:w-48">
+                    <div className="flex flex-col gap-2 md:w-40">
                       <button
                         onClick={() => handleViewTrip(trip)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                         style={{ backgroundColor: theme.colors.primary }}
                       >
                         View Details
                       </button>
                       <button
                         onClick={() => navigate(`/admin/bookings/${trip.bookingId}/tracking`)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Live Tracking
                       </button>
                       <button
                         onClick={() => handleDownloadTracking(trip.id)}
-                        className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                       >
                         Download Data
                       </button>

@@ -510,10 +510,10 @@ const GuarantorListPage = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col gap-2 md:w-48">
+                <div className="flex flex-col gap-2 md:w-40">
                   <button
                     onClick={() => handleViewGuarantor(guarantor)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: theme.colors.primary }}
                   >
                     View Details
@@ -523,7 +523,7 @@ const GuarantorListPage = () => {
                     <>
                       <button
                         onClick={() => handleVerify(guarantor.id)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Verify
                       </button>
@@ -532,7 +532,7 @@ const GuarantorListPage = () => {
                           const reason = prompt('Enter rejection reason:');
                           if (reason) handleReject(guarantor.id, reason);
                         }}
-                        className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
                         Reject
                       </button>
@@ -542,7 +542,7 @@ const GuarantorListPage = () => {
                   {guarantor.guarantorKYCStatus === 'pending' && (
                     <button
                       onClick={() => handleSendReminder(guarantor.id)}
-                      className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors"
+                      className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors"
                     >
                       Send KYC Reminder
                     </button>
@@ -554,7 +554,7 @@ const GuarantorListPage = () => {
                         handleRemoveLink(guarantor.id);
                       }
                     }}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                    className="w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                   >
                     Remove Link
                   </button>

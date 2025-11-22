@@ -557,10 +557,10 @@ const ReferralManagementPage = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-2 md:w-48">
+                    <div className="flex flex-col gap-2 md:w-40">
                       <button
                         onClick={() => handleViewReferral(referral)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                         style={{ backgroundColor: theme.colors.primary }}
                       >
                         View Details
@@ -570,7 +570,7 @@ const ReferralManagementPage = () => {
                           const points = prompt('Enter points to add (negative to subtract):');
                           if (points) handleAdjustPoints(referral.id, parseInt(points));
                         }}
-                        className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                       >
                         Adjust Points
                       </button>
