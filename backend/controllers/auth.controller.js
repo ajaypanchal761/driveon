@@ -27,8 +27,16 @@ export const register = async (req, res) => {
 
     if (existingUser) {
       let message = 'User already exists';
-      if (existingUser.email === email) message = 'Email already registered';
-      else if (existingUser.phone === phone) message = 'Phone number already registered';
+      const emailExists = existingUser.email === email;
+      const phoneExists = existingUser.phone === phone;
+      
+      if (emailExists && phoneExists) {
+        message = 'Email and phone number already registered';
+      } else if (emailExists) {
+        message = 'Email already registered';
+      } else if (phoneExists) {
+        message = 'Phone number already registered';
+      }
 
       return res.status(400).json({
         success: false,

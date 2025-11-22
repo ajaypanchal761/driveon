@@ -22,6 +22,26 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    age: {
+      type: Number,
+      min: [18, 'Age must be at least 18'],
+      max: [100, 'Age must be less than 100'],
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other'],
+    },
+    address: {
+      type: String,
+      trim: true,
+    },
+    profilePhoto: {
+      type: String, // Cloudinary URL
+    },
+    profileComplete: {
+      type: Number,
+      default: 0, // Percentage 0-100
+    },
     role: {
       type: String,
       enum: ['user', 'owner', 'guarantor', 'admin'],

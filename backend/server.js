@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import fileUpload from 'express-fileupload';
 import { connectDB } from './config/database.js';
 
 // Load environment variables
@@ -16,15 +17,21 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  abortOnLimit: true,
+}));
 
 // Connect to MongoDB
 connectDB();
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 // API Routes
 app.use('/api', authRoutes);
+app.use('/api', userRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

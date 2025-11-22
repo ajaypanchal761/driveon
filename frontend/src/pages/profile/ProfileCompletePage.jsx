@@ -108,22 +108,14 @@ const ProfileCompletePage = () => {
       // Mock mode - just use the preview URL
       const formData = new FormData();
       formData.append('photo', profilePhoto);
-      formData.append('file', profilePhoto);
-      formData.append('image', profilePhoto);
 
       const response = await userService.uploadPhoto(formData);
       
-      // Handle different response formats
-      const uploadedPhotoUrl = 
-        response.profilePhoto || 
-        response.photo || 
-        response.imageUrl || 
-        response.url ||
-        photoPreview; // Fallback to preview if API doesn't return URL
+      // Handle response from backend
+      const uploadedPhotoUrl = response.data?.profilePhoto || photoPreview;
       
-      // Store in Redux and localStorage for mock mode
+      // Update Redux store
       dispatch(updateUser({ profilePhoto: uploadedPhotoUrl }));
-      localStorage.setItem('userProfilePhoto', uploadedPhotoUrl);
       
       toastUtils.success('Profile photo uploaded successfully!');
       setCurrentStep(3);
@@ -171,34 +163,25 @@ const ProfileCompletePage = () => {
         age: parseInt(data.age),
       });
 
-      // Update Redux store
-      dispatch(updateUser(response.user));
-      dispatch(setProfileComplete(true));
+      // Handle backend response
+      const userData = response.data?.user || response.user;
+      const profileComplete = userData?.profileComplete || 100;
       
-      // Store in localStorage for mock mode
-      localStorage.setItem('userProfile', JSON.stringify(response.user));
-      localStorage.setItem('profileComplete', 'true');
+      // Update Redux store
+      dispatch(updateUser(userData));
+      dispatch(setProfileComplete(profileComplete >= 100));
       
       toastUtils.success('Profile completed successfully!');
       navigate('/profile');
     } catch (error) {
       console.error('Profile update error:', error);
       
-      // In mock mode, still update local state even if API fails
-      const mockUser = {
-        ...data,
-        age: parseInt(data.age),
-        id: 'mock_user',
-        profilePhoto: photoPreview,
-      };
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to update profile. Please try again.';
       
-      dispatch(updateUser(mockUser));
-      dispatch(setProfileComplete(true));
-      localStorage.setItem('userProfile', JSON.stringify(mockUser));
-      localStorage.setItem('profileComplete', 'true');
-      
-      toastUtils.success('Profile completed successfully!');
-      navigate('/profile');
+      toastUtils.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

@@ -100,15 +100,8 @@ const RegisterPage = () => {
       
       toastUtils.error(errorMessage);
       
-      // Always navigate to OTP page (mock mode or if API fails)
-      navigate('/verify-otp', {
-        state: {
-          email: data.email,
-          phone: data.phone,
-          type: 'register',
-        },
-        replace: true,
-      });
+      // Don't navigate to OTP page if there's an error (e.g., user already exists)
+      // User stays on register page to see the error message
     } finally {
       setIsLoading(false);
     }

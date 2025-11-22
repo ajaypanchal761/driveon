@@ -1,5 +1,5 @@
 // Mock mode - No backend API calls, works offline for frontend design
-const MOCK_MODE = true; // Set to false when backend is ready
+const MOCK_MODE = false; // Backend is ready - using actual API calls
 
 // Mock delay to simulate API call
 const mockDelay = (ms = 1000) => new Promise(resolve => setTimeout(resolve, ms));
@@ -29,10 +29,15 @@ export const userService = {
       };
     }
     
-    const api = (await import('./api')).default;
-    const { API_ENDPOINTS } = await import('../constants');
-    const response = await api.get(API_ENDPOINTS.USER.PROFILE);
-    return response.data;
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.get(API_ENDPOINTS.USER.PROFILE);
+      return response.data;
+    } catch (error) {
+      console.error('Get profile error:', error);
+      throw error;
+    }
   },
 
   /**
@@ -52,10 +57,15 @@ export const userService = {
       };
     }
     
-    const api = (await import('./api')).default;
-    const { API_ENDPOINTS } = await import('../constants');
-    const response = await api.put(API_ENDPOINTS.USER.UPDATE_PROFILE, data);
-    return response.data;
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.put(API_ENDPOINTS.USER.UPDATE_PROFILE, data);
+      return response.data;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
   },
 
   /**
@@ -72,10 +82,15 @@ export const userService = {
       };
     }
     
-    const api = (await import('./api')).default;
-    const { API_ENDPOINTS } = await import('../constants');
-    const response = await api.get(API_ENDPOINTS.USER.KYC_STATUS);
-    return response.data;
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.get(API_ENDPOINTS.USER.KYC_STATUS);
+      return response.data;
+    } catch (error) {
+      console.error('Get KYC status error:', error);
+      throw error;
+    }
   },
 
   /**
@@ -113,11 +128,20 @@ export const userService = {
       };
     }
     
-    // Production mode - actual API call
-    const api = (await import('./api')).default;
-    const { API_ENDPOINTS } = await import('../constants');
-    const response = await api.post(API_ENDPOINTS.USER.UPLOAD_PHOTO, formData);
-    return response.data;
+    try {
+      // Production mode - actual API call
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.post(API_ENDPOINTS.USER.UPLOAD_PHOTO, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Upload photo error:', error);
+      throw error;
+    }
   },
 };
 
