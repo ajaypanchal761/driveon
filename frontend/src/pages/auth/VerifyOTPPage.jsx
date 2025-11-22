@@ -109,16 +109,12 @@ const VerifyOTPPage = () => {
 
     setIsLoading(true);
     try {
-      if (type === 'login') {
-        await authService.sendLoginOTP({
-          emailOrPhone: emailOrPhone,
-        });
-      } else {
-        await authService.register({
-          email: email || undefined,
-          phone: phone || undefined,
-        });
-      }
+      // Use resend OTP API
+      await authService.resendOTP({
+        email: email || (emailOrPhone?.includes('@') ? emailOrPhone : undefined),
+        phone: phone || (!emailOrPhone?.includes('@') ? emailOrPhone?.replace(/\D/g, '') : undefined),
+        purpose: type || 'register',
+      });
 
       toastUtils.success('OTP resent successfully!');
       setTimer(60);

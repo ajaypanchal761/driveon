@@ -1,5 +1,5 @@
 // Mock mode - No backend API calls, works offline for frontend design
-const MOCK_MODE = true; // Set to false when backend is ready
+const MOCK_MODE = false; // Backend is ready - using actual API calls
 
 /**
  * Auth Service
@@ -36,7 +36,11 @@ export const authService = {
     // Production mode - actual API call
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
-    const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, data);
+    const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, {
+      email: data.email,
+      phone: data.phone,
+      referralCode: data.referralCode,
+    });
     return response.data;
   },
 
@@ -86,16 +90,8 @@ export const authService = {
     try {
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
-      const endpoint = API_ENDPOINTS.AUTH.SEND_LOGIN_OTP || API_ENDPOINTS.AUTH.LOGIN;
-      
-      const isEmail = data.emailOrPhone.includes('@');
-      const requestData = isEmail 
-        ? { email: data.emailOrPhone }
-        : { phone: data.emailOrPhone.replace(/\D/g, '') };
-      
-      const response = await api.post(endpoint, {
-        ...requestData,
-        sendOTP: true,
+      const response = await api.post(API_ENDPOINTS.AUTH.SEND_LOGIN_OTP, {
+        emailOrPhone: data.emailOrPhone,
       });
       return response.data;
     } catch (error) {
@@ -146,6 +142,11 @@ export const authService = {
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
     const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_OTP, data);
+    
+    // Return data in expected format
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
     return response.data;
   },
 
@@ -167,6 +168,29 @@ export const authService = {
     const response = await api.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
       refreshToken,
     });
+    return response.data;
+  },
+
+  /**
+   * Resend OTP
+   * @param {Object} data - Resend OTP data (email, phone, purpose)
+   * @returns {Promise}
+   */
+  resendOTP: async (data) => {
+    if (MOCK_MODE) {
+      await mockDelay(800);
+      const mockOTP = '123456';
+      localStorage.setItem('mockOTP', mockOTP);
+      return {
+        success: true,
+        message: 'OTP sent successfully',
+        otp: mockOTP,
+      };
+    }
+    
+    const api = (await import('./api')).default;
+    const { API_ENDPOINTS } = await import('../constants');
+    const response = await api.post(API_ENDPOINTS.AUTH.RESEND_OTP, data);
     return response.data;
   },
 
