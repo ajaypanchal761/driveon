@@ -1,33 +1,15 @@
-import { Navigate, useLocation, Outlet } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
+import { useAdminAuth } from '../../context/AdminContext';
 
 /**
  * AdminRoute Component
  * Guards routes that require admin role
- * Redirects to home if user is not admin
+ * Redirects to admin login if user is not authenticated
  * Uses React Hooks only - No Redux, No localStorage
  */
 const AdminRoute = () => {
-  const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check admin status (in real app, this would come from context/API)
-    // For now, using a simple check - can be replaced with context later
-    const checkAdminStatus = async () => {
-      setIsLoading(true);
-      // TODO: Replace with actual admin check from context/API
-      // Mock: Check if user has admin role
-      // This should come from a context provider or API call
-      const mockIsAdmin = true; // Replace with actual check
-      setIsAdmin(mockIsAdmin);
-      setIsLoading(false);
-    };
-
-    checkAdminStatus();
-  }, []);
+  const { isAuthenticated, isLoading } = useAdminAuth();
 
   if (isLoading) {
     // Show loading spinner while checking admin status
@@ -44,9 +26,9 @@ const AdminRoute = () => {
     );
   }
 
-  if (!isAdmin) {
-    // Redirect to home if not admin
-    return <Navigate to="/" replace />;
+  if (!isAuthenticated) {
+    // Redirect to admin login if not authenticated
+    return <Navigate to="/admin/login" replace />;
   }
 
   return <Outlet />;

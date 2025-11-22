@@ -91,180 +91,190 @@ const KYCStatusPage = () => {
     <div className="min-h-screen pb-24 bg-white">
       {/* Header */}
       <header className="text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
-        <div className="relative px-4 pt-3 pb-2">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-1.5 -ml-1 touch-target"
-              aria-label="Go back"
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h1 className="text-lg font-bold text-white">KYC Verification</h1>
-            <div className="w-8"></div>
+        <div className="relative px-4 pt-3 pb-2 md:px-6 md:py-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-1.5 -ml-1 touch-target md:p-2"
+                aria-label="Go back"
+              >
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h1 className="text-lg md:text-2xl font-bold text-white">KYC Verification</h1>
+              <div className="w-8"></div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* KYC Status Summary */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-base font-semibold" style={{ color: theme.colors.textPrimary }}>
-              KYC Status
-            </h2>
-            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-              kycStatus.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-            }`}>
-              {kycStatus.verified ? 'Verified' : `${completionPercentage}% Complete`}
-            </span>
+      <div className="px-4 pt-6 pb-2 md:pt-8 md:pb-2">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <h2 className="text-base md:text-xl font-semibold" style={{ color: theme.colors.textPrimary }}>
+                KYC Status
+              </h2>
+              <span className={`text-xs md:text-sm font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-full ${
+                kycStatus.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {kycStatus.verified ? 'Verified' : `${completionPercentage}% Complete`}
+              </span>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2 md:h-3 mb-2 md:mb-3">
+              <div
+                className={`h-2 md:h-3 rounded-full transition-all duration-300 ${
+                  kycStatus.verified ? 'bg-green-500' : 'bg-yellow-400'
+                }`}
+                style={{ width: `${completionPercentage}%` }}
+              ></div>
+            </div>
+            
+            <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>
+              {completedDocuments} of {documents.length} documents verified
+            </p>
           </div>
-          
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-            <div
-              className={`h-2 rounded-full transition-all duration-300 ${
-                kycStatus.verified ? 'bg-green-500' : 'bg-yellow-400'
-              }`}
-              style={{ width: `${completionPercentage}%` }}
-            ></div>
-          </div>
-          
-          <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
-            {completedDocuments} of {documents.length} documents verified
-          </p>
         </div>
       </div>
 
       {/* Documents List */}
-      <div className="px-4 py-4 space-y-3">
-        <h3 className="text-sm font-semibold mb-2" style={{ color: theme.colors.primary }}>
-          Required Documents
-        </h3>
-        
-        {documents.map((doc) => (
-          <div
-            key={doc.id}
-            className="bg-white rounded-lg p-4 shadow-sm border"
-            style={{ borderColor: doc.verified ? theme.colors.success : theme.colors.borderLight }}
-          >
-            {/* Document Header */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3 flex-1">
-                <div
-                  className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    doc.verified ? 'bg-green-100' : 'bg-purple-50'
-                  }`}
-                  style={!doc.verified ? { backgroundColor: `${theme.colors.primary}15` } : {}}
-                >
-                  <div style={{ color: doc.verified ? theme.colors.success : theme.colors.primary }}>
-                    {doc.icon}
+      <div className="px-4 py-4 md:py-6">
+        <div className="max-w-7xl mx-auto">
+          <h3 className="text-sm md:text-lg font-semibold mb-3 md:mb-4" style={{ color: theme.colors.primary }}>
+            Required Documents
+          </h3>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="bg-white rounded-lg p-4 md:p-5 shadow-sm border hover:shadow-md transition-shadow"
+                style={{ borderColor: doc.verified ? theme.colors.success : theme.colors.borderLight }}
+              >
+                {/* Document Header */}
+                <div className="flex items-start justify-between mb-3 md:mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        doc.verified ? 'bg-green-100' : 'bg-purple-50'
+                      }`}
+                      style={!doc.verified ? { backgroundColor: `${theme.colors.primary}15` } : {}}
+                    >
+                      <div className="w-6 h-6 md:w-7 md:h-7" style={{ color: doc.verified ? theme.colors.success : theme.colors.primary }}>
+                        {doc.icon}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm md:text-base font-semibold" style={{ color: theme.colors.textPrimary }}>
+                        {doc.name}
+                      </h4>
+                      <p className="text-xs md:text-sm mt-0.5" style={{ color: theme.colors.textSecondary }}>
+                        {doc.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold" style={{ color: theme.colors.textPrimary }}>
-                    {doc.name}
-                  </h4>
-                  <p className="text-xs mt-0.5" style={{ color: theme.colors.textSecondary }}>
-                    {doc.description}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Verification Badge */}
-              {doc.verified && (
-                <div className="flex-shrink-0">
-                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              )}
-            </div>
-
-            {/* Document Number Input (if not verified) */}
-            {!doc.verified && (
-              <div className="space-y-2">
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: theme.colors.textSecondary }}>
-                    {doc.id === 'aadhaar' ? 'Aadhaar Number' : doc.id === 'pan' ? 'PAN Number' : 'Driving License Number'}
-                  </label>
-                  <input
-                    type="text"
-                    value={doc.number}
-                    onChange={(e) => doc.setNumber(e.target.value)}
-                    placeholder={doc.id === 'aadhaar' ? 'Enter 12-digit Aadhaar' : doc.id === 'pan' ? 'Enter PAN (e.g., ABCDE1234F)' : 'Enter DL Number'}
-                    className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                      color: theme.colors.textPrimary,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                    maxLength={doc.id === 'aadhaar' ? 12 : doc.id === 'pan' ? 10 : 20}
-                  />
-                </div>
-                
-                {/* DigiLocker Verify Button */}
-                <button
-                  onClick={() => handleDigiLockerVerify(doc.id)}
-                  disabled={isSubmitting}
-                  className="w-full py-2.5 rounded-lg font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{
-                    backgroundColor: theme.colors.primary,
-                    color: theme.colors.white,
-                  }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  
+                  {/* Verification Badge */}
+                  {doc.verified && (
+                    <div className="flex-shrink-0">
+                      <svg className="w-5 h-5 md:w-6 md:h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span>Verifying...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                      <span>Verify via DigiLocker</span>
-                    </>
+                    </div>
                   )}
-                </button>
-              </div>
-            )}
+                </div>
 
-            {/* Verified Status */}
-            {doc.verified && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50">
-                <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <p className="text-xs font-medium text-green-700">
-                  Verified via DigiLocker
-                </p>
+                {/* Document Number Input (if not verified) */}
+                {!doc.verified && (
+                  <div className="space-y-2 md:space-y-3">
+                    <div>
+                      <label className="text-xs md:text-sm font-medium block mb-1.5 md:mb-2" style={{ color: theme.colors.textSecondary }}>
+                        {doc.id === 'aadhaar' ? 'Aadhaar Number' : doc.id === 'pan' ? 'PAN Number' : 'Driving License Number'}
+                      </label>
+                      <input
+                        type="text"
+                        value={doc.number}
+                        onChange={(e) => doc.setNumber(e.target.value)}
+                        placeholder={doc.id === 'aadhaar' ? 'Enter 12-digit Aadhaar' : doc.id === 'pan' ? 'Enter PAN (e.g., ABCDE1234F)' : 'Enter DL Number'}
+                        className="w-full px-3 py-2.5 md:py-3 rounded-lg bg-white border text-sm md:text-base focus:outline-none transition-colors"
+                        style={{
+                          borderColor: theme.colors.borderDefault,
+                          color: theme.colors.textPrimary,
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                        onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                        maxLength={doc.id === 'aadhaar' ? 12 : doc.id === 'pan' ? 10 : 20}
+                      />
+                    </div>
+                    
+                    {/* DigiLocker Verify Button */}
+                    <button
+                      onClick={() => handleDigiLockerVerify(doc.id)}
+                      disabled={isSubmitting}
+                      className="w-full py-2.5 md:py-3 rounded-lg font-semibold text-sm md:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
+                      style={{
+                        backgroundColor: theme.colors.primary,
+                        color: theme.colors.white,
+                      }}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 md:h-5 md:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <span>Verify via DigiLocker</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Verified Status */}
+                {doc.verified && (
+                  <div className="flex items-center gap-2 p-2 md:p-3 rounded-lg bg-green-50">
+                    <svg className="w-4 h-4 md:w-5 md:h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-xs md:text-sm font-medium text-green-700">
+                      Verified via DigiLocker
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Info Card */}
-      <div className="px-4 pb-4">
-        <div className="bg-purple-50 rounded-lg p-3 border" style={{ borderColor: `${theme.colors.primary}30` }}>
-          <div className="flex items-start gap-2">
-            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: theme.colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <h4 className="text-xs font-semibold mb-1" style={{ color: theme.colors.primary }}>
-                About DigiLocker Verification
-              </h4>
-              <p className="text-xs leading-relaxed" style={{ color: theme.colors.textSecondary }}>
-                DigiLocker is a secure platform by the Government of India. Your documents are verified directly from government databases, ensuring authenticity and security. No physical documents are required.
-              </p>
+      <div className="px-4 pb-4 md:pb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-purple-50 rounded-lg p-3 md:p-5 border" style={{ borderColor: `${theme.colors.primary}30` }}>
+            <div className="flex items-start gap-2 md:gap-3">
+              <svg className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5 md:mt-1" style={{ color: theme.colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h4 className="text-xs md:text-base font-semibold mb-1 md:mb-2" style={{ color: theme.colors.primary }}>
+                  About DigiLocker Verification
+                </h4>
+                <p className="text-xs md:text-sm leading-relaxed" style={{ color: theme.colors.textSecondary }}>
+                  DigiLocker is a secure platform by the Government of India. Your documents are verified directly from government databases, ensuring authenticity and security. No physical documents are required.
+                </p>
+              </div>
             </div>
           </div>
         </div>

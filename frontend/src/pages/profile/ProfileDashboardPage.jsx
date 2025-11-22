@@ -137,90 +137,92 @@ const ProfileDashboardPage = () => {
         </div>
 
         {/* Header Content */}
-        <div className="relative px-4 py-3">
-          {/* Back Button, Profile Icon, and User Name - All Aligned */}
-          <div className="flex items-center gap-3">
-            {/* Back Button */}
-            <button
-              onClick={() => navigate(-1)}
-              className="p-1.5 -ml-1 touch-target flex-shrink-0"
-              aria-label="Go back"
-            >
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <div className="relative px-4 py-3 md:px-6 md:py-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Back Button, Profile Icon, and User Name - All Aligned */}
+            <div className="flex items-center gap-3 md:gap-6">
+              {/* Back Button */}
+              <button
+                onClick={() => navigate(-1)}
+                className="p-1.5 -ml-1 touch-target flex-shrink-0 md:p-2"
+                aria-label="Go back"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5 md:w-6 md:h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
 
-            {/* Profile Photo */}
-            <div className="relative">
-              {userPhoto ? (
-                <img
-                  src={userPhoto}
-                  alt={userName}
-                  className="w-14 h-14 rounded-full border-2 border-white object-cover shadow-md"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white flex items-center justify-center shadow-md">
-                  <svg
-                    className="w-7 h-7 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </div>
-              )}
-              {profileComplete && (
-                <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 flex items-center justify-center" style={{ borderColor: PRIMARY_COLOR }}>
-                  <svg
-                    className="w-2 h-2 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
+              {/* Profile Photo */}
+              <div className="relative">
+                {userPhoto ? (
+                  <img
+                    src={userPhoto}
+                    alt={userName}
+                    className="w-14 h-14 md:w-20 md:h-20 rounded-full border-2 border-white object-cover shadow-md"
+                  />
+                ) : (
+                  <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-white/20 border-2 border-white flex items-center justify-center shadow-md">
+                    <svg
+                      className="w-7 h-7 md:w-10 md:h-10 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                  </div>
+                )}
+                {profileComplete && (
+                  <div className="absolute bottom-0 right-0 w-4 h-4 md:w-5 md:h-5 bg-green-500 rounded-full border-2 flex items-center justify-center" style={{ borderColor: PRIMARY_COLOR }}>
+                    <svg
+                      className="w-2 h-2 md:w-2.5 md:h-2.5 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </div>
 
-            {/* Name and Email */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold text-white mb-0.5 truncate">{userName}</h1>
-              <p className="text-xs text-white/80 truncate">{userEmail}</p>
+              {/* Name and Email */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg md:text-2xl font-bold text-white mb-0.5 md:mb-1 truncate">{userName}</h1>
+                <p className="text-xs md:text-sm text-white/80 truncate">{userEmail}</p>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="px-3 pt-4 pb-3 w-full" style={{ backgroundColor: '#ffffff' }}>
+      <main className="px-3 pt-4 pb-3 md:px-6 md:pt-8 md:pb-6 w-full max-w-7xl mx-auto" style={{ backgroundColor: '#ffffff' }}>
         {/* Profile Completion Status Card */}
         {!profileComplete && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-            <div className="flex items-start gap-2">
-              <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 mb-3 md:mb-6">
+            <div className="flex items-start gap-2 md:gap-3">
+              <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-4 h-4 text-yellow-900"
+                  className="w-4 h-4 md:w-5 md:h-5 text-yellow-900"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -234,18 +236,18 @@ const ProfileDashboardPage = () => {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <h3 className="text-xs font-semibold text-yellow-900">
+                <div className="flex items-center justify-between gap-2 mb-0.5 md:mb-1">
+                  <h3 className="text-xs md:text-sm font-semibold text-yellow-900">
                     Complete Your Profile
                   </h3>
-                  <span className="text-xs font-bold text-yellow-900">0%</span>
+                  <span className="text-xs md:text-sm font-bold text-yellow-900">0%</span>
                 </div>
-                <p className="text-xs text-yellow-700 mb-1.5">
+                <p className="text-xs md:text-sm text-yellow-700 mb-1.5 md:mb-2">
                   Complete your profile to start booking cars
                 </p>
                 <button
                   onClick={() => navigate('/profile/complete')}
-                  className="text-xs font-medium text-yellow-900 underline"
+                  className="text-xs md:text-sm font-medium text-yellow-900 underline hover:no-underline"
                 >
                   Complete Now →
                 </button>
@@ -255,18 +257,18 @@ const ProfileDashboardPage = () => {
         )}
 
         {/* Menu Options */}
-        <div className="space-y-1.5 pt-2">
+        <div className="space-y-1.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 pt-2">
           {menuOptions.map((option) => (
             <button
               key={option.id}
               onClick={() => navigate(option.path)}
-              className="w-full bg-white rounded-lg p-3 flex items-center justify-between shadow-sm border border-gray-100 hover:shadow-md transition-all touch-target group"
+              className="w-full bg-white rounded-lg p-3 md:p-4 flex items-center justify-between shadow-sm border border-gray-100 hover:shadow-md md:hover:shadow-lg transition-all touch-target group"
             >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Icon */}
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${PRIMARY_COLOR}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${PRIMARY_COLOR}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${PRIMARY_COLOR}1A`}>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${PRIMARY_COLOR}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${PRIMARY_COLOR}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${PRIMARY_COLOR}1A`}>
                   <svg
-                    className="w-5 h-5"
+                    className="w-5 h-5 md:w-6 md:h-6"
                     style={{ color: PRIMARY_COLOR }}
                     fill="none"
                     stroke="currentColor"
@@ -277,20 +279,20 @@ const ProfileDashboardPage = () => {
                 </div>
 
                 {/* Label */}
-                <span className="text-sm font-medium text-gray-900 truncate">{option.label}</span>
+                <span className="text-sm md:text-base font-medium text-gray-900 truncate">{option.label}</span>
               </div>
 
               {/* Badge and Arrow */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
                 {option.badge && (
                   <span
-                    className={`${option.badgeColor} text-white text-xs font-semibold px-1.5 py-0.5 rounded-full`}
+                    className={`${option.badgeColor} text-white text-xs md:text-sm font-semibold px-1.5 md:px-2 py-0.5 md:py-1 rounded-full`}
                   >
                     {option.badge}
                   </span>
                 )}
                 <svg
-                  className="w-4 h-4 text-gray-400 transition-colors"
+                  className="w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-colors"
                   onMouseEnter={(e) => e.currentTarget.style.color = PRIMARY_COLOR}
                   onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
                   fill="none"
@@ -311,13 +313,13 @@ const ProfileDashboardPage = () => {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="w-full bg-red-50 rounded-lg p-3 flex items-center justify-between shadow-sm border border-red-100 hover:shadow-md transition-all touch-target group mt-3"
+            className="w-full bg-red-50 rounded-lg p-3 md:p-4 flex items-center justify-between shadow-sm border border-red-100 hover:shadow-md md:hover:shadow-lg transition-all touch-target group mt-3 md:mt-4 md:col-span-2"
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
               {/* Icon */}
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors flex-shrink-0">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors flex-shrink-0">
                 <svg
-                  className="w-5 h-5 text-red-600"
+                  className="w-5 h-5 md:w-6 md:h-6 text-red-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -332,12 +334,12 @@ const ProfileDashboardPage = () => {
               </div>
 
               {/* Label */}
-              <span className="text-sm font-medium text-red-600">Logout</span>
+              <span className="text-sm md:text-base font-medium text-red-600">Logout</span>
             </div>
 
             {/* Arrow */}
             <svg
-              className="w-4 h-4 text-red-400 group-hover:text-red-600 transition-colors flex-shrink-0"
+              className="w-4 h-4 md:w-5 md:h-5 text-red-400 group-hover:text-red-600 transition-colors flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -354,22 +356,22 @@ const ProfileDashboardPage = () => {
 
         {/* Referral Code Display */}
         {referralCode && (
-          <div className="mt-3 rounded-lg p-3 text-white" style={{ background: `linear-gradient(to right, ${PRIMARY_COLOR}, ${PRIMARY_COLOR_LIGHT})` }}>
-            <div className="flex items-center justify-between gap-2">
+          <div className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white" style={{ background: `linear-gradient(to right, ${PRIMARY_COLOR}, ${PRIMARY_COLOR_LIGHT})` }}>
+            <div className="flex items-center justify-between gap-2 md:gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-white/80 mb-0.5">Your Referral Code</p>
-                <p className="text-sm font-bold font-mono truncate">{referralCode}</p>
+                <p className="text-xs md:text-sm text-white/80 mb-0.5 md:mb-1">Your Referral Code</p>
+                <p className="text-sm md:text-lg font-bold font-mono truncate">{referralCode}</p>
               </div>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(referralCode);
                   toastUtils.success('Referral code copied!');
                 }}
-                className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 touch-target"
+                className="p-1.5 md:p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 touch-target"
                 aria-label="Copy referral code"
               >
                 <svg
-                  className="w-4 h-4 text-white"
+                  className="w-4 h-4 md:w-5 md:h-5 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

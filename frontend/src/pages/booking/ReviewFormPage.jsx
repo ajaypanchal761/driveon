@@ -119,10 +119,10 @@ const ReviewFormPage = () => {
   const renderStarRating = (rating, hovered, onRate, onHover, onLeave, label) => {
     return (
       <div className="space-y-2">
-        <label className="text-sm font-medium" style={{ color: theme.colors.textSecondary }}>
+        <label className="text-sm md:text-base font-medium" style={{ color: theme.colors.textSecondary }}>
           {label}
         </label>
-        <div className="flex items-center gap-1" onMouseLeave={onLeave}>
+        <div className="flex items-center gap-1 md:gap-2" onMouseLeave={onLeave}>
           {[1, 2, 3, 4, 5].map((star) => {
             const displayRating = hovered || rating;
             const isFilled = star <= displayRating;
@@ -132,11 +132,11 @@ const ReviewFormPage = () => {
                 type="button"
                 onClick={() => onRate(star)}
                 onMouseEnter={() => onHover(star)}
-                className="focus:outline-none transition-transform active:scale-95"
+                className="focus:outline-none transition-transform active:scale-95 hover:scale-110"
                 aria-label={`Rate ${star} stars`}
               >
                 <svg
-                  className={`w-8 h-8 transition-colors ${
+                  className={`w-8 h-8 md:w-9 md:h-9 transition-colors ${
                     isFilled ? 'text-yellow-400 fill-current' : 'text-gray-300 fill-current'
                   }`}
                   viewBox="0 0 20 20"
@@ -148,7 +148,7 @@ const ReviewFormPage = () => {
           })}
         </div>
         {rating > 0 && (
-          <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+          <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>
             {rating} out of 5 stars
           </p>
         )}
@@ -184,88 +184,96 @@ const ReviewFormPage = () => {
     <div className="min-h-screen pb-24 bg-white">
       {/* Header */}
       <header className="text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
-        <div className="relative px-4 pt-3 pb-2">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-1.5 -ml-1 touch-target"
-              aria-label="Go back"
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h1 className="text-lg font-bold text-white">Write Review</h1>
-            <div className="w-8"></div>
+        <div className="relative px-4 pt-3 pb-2 md:px-6 md:py-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-1.5 md:p-2 -ml-1 touch-target hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Go back"
+              >
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h1 className="text-lg md:text-2xl font-bold text-white">Write Review</h1>
+              <div className="w-8 md:w-12"></div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Car Summary Card */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-          <img src={booking.car.image} alt={`${booking.car.brand} ${booking.car.model}`} className="w-16 h-16 object-contain" />
-          <div className="flex-1">
-            <h3 className="font-bold" style={{ color: theme.colors.textPrimary }}>{booking.car.brand} {booking.car.model}</h3>
-            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
-              {booking.pickupDate} to {booking.dropDate}
-            </p>
+      <div className="px-4 pt-4 pb-2 md:pt-6 md:pb-2">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg md:rounded-xl p-3 md:p-4 flex items-center gap-3 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
+            <img src={booking.car.image} alt={`${booking.car.brand} ${booking.car.model}`} className="w-16 h-16 md:w-20 md:h-20 object-contain" />
+            <div className="flex-1">
+              <h3 className="font-bold text-base md:text-lg" style={{ color: theme.colors.textPrimary }}>{booking.car.brand} {booking.car.model}</h3>
+              <p className="text-sm md:text-base" style={{ color: theme.colors.textSecondary }}>
+                {booking.pickupDate} to {booking.dropDate}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Review Form */}
-      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-2 space-y-6">
-        {/* Trip Experience Rating */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-          {renderStarRating(
-            tripRating,
-            hoveredRating,
-            setTripRating,
-            (star) => setHoveredRating(star),
-            () => setHoveredRating(0),
-            'Rate Your Trip Experience'
-          )}
-        </div>
+      <form onSubmit={handleSubmit} className="px-4 pt-4 pb-2 md:pt-6 md:pb-2 space-y-3 md:space-y-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Trip Experience Rating */}
+          <div className="bg-white rounded-lg md:rounded-xl p-3 md:p-4 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
+            {renderStarRating(
+              tripRating,
+              hoveredRating,
+              setTripRating,
+              (star) => setHoveredRating(star),
+              () => setHoveredRating(0),
+              'Rate Your Trip Experience'
+            )}
+          </div>
 
-        {/* Review Comment */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-          <label className="text-sm font-medium mb-2 block" style={{ color: theme.colors.textSecondary }}>
-            Write Your Review
-          </label>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={5}
-            className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors resize-none"
-            style={{ 
-              borderColor: theme.colors.borderDefault,
-              color: theme.colors.textPrimary,
-            }}
-            onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-            onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-            placeholder="Share your experience with this car rental..."
-            required
-          />
-          <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>
-            {comment.length} characters
-          </p>
+          {/* Review Comment */}
+          <div className="bg-white rounded-lg md:rounded-xl p-3 md:p-4 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
+            <label className="text-sm md:text-base font-medium mb-2 block" style={{ color: theme.colors.textSecondary }}>
+              Write Your Review
+            </label>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={5}
+              className="w-full px-3 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors resize-none"
+              style={{ 
+                borderColor: theme.colors.borderDefault,
+                color: theme.colors.textPrimary,
+              }}
+              onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+              onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+              placeholder="Share your experience with this car rental..."
+              required
+            />
+            <p className="text-xs md:text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+              {comment.length} characters
+            </p>
+          </div>
         </div>
 
         {/* Submit Button - Fixed Bottom */}
-        <div className="fixed bottom-0 left-0 right-0 border-t-2 border-white/20 px-4 py-4 z-50 shadow-2xl" style={{ backgroundColor: theme.colors.primary }}>
-          <button
-            type="submit"
-            disabled={isSubmitting || tripRating === 0 || !comment.trim()}
-            className="w-full py-3.5 rounded-lg font-bold shadow-xl touch-target active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: '#ffffff',
-              color: theme.colors.primary,
-              boxShadow: '0 4px 14px 0 rgba(255, 255, 255, 0.3)',
-            }}
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
-          </button>
+        <div className="fixed bottom-0 left-0 right-0 border-t-2 border-white/20 px-4 md:px-6 py-4 md:py-5 z-50 shadow-2xl" style={{ backgroundColor: theme.colors.primary }}>
+          <div className="max-w-4xl mx-auto">
+            <button
+              type="submit"
+              disabled={isSubmitting || tripRating === 0 || !comment.trim()}
+              className="w-full md:w-auto md:max-w-xs md:mx-auto block py-3 md:py-3.5 px-6 md:px-8 rounded-lg md:rounded-xl font-bold text-sm md:text-base shadow-xl touch-target active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: '#ffffff',
+                color: theme.colors.primary,
+                boxShadow: '0 4px 14px 0 rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

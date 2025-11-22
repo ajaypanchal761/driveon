@@ -733,8 +733,8 @@ const CarListingPage = () => {
             <div className="flex items-center gap-3 md:gap-4">
               {/* Back Button */}
               <button
-                onClick={() => navigate(-1)}
-                className="p-1.5 -ml-1 touch-target hover:opacity-80 transition-opacity"
+                onClick={() => navigate('/')}
+                className="p-1.5 -ml-1 touch-target hover:opacity-80 transition-opacity hover:bg-white/10 rounded-lg"
                 aria-label="Go back"
               >
                 <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

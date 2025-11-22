@@ -91,6 +91,12 @@ const ReportsPage = lazy(() =>
 const AdminSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminSettingsPage")
 );
+const AdminLoginPage = lazy(() =>
+  import("../pages/admin/AdminLoginPage")
+);
+const AdminSignupPage = lazy(() =>
+  import("../pages/admin/AdminSignupPage")
+);
 const OwnerDashboardPage = lazy(() =>
   import("../pages/owner/OwnerDashboardPage")
 );
@@ -123,6 +129,15 @@ const router = createBrowserRouter([
       {
         path: "verify-otp",
         element: <VerifyOTPPage />,
+      },
+      // Admin Auth Routes (public - no authentication required)
+      {
+        path: "admin/login",
+        element: <AdminLoginPage />,
+      },
+      {
+        path: "admin/signup",
+        element: <AdminSignupPage />,
       },
       // Admin Routes (require admin role and use AdminLayout)
       {

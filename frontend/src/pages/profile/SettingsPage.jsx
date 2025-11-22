@@ -216,189 +216,218 @@ const SettingsPage = () => {
       </header>
 
       {/* Settings Sections */}
-      <div className="px-4 py-4 space-y-5">
-        {settingsSections.map((section) => (
-          <div key={section.id} className="bg-white rounded-xl shadow-lg border-2 overflow-hidden" style={{ borderColor: theme.colors.borderLight }}>
-            {/* Section Header */}
-            <div className="px-4 pt-4 pb-3 border-b-2 bg-gradient-to-r to-white" style={{ borderColor: `${theme.colors.primary}20`, background: `linear-gradient(to right, ${theme.colors.primary}08, white)` }}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${theme.colors.primary}20` }}>
-                  <div style={{ color: theme.colors.primary }}>
-                    {section.icon}
+      <div className="px-4 pt-6 pb-4 md:pt-8 md:pb-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="space-y-4 md:space-y-5">
+            {settingsSections.map((section) => (
+              <div key={section.id} className="bg-white rounded-xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-shadow" style={{ borderColor: theme.colors.borderLight }}>
+                {/* Section Header */}
+                <div className="px-4 md:px-5 pt-3 md:pt-4 pb-2.5 md:pb-3 border-b-2 bg-gradient-to-r to-white" style={{ borderColor: `${theme.colors.primary}20`, background: `linear-gradient(to right, ${theme.colors.primary}08, white)` }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${theme.colors.primary}20` }}>
+                      <div className="w-5 h-5 md:w-6 md:h-6" style={{ color: theme.colors.primary }}>
+                        {section.icon}
+                      </div>
+                    </div>
+                    <h2 className="text-base md:text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
+                      {section.title}
+                    </h2>
                   </div>
                 </div>
-                <h2 className="text-base font-bold" style={{ color: theme.colors.textPrimary }}>
-                  {section.title}
-                </h2>
-              </div>
-            </div>
 
-            {/* Section Items */}
-            <div className="divide-y" style={{ borderColor: `${theme.colors.borderLight}80` }}>
-              {section.items.map((item, index) => (
-                <div
-                  key={item.id}
-                  className={`px-4 transition-colors hover:bg-gray-50 ${index === 0 ? 'pt-4' : ''} ${index === section.items.length - 1 ? 'pb-4' : 'py-4'}`}
-                >
-                  {item.toggle !== undefined ? (
-                    // Toggle Item
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        {item.icon && (
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: `${theme.colors.primary}10` }}>
-                            <div style={{ color: theme.colors.primary }}>
-                              {item.icon}
+                {/* Section Items */}
+                <div className="divide-y" style={{ borderColor: `${theme.colors.borderLight}80` }}>
+                  {section.items.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className={`px-4 md:px-5 transition-colors hover:bg-gray-50 ${index === 0 ? 'pt-3 md:pt-4' : ''} ${index === section.items.length - 1 ? 'pb-3 md:pb-4' : 'py-3 md:py-4'}`}
+                    >
+                      {item.toggle !== undefined ? (
+                        // Toggle Item
+                        <div className="flex items-center justify-between gap-3 md:gap-4">
+                          <div className="flex items-start gap-2.5 md:gap-3 flex-1 min-w-0">
+                            {item.icon && (
+                              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: `${theme.colors.primary}10` }}>
+                                <div className="w-4 h-4 md:w-5 md:h-5" style={{ color: theme.colors.primary }}>
+                                  {item.icon}
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm md:text-base font-bold mb-0.5 md:mb-1" style={{ color: theme.colors.textPrimary }}>
+                                {item.label}
+                              </p>
+                              <p className="text-xs md:text-sm leading-relaxed" style={{ color: theme.colors.textSecondary }}>
+                                {item.description}
+                              </p>
                             </div>
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold mb-1" style={{ color: theme.colors.textPrimary }}>
-                            {item.label}
-                          </p>
-                          <p className="text-xs leading-relaxed" style={{ color: theme.colors.textSecondary }}>
-                            {item.description}
-                          </p>
-                        </div>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={item.toggle}
-                          onChange={(e) => item.onToggle(e.target.checked)}
-                          className="sr-only peer"
-                          style={{
-                            '--tw-ring-color': `${theme.colors.primary}50`,
-                          }}
-                          onFocus={(e) => {
-                            e.target.parentElement.querySelector('div').style.outline = `2px solid ${theme.colors.primary}50`;
-                            e.target.parentElement.querySelector('div').style.outlineOffset = '2px';
-                          }}
-                          onBlur={(e) => {
-                            e.target.parentElement.querySelector('div').style.outline = 'none';
-                            e.target.parentElement.querySelector('div').style.outlineOffset = '0';
-                          }}
-                        />
-                        <div 
-                          className="w-12 h-6 rounded-full transition-all duration-300 shadow-inner"
-                          style={{
-                            backgroundColor: item.toggle ? theme.colors.primary : '#d1d5db',
-                            boxShadow: item.toggle ? `inset 0 2px 4px ${theme.colors.primary}40` : 'inset 0 2px 4px rgba(0,0,0,0.1)',
-                          }}
-                        >
-                          <div 
-                            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${
-                              item.toggle ? 'translate-x-6' : 'translate-x-0'
-                            }`}
-                          ></div>
-                        </div>
-                      </label>
-                    </div>
-                  ) : (
-                    // Action Item
-                    <button
-                      onClick={item.action}
-                      className="w-full flex items-center justify-between group active:scale-[0.98] transition-transform"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                        {item.icon && (
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors group-hover:scale-110" style={{ backgroundColor: `${theme.colors.primary}10`, color: theme.colors.primary }}>
-                            {item.icon}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p 
-                              className="text-sm font-bold transition-colors" 
-                              style={{ 
-                                color: theme.colors.textPrimary,
+                          <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={item.toggle}
+                              onChange={(e) => item.onToggle(e.target.checked)}
+                              className="sr-only peer"
+                              style={{
+                                '--tw-ring-color': `${theme.colors.primary}50`,
                               }}
-                              onMouseEnter={(e) => e.target.style.color = theme.colors.primary}
-                              onMouseLeave={(e) => e.target.style.color = theme.colors.textPrimary}
+                              onFocus={(e) => {
+                                e.target.parentElement.querySelector('div').style.outline = `2px solid ${theme.colors.primary}50`;
+                                e.target.parentElement.querySelector('div').style.outlineOffset = '2px';
+                              }}
+                              onBlur={(e) => {
+                                e.target.parentElement.querySelector('div').style.outline = 'none';
+                                e.target.parentElement.querySelector('div').style.outlineOffset = '0';
+                              }}
+                            />
+                            <div 
+                              className="w-12 h-6 md:w-14 md:h-7 rounded-full transition-all duration-300 shadow-inner"
+                              style={{
+                                backgroundColor: item.toggle ? theme.colors.primary : '#d1d5db',
+                                boxShadow: item.toggle ? `inset 0 2px 4px ${theme.colors.primary}40` : 'inset 0 2px 4px rgba(0,0,0,0.1)',
+                              }}
                             >
-                              {item.label}
-                            </p>
-                          </div>
-                          <p className="text-xs leading-relaxed mb-0.5" style={{ color: theme.colors.textSecondary }}>
-                            {item.description}
-                          </p>
-                          {item.value && (
-                            <p className="text-xs font-semibold mt-1 inline-block px-2 py-0.5 rounded-md" style={{ backgroundColor: `${theme.colors.primary}15`, color: theme.colors.primary }}>
-                              {item.value}
-                            </p>
-                          )}
+                              <div 
+                                className={`absolute top-0.5 left-0.5 w-5 h-5 md:w-6 md:h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                                  item.toggle ? 'md:translate-x-7 translate-x-6' : 'translate-x-0'
+                                }`}
+                              ></div>
+                            </div>
+                          </label>
                         </div>
-                      </div>
-                      <div className="flex-shrink-0 ml-2">
-                        <div 
-                          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                          style={{ backgroundColor: 'transparent' }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = `${theme.colors.primary}15`}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      ) : (
+                        // Action Item
+                        <button
+                          onClick={item.action}
+                          className="w-full flex items-center justify-between group active:scale-[0.98] transition-transform"
                         >
-                          <svg 
-                            className="w-5 h-5 transition-colors" 
-                            style={{ color: '#9ca3af' }}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                            onMouseEnter={(e) => e.target.style.color = theme.colors.primary}
-                            onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </button>
-                  )}
+                          <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0 text-left">
+                            {item.icon && (
+                              <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors group-hover:scale-110" style={{ backgroundColor: `${theme.colors.primary}10`, color: theme.colors.primary }}>
+                                <div className="w-4 h-4 md:w-5 md:h-5">
+                                  {item.icon}
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5 md:mb-1">
+                                <p 
+                                  className="text-sm md:text-base font-bold transition-colors" 
+                                  style={{ 
+                                    color: theme.colors.textPrimary,
+                                  }}
+                                  onMouseEnter={(e) => e.target.style.color = theme.colors.primary}
+                                  onMouseLeave={(e) => e.target.style.color = theme.colors.textPrimary}
+                                >
+                                  {item.label}
+                                </p>
+                              </div>
+                              <p className="text-xs md:text-sm leading-relaxed mb-0.5" style={{ color: theme.colors.textSecondary }}>
+                                {item.description}
+                              </p>
+                              {item.value && (
+                                <p className="text-xs md:text-sm font-semibold mt-1 inline-block px-2 md:px-3 py-0.5 md:py-1 rounded-md" style={{ backgroundColor: `${theme.colors.primary}15`, color: theme.colors.primary }}>
+                                  {item.value}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 ml-2">
+                            <div 
+                              className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center transition-colors"
+                              style={{ backgroundColor: 'transparent' }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = `${theme.colors.primary}15`}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                            >
+                              <svg 
+                                className="w-5 h-5 md:w-6 md:h-6 transition-colors" 
+                                style={{ color: '#9ca3af' }}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                                onMouseEnter={(e) => e.target.style.color = theme.colors.primary}
+                                onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        ))}
 
-        {/* Save Button */}
-        <button
-          onClick={handleSaveSettings}
-          disabled={isSaving}
-          className="w-full py-4 rounded-xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2"
-          style={{
-            background: `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.primaryLight} 100%)`,
-            color: theme.colors.white,
-          }}
-        >
-          {isSaving ? (
-            <>
-              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Saving...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Save Settings</span>
-            </>
-          )}
-        </button>
+          {/* Buttons Container */}
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 mt-5 md:mt-6">
+            {/* Save Button */}
+            <button
+              onClick={handleSaveSettings}
+              disabled={isSaving}
+              className="flex-1 md:flex-none md:w-auto md:min-w-[200px] py-3.5 md:py-4 px-6 md:px-8 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-2xl active:scale-[0.98] flex items-center justify-center gap-2 md:gap-3"
+              style={{
+                background: `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.primaryLight} 100%)`,
+                color: theme.colors.white,
+                boxShadow: `0 10px 25px -5px ${theme.colors.primary}30`,
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = `0 15px 35px -5px ${theme.colors.primary}40`;
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = `0 10px 25px -5px ${theme.colors.primary}30`;
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 md:h-6 md:w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Save Settings</span>
+                </>
+              )}
+            </button>
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className="w-full py-4 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2 border-2"
-          style={{
-            backgroundColor: theme.colors.white,
-            color: theme.colors.error,
-            borderColor: theme.colors.error,
-          }}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span>Logout</span>
-        </button>
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex-1 md:flex-none md:w-auto md:min-w-[200px] py-3.5 md:py-4 px-6 md:px-8 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-[0.98] flex items-center justify-center gap-2 md:gap-3 border-2"
+              style={{
+                backgroundColor: theme.colors.white,
+                color: theme.colors.error,
+                borderColor: theme.colors.error,
+                boxShadow: `0 10px 25px -5px ${theme.colors.error}20`,
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = `0 15px 35px -5px ${theme.colors.error}30`;
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.backgroundColor = `${theme.colors.error}05`;
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = `0 10px 25px -5px ${theme.colors.error}20`;
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.backgroundColor = theme.colors.white;
+              }}
+            >
+              <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

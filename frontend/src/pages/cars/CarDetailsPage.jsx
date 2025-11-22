@@ -360,21 +360,21 @@ const CarDetailsPage = () => {
         {/* Desktop: Main Image with Thumbnails */}
         <div className="hidden md:block w-full">
           {/* Main Image */}
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 lg:p-8 xl:p-10 mb-4 lg:mb-6 flex items-center justify-center min-h-[400px] lg:min-h-[500px] xl:min-h-[600px] shadow-inner">
+          <div className="rounded-xl p-4 lg:p-5 xl:p-6 mb-3 lg:mb-4 flex items-center justify-center min-h-[280px] lg:min-h-[320px] xl:min-h-[360px]">
             <img
               src={carImages[currentImageIndex]}
               alt={`${car.brand} ${car.model} - Main`}
-              className="max-w-full max-h-[400px] lg:max-h-[500px] xl:max-h-[600px] object-contain transition-opacity duration-300"
+              className="max-w-full max-h-[280px] lg:max-h-[320px] xl:max-h-[360px] object-contain transition-opacity duration-300"
               draggable={false}
             />
           </div>
           
           {/* Thumbnail Grid */}
-          <div className="grid grid-cols-4 gap-3 lg:gap-4">
+          <div className="grid grid-cols-4 gap-2 lg:gap-3">
             {carImages.map((image, index) => (
               <div
                 key={index}
-                className={`bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 lg:p-4 cursor-pointer transition-all duration-200 ${
+                className={`rounded-lg p-2 lg:p-2.5 cursor-pointer transition-all duration-200 ${
                   currentImageIndex === index 
                     ? 'ring-2 ring-white shadow-lg scale-105 opacity-100' 
                     : 'hover:opacity-80 hover:scale-102 opacity-70'
@@ -384,7 +384,7 @@ const CarDetailsPage = () => {
                 <img
                   src={image}
                   alt={`${car.brand} ${car.model} - Thumbnail ${index + 1}`}
-                  className="w-full h-24 lg:h-28 xl:h-32 object-contain"
+                  className="w-full h-16 lg:h-20 xl:h-24 object-contain"
                   draggable={false}
                 />
               </div>
@@ -635,7 +635,7 @@ const CarDetailsPage = () => {
       >
         <div className="flex items-center justify-between max-w-md md:max-w-7xl md:mx-auto">
           {/* Price - Same line alignment */}
-          <div className="flex flex-col md:flex-row md:items-baseline gap-0.5 md:gap-1">
+          <div className="flex flex-row items-baseline gap-1">
             <span className="text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white">
               Rs. {car.price}
             </span>
