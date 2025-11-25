@@ -787,7 +787,7 @@ const CarListingPage = () => {
       </div>
 
       {/* Header Section - Purple Background - Sticky */}
-      <header className="sticky top-0 z-50 bg-[#272343] text-white relative overflow-hidden shadow-md">
+      <header className="sticky top-0 z-50 bg-[#1e6262] text-white relative overflow-hidden shadow-md">
         <div className="px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 md:max-w-7xl md:mx-auto">
           {/* Back Button, Title and Filter - Same Line */}
           <div className="flex items-center justify-between">

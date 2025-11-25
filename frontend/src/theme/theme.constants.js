@@ -3,6 +3,8 @@
  * Centralized theme configuration for the entire application
  * All colors, spacing, and design tokens are defined here
  * 
+ * SINGLE SOURCE OF TRUTH: All colors are managed in theme/colors.js
+ * 
  * Usage:
  * import { theme } from '../theme/theme.constants';
  * 
@@ -11,37 +13,56 @@
  */
 
 import { customTheme } from './themes/custom.theme';
+import premiumColors from './colors';
 
 // Export theme colors as constants for easy access
 export const theme = {
   colors: {
-    // Primary Colors
-    primary: customTheme.colors.primary.DEFAULT, // #272343
-    primaryDark: customTheme.colors.primary.dark, // #1f1c35
-    primaryLight: customTheme.colors.primary.light, // #3a4169
+    // Primary Colors - Main brand color (#1c205c)
+    primary: customTheme.colors.primary.DEFAULT, // #1c205c
+    primaryDark: customTheme.colors.primary.dark, // #1a1c45
+    primaryLight: customTheme.colors.primary.light, // #2693b9
+    
+    // Secondary Colors - Supporting elements (#21598b)
+    secondary: customTheme.colors.secondary.DEFAULT, // #21598b
+    secondaryDark: customTheme.colors.secondary.dark,
+    secondaryLight: customTheme.colors.secondary.light,
+    
+    // Accent Colors - Highlights and CTAs (#25b8d7)
+    accent: customTheme.colors.accent.DEFAULT, // #25b8d7
+    accentDark: customTheme.colors.accent.dark,
+    accentLight: customTheme.colors.accent.light,
     
     // Background Colors
     background: customTheme.colors.background.primary, // #ffffff
-    backgroundSecondary: customTheme.colors.background.secondary, // #f1f1f1
-    backgroundTertiary: customTheme.colors.background.tertiary, // #e8e8e8
+    backgroundSecondary: customTheme.colors.background.secondary, // #f8f9fa
+    backgroundTertiary: customTheme.colors.background.tertiary, // #e9ecef
+    backgroundDark: customTheme.colors.background.dark, // #1a1c45
     
     // Text Colors
-    textPrimary: customTheme.colors.text.primary, // #1a1a1a
-    textSecondary: customTheme.colors.text.secondary, // #4a4a4a
-    textTertiary: customTheme.colors.text.tertiary, // #808080
+    textPrimary: customTheme.colors.text.primary, // #1a1c45
+    textSecondary: customTheme.colors.text.secondary, // #283b61
+    textTertiary: customTheme.colors.text.tertiary, // #6f7886
     textInverse: customTheme.colors.text.inverse, // #ffffff
+    textDisabled: customTheme.colors.text.disabled, // #b6bdc8
     
     // Border Colors
-    borderLight: customTheme.colors.border.light, // #e8e8e8
-    borderDefault: customTheme.colors.border.DEFAULT, // #d0d0d0
-    borderDark: customTheme.colors.border.dark, // #a0a0a0
-    borderFocus: customTheme.colors.border.focus, // #272343
+    borderLight: customTheme.colors.border.light, // #e0e3e8
+    borderDefault: customTheme.colors.border.DEFAULT, // #cbd0d8
+    borderDark: customTheme.colors.border.dark, // #8c97a8
+    borderFocus: customTheme.colors.border.focus, // #25b8d7
+    borderPrimary: customTheme.colors.border.primary, // #1c205c
     
     // Status Colors
-    success: customTheme.colors.success.DEFAULT, // #28a745
-    error: customTheme.colors.error.DEFAULT, // #dc3545
-    warning: customTheme.colors.warning.DEFAULT, // #ffc107
-    info: customTheme.colors.info.DEFAULT, // #17a2b8
+    success: customTheme.colors.success.DEFAULT, // #4caf50
+    error: customTheme.colors.error.DEFAULT, // #f44336
+    warning: customTheme.colors.warning.DEFAULT, // #ff9800
+    info: customTheme.colors.info.DEFAULT, // #2377a4
+    
+    // Neutral Colors
+    neutral: premiumColors.neutral.DEFAULT, // #8c97a8
+    neutralDark: premiumColors.neutral.dark, // #283b61
+    neutralLight: premiumColors.neutral.light, // #b6bdc8
     
     // Neutral Colors
     white: customTheme.colors.white, // #ffffff
@@ -92,6 +113,12 @@ export const {
   primary,
   primaryDark,
   primaryLight,
+  secondary,
+  secondaryDark,
+  secondaryLight,
+  accent,
+  accentDark,
+  accentLight,
   background,
   backgroundSecondary,
   textPrimary,
@@ -102,5 +129,6 @@ export const {
   success,
   error,
   warning,
+  info,
 } = theme.colors;
 

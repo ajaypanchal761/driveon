@@ -6,13 +6,13 @@ import { clearUser, updateUser } from '../../store/slices/userSlice';
 import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
 // Theme color constant
-const PRIMARY_COLOR = '#272343';
-const PRIMARY_COLOR_LIGHT = '#3a4169';
+const PRIMARY_COLOR = '#1e6262';
+const PRIMARY_COLOR_LIGHT = '#2d767f';
 
 /**
  * ProfileDashboardPage Component
  * Beautiful profile page with user info and menu options
- * Matches homepage theme (blue #272343)
+ * Matches homepage theme (teal #1e6262)
  * Mobile-first design
  */
 const ProfileDashboardPage = () => {

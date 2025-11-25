@@ -1,90 +1,112 @@
-// Custom Theme - Your Brand Colors
-// Primary: #272343, White: #ffffff, Background: #e3f6f5
+// Premium Theme - Centralized Color Management
+// All colors imported from colors.js for single source of truth
+// Primary: #1c205c, Accent: #25b8d7, Secondary: #21598b
+
+import premiumColors from '../colors';
 
 export const customTheme = {
   name: 'custom',
   colors: {
-    // Primary Colors
+    // Primary Colors - Main brand color (#1c205c)
     primary: {
-      50: '#e8e9f0',
-      100: '#d1d3e1',
-      200: '#a3a7c3',
-      300: '#757ba5',
-      400: '#474f87',
-      500: '#3a4169',
-      600: '#2d3350',
-      700: '#272343', // Main brand color
-      800: '#1f1c35',
-      900: '#171527',
-      DEFAULT: '#272343',
-      dark: '#1f1c35',
-      light: '#3a4169',
+      50: premiumColors.primary[50],
+      100: premiumColors.primary[100],
+      200: premiumColors.primary[200],
+      300: premiumColors.primary[300],
+      400: premiumColors.primary[400],
+      500: premiumColors.primary[500],
+      600: premiumColors.primary[600],
+      700: premiumColors.primary[700],
+      800: premiumColors.primary[800],
+      900: premiumColors.primary[900],
+      DEFAULT: premiumColors.primary.DEFAULT, // #1c205c
+      dark: premiumColors.primary.dark, // #1a1c45
+      light: premiumColors.primary.light, // #2693b9
     },
     
-    // Secondary Colors (complementary to primary)
+    // Secondary Colors - Supporting elements (#21598b)
     secondary: {
-      50: '#f0f0f0',
-      100: '#e0e0e0',
-      200: '#d0d0d0',
-      300: '#c0c0c0',
-      400: '#b0b0b0',
-      500: '#a0a0a0',
-      600: '#909090',
-      700: '#808080',
-      800: '#707070',
-      900: '#606060',
-      DEFAULT: '#808080',
+      50: premiumColors.secondary[50],
+      100: premiumColors.secondary[100],
+      200: premiumColors.secondary[200],
+      300: premiumColors.secondary[300],
+      400: premiumColors.secondary[400],
+      500: premiumColors.secondary[500],
+      600: premiumColors.secondary[600],
+      700: premiumColors.secondary[700],
+      800: premiumColors.secondary[800],
+      900: premiumColors.secondary[900],
+      DEFAULT: premiumColors.secondary.DEFAULT, // #21598b
+      dark: premiumColors.secondary.dark,
+      light: premiumColors.secondary.light,
+    },
+
+    // Accent Colors - Highlights and CTAs (#25b8d7)
+    accent: {
+      50: premiumColors.accent[50],
+      100: premiumColors.accent[100],
+      200: premiumColors.accent[200],
+      300: premiumColors.accent[300],
+      400: premiumColors.accent[400],
+      500: premiumColors.accent[500],
+      600: premiumColors.accent[600],
+      700: premiumColors.accent[700],
+      800: premiumColors.accent[800],
+      900: premiumColors.accent[900],
+      DEFAULT: premiumColors.accent.DEFAULT, // #25b8d7
+      dark: premiumColors.accent.dark,
+      light: premiumColors.accent.light,
     },
 
     // Neutral Colors
-    white: '#ffffff',
-    black: '#000000',
+    white: premiumColors.white,
+    black: premiumColors.black,
     
     // Background Colors
     background: {
-      primary: '#ffffff',
-      secondary: '#e3f6f5',
-      tertiary: '#bae8e8',
-      dark: '#1a1a1a',
+      primary: premiumColors.background.primary,
+      secondary: premiumColors.background.secondary,
+      tertiary: premiumColors.background.tertiary,
+      dark: premiumColors.background.dark,
     },
 
     // Text Colors
     text: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
-      tertiary: '#808080',
-      inverse: '#ffffff',
-      disabled: '#b0b0b0',
+      primary: premiumColors.text.primary,
+      secondary: premiumColors.text.secondary,
+      tertiary: premiumColors.text.tertiary,
+      inverse: premiumColors.text.inverse,
+      disabled: premiumColors.text.disabled,
     },
 
     // Border Colors
     border: {
-      light: '#bae8e8',
-      DEFAULT: '#d0d0d0',
-      dark: '#a0a0a0',
-      focus: '#272343',
+      light: premiumColors.border.light,
+      DEFAULT: premiumColors.border.DEFAULT,
+      dark: premiumColors.border.dark,
+      focus: premiumColors.border.focus, // #25b8d7
     },
 
     // Status Colors
     success: {
-      light: '#d4edda',
-      DEFAULT: '#28a745',
-      dark: '#155724',
+      light: premiumColors.success.light,
+      DEFAULT: premiumColors.success.DEFAULT,
+      dark: premiumColors.success.dark,
     },
     error: {
-      light: '#f8d7da',
-      DEFAULT: '#dc3545',
-      dark: '#721c24',
+      light: premiumColors.error.light,
+      DEFAULT: premiumColors.error.DEFAULT,
+      dark: premiumColors.error.dark,
     },
     warning: {
-      light: '#fff3cd',
-      DEFAULT: '#ffc107',
-      dark: '#856404',
+      light: premiumColors.warning.light,
+      DEFAULT: premiumColors.warning.DEFAULT,
+      dark: premiumColors.warning.dark,
     },
     info: {
-      light: '#d1ecf1',
-      DEFAULT: '#17a2b8',
-      dark: '#0c5460',
+      light: premiumColors.info.light,
+      DEFAULT: premiumColors.info.DEFAULT, // #2377a4
+      dark: premiumColors.info.dark,
     },
   },
 
@@ -172,4 +194,3 @@ export const customTheme = {
     '2xl': '1536px',
   },
 };
-

@@ -1,46 +1,52 @@
 // Light Theme (Default fallback)
+// Uses premium color palette
+
+import premiumColors from '../colors';
 
 export const lightTheme = {
   name: 'light',
   colors: {
     primary: {
-      DEFAULT: '#272343',
-      dark: '#1f1c35',
-      light: '#3a4169',
+      DEFAULT: premiumColors.primary.DEFAULT, // #1c205c
+      dark: premiumColors.primary.dark, // #1a1c45
+      light: premiumColors.primary.light, // #2693b9
     },
     secondary: {
-      DEFAULT: '#808080',
+      DEFAULT: premiumColors.secondary.DEFAULT, // #21598b
     },
-    white: '#ffffff',
-    black: '#000000',
+    accent: {
+      DEFAULT: premiumColors.accent.DEFAULT, // #25b8d7
+    },
+    white: premiumColors.white,
+    black: premiumColors.black,
     background: {
-      primary: '#ffffff',
-      secondary: '#e3f6f5',
-      tertiary: '#bae8e8',
+      primary: premiumColors.background.primary,
+      secondary: premiumColors.background.secondary,
+      tertiary: premiumColors.background.tertiary,
     },
     text: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
-      tertiary: '#808080',
-      inverse: '#ffffff',
+      primary: premiumColors.text.primary,
+      secondary: premiumColors.text.secondary,
+      tertiary: premiumColors.text.tertiary,
+      inverse: premiumColors.text.inverse,
     },
     border: {
-      light: '#bae8e8',
-      DEFAULT: '#d0d0d0',
-      dark: '#a0a0a0',
-      focus: '#272343',
+      light: premiumColors.border.light,
+      DEFAULT: premiumColors.border.DEFAULT,
+      dark: premiumColors.border.dark,
+      focus: premiumColors.border.focus, // #25b8d7
     },
     success: {
-      DEFAULT: '#28a745',
+      DEFAULT: premiumColors.success.DEFAULT,
     },
     error: {
-      DEFAULT: '#dc3545',
+      DEFAULT: premiumColors.error.DEFAULT,
     },
     warning: {
-      DEFAULT: '#ffc107',
+      DEFAULT: premiumColors.warning.DEFAULT,
     },
     info: {
-      DEFAULT: '#17a2b8',
+      DEFAULT: premiumColors.info.DEFAULT, // #2377a4
     },
   },
 };

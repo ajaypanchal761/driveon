@@ -102,7 +102,7 @@ const AdminSignupPage = () => {
     <div
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{
-        backgroundColor: '#272343',
+        backgroundColor: '#1e6262',
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -172,7 +172,7 @@ const AdminSignupPage = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="mt-0.5 text-[10px] text-gray-600 hover:text-gray-900 flex items-center gap-0.5"
-                style={{ color: '#272343' }}
+                style={{ color: '#1e6262' }}
               >
                 {showPassword ? (
                   <>
@@ -232,7 +232,7 @@ const AdminSignupPage = () => {
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="mt-0.5 text-[10px] text-gray-600 hover:text-gray-900 flex items-center gap-0.5"
-                style={{ color: '#272343' }}
+                style={{ color: '#1e6262' }}
               >
                 {showConfirmPassword ? (
                   <>
@@ -286,7 +286,7 @@ const AdminSignupPage = () => {
                   {...register('termsAccepted')}
                   className="mt-0.5 w-3 h-3 rounded focus:ring-2"
                   style={{
-                    accentColor: '#272343',
+                    accentColor: '#1e6262',
                     borderColor: '#d0d0d0',
                   }}
                 />
@@ -295,7 +295,7 @@ const AdminSignupPage = () => {
                   <Link
                     to="/terms"
                     className="font-medium hover:underline"
-                    style={{ color: '#272343' }}
+                    style={{ color: '#1e6262' }}
                     target="_blank"
                   >
                     Terms
@@ -304,7 +304,7 @@ const AdminSignupPage = () => {
                   <Link
                     to="/privacy"
                     className="font-medium hover:underline"
-                    style={{ color: '#272343' }}
+                    style={{ color: '#1e6262' }}
                     target="_blank"
                   >
                     Privacy
@@ -327,7 +327,7 @@ const AdminSignupPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-2"
-              style={{ backgroundColor: '#272343' }}
+              style={{ backgroundColor: '#1e6262' }}
             >
               Create Account
             </Button>

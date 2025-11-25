@@ -22,8 +22,7 @@ import carImg7 from '../../assets/car_img7-removebg-preview.png';
 const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.user);
-  const [location, setLocation] = useState('Lombok mataram');
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [location] = useState('Lombok mataram');
   const [topCarTypes, setTopCarTypes] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -159,49 +158,13 @@ const HomePage = () => {
 
         {/* Header Content */}
         <div className="relative px-3 py-2 flex items-center justify-between md:px-6 md:py-3 lg:px-8 lg:py-4 md:max-w-7xl md:mx-auto">
-          {/* Location Section */}
-          <div className="flex items-center gap-1.5 flex-1 md:gap-2 lg:gap-3">
-            <svg
-              className="w-4 h-4 text-white md:w-5 md:h-5 lg:w-6 lg:h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            <div className="flex-1">
-              <div className="text-[10px] text-white/80 md:text-xs lg:text-sm">Your location</div>
-              <button
-                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                className="flex items-center gap-0.5 text-xs font-medium md:text-sm lg:text-base md:gap-1 hover:opacity-80 transition-opacity"
-              >
-                {location}
-                <svg
-                  className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-            </div>
+          {/* Logo */}
+          <div className="flex items-center ml-2 md:-ml-2">
+            <img
+              src="/driveonlogo.png"
+              alt="DriveOn Logo"
+              className="h-10 md:h-12 lg:h-14 w-auto object-contain"
+            />
           </div>
 
           {/* Profile Picture */}

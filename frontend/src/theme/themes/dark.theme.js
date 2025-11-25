@@ -1,46 +1,52 @@
 // Dark Theme
+// Uses premium color palette with lighter variants for dark mode
+
+import premiumColors from '../colors';
 
 export const darkTheme = {
   name: 'dark',
   colors: {
     primary: {
-      DEFAULT: '#3a4169', // Lighter blue for dark mode
-      dark: '#272343',
-      light: '#474f87',
+      DEFAULT: premiumColors.primary.light, // #2693b9 - Lighter for dark mode
+      dark: premiumColors.primary.DEFAULT, // #1c205c
+      light: premiumColors.accent.DEFAULT, // #25b8d7
     },
     secondary: {
-      DEFAULT: '#a0a0a0',
+      DEFAULT: premiumColors.secondary.light, // Lighter for dark mode
     },
-    white: '#ffffff',
-    black: '#000000',
+    accent: {
+      DEFAULT: premiumColors.accent.DEFAULT, // #25b8d7
+    },
+    white: premiumColors.white,
+    black: premiumColors.black,
     background: {
-      primary: '#1a1a1a',
+      primary: premiumColors.background.dark, // #1a1c45
       secondary: '#2a2a2a',
       tertiary: '#3a3a3a',
     },
     text: {
-      primary: '#ffffff',
+      primary: premiumColors.white,
       secondary: '#d0d0d0',
-      tertiary: '#a0a0a0',
-      inverse: '#1a1a1a',
+      tertiary: premiumColors.neutral.light,
+      inverse: premiumColors.background.dark,
     },
     border: {
       light: '#3a3a3a',
       DEFAULT: '#4a4a4a',
       dark: '#5a5a5a',
-      focus: '#3a4169',
+      focus: premiumColors.accent.DEFAULT, // #25b8d7
     },
     success: {
-      DEFAULT: '#4ade80',
+      DEFAULT: premiumColors.success.light,
     },
     error: {
-      DEFAULT: '#f87171',
+      DEFAULT: premiumColors.error.light,
     },
     warning: {
-      DEFAULT: '#fbbf24',
+      DEFAULT: premiumColors.warning.light,
     },
     info: {
-      DEFAULT: '#60a5fa',
+      DEFAULT: premiumColors.info.light, // Lighter for dark mode
     },
   },
 };
