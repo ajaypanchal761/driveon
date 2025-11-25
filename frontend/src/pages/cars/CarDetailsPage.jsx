@@ -786,8 +786,8 @@ const CarDetailsPage = () => {
           {/* Rent Now Button - White with theme color text */}
           <button
             onClick={() => {
-              // Navigate to booking page or show booking modal
-              navigate(`/booking/${car.id}`);
+              // Navigate to rent now booking page
+              navigate(`/rent-now/${car.id}`);
             }}
             className="px-8 py-3.5 md:px-10 md:py-4 lg:px-14 lg:py-4 xl:px-16 xl:py-5 rounded-lg md:rounded-xl text-sm md:text-base lg:text-lg xl:text-xl font-bold shadow-xl touch-target active:scale-95 md:active:scale-100 transition-all hover:shadow-2xl hover:scale-105"
             style={{

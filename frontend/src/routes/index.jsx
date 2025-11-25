@@ -17,6 +17,7 @@ const CarListingPage = lazy(() => import("../pages/cars/CarListingPage"));
 const CarDetailsPage = lazy(() => import("../pages/cars/CarDetailsPage"));
 const CarReviewsPage = lazy(() => import("../pages/cars/CarReviewsPage"));
 const BookingFormPage = lazy(() => import("../pages/booking/BookingFormPage"));
+const RentNowPage = lazy(() => import("../pages/booking/RentNowPage"));
 const BookingDateTimePage = lazy(() =>
   import("../pages/booking/BookingDateTimePage")
 );
@@ -349,6 +350,10 @@ const router = createBrowserRouter([
       {
         path: "cars/:id/reviews",
         element: <CarReviewsPage />,
+      },
+      {
+        path: "rent-now/:carId",
+        element: <RentNowPage />,
       },
       {
         path: "booking/:carId",
