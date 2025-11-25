@@ -4,6 +4,11 @@ import {
   adminLogin,
   refreshAdminToken,
   getAdminProfile,
+  updateAdminProfile,
+  changeAdminPassword,
+  getDashboardStats,
+  getSystemSettings,
+  updateSystemSettings,
   adminLogout,
   getAllUsers,
   getUserById,
@@ -49,6 +54,26 @@ router.post('/refresh-token', refreshAdminToken);
 // Get Admin Profile - PROTECTED
 // Route: GET /api/admin/profile
 router.get('/profile', authenticateAdmin, getAdminProfile);
+
+// Update Admin Profile - PROTECTED
+// Route: PUT /api/admin/profile
+router.put('/profile', authenticateAdmin, updateAdminProfile);
+
+// Change Admin Password - PROTECTED
+// Route: PUT /api/admin/change-password
+router.put('/change-password', authenticateAdmin, changeAdminPassword);
+
+// Get Dashboard Statistics - PROTECTED
+// Route: GET /api/admin/dashboard/stats
+router.get('/dashboard/stats', authenticateAdmin, getDashboardStats);
+
+// Get System Settings - PROTECTED
+// Route: GET /api/admin/settings
+router.get('/settings', authenticateAdmin, getSystemSettings);
+
+// Update System Settings - PROTECTED
+// Route: PUT /api/admin/settings
+router.put('/settings', authenticateAdmin, updateSystemSettings);
 
 // Admin Logout - PROTECTED
 // Route: POST /api/admin/logout

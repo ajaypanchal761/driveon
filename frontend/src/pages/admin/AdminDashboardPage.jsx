@@ -35,21 +35,24 @@ const AdminDashboardPage = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch total users count
-        const usersResponse = await adminService.getAllUsers({
-          page: 1,
-          limit: 1, // We only need the total count
-        });
+        setDashboardData(prev => ({ ...prev, loading: true }));
 
-        if (usersResponse.success && usersResponse.data) {
-          const totalUsers = usersResponse.data.pagination?.total || 0;
+        // Fetch dashboard statistics from backend
+        const statsResponse = await adminService.getDashboardStats();
+
+        if (statsResponse.success && statsResponse.data) {
+          const stats = statsResponse.data.stats;
           
           setDashboardData(prev => ({
             ...prev,
             loading: false,
             stats: {
-              ...prev.stats,
-              totalUsers: totalUsers,
+              totalUsers: stats.totalUsers || 0,
+              totalCars: stats.totalCars || 0,
+              activeBookings: stats.activeBookings || 0,
+              pendingKYC: stats.pendingKYC || 0,
+              todayRevenue: stats.todayRevenue || 0,
+              activeTrips: stats.activeTrips || 0,
             },
           }));
         } else {

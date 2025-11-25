@@ -276,6 +276,82 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Update Admin Profile
+   * @param {Object} data - Profile data (name, phone)
+   * @returns {Promise}
+   */
+  updateProfile: async (data) => {
+    try {
+      const response = await api.put('/admin/profile', data);
+      return response.data;
+    } catch (error) {
+      console.error('Update admin profile error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Change Admin Password
+   * @param {Object} data - Password data (currentPassword, newPassword)
+   * @returns {Promise}
+   */
+  changePassword: async (data) => {
+    try {
+      const response = await api.put('/admin/change-password', {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Change admin password error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Dashboard Statistics
+   * @returns {Promise}
+   */
+  getDashboardStats: async () => {
+    try {
+      const response = await api.get('/admin/dashboard/stats');
+      return response.data;
+    } catch (error) {
+      console.error('Get dashboard stats error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get System Settings
+   * @returns {Promise}
+   */
+  getSystemSettings: async () => {
+    try {
+      const response = await api.get('/admin/settings');
+      return response.data;
+    } catch (error) {
+      console.error('Get system settings error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update System Settings
+   * @param {Object} data - Settings data (appName, contactEmail, contactPhone)
+   * @returns {Promise}
+   */
+  updateSystemSettings: async (data) => {
+    try {
+      const response = await api.put('/admin/settings', data);
+      return response.data;
+    } catch (error) {
+      console.error('Update system settings error:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;

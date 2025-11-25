@@ -1,5 +1,6 @@
 import Admin from '../models/Admin.js';
 import User from '../models/User.js';
+import Car from '../models/Car.js';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 
 /**
@@ -471,6 +472,277 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error fetching users',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Update Admin Profile
+ * @route   PUT /api/admin/profile
+ * @access  Private (Admin)
+ */
+export const updateAdminProfile = async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const admin = await Admin.findById(req.user._id);
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin not found'
+      });
+    }
+
+    // Update fields if provided
+    if (name !== undefined) {
+      admin.name = name.trim();
+    }
+    if (phone !== undefined) {
+      admin.phone = phone?.trim() || undefined;
+    }
+
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        admin: {
+          id: admin._id,
+          name: admin.name,
+          email: admin.email,
+          phone: admin.phone,
+          role: admin.role,
+          permissions: admin.permissions,
+          isActive: admin.isActive,
+          lastLogin: admin.lastLogin,
+          profilePhoto: admin.profilePhoto,
+          department: admin.department,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update admin profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating admin profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Change Admin Password
+ * @route   PUT /api/admin/change-password
+ * @access  Private (Admin)
+ */
+export const changeAdminPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Find admin with password field
+    const admin = await Admin.findById(req.user._id).select('+password');
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin not found'
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await admin.comparePassword(currentPassword);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update password (will be hashed by pre-save hook)
+    admin.password = newPassword;
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change admin password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error changing password',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Get Dashboard Statistics
+ * @route   GET /api/admin/dashboard/stats
+ * @access  Private (Admin)
+ */
+export const getDashboardStats = async (req, res) => {
+  try {
+    // Get total users count
+    const totalUsers = await User.countDocuments();
+
+    // Get total cars count
+    const totalCars = await Car.countDocuments();
+
+    // Get active cars count
+    const activeCars = await Car.countDocuments({ status: 'active' });
+
+    // Get pending KYC count (users with unverified email or phone)
+    const pendingKYC = await User.countDocuments({
+      $or: [
+        { isPhoneVerified: false },
+        { isEmailVerified: false },
+      ],
+    });
+
+    // Get active bookings count (if Booking model exists, otherwise 0)
+    // For now, we'll return 0 as there's no Booking model yet
+    const activeBookings = 0;
+
+    // Get today's revenue (if Payment/Booking model exists, otherwise 0)
+    // For now, we'll return 0
+    const todayRevenue = 0;
+
+    // Get active trips (same as active bookings for now)
+    const activeTrips = activeBookings;
+
+    // Get additional stats
+    const totalActiveUsers = await User.countDocuments({ 
+      isActive: true,
+      accountStatus: 'active',
+    });
+
+    const totalPendingCars = await Car.countDocuments({ status: 'pending' });
+
+    const totalSuspendedCars = await Car.countDocuments({ status: 'suspended' });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        stats: {
+          totalUsers,
+          totalCars,
+          activeCars,
+          activeBookings,
+          pendingKYC,
+          todayRevenue,
+          activeTrips,
+          totalActiveUsers,
+          totalPendingCars,
+          totalSuspendedCars,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get dashboard stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching dashboard statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Get System Settings
+ * @route   GET /api/admin/settings
+ * @access  Private (Admin)
+ */
+export const getSystemSettings = async (req, res) => {
+  try {
+    // For now, return default settings
+    // In future, you can store these in a database
+    const settings = {
+      appName: process.env.APP_NAME || 'DriveOn',
+      contactEmail: process.env.CONTACT_EMAIL || 'driveon721@gmail.com',
+      contactPhone: process.env.CONTACT_PHONE || '+91 98765 43210',
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        settings,
+      },
+    });
+  } catch (error) {
+    console.error('Get system settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching system settings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Update System Settings
+ * @route   PUT /api/admin/settings
+ * @access  Private (Admin)
+ */
+export const updateSystemSettings = async (req, res) => {
+  try {
+    const { appName, contactEmail, contactPhone } = req.body;
+
+    // Validation
+    if (!appName || !contactEmail || !contactPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'App name, contact email, and contact phone are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(contactEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format'
+      });
+    }
+
+    // For now, we'll just return success
+    // In future, you can store these in a database or environment variables
+    // You could create a Settings model or use a config file
+    
+    res.status(200).json({
+      success: true,
+      message: 'System settings updated successfully',
+      data: {
+        settings: {
+          appName: appName.trim(),
+          contactEmail: contactEmail.trim().toLowerCase(),
+          contactPhone: contactPhone.trim(),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update system settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating system settings',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

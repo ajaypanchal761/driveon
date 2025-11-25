@@ -260,6 +260,23 @@ export const AdminProvider = ({ children }) => {
   }, []);
 
   /**
+   * Refresh admin profile - fetches latest admin data
+   */
+  const refreshProfile = useCallback(async () => {
+    try {
+      const response = await adminService.getProfile();
+      if (response.success && response.data?.admin) {
+        setAdminUser(response.data.admin);
+        setIsAuthenticated(true);
+        return response.data.admin;
+      }
+    } catch (error) {
+      console.error('Error refreshing admin profile:', error);
+      throw error;
+    }
+  }, []);
+
+  /**
    * Logout function - clears admin state and calls backend
    */
   const logout = useCallback(async () => {
@@ -298,6 +315,7 @@ export const AdminProvider = ({ children }) => {
     login,
     signup,
     logout,
+    refreshProfile,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
