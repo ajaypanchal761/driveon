@@ -52,6 +52,17 @@ export const API_ENDPOINTS = {
   PRICING: {
     CALCULATE: '/pricing/calculate',
   },
+  SUPPORT: {
+    CREATE_TICKET: '/tickets',
+    GET_TICKETS: '/tickets',
+    GET_TICKET: '/tickets',
+    ADD_MESSAGE: '/tickets',
+    // Admin endpoints
+    ADMIN_GET_TICKETS: '/admin/tickets',
+    ADMIN_GET_TICKET: '/admin/tickets',
+    ADMIN_UPDATE_STATUS: '/admin/tickets',
+    ADMIN_ADD_RESPONSE: '/admin/tickets',
+  },
 };
 
 // User Roles

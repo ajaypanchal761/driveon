@@ -24,6 +24,12 @@ import {
   toggleFeatured,
   togglePopular,
 } from '../controllers/admin.car.controller.js';
+import {
+  getAllTickets,
+  getTicketByIdAdmin,
+  updateTicketStatus,
+  addAdminResponse,
+} from '../controllers/support.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 
 const router = express.Router();
@@ -161,6 +167,26 @@ router.put('/cars/:carId/featured', authenticateAdmin, toggleFeatured);
 // Toggle Popular Status - PROTECTED
 // Route: PUT /api/admin/cars/:carId/popular
 router.put('/cars/:carId/popular', authenticateAdmin, togglePopular);
+
+// ============================================
+// SUPPORT TICKET MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Get All Support Tickets - PROTECTED
+// Route: GET /api/admin/tickets
+router.get('/tickets', authenticateAdmin, getAllTickets);
+
+// Get Ticket by ID - PROTECTED
+// Route: GET /api/admin/tickets/:ticketId
+router.get('/tickets/:ticketId', authenticateAdmin, getTicketByIdAdmin);
+
+// Update Ticket Status - PROTECTED
+// Route: PUT /api/admin/tickets/:ticketId/status
+router.put('/tickets/:ticketId/status', authenticateAdmin, updateTicketStatus);
+
+// Add Admin Response - PROTECTED
+// Route: POST /api/admin/tickets/:ticketId/response
+router.post('/tickets/:ticketId/response', authenticateAdmin, addAdminResponse);
 
 export default router;
 

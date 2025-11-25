@@ -54,6 +54,7 @@ const ReferralDashboardPage = lazy(() =>
   import("../pages/profile/ReferralDashboardPage")
 );
 const SettingsPage = lazy(() => import("../pages/profile/SettingsPage"));
+const SupportPage = lazy(() => import("../pages/profile/SupportPage"));
 const AdminDashboardPage = lazy(() =>
   import("../pages/admin/AdminDashboardPage")
 );
@@ -98,6 +99,9 @@ const ReportsPage = lazy(() =>
 );
 const AdminSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminSettingsPage")
+);
+const AdminSupportPage = lazy(() =>
+  import("../pages/admin/support/AdminSupportPage")
 );
 const AdminLoginPage = lazy(() =>
   import("../pages/admin/AdminLoginPage")
@@ -310,6 +314,10 @@ const router = createBrowserRouter([
                 element: <ReportsPage />,
               },
               {
+                path: "admin/support",
+                element: <AdminSupportPage />,
+              },
+              {
                 path: "admin/settings",
                 element: <AdminSettingsPage />,
               },
@@ -392,6 +400,10 @@ const router = createBrowserRouter([
           {
             path: "profile/settings",
             element: <SettingsPage />,
+          },
+          {
+            path: "profile/support",
+            element: <SupportPage />,
           },
           {
             path: "bookings",
