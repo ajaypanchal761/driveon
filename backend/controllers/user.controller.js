@@ -20,7 +20,8 @@ const calculateProfileComplete = (user) => {
   let completedFields = 0;
   
   fields.forEach((field) => {
-    if (user[field] && user[field] !== '') {
+    // Check if field exists and is not empty
+    if (user[field] !== undefined && user[field] !== null && user[field] !== '') {
       completedFields++;
     }
   });
@@ -58,13 +59,13 @@ export const getProfile = async (req, res) => {
       data: {
         user: {
           id: user._id,
-          name: user.name,
+          name: user.name || '',
           email: user.email,
           phone: user.phone,
           age: user.age,
           gender: user.gender,
-          address: user.address,
-          profilePhoto: user.profilePhoto,
+          address: user.address || '',
+          profilePhoto: user.profilePhoto || '',
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
@@ -93,6 +94,8 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { name, age, gender, address } = req.body;
+    console.log('📝 Update Profile - Received data:', { name, age, gender, address });
+    
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -102,16 +105,53 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    // Update allowed fields
-    if (name !== undefined) user.name = name;
-    if (age !== undefined) user.age = parseInt(age);
-    if (gender !== undefined) user.gender = gender;
-    if (address !== undefined) user.address = address;
+    // Update allowed fields (only update if provided)
+    if (name !== undefined && name !== null && name !== '') {
+      user.name = name.trim();
+      console.log('✅ Updated name:', user.name);
+    }
+    
+    // Handle age - can be number or string
+    if (age !== undefined && age !== null && age !== '') {
+      const ageNum = typeof age === 'number' ? age : parseInt(String(age), 10);
+      console.log('🔍 Age processing:', { age, ageNum, isValid: !isNaN(ageNum) && ageNum >= 18 && ageNum <= 100 });
+      if (!isNaN(ageNum) && ageNum >= 18 && ageNum <= 100) {
+        user.age = ageNum;
+        console.log('✅ Updated age:', user.age);
+      } else {
+        console.warn('⚠️ Invalid age value:', age, '->', ageNum, '(must be between 18-100)');
+      }
+    } else {
+      console.log('ℹ️ Age not provided or empty');
+    }
+    
+    // Handle gender
+    if (gender !== undefined && gender !== null && gender !== '') {
+      const genderLower = String(gender).toLowerCase();
+      if (['male', 'female', 'other'].includes(genderLower)) {
+        user.gender = genderLower;
+        console.log('✅ Updated gender:', user.gender);
+      } else {
+        console.warn('⚠️ Invalid gender value:', gender, '(must be male, female, or other)');
+      }
+    } else {
+      console.log('ℹ️ Gender not provided or empty');
+    }
+    
+    // Handle address
+    if (address !== undefined && address !== null && address !== '') {
+      user.address = address.trim();
+      console.log('✅ Updated address:', user.address);
+    } else {
+      console.log('ℹ️ Address not provided or empty');
+    }
 
     // Calculate and update profile completion
     user.profileComplete = calculateProfileComplete(user);
+    console.log('📊 Profile completion:', user.profileComplete + '%');
     
     await user.save();
+    console.log('💾 User saved successfully');
 
     res.status(200).json({
       success: true,
@@ -119,14 +159,18 @@ export const updateProfile = async (req, res) => {
       data: {
         user: {
           id: user._id,
-          name: user.name,
+          name: user.name || '',
           email: user.email,
           phone: user.phone,
           age: user.age,
           gender: user.gender,
-          address: user.address,
-          profilePhoto: user.profilePhoto,
+          address: user.address || '',
+          profilePhoto: user.profilePhoto || '',
           profileComplete: user.profileComplete,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          isPhoneVerified: user.isPhoneVerified,
+          referralCode: user.referralCode,
         },
       },
     });

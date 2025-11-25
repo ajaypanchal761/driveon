@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       trim: true,
+      default: '',
     },
     age: {
       type: Number,
@@ -44,7 +45,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'owner', 'guarantor', 'admin'],
+      enum: ['user', 'owner', 'guarantor'],
       default: 'user',
     },
     isEmailVerified: {
@@ -68,14 +69,31 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    accountStatus: {
+      type: String,
+      enum: ['active', 'suspended', 'banned'],
+      default: 'active',
+    },
+    password: {
+      type: String,
+      select: false, // Don't include password in queries by default
+      minlength: [6, 'Password must be at least 6 characters'],
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Generate referral code before saving
+// Hash password before saving (only if password is modified and exists)
 userSchema.pre('save', async function (next) {
+  // Hash password if it's modified and exists
+  if (this.isModified('password') && this.password) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
+  
+  // Generate referral code before saving (only for new users)
   if (this.isNew && !this.referralCode) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = 'DRIVE';
@@ -97,6 +115,14 @@ userSchema.pre('save', async function (next) {
   
   next();
 });
+
+// Method to compare password
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) {
+    return false;
+  }
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 const User = mongoose.model('User', userSchema);
 

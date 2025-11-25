@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
+import { carService } from '../../services/car.service';
+import toastUtils from '../../config/toast';
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
 import carImg2 from '../../assets/car_img2-removebg-preview.png';
 import carImg3 from '../../assets/car_img3-removebg-preview.png';
@@ -20,8 +22,93 @@ const CarDetailsPage = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const scrollContainerRef = useRef(null);
+  const [car, setCar] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock car data based on document.txt structure
+  // Fetch car details from backend
+  useEffect(() => {
+    const fetchCarDetails = async () => {
+      if (!id) {
+        setError('Car ID is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await carService.getCarDetails(id);
+        
+        if (response.success && response.data?.car) {
+          const carData = response.data.car;
+          
+          // Format car data for display
+          // Extract images - handle both array of objects and array of strings
+          let images = [];
+          if (carData.images && Array.isArray(carData.images)) {
+            images = carData.images.map(img => {
+              if (typeof img === 'string') return img;
+              return img.url || img.path || null;
+            }).filter(img => img);
+          } else if (carData.primaryImage) {
+            images = [carData.primaryImage];
+          }
+          
+          const formattedCar = {
+            id: carData._id || carData.id,
+            brand: carData.brand || '',
+            model: carData.model || '',
+            variant: carData.variant || carData.model || '',
+            year: carData.year || new Date().getFullYear(),
+            price: carData.pricePerDay || 0,
+            images: images,
+            seats: carData.seatingCapacity || 5,
+            transmission: carData.transmission === 'automatic' ? 'Automatic' : carData.transmission === 'manual' ? 'Manual' : carData.transmission || 'Manual',
+            fuelType: carData.fuelType === 'petrol' ? 'Petrol' : carData.fuelType === 'diesel' ? 'Diesel' : carData.fuelType === 'electric' ? 'Electric' : carData.fuelType === 'hybrid' ? 'Hybrid' : carData.fuelType || 'Petrol',
+            color: carData.color || 'N/A',
+            carType: carData.carType || 'Sedan',
+            rating: carData.averageRating || 0,
+            horsepower: carData.horsepower || carData.enginePower || 0,
+            mileage: carData.mileage || 'N/A',
+            location: (() => {
+              // Handle location - could be string or object
+              if (typeof carData.location === 'string') {
+                return carData.location;
+              } else if (carData.location && typeof carData.location === 'object') {
+                // Format object location: {city, state, address}
+                const parts = [];
+                if (carData.location.city) parts.push(carData.location.city);
+                if (carData.location.state) parts.push(carData.location.state);
+                return parts.length > 0 ? parts.join(', ') : (carData.location.address || 'N/A');
+              }
+              return carData.city || 'N/A';
+            })(),
+            ownerName: carData.owner?.name || 'DriveOn Premium',
+            ownerRating: carData.owner?.rating || 4.5,
+            description: carData.description || 'Premium car available for rent.',
+            reviews: carData.totalReviews || 0,
+            features: carData.features || ['Air Conditioning', 'GPS Navigation', 'Bluetooth', 'USB Charging', 'Leather Seats'],
+          };
+          
+          setCar(formattedCar);
+        } else {
+          setError('Car not found');
+          toastUtils.error('Car not found');
+        }
+      } catch (error) {
+        console.error('Error fetching car details:', error);
+        setError('Failed to load car details');
+        toastUtils.error('Failed to load car details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCarDetails();
+  }, [id]);
+
+  // Mock car data based on document.txt structure (fallback)
   const carsData = {
     '1': {
       id: '1',
@@ -186,20 +273,74 @@ const CarDetailsPage = () => {
     },
   };
 
-  const car = carsData[id];
-
-  // Generate multiple images for the car (using same image 3-4 times)
-  const carImages = car ? [car.image, car.image, car.image, car.image] : [];
-
-  // If car not found, redirect to listing page
-  useEffect(() => {
-    if (!car) {
-      navigate('/cars');
+  // Generate car images from fetched data or use fallback
+  const getCarImages = () => {
+    if (!car) return [];
+    
+    // If car has images array
+    if (car.images && car.images.length > 0) {
+      const imageUrls = car.images
+        .map(img => (typeof img === 'string' ? img : img.url))
+        .filter(url => url);
+      
+      if (imageUrls.length > 0) {
+        // If we have multiple images, use them; otherwise duplicate the first one
+        return imageUrls.length >= 4 ? imageUrls.slice(0, 4) : 
+               imageUrls.length === 1 ? [imageUrls[0], imageUrls[0], imageUrls[0], imageUrls[0]] :
+               imageUrls;
+      }
     }
-  }, [car, navigate]);
+    
+    // Fallback to default image
+    return [carImg1, carImg1, carImg1, carImg1];
+  };
+  
+  const carImages = getCarImages();
 
-  if (!car) {
-    return null;
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: theme.colors.primary }}>
+        <div className="text-center">
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
+            style={{ borderColor: '#ffffff' }}
+          ></div>
+          <p className="text-white">Loading car details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state or car not found
+  if (error || !car) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: theme.colors.primary }}>
+        <div className="text-center">
+          <svg
+            className="w-16 h-16 text-white/50 mx-auto mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <h2 className="text-xl font-bold text-white mb-2">Car Not Found</h2>
+          <p className="text-white/80 mb-4">{error || 'The car you are looking for does not exist.'}</p>
+          <button
+            onClick={() => navigate('/cars')}
+            className="px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+          >
+            Back to Cars
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Handle previous image

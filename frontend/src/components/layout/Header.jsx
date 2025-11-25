@@ -36,10 +36,7 @@ const Header = () => {
   return (
     <>
       {/* Mobile Header - Exactly like design */}
-      <header className="md:hidden bg-primary text-white">
-        {/* Status bar spacing */}
-        <div className="h-6"></div>
-        
+      <header className="md:hidden bg-primary text-white pt-0">
         {/* Main Header */}
         <div className="px-4 py-3 flex items-center justify-between">
           {/* Hamburger Menu */}

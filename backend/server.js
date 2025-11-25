@@ -46,8 +46,14 @@ connectDB();
 // Import routes
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import carRoutes from "./routes/car.routes.js";
 
 // API Routes
+// IMPORTANT: Mount admin routes BEFORE user routes to avoid route conflicts
+// Admin routes are more specific, so they should be checked first
+app.use("/api/admin", adminRoutes);
+app.use("/api/cars", carRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 

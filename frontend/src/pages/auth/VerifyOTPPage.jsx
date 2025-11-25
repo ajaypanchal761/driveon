@@ -7,11 +7,11 @@ import { loginSuccess } from '../../store/slices/authSlice';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 // Theme color constant
-const PRIMARY_COLOR = '#3d096d';
+const PRIMARY_COLOR = '#272343';
 
 /**
  * VerifyOTPPage Component
- * OTP verification with purple theme matching homepage
+ * OTP verification with blue theme matching homepage
  * Fixed view, no scrolling
  */
 const VerifyOTPPage = () => {
@@ -148,7 +148,7 @@ const VerifyOTPPage = () => {
     <div 
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{ 
-        backgroundColor: '#3d096d',
+        backgroundColor: '#272343',
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -201,14 +201,14 @@ const VerifyOTPPage = () => {
                     {...props}
                     className="w-11 h-12 md:w-14 md:h-16 text-center text-xl md:text-2xl font-bold border-2 border-gray-300 rounded-lg shadow-sm focus:ring-2 bg-white text-gray-900 transition-all hover:shadow-md"
                     style={{
-                      '--focus-border': '#3d096d',
-                      '--focus-ring': '#3d096d33',
+                      '--focus-border': '#272343',
+                      '--focus-ring': '#27234333',
                       minWidth: '44px',
                       minHeight: '44px',
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#3d096d';
-                      e.currentTarget.style.boxShadow = '0 0 0 2px #3d096d33';
+                      e.currentTarget.style.borderColor = '#272343';
+                      e.currentTarget.style.boxShadow = '0 0 0 2px #27234333';
                     }}
                     onBlur={(e) => {
                       e.currentTarget.style.borderColor = '#d1d5db';
@@ -227,7 +227,7 @@ const VerifyOTPPage = () => {
             {timer > 0 ? (
               <p className="text-sm text-gray-600">
                 Resend code in{' '}
-                <span className="font-semibold" style={{ color: '#3d096d' }}>
+                <span className="font-semibold" style={{ color: '#272343' }}>
                   {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
                 </span>
               </p>
@@ -235,7 +235,7 @@ const VerifyOTPPage = () => {
               <button
                 onClick={handleResendOTP}
                 className="text-sm font-medium hover:underline"
-                style={{ color: '#3d096d' }}
+                style={{ color: '#272343' }}
                 disabled={isLoading}
               >
                 Resend OTP
@@ -252,7 +252,7 @@ const VerifyOTPPage = () => {
             onClick={handleVerifyOTP}
             isLoading={isLoading}
             disabled={isLoading || otp.length !== 6}
-            style={{ backgroundColor: '#3d096d' }}
+            style={{ backgroundColor: '#272343' }}
           >
             Verify OTP
           </Button>
@@ -262,7 +262,7 @@ const VerifyOTPPage = () => {
             <button
               onClick={() => navigate(type === 'login' ? '/login' : '/register')}
               className="text-sm hover:underline transition-colors"
-              style={{ color: '#3d096d' }}
+              style={{ color: '#272343' }}
             >
               Change {type === 'login' ? 'email/phone' : 'email/phone number'}
             </button>

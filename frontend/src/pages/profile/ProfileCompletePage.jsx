@@ -1,15 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { updateUser, setProfileComplete } from '../../store/slices/userSlice';
-import { Input, Button } from '../../components/common';
+import { Input, Button, LoadingSpinner } from '../../components/common';
 import { userService } from '../../services';
 import toastUtils from '../../config/toast';
 // Theme color constant - using direct value to avoid import issues
-const PRIMARY_COLOR = '#3d096d';
+const PRIMARY_COLOR = '#272343';
 
 /**
  * Profile Completion Schema
@@ -37,7 +37,7 @@ const profileSchema = z.object({
 /**
  * ProfileCompletePage Component
  * Multi-step form to complete user profile (100% required for booking)
- * Mobile-first design with purple theme
+ * Mobile-first design with blue theme
  */
 const ProfileCompletePage = () => {
   const navigate = useNavigate();
@@ -48,6 +48,7 @@ const ProfileCompletePage = () => {
   const [photoPreview, setPhotoPreview] = useState(user?.profilePhoto || null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingStep1, setIsSavingStep1] = useState(false);
   const fileInputRef = useRef(null);
 
   const {
@@ -55,17 +56,61 @@ const ProfileCompletePage = () => {
     handleSubmit,
     formState: { errors },
     watch,
+    reset,
   } = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name || '',
       email: user?.email || '',
       phone: user?.phone || '',
-      age: user?.age || '',
+      age: user?.age ? String(user.age) : '',
       gender: user?.gender || '',
       address: user?.address || '',
     },
   });
+
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Fetch user profile from API when component mounts
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setIsLoadingProfile(true);
+        const response = await userService.getProfile();
+        
+        // Extract user data from response
+        const userData = response.data?.user || response.data?.data?.user || response.user;
+        
+        if (userData) {
+          // Update Redux store with fetched data
+          dispatch(updateUser(userData));
+          
+          // Reset form with fetched data
+          reset({
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+            age: userData.age ? String(userData.age) : '',
+            gender: userData.gender || '',
+            address: userData.address || '',
+          });
+          
+          // Set profile photo preview if exists
+          if (userData.profilePhoto) {
+            setPhotoPreview(userData.profilePhoto);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Don't show error toast - just use Redux store data as fallback
+        // The form will use defaultValues from Redux store
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [dispatch, reset]);
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
@@ -112,10 +157,15 @@ const ProfileCompletePage = () => {
       const response = await userService.uploadPhoto(formData);
       
       // Handle response from backend
-      const uploadedPhotoUrl = response.data?.profilePhoto || photoPreview;
+      const uploadedPhotoUrl = response.data?.profilePhoto || response.data?.data?.profilePhoto || photoPreview;
+      const userData = response.data?.user || response.data?.data?.user;
       
-      // Update Redux store
-      dispatch(updateUser({ profilePhoto: uploadedPhotoUrl }));
+      // Update Redux store with complete user data
+      if (userData) {
+        dispatch(updateUser(userData));
+      } else {
+        dispatch(updateUser({ profilePhoto: uploadedPhotoUrl }));
+      }
       
       toastUtils.success('Profile photo uploaded successfully!');
       setCurrentStep(3);
@@ -164,28 +214,65 @@ const ProfileCompletePage = () => {
     }
   };
 
-  // Submit profile completion (Mock mode - no backend)
+  // Submit profile completion
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      // Update profile (mock mode)
-      const response = await userService.updateProfile({
-        ...data,
-        age: parseInt(data.age),
-      });
+      console.log('📝 Form submission data:', data);
+      
+      // Parse age properly - ensure it's a valid number
+      const ageValue = data.age ? parseInt(data.age, 10) : undefined;
+      if (isNaN(ageValue)) {
+        toastUtils.error('Please enter a valid age');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Prepare update data
+      const updateData = {
+        name: data.name || '',
+        age: ageValue,
+        gender: data.gender || '',
+        address: data.address || '',
+      };
+      
+      console.log('📤 Sending to backend:', updateData);
+      
+      // Update profile with all form data
+      const response = await userService.updateProfile(updateData);
 
       // Handle backend response
-      const userData = response.data?.user || response.user;
+      const userData = response.data?.user || response.data?.data?.user || response.user;
       const profileComplete = userData?.profileComplete || 100;
       
-      // Update Redux store
-      dispatch(updateUser(userData));
+      // Update Redux store with complete user data
+      if (userData) {
+        dispatch(updateUser(userData));
+      } else {
+        // Fallback: update with form data
+        dispatch(updateUser({
+          name: data.name,
+          age: parseInt(data.age),
+          gender: data.gender,
+          address: data.address,
+        }));
+      }
+      
       dispatch(setProfileComplete(profileComplete >= 100));
       
       toastUtils.success('Profile completed successfully!');
       navigate('/profile');
     } catch (error) {
       console.error('Profile update error:', error);
+      
+      // Handle authentication errors
+      if (error.status === 401 || error.code === 'AUTH_ERROR') {
+        toastUtils.error('Your session has expired. Please log in again.');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+        return;
+      }
       
       // Handle network errors with user-friendly messages
       let errorMessage = 'Failed to update profile. Please try again.';
@@ -226,8 +313,8 @@ const ProfileCompletePage = () => {
 
   return (
     <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0">
-      {/* Header Section - Purple Background */}
-      <header className="w-full bg-[#3d096d] text-white relative overflow-hidden">
+      {/* Header Section - Blue Background */}
+      <header className="w-full bg-[#272343] text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
@@ -270,9 +357,59 @@ const ProfileCompletePage = () => {
 
       {/* Main Content */}
       <main className="px-3 pt-4 pb-2 md:px-6 md:pt-6 md:pb-4 w-full max-w-4xl mx-auto">
+        {/* Loading State */}
+        {isLoadingProfile && (
+          <div className="flex items-center justify-center py-12">
+            <LoadingSpinner size="lg" message="Loading your profile..." />
+          </div>
+        )}
+
         {/* Step 1: Basic Information */}
-        {currentStep === 1 && (
-          <form onSubmit={handleSubmit(() => setCurrentStep(2))} className="space-y-2">
+        {!isLoadingProfile && currentStep === 1 && (
+          <form onSubmit={handleSubmit(async (data) => {
+            console.log('✅ Step 1 form data validated:', data);
+            
+            // Save Step 1 data to database immediately
+            setIsSavingStep1(true);
+            try {
+              const ageValue = data.age ? parseInt(data.age, 10) : undefined;
+              if (isNaN(ageValue) && data.age) {
+                toastUtils.error('Please enter a valid age');
+                setIsSavingStep1(false);
+                return;
+              }
+              
+              const updateData = {
+                name: data.name || '',
+                age: ageValue,
+                gender: data.gender || '',
+                address: data.address || '',
+              };
+              
+              console.log('💾 Saving Step 1 data to database:', updateData);
+              
+              const response = await userService.updateProfile(updateData);
+              
+              // Update Redux store with saved data
+              const userData = response.data?.user || response.data?.data?.user;
+              if (userData) {
+                dispatch(updateUser(userData));
+                console.log('✅ Step 1 data saved successfully');
+                toastUtils.success('Profile information saved!');
+              }
+              
+              // Move to next step
+              setCurrentStep(2);
+            } catch (error) {
+              console.error('❌ Error saving Step 1 data:', error);
+              // Still allow user to continue even if save fails
+              const errorMessage = error.response?.data?.message || error.message || 'Failed to save data';
+              toastUtils.error(errorMessage + '. You can continue and save later.');
+              setCurrentStep(2);
+            } finally {
+              setIsSavingStep1(false);
+            }
+          })} className="space-y-2">
             <div className="bg-white rounded-lg p-2.5 md:p-4 border border-gray-200 shadow-sm">
               <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">Basic Information</h2>
 
@@ -297,6 +434,8 @@ const ProfileCompletePage = () => {
                     error={errors.email?.message}
                     {...register('email')}
                     autoComplete="email"
+                    disabled={true}
+                    className="bg-gray-50 cursor-not-allowed"
                   />
                 </div>
 
@@ -310,6 +449,8 @@ const ProfileCompletePage = () => {
                     {...register('phone')}
                     autoComplete="tel"
                     maxLength={10}
+                    disabled={true}
+                    className="bg-gray-50 cursor-not-allowed"
                   />
                 </div>
 
@@ -342,8 +483,8 @@ const ProfileCompletePage = () => {
                           isSelected ? '' : 'border-gray-200 hover:border-gray-300'
                         }`}
                         style={isSelected ? {
-                          borderColor: '#3d096d',
-                          backgroundColor: '#3d096d1A',
+                          borderColor: '#272343',
+                          backgroundColor: '#2723431A',
                         } : {}}
                       >
                         <input
@@ -375,12 +516,12 @@ const ProfileCompletePage = () => {
                     errors.address ? 'border-red-500' : 'border-gray-300'
                   }`}
                   style={!errors.address ? {
-                    '--focus-border': '#3d096d',
-                    '--focus-ring': '#3d096d33',
+                    '--focus-border': '#272343',
+                    '--focus-ring': '#27234333',
                   } : {}}
                   onFocus={!errors.address ? (e) => {
-                    e.currentTarget.style.borderColor = '#3d096d';
-                    e.currentTarget.style.boxShadow = '0 0 0 2px #3d096d33';
+                    e.currentTarget.style.borderColor = '#272343';
+                    e.currentTarget.style.boxShadow = '0 0 0 2px #27234333';
                   } : undefined}
                   onBlur={!errors.address ? (e) => {
                     e.currentTarget.style.borderColor = '#d1d5db';
@@ -401,7 +542,8 @@ const ProfileCompletePage = () => {
                 size="sm"
                 fullWidth
                 className="md:w-auto md:min-w-[160px]"
-                disabled={!isStep1Complete()}
+                disabled={!isStep1Complete() || isSavingStep1}
+                isLoading={isSavingStep1}
               >
                 Continue
               </Button>
@@ -410,7 +552,7 @@ const ProfileCompletePage = () => {
         )}
 
         {/* Step 2: Profile Photo */}
-        {currentStep === 2 && (
+        {!isLoadingProfile && currentStep === 2 && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg p-3 md:p-5 border border-gray-200 shadow-sm">
               <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3">Profile Photo</h2>
@@ -423,7 +565,7 @@ const ProfileCompletePage = () => {
                       src={photoPreview}
                       alt="Profile"
                       className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 object-cover shadow-lg"
-                    style={{ borderColor: '#3d096d' }}
+                    style={{ borderColor: '#272343' }}
                     />
                   ) : (
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-gray-300 bg-gray-100 flex items-center justify-center">
@@ -457,10 +599,10 @@ const ProfileCompletePage = () => {
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
-                <div className="w-full border-2 border-dashed rounded-lg p-2.5 md:p-3 text-center cursor-pointer transition-colors" style={{ backgroundColor: '#3d096d1A', borderColor: '#3d096d' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3d096d33'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3d096d1A'}>
+                <div className="w-full border-2 border-dashed rounded-lg p-2.5 md:p-3 text-center cursor-pointer transition-colors" style={{ backgroundColor: '#2723431A', borderColor: '#272343' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#27234333'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2723431A'}>
                   <svg
                     className="w-7 h-7 mx-auto mb-1.5"
-                    style={{ color: '#3d096d' }}
+                    style={{ color: '#272343' }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -472,7 +614,7 @@ const ProfileCompletePage = () => {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  <p className="text-sm font-medium" style={{ color: '#3d096d' }}>
+                  <p className="text-sm font-medium" style={{ color: '#272343' }}>
                     {photoPreview ? 'Change Photo' : 'Select Photo'}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">Max 5MB, JPG/PNG</p>
@@ -535,7 +677,7 @@ const ProfileCompletePage = () => {
         )}
 
         {/* Step 3: DigiLocker KYC */}
-        {currentStep === 3 && (
+        {!isLoadingProfile && currentStep === 3 && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="bg-white rounded-lg p-4 md:p-5 border border-gray-200 shadow-sm">
               <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">KYC Verification</h2>

@@ -16,9 +16,9 @@ import { customTheme } from './themes/custom.theme';
 export const theme = {
   colors: {
     // Primary Colors
-    primary: customTheme.colors.primary.DEFAULT, // #3d096d
-    primaryDark: customTheme.colors.primary.dark, // #2d0750
-    primaryLight: customTheme.colors.primary.light, // #5d0d8a
+    primary: customTheme.colors.primary.DEFAULT, // #272343
+    primaryDark: customTheme.colors.primary.dark, // #1f1c35
+    primaryLight: customTheme.colors.primary.light, // #3a4169
     
     // Background Colors
     background: customTheme.colors.background.primary, // #ffffff
@@ -35,7 +35,7 @@ export const theme = {
     borderLight: customTheme.colors.border.light, // #e8e8e8
     borderDefault: customTheme.colors.border.DEFAULT, // #d0d0d0
     borderDark: customTheme.colors.border.dark, // #a0a0a0
-    borderFocus: customTheme.colors.border.focus, // #3d096d
+    borderFocus: customTheme.colors.border.focus, // #272343
     
     // Status Colors
     success: customTheme.colors.success.DEFAULT, // #28a745

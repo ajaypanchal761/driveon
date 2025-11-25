@@ -1,0 +1,282 @@
+import api from './api';
+
+/**
+ * Admin Service
+ * Handles admin authentication API calls
+ */
+export const adminService = {
+  /**
+   * Admin Signup
+   * @param {Object} data - Signup data (name, email, password)
+   * @returns {Promise}
+   */
+  signup: async (data) => {
+    try {
+      const response = await api.post('/admin/signup', {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Admin signup error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Admin Login
+   * @param {Object} credentials - Login credentials (email, password)
+   * @returns {Promise}
+   */
+  login: async (credentials) => {
+    try {
+      console.log('Admin login service called with:', { email: credentials.email });
+      const response = await api.post('/admin/login', {
+        email: credentials.email,
+        password: credentials.password,
+      });
+      console.log('Admin login response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Admin login error:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        data: error.response?.data,
+        url: error.config?.url,
+      });
+      // Preserve the actual backend error message
+      if (error.response?.data?.message) {
+        const backendError = new Error(error.response.data.message);
+        backendError.response = error.response;
+        throw backendError;
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Get Admin Profile
+   * @returns {Promise}
+   */
+  getProfile: async () => {
+    try {
+      const response = await api.get('/admin/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Get admin profile error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Refresh Admin Token
+   * @param {String} refreshToken - Refresh token
+   * @returns {Promise}
+   */
+  refreshToken: async (refreshToken) => {
+    try {
+      const response = await api.post('/admin/refresh-token', {
+        refreshToken,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Admin refresh token error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Admin Logout
+   * @returns {Promise}
+   */
+  logout: async () => {
+    try {
+      const response = await api.post('/admin/logout');
+      return response.data;
+    } catch (error) {
+      console.error('Admin logout error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get All Users (Admin)
+   * @param {Object} params - Query parameters (page, limit, search, filters)
+   * @returns {Promise}
+   */
+  getAllUsers: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/users', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get all users error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get User by ID (Admin)
+   * @param {String} userId - User ID
+   * @returns {Promise}
+   */
+  getUserById: async (userId) => {
+    try {
+      const response = await api.get(`/admin/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get user by ID error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update User Status (Admin)
+   * @param {String} userId - User ID
+   * @param {String} action - Action: 'activate', 'suspend', or 'ban'
+   * @returns {Promise}
+   */
+  updateUserStatus: async (userId, action) => {
+    try {
+      const response = await api.put(`/admin/users/${userId}/status`, { action });
+      return response.data;
+    } catch (error) {
+      console.error('Update user status error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get All Cars (Admin)
+   * @param {Object} params - Query parameters (page, limit, search, filters)
+   * @returns {Promise}
+   */
+  getAllCars: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/cars', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get all cars (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create New Car (Admin)
+   * @param {FormData} formData - Car data with images
+   * @returns {Promise}
+   */
+  createCar: async (formData) => {
+    try {
+      const response = await api.post('/admin/cars', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Create car (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Car by ID (Admin)
+   * @param {String} carId - Car ID
+   * @returns {Promise}
+   */
+  getCarById: async (carId) => {
+    try {
+      const response = await api.get(`/admin/cars/${carId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get car by ID (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update Car (Admin)
+   * @param {String} carId - Car ID
+   * @param {FormData} formData - Car data with images
+   * @returns {Promise}
+   */
+  updateCar: async (carId, formData) => {
+    try {
+      const response = await api.put(`/admin/cars/${carId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Update car (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update Car Status (Admin)
+   * @param {String} carId - Car ID
+   * @param {String} status - Status: 'pending', 'active', 'inactive', 'suspended', 'rejected'
+   * @param {String} rejectionReason - Optional rejection reason
+   * @returns {Promise}
+   */
+  updateCarStatus: async (carId, status, rejectionReason) => {
+    try {
+      const response = await api.put(`/admin/cars/${carId}/status`, { status, rejectionReason });
+      return response.data;
+    } catch (error) {
+      console.error('Update car status error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete Car (Admin)
+   * @param {String} carId - Car ID
+   * @returns {Promise}
+   */
+  deleteCar: async (carId) => {
+    try {
+      const response = await api.delete(`/admin/cars/${carId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete car error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Toggle Car Featured Status (Admin)
+   * @param {String} carId - Car ID
+   * @returns {Promise}
+   */
+  toggleCarFeatured: async (carId) => {
+    try {
+      const response = await api.put(`/admin/cars/${carId}/featured`);
+      return response.data;
+    } catch (error) {
+      console.error('Toggle car featured error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Toggle Car Popular Status (Admin)
+   * @param {String} carId - Car ID
+   * @returns {Promise}
+   */
+  toggleCarPopular: async (carId) => {
+    try {
+      const response = await api.put(`/admin/cars/${carId}/popular`);
+      return response.data;
+    } catch (error) {
+      console.error('Toggle car popular error:', error);
+      throw error;
+    }
+  },
+};
+
+export default adminService;
+

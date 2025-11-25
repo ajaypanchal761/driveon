@@ -12,7 +12,7 @@ Copy the following content into a `.env` file in the `backend` directory:
 # MongoDB Configuration
 # For local MongoDB: mongodb://localhost:27017/driveon
 # For MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/driveon
-MONGODB_URI=mongodb+srv://driveon:driveon@cluster0.xzxln3b.mongodb.net/?appName=Cluster0
+MONGODB_URI=mongodb+srv://driveon:driveon2025@cluster0.dbvxz1c.mongodb.net/driveon?appName=Cluster0
 
 # Server Configuration
 PORT=5000
@@ -41,6 +41,8 @@ CLOUDINARY_API_SECRET=3KvMgaUJ6rdYXX-haDPkOfey8-c
 # ============================================
 SMSINDIAHUB_API_KEY=j8oT8a4QSkuE8UbnoUHqDw
 SMSINDIAHUB_SENDER_ID=SMSHUB
+# SMSINDIAHUB_TEMPLATE_ID=your_template_id_here  # Optional: DLT template ID (register template in SMSIndia Hub dashboard)
+# SMSINDIAHUB_USE_PROMOTIONAL=false  # Optional: Set to 'true' for promotional SMS (NOT recommended for OTP, use only for testing)
 ```
 
 ## Quick Setup

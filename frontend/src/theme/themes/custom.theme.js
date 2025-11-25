@@ -1,24 +1,24 @@
 // Custom Theme - Your Brand Colors
-// Primary: #3d096d, White: #ffffff, Background: #f1f1f1
+// Primary: #272343, White: #ffffff, Background: #e3f6f5
 
 export const customTheme = {
   name: 'custom',
   colors: {
     // Primary Colors
     primary: {
-      50: '#f5e6ff',
-      100: '#e6ccff',
-      200: '#d4b3ff',
-      300: '#c299ff',
-      400: '#b080ff',
-      500: '#9e66ff',
-      600: '#8c4dff',
-      700: '#7a33ff',
-      800: '#681aff',
-      900: '#3d096d', // Main brand color
-      DEFAULT: '#3d096d',
-      dark: '#2d0750',
-      light: '#5d0d8a',
+      50: '#e8e9f0',
+      100: '#d1d3e1',
+      200: '#a3a7c3',
+      300: '#757ba5',
+      400: '#474f87',
+      500: '#3a4169',
+      600: '#2d3350',
+      700: '#272343', // Main brand color
+      800: '#1f1c35',
+      900: '#171527',
+      DEFAULT: '#272343',
+      dark: '#1f1c35',
+      light: '#3a4169',
     },
     
     // Secondary Colors (complementary to primary)
@@ -43,8 +43,8 @@ export const customTheme = {
     // Background Colors
     background: {
       primary: '#ffffff',
-      secondary: '#f1f1f1',
-      tertiary: '#e8e8e8',
+      secondary: '#e3f6f5',
+      tertiary: '#bae8e8',
       dark: '#1a1a1a',
     },
 
@@ -59,10 +59,10 @@ export const customTheme = {
 
     // Border Colors
     border: {
-      light: '#e8e8e8',
+      light: '#bae8e8',
       DEFAULT: '#d0d0d0',
       dark: '#a0a0a0',
-      focus: '#3d096d',
+      focus: '#272343',
     },
 
     // Status Colors

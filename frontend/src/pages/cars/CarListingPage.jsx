@@ -1,13 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
-import carImg1 from '../../assets/car_img1-removebg-preview.png';
-import carImg2 from '../../assets/car_img2-removebg-preview.png';
-import carImg3 from '../../assets/car_img3-removebg-preview.png';
-import carImg4 from '../../assets/car_img4-removebg-preview.png';
-import carImg5 from '../../assets/car_img5-removebg-preview.png';
-import carImg6 from '../../assets/car_img6-removebg-preview.png';
-import carImg7 from '../../assets/car_img7-removebg-preview.png';
+import { carService } from '../../services/car.service';
+import toastUtils from '../../config/toast';
 
 /**
  * CarListingPage Component
@@ -16,8 +11,11 @@ import carImg7 from '../../assets/car_img7-removebg-preview.png';
  */
 const CarListingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [showDesktopFilters, setShowDesktopFilters] = useState(false);
+  const [cars, setCars] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -26,108 +24,176 @@ const CarListingPage = () => {
     fuelType: [],
     transmission: [],
     color: [],
-    priceRange: { min: 0, max: 1000 },
+    priceRange: { min: 0, max: 10000 },
     rating: 0,
     carType: [],
   });
 
-  // Mock car data based on document.txt structure
-  const cars = [
-    {
-      id: '1',
-      brand: 'Tesla',
-      model: 'Model X',
-      year: 2018,
-      price: 180,
-      image: carImg1,
-      seats: 7,
-      transmission: 'Automatic',
-      fuelType: 'Electric',
-      color: 'White',
-      rating: 4.8,
-    },
-    {
-      id: '2',
-      brand: 'Mercedes-Benz',
-      model: 'S-Class',
-      year: 2020,
-      price: 220,
-      image: carImg2,
-      seats: 5,
-      transmission: 'Automatic',
-      fuelType: 'Petrol',
-      color: 'Silver',
-      rating: 4.7,
-    },
-    {
-      id: '3',
-      brand: 'BMW',
-      model: '7 Series',
-      year: 2019,
-      price: 200,
-      image: carImg3,
-      seats: 5,
-      transmission: 'Automatic',
-      fuelType: 'Petrol',
-      color: 'White',
-      rating: 4.6,
-    },
-    {
-      id: '4',
-      brand: 'Audi',
-      model: 'A8 L',
-      year: 2021,
-      price: 210,
-      image: carImg4,
-      seats: 5,
-      transmission: 'Automatic',
-      fuelType: 'Petrol',
-      color: 'Black',
-      rating: 4.9,
-    },
-    {
-      id: '5',
-      brand: 'Jaguar',
-      model: 'XF',
-      year: 2019,
-      price: 175,
-      image: carImg5,
-      seats: 5,
-      transmission: 'Automatic',
-      fuelType: 'Diesel',
-      color: 'Blue',
-      rating: 4.5,
-    },
-    {
-      id: '6',
-      brand: 'Lexus',
-      model: 'LS 500',
-      year: 2020,
-      price: 195,
-      image: carImg6,
-      seats: 5,
-      transmission: 'Automatic',
-      fuelType: 'Hybrid',
-      color: 'Grey',
-      rating: 4.8,
-    },
-    {
-      id: '7',
-      brand: 'Porsche',
-      model: 'Panamera',
-      year: 2021,
-      price: 250,
-      image: carImg7,
-      seats: 4,
-      transmission: 'Automatic',
-      fuelType: 'Petrol',
-      color: 'Red',
-      rating: 4.9,
-    },
-  ];
+  // Read brand and carType from URL query parameters
+  useEffect(() => {
+    const brandParam = searchParams.get('brand');
+    const carTypeParam = searchParams.get('carType');
+    
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      
+      if (brandParam) {
+        newFilters.brand = [brandParam];
+      } else {
+        newFilters.brand = [];
+      }
+      
+      if (carTypeParam) {
+        newFilters.carType = [carTypeParam];
+      } else {
+        newFilters.carType = [];
+      }
+      
+      return newFilters;
+    });
+  }, [searchParams]);
+
+  // Fetch cars from backend
+  useEffect(() => {
+    const fetchCars = async () => {
+      try {
+        setLoading(true);
+        
+        // Build query parameters
+        const queryParams = {
+          page: 1,
+          limit: 1000, // Increased limit to show all cars of the same type
+          status: 'active',
+          isAvailable: true,
+        };
+
+        // Add brand filter
+        if (filters.brand.length > 0) {
+          queryParams.brand = filters.brand[0];
+        }
+
+        // Add car type filter - this will show ALL models of the same car type
+        if (filters.carType.length > 0) {
+          queryParams.carType = filters.carType[0];
+        }
+
+        // Add fuel type filter
+        if (filters.fuelType.length > 0) {
+          queryParams.fuelType = filters.fuelType[0];
+        }
+
+        // Add price range
+        if (filters.priceRange.min > 0) {
+          queryParams.minPrice = filters.priceRange.min;
+        }
+        if (filters.priceRange.max < 10000) {
+          queryParams.maxPrice = filters.priceRange.max;
+        }
+
+        const response = await carService.getCars(queryParams);
+        
+        if (response.success && response.data.cars) {
+          // Format cars data for display
+          const formattedCars = response.data.cars.map((car) => {
+            // Get primary image or first image
+            const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
+            const imageUrl = primaryImage?.url || null;
+
+            return {
+              id: car._id || car.id,
+              brand: car.brand,
+              model: car.model,
+              year: car.year,
+              price: car.pricePerDay,
+              image: imageUrl,
+              seats: car.seatingCapacity,
+              transmission: car.transmission === 'automatic' ? 'Automatic' : car.transmission === 'manual' ? 'Manual' : car.transmission,
+              fuelType: car.fuelType === 'petrol' ? 'Petrol' : car.fuelType === 'diesel' ? 'Diesel' : car.fuelType === 'electric' ? 'Electric' : car.fuelType === 'hybrid' ? 'Hybrid' : car.fuelType,
+              color: car.color || 'N/A',
+              rating: car.averageRating || 0,
+              carType: car.carType,
+            };
+          });
+          
+          setCars(formattedCars);
+        } else {
+          setCars([]);
+        }
+      } catch (error) {
+        console.error('Error fetching cars:', error);
+        toastUtils.error('Failed to load cars');
+        setCars([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCars();
+  }, [filters.brand, filters.carType, filters.fuelType, filters.priceRange]);
+
+  // Filter cars based on active filters (client-side filtering for seats, transmission, color, rating, carType)
+  const filteredCars = cars.filter((car) => {
+    // Car Type filter - case-insensitive matching
+    if (filters.carType.length > 0) {
+      const carTypeLower = car.carType?.toLowerCase();
+      const filterCarTypes = filters.carType.map(ct => ct.toLowerCase());
+      
+      if (!filterCarTypes.includes(carTypeLower)) {
+        return false;
+      }
+    }
+    
+    // Brand filter - case-insensitive with flexible matching
+    if (filters.brand.length > 0) {
+      const carBrand = car.brand.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+      const filterBrands = filters.brand.map(b => b.toLowerCase().replace(/\s+/g, '').replace(/-/g, ''));
+      
+      // Check if any filter brand matches the car brand
+      const matches = filterBrands.some(filterBrand => {
+        // Exact match
+        if (carBrand === filterBrand) return true;
+        // Partial match (e.g., "mercedes" matches "mercedesbenz")
+        if (carBrand.includes(filterBrand) || filterBrand.includes(carBrand)) return true;
+        // Handle common variations
+        if ((filterBrand === 'mercedes' && carBrand.includes('mercedes')) ||
+            (carBrand === 'mercedes' && filterBrand.includes('mercedes'))) return true;
+        return false;
+      });
+      
+      if (!matches) {
+        return false;
+      }
+    }
+    
+    // Seats filter
+    if (filters.seats.length > 0 && !filters.seats.includes(car.seats)) {
+      return false;
+    }
+    
+    // Transmission filter
+    if (filters.transmission.length > 0 && !filters.transmission.includes(car.transmission)) {
+      return false;
+    }
+    
+    // Color filter
+    if (filters.color.length > 0 && !filters.color.includes(car.color)) {
+      return false;
+    }
+    
+    // Rating filter
+    if (car.rating < filters.rating) {
+      return false;
+    }
+    
+    return true;
+  });
 
   const handleDetailsClick = (carId) => {
     navigate(`/cars/${carId}`);
+  };
+
+  const handleBookClick = (carId) => {
+    navigate(`/booking/${carId}`);
   };
 
   const handleFilterChange = (filterType, value) => {
@@ -161,9 +227,9 @@ const CarListingPage = () => {
     setShowFilters(false);
   };
 
-  // Available filter options
+  // Available filter options - Include all brands from home page
   const filterOptions = {
-    brand: ['Tesla', 'Mercedes-Benz', 'BMW', 'Audi', 'Jaguar', 'Lexus', 'Porsche'],
+    brand: ['Toyota', 'Honda', 'BMW', 'Mercedes', 'Mercedes-Benz', 'Audi', 'Hyundai', 'Ford', 'Tesla', 'Jaguar', 'Lexus', 'Porsche'],
     seats: [4, 5, 7],
     fuelType: ['Petrol', 'Diesel', 'Electric', 'Hybrid'],
     transmission: ['Automatic', 'Manual'],
@@ -720,14 +786,9 @@ const CarListingPage = () => {
         </div>
       </div>
 
-      {/* Header Section - Purple Background */}
-      <header className="bg-[#3d096d] text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-32 h-32 md:w-48 md:h-48 bg-white rounded-full -mr-16 -mt-16 md:-mr-24 md:-mt-24"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 md:w-36 md:h-36 bg-white rounded-full -ml-12 -mb-12 md:-ml-18 md:-mb-18"></div>
-        </div>
-
-        <div className="relative px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 md:max-w-7xl md:mx-auto">
+      {/* Header Section - Purple Background - Sticky */}
+      <header className="sticky top-0 z-50 bg-[#272343] text-white relative overflow-hidden shadow-md">
+        <div className="px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 md:max-w-7xl md:mx-auto">
           {/* Back Button, Title and Filter - Same Line */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4">
@@ -801,23 +862,46 @@ const CarListingPage = () => {
       <div className={`px-3 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8 transition-all duration-300 ${
         showDesktopFilters ? 'md:pr-80' : ''
       }`}>
-        <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 lg:gap-5 md:max-w-7xl md:mx-auto">
-          {cars.map((car) => (
-            <div
-              key={car.id}
-              onClick={() => handleDetailsClick(car.id)}
-              className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 relative cursor-pointer active:scale-[0.98] md:active:scale-100 transition-all hover:shadow-lg hover:-translate-y-1 p-3 md:p-3 lg:p-4"
-            >
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div
+                className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
+                style={{ borderColor: theme.colors.primary }}
+              ></div>
+              <p className="text-gray-600">Loading cars...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 lg:gap-5 md:max-w-7xl md:mx-auto">
+            {filteredCars.length > 0 ? (
+              filteredCars.map((car) => (
+              <div
+                key={car.id}
+                className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 relative cursor-pointer active:scale-[0.98] md:active:scale-100 transition-all hover:shadow-lg hover:-translate-y-1 p-3 md:p-3 lg:p-4"
+              >
               {/* Compact Horizontal Card Layout - Mobile, Vertical on Desktop */}
               <div className="flex gap-3 md:flex-col md:gap-3">
                 {/* Car Image */}
                 <div className="flex-shrink-0 w-20 md:w-full flex items-center justify-center md:bg-gray-50 md:rounded-lg md:p-3">
                   <div className="w-20 h-20 md:w-full md:h-36 lg:h-40 flex items-center justify-center">
-                    <img
-                      src={car.image}
-                      alt={`${car.brand} ${car.model}`}
-                      className="max-w-full max-h-full object-contain"
-                    />
+                    {car.image ? (
+                      <img
+                        src={car.image}
+                        alt={`${car.brand} ${car.model}`}
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const placeholder = e.target.nextElementSibling;
+                          if (placeholder) placeholder.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className="hidden w-full h-full items-center justify-center bg-gray-100 rounded-lg">
+                      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
@@ -874,8 +958,8 @@ const CarListingPage = () => {
                     </div>
                   </div>
                   
-                  {/* Price and Details Button - Same Line */}
-                  <div className="flex items-center justify-between pt-1.5 md:pt-2">
+                  {/* Price and Action Buttons - Same Line */}
+                  <div className="flex items-center justify-between pt-1.5 md:pt-2 gap-2">
                     {/* Price */}
                     <div className="flex items-baseline">
                       <span className="text-sm md:text-base lg:text-lg font-bold text-gray-900">
@@ -884,24 +968,66 @@ const CarListingPage = () => {
                       <span className="text-xs text-gray-500 ml-0.5">/day</span>
                     </div>
                     
-                    {/* Details Button - Smaller */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDetailsClick(car.id);
-                      }}
-                      className="px-3 py-1 md:px-3 md:py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs md:text-xs lg:text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all"
-                      style={{ backgroundColor: theme.colors.primary }}
-                      aria-label="View details"
-                    >
-                      Details
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      {/* Details Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDetailsClick(car.id);
+                        }}
+                        className="px-3 py-1 md:px-3 md:py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs md:text-xs lg:text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all border-2"
+                        style={{ 
+                          backgroundColor: 'transparent',
+                          borderColor: theme.colors.primary,
+                          color: theme.colors.primary,
+                        }}
+                        aria-label="View details"
+                      >
+                        Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-12 md:py-16">
+                <svg
+                  className="w-16 h-16 md:w-20 md:h-20 text-gray-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+                  No cars found
+                </h3>
+                <p className="text-sm md:text-base text-gray-500 text-center mb-4">
+                  {filters.brand.length > 0
+                    ? `No cars found for brand: ${filters.brand.join(', ')}`
+                    : filters.carType.length > 0
+                    ? `No cars found for type: ${filters.carType.join(', ')}`
+                    : 'Try adjusting your filters to see more results'}
+                </p>
+                <button
+                  onClick={handleResetFilters}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,3 +1,6 @@
+// Import error handler first to suppress browser extension errors
+import './utils/errorHandler';
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

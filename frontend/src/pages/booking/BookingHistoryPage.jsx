@@ -168,13 +168,13 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleViewDetails(booking.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#3d096d] text-[#3d096d] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#3d096d]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#272343] text-[#272343] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#272343]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
           >
             View Details
           </button>
           <button
             onClick={() => navigate(`/booking/${booking.id}/active`)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-[#3d096d] text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#3d096d]/90 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-[#272343] text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#272343]/90 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
           >
             Track Trip
           </button>
@@ -185,13 +185,13 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleReBook(booking.car.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#3d096d] text-[#3d096d] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#3d096d]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#272343] text-[#272343] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#272343]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
           >
             Re-Book
           </button>
           <button
             onClick={() => handleWriteReview(booking.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-[#3d096d] text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#3d096d]/90 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-[#272343] text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#272343]/90 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
           >
             Write Review
           </button>
@@ -202,7 +202,7 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleReBook(booking.car.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#3d096d] text-[#3d096d] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#3d096d]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#272343] text-[#272343] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#272343]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
           >
             Book Again
           </button>
@@ -220,7 +220,7 @@ const BookingHistoryPage = () => {
   return (
     <div className="min-h-screen bg-white pb-20">
       {/* Header Section - Purple Background */}
-      <header className="bg-[#3d096d] text-white relative overflow-hidden">
+      <header className="bg-[#272343] text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>

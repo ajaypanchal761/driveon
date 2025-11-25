@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { theme } from '../../../theme/theme.constants';
 import Card from '../../../components/common/Card';
+import { adminService } from '../../../services/admin.service';
+import toastUtils from '../../../config/toast';
+import { Button } from '../../../components/common';
 
 /**
  * Car List Page
@@ -37,229 +40,93 @@ const CarListPage = () => {
     priceRange: 'all', // all, 0-1000, 1000-2000, 2000+
   });
 
-  // Mock cars data
+  // Fetch cars from API
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockCars = [
-        {
-          id: '1',
-          brand: 'Toyota',
-          model: 'Camry',
-          year: 2022,
-          carType: 'sedan',
-          pricePerDay: 1500,
-          status: 'active',
-          availability: 'available',
-          ownerId: '3',
-          ownerName: 'Mike Johnson',
-          ownerEmail: 'mike.j@example.com',
-          location: 'Mumbai',
-          images: [],
-          rating: 4.5,
-          totalBookings: 25,
-          totalRevenue: 375000,
-          features: ['AC', 'GPS', 'Bluetooth'],
-          registrationDate: '2024-01-15',
-        },
-        {
-          id: '2',
-          brand: 'Honda',
-          model: 'City',
-          year: 2023,
-          carType: 'sedan',
-          pricePerDay: 1200,
-          status: 'pending',
-          availability: 'available',
-          ownerId: '8',
-          ownerName: 'Lisa Anderson',
-          ownerEmail: 'lisa.a@example.com',
-          location: 'Delhi',
-          images: [],
-          rating: 0,
-          totalBookings: 0,
-          totalRevenue: 0,
-          features: ['AC', 'GPS'],
-          registrationDate: '2024-03-10',
-        },
-        {
-          id: '3',
-          brand: 'BMW',
-          model: '7 Series',
-          year: 2023,
-          carType: 'luxury',
-          pricePerDay: 5000,
-          status: 'active',
-          availability: 'booked',
-          ownerId: '3',
-          ownerName: 'Mike Johnson',
-          ownerEmail: 'mike.j@example.com',
-          location: 'Mumbai',
-          images: [],
-          rating: 4.8,
-          totalBookings: 12,
-          totalRevenue: 600000,
-          features: ['AC', 'GPS', 'Bluetooth', 'Sunroof', 'Leather Seats'],
-          registrationDate: '2023-12-20',
-        },
-        {
-          id: '4',
-          brand: 'Maruti',
-          model: 'Swift',
-          year: 2022,
-          carType: 'hatchback',
-          pricePerDay: 800,
-          status: 'active',
-          availability: 'available',
-          ownerId: '8',
-          ownerName: 'Lisa Anderson',
-          ownerEmail: 'lisa.a@example.com',
-          location: 'Bangalore',
-          images: [],
-          rating: 4.2,
-          totalBookings: 18,
-          totalRevenue: 144000,
-          features: ['AC'],
-          registrationDate: '2024-02-05',
-        },
-        {
-          id: '5',
-          brand: 'Mahindra',
-          model: 'XUV700',
-          year: 2023,
-          carType: 'suv',
-          pricePerDay: 2500,
-          status: 'suspended',
-          availability: 'available',
-          ownerId: '3',
-          ownerName: 'Mike Johnson',
-          ownerEmail: 'mike.j@example.com',
-          location: 'Mumbai',
-          images: [],
-          rating: 4.6,
-          totalBookings: 8,
-          totalRevenue: 200000,
-          features: ['AC', 'GPS', 'Bluetooth', 'Sunroof'],
-          registrationDate: '2024-01-10',
-        },
-        {
-          id: '6',
-          brand: 'Hyundai',
-          model: 'Creta',
-          year: 2023,
-          carType: 'suv',
-          pricePerDay: 2000,
-          status: 'pending',
-          availability: 'available',
-          ownerId: '8',
-          ownerName: 'Lisa Anderson',
-          ownerEmail: 'lisa.a@example.com',
-          location: 'Delhi',
-          images: [],
-          rating: 0,
-          totalBookings: 0,
-          totalRevenue: 0,
-          features: ['AC', 'GPS', 'Bluetooth'],
-          registrationDate: '2024-03-12',
-        },
-        {
-          id: '7',
-          brand: 'Tata',
-          model: 'Nexon',
-          year: 2022,
-          carType: 'suv',
-          pricePerDay: 1800,
-          status: 'active',
-          availability: 'available',
-          ownerId: '8',
-          ownerName: 'Lisa Anderson',
-          ownerEmail: 'lisa.a@example.com',
-          location: 'Pune',
-          images: [],
-          rating: 4.4,
-          totalBookings: 15,
-          totalRevenue: 270000,
-          features: ['AC', 'GPS'],
-          registrationDate: '2024-01-20',
-        },
-        {
-          id: '8',
-          brand: 'Mercedes',
-          model: 'E-Class',
-          year: 2023,
-          carType: 'luxury',
-          pricePerDay: 4500,
-          status: 'inactive',
-          availability: 'available',
-          ownerId: '3',
-          ownerName: 'Mike Johnson',
-          ownerEmail: 'mike.j@example.com',
-          location: 'Mumbai',
-          images: [],
-          rating: 4.7,
-          totalBookings: 10,
-          totalRevenue: 450000,
-          features: ['AC', 'GPS', 'Bluetooth', 'Sunroof', 'Leather Seats', 'Premium Sound'],
-          registrationDate: '2023-11-15',
-        },
-      ];
-      setCars(mockCars);
-      setFilteredCars(mockCars);
-      setLoading(false);
-    }, 500);
-  }, []);
+    const fetchCars = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getAllCars({
+          page: 1,
+          limit: 1000, // Get all cars for now
+          search: searchQuery,
+          status: filters.status,
+          carType: filters.carType,
+          brand: filters.brand || undefined,
+          location: filters.location !== 'all' ? filters.location : undefined,
+          owner: filters.owner !== 'all' ? filters.owner : undefined,
+        });
 
-  // Filter and search cars
+        if (response.success && response.data) {
+          // Format cars data for frontend
+          const formattedCars = response.data.cars.map((car) => {
+            // Get primary image or first image
+            const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
+            const imageUrl = primaryImage?.url || null;
+            
+            return {
+              id: car._id || car.id,
+              brand: car.brand,
+              model: car.model,
+              year: car.year,
+              carType: car.carType,
+              pricePerDay: car.pricePerDay,
+              status: car.status,
+              availability: car.isAvailable ? 'available' : 'booked',
+              ownerId: car.owner?._id || car.owner?.id || car.owner,
+              ownerName: car.owner?.name || 'Unknown',
+              ownerEmail: car.owner?.email || '',
+              location: car.location?.city || car.location || 'Unknown',
+              images: car.images || [],
+              imageUrl: imageUrl, // Add primary image URL for easy access
+              rating: car.averageRating || 0,
+              totalBookings: car.totalBookings || 0,
+              totalRevenue: car.totalRevenue || 0,
+              features: car.features || [],
+              registrationDate: car.createdAt || new Date().toISOString(),
+              registrationNumber: car.registrationNumber,
+              fuelType: car.fuelType,
+              transmission: car.transmission,
+              seatingCapacity: car.seatingCapacity,
+              isFeatured: car.isFeatured,
+              isPopular: car.isPopular,
+            };
+          });
+          
+          setCars(formattedCars);
+        } else {
+          setCars([]);
+        }
+      } catch (error) {
+        console.error('Error fetching cars:', error);
+        setCars([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCars();
+  }, [searchQuery, filters.status, filters.carType, filters.brand, filters.location, filters.owner]);
+
+  // Client-side filtering for availability (backend doesn't handle this filter)
   useEffect(() => {
     let filtered = [...cars];
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (car) =>
-          car.brand.toLowerCase().includes(query) ||
-          car.model.toLowerCase().includes(query) ||
-          car.ownerName.toLowerCase().includes(query) ||
-          car.location.toLowerCase().includes(query)
-      );
-    }
-
-    // Status filter
-    if (filters.status !== 'all') {
-      filtered = filtered.filter((car) => car.status === filters.status);
-    }
-
-    // Availability filter
+    // Availability filter (client-side only)
     if (filters.availability !== 'all') {
       filtered = filtered.filter((car) => car.availability === filters.availability);
     }
 
-    // Owner filter
-    if (filters.owner !== 'all') {
-      filtered = filtered.filter((car) => car.ownerId === filters.owner);
-    }
-
-    // Location filter
-    if (filters.location !== 'all') {
-      filtered = filtered.filter((car) => car.location === filters.location);
-    }
-
-    // Car type filter
-    if (filters.carType !== 'all') {
-      filtered = filtered.filter((car) => car.carType === filters.carType);
-    }
-
-    // Price range filter
+    // Price range filter (client-side only)
     if (filters.priceRange !== 'all') {
       filtered = filtered.filter((car) => {
+        const price = car.pricePerDay;
         switch (filters.priceRange) {
           case '0-1000':
-            return car.pricePerDay <= 1000;
+            return price >= 0 && price <= 1000;
           case '1000-2000':
-            return car.pricePerDay > 1000 && car.pricePerDay <= 2000;
+            return price > 1000 && price <= 2000;
           case '2000+':
-            return car.pricePerDay > 2000;
+            return price > 2000;
           default:
             return true;
         }
@@ -267,62 +134,132 @@ const CarListPage = () => {
     }
 
     setFilteredCars(filtered);
-  }, [cars, searchQuery, filters]);
+  }, [cars, filters.availability, filters.priceRange]);
+
+  // Helper function to refresh cars list
+  const refreshCarsList = async () => {
+    try {
+      const response = await adminService.getAllCars({
+        page: 1,
+        limit: 1000,
+        search: searchQuery,
+        status: filters.status,
+        carType: filters.carType,
+        brand: filters.brand || undefined,
+        location: filters.location !== 'all' ? filters.location : undefined,
+        owner: filters.owner !== 'all' ? filters.owner : undefined,
+      });
+
+      if (response.success && response.data) {
+          const formattedCars = response.data.cars.map((car) => {
+            // Get primary image or first image
+            const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
+            const imageUrl = primaryImage?.url || null;
+            
+            return {
+              id: car._id || car.id,
+              brand: car.brand,
+              model: car.model,
+              year: car.year,
+              carType: car.carType,
+              pricePerDay: car.pricePerDay,
+              status: car.status,
+              availability: car.isAvailable ? 'available' : 'booked',
+              ownerId: car.owner?._id || car.owner?.id || car.owner,
+              ownerName: car.owner?.name || 'Unknown',
+              ownerEmail: car.owner?.email || '',
+              location: car.location?.city || car.location || 'Unknown',
+              images: car.images || [],
+              imageUrl: imageUrl, // Add primary image URL for easy access
+              rating: car.averageRating || 0,
+              totalBookings: car.totalBookings || 0,
+              totalRevenue: car.totalRevenue || 0,
+              features: car.features || [],
+              registrationDate: car.createdAt || new Date().toISOString(),
+            };
+          });
+        setCars(formattedCars);
+      }
+    } catch (error) {
+      console.error('Error refreshing cars list:', error);
+    }
+  };
 
   // Handle car actions
-  const handleApprove = (carId) => {
-    setCars((prevList) =>
-      prevList.map((car) => {
-        if (car.id === carId) {
-          return { ...car, status: 'active' };
-        }
-        return car;
-      })
-    );
+  const handleApprove = async (carId) => {
+    try {
+      const response = await adminService.updateCarStatus(carId, 'active');
+      if (response.success) {
+        toastUtils.success('Car approved successfully');
+        await refreshCarsList();
+      }
+    } catch (error) {
+      console.error('Error approving car:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to approve car');
+    }
   };
 
-  const handleReject = (carId) => {
-    setCars((prevList) =>
-      prevList.map((car) => {
-        if (car.id === carId) {
-          return { ...car, status: 'inactive' };
-        }
-        return car;
-      })
-    );
+  const handleReject = async (carId) => {
+    try {
+      const response = await adminService.updateCarStatus(carId, 'rejected', 'Rejected by admin');
+      if (response.success) {
+        toastUtils.success('Car rejected successfully');
+        await refreshCarsList();
+      }
+    } catch (error) {
+      console.error('Error rejecting car:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to reject car');
+    }
   };
 
-  const handleSuspend = (carId) => {
-    setCars((prevList) =>
-      prevList.map((car) => {
-        if (car.id === carId) {
-          return { ...car, status: 'suspended' };
-        }
-        return car;
-      })
-    );
+  const handleSuspend = async (carId) => {
+    try {
+      const response = await adminService.updateCarStatus(carId, 'suspended');
+      if (response.success) {
+        toastUtils.success('Car suspended successfully');
+        await refreshCarsList();
+      }
+    } catch (error) {
+      console.error('Error suspending car:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to suspend car');
+    }
   };
 
-  const handleActivate = (carId) => {
-    setCars((prevList) =>
-      prevList.map((car) => {
-        if (car.id === carId) {
-          return { ...car, status: 'active' };
-        }
-        return car;
-      })
-    );
+  const handleActivate = async (carId) => {
+    try {
+      const response = await adminService.updateCarStatus(carId, 'active');
+      if (response.success) {
+        toastUtils.success('Car activated successfully');
+        await refreshCarsList();
+      }
+    } catch (error) {
+      console.error('Error activating car:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to activate car');
+    }
   };
 
-  const handleDelete = (carId) => {
+  const handleDelete = async (carId) => {
     if (window.confirm('Are you sure you want to delete this car listing?')) {
-      setCars((prevList) => prevList.filter((car) => car.id !== carId));
+      try {
+        const response = await adminService.deleteCar(carId);
+        if (response.success) {
+          toastUtils.success('Car deleted successfully');
+          await refreshCarsList();
+        }
+      } catch (error) {
+        console.error('Error deleting car:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to delete car');
+      }
     }
   };
 
   const handleViewCar = (car) => {
     setSelectedCar(car);
     setShowCarDetail(true);
+  };
+
+  const handleEditCar = (car) => {
+    navigate(`/admin/cars/${car.id}/edit`);
   };
 
   // Get status badge color
@@ -594,11 +531,28 @@ const CarListPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredCars.map((car) => (
               <Card key={car.id} className="p-4 hover:shadow-lg transition-all">
-                {/* Car Image Placeholder */}
-                <div className="w-full h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
+                {/* Car Image */}
+                <div className="w-full h-48 bg-gray-200 rounded-lg mb-4 overflow-hidden">
+                  {car.imageUrl ? (
+                    <img
+                      src={car.imageUrl}
+                      alt={`${car.brand} ${car.model}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`w-full h-full flex items-center justify-center ${car.imageUrl ? 'hidden' : ''}`}
+                    style={{ display: car.imageUrl ? 'none' : 'flex' }}
+                  >
                   <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
+                  </div>
                 </div>
 
                 {/* Car Info */}
@@ -694,10 +648,27 @@ const CarListPage = () => {
               <Card key={car.id} className="p-4 hover:shadow-lg transition-all">
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* Car Image */}
-                  <div className="w-full md:w-48 h-32 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-full md:w-48 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                    {car.imageUrl ? (
+                      <img
+                        src={car.imageUrl}
+                        alt={`${car.brand} ${car.model}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className={`w-full h-full flex items-center justify-center ${car.imageUrl ? 'hidden' : ''}`}
+                      style={{ display: car.imageUrl ? 'none' : 'flex' }}
+                    >
                     <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
+                    </div>
                   </div>
 
                   {/* Car Details */}
@@ -827,6 +798,7 @@ const CarListPage = () => {
             setShowCarDetail(false);
             setSelectedCar(null);
           }}
+          onEdit={handleEditCar}
           onApprove={handleApprove}
           onReject={handleReject}
           onSuspend={handleSuspend}
@@ -841,7 +813,7 @@ const CarListPage = () => {
 /**
  * Car Detail Modal Component
  */
-const CarDetailModal = ({ car, onClose, onApprove, onReject, onSuspend, onActivate, onDelete }) => {
+const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, onActivate, onDelete }) => {
   const [activeTab, setActiveTab] = useState('details');
 
   if (!car) return null;
@@ -897,15 +869,41 @@ const CarDetailModal = ({ car, onClose, onApprove, onReject, onSuspend, onActiva
                 {/* Car Images */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Car Images</h3>
+                  {car.images && car.images.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                      {car.images.map((image, index) => (
+                        <div key={index} className="relative w-full h-32 bg-gray-200 rounded-lg overflow-hidden group">
+                          <img
+                            src={image.url || image}
+                            alt={`${car.brand} ${car.model} - Image ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              const placeholder = e.target.nextElementSibling;
+                              if (placeholder) placeholder.style.display = 'flex';
+                            }}
+                          />
+                          <div className="hidden w-full h-full absolute inset-0 bg-gray-200 rounded-lg items-center justify-center">
                         <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
+                          </div>
+                          {image.isPrimary && (
+                            <span className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded">
+                              Primary
+                            </span>
+                          )}
                       </div>
                     ))}
                   </div>
+                  ) : (
+                    <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="ml-2 text-gray-500 text-sm">No images available</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Car Specifications */}
@@ -1036,6 +1034,16 @@ const CarDetailModal = ({ car, onClose, onApprove, onReject, onSuspend, onActiva
             className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
           >
             Close
+          </button>
+          <button
+            onClick={() => {
+              onEdit(car);
+              onClose();
+            }}
+            className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
+            style={{ backgroundColor: theme.colors.primary }}
+          >
+            Edit
           </button>
           {car.status === 'pending' && (
             <>

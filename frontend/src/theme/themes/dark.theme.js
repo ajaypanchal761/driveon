@@ -4,9 +4,9 @@ export const darkTheme = {
   name: 'dark',
   colors: {
     primary: {
-      DEFAULT: '#5d0d8a', // Lighter purple for dark mode
-      dark: '#3d096d',
-      light: '#7d1daa',
+      DEFAULT: '#3a4169', // Lighter blue for dark mode
+      dark: '#272343',
+      light: '#474f87',
     },
     secondary: {
       DEFAULT: '#a0a0a0',
@@ -28,7 +28,7 @@ export const darkTheme = {
       light: '#3a3a3a',
       DEFAULT: '#4a4a4a',
       dark: '#5a5a5a',
-      focus: '#5d0d8a',
+      focus: '#3a4169',
     },
     success: {
       DEFAULT: '#4ade80',

@@ -1,5 +1,4 @@
 import api from './api';
-import { API_ENDPOINTS } from '../constants';
 
 /**
  * Car Service
@@ -13,8 +12,13 @@ export const carService = {
    * @returns {Promise}
    */
   getCars: async (params = {}) => {
-    const response = await api.get(API_ENDPOINTS.CARS.LIST, { params });
-    return response.data;
+    try {
+      const response = await api.get('/cars', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get cars error:', error);
+      throw error;
+    }
   },
 
   /**
@@ -23,17 +27,58 @@ export const carService = {
    * @returns {Promise}
    */
   getCarDetails: async (id) => {
-    const response = await api.get(`${API_ENDPOINTS.CARS.DETAILS}/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/cars/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get car details error:', error);
+      throw error;
+    }
   },
 
   /**
-   * Get available filters
+   * Get top brands
+   * @param {Object} params - Query parameters (limit)
    * @returns {Promise}
    */
-  getFilters: async () => {
-    const response = await api.get(API_ENDPOINTS.CARS.FILTERS);
-    return response.data;
+  getTopBrands: async (params = { limit: 10 }) => {
+    try {
+      const response = await api.get('/cars/brands/top', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get top brands error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get top car types
+   * @param {Object} params - Query parameters (limit)
+   * @returns {Promise}
+   */
+  getTopCarTypes: async (params = { limit: 10 }) => {
+    try {
+      const response = await api.get('/cars/types/top', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get top car types error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get nearby cars
+   * @param {Object} params - Query parameters (city, limit, latitude, longitude)
+   * @returns {Promise}
+   */
+  getNearbyCars: async (params = {}) => {
+    try {
+      const response = await api.get('/cars/nearby', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get nearby cars error:', error);
+      throw error;
+    }
   },
 };
 

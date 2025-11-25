@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy } from "react";
 import ProtectedRoute from "../components/layout/ProtectedRoute";
 import AdminRoute from "../components/layout/AdminRoute";
@@ -6,6 +6,7 @@ import OwnerRoute from "../components/layout/OwnerRoute";
 import ProfileCompleteRoute from "../components/layout/ProfileCompleteRoute";
 import PageLayout from "../components/layout/PageLayout";
 import AdminLayout from "../components/admin/layout/AdminLayout";
+import { useAdminAuth } from "../context/AdminContext";
 
 // Lazy load pages for code splitting (better performance)
 const HomePage = lazy(() => import("../pages/home/HomePage"));
@@ -67,6 +68,12 @@ const GuarantorListPage = lazy(() =>
 const CarListPage = lazy(() =>
   import("../pages/admin/cars/CarListPage")
 );
+const AddCarPage = lazy(() =>
+  import("../pages/admin/cars/AddCarPage")
+);
+const EditCarPage = lazy(() =>
+  import("../pages/admin/cars/EditCarPage")
+);
 const BookingListPage = lazy(() =>
   import("../pages/admin/bookings/BookingListPage")
 );
@@ -94,9 +101,6 @@ const AdminSettingsPage = lazy(() =>
 const AdminLoginPage = lazy(() =>
   import("../pages/admin/AdminLoginPage")
 );
-const AdminSignupPage = lazy(() =>
-  import("../pages/admin/AdminSignupPage")
-);
 const OwnerDashboardPage = lazy(() =>
   import("../pages/owner/OwnerDashboardPage")
 );
@@ -106,6 +110,31 @@ const OwnerBookingsPage = lazy(() =>
   import("../pages/owner/OwnerBookingsPage")
 );
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
+
+/**
+ * AdminRedirectRoute Component
+ * Handles /admin route - redirects to dashboard if authenticated, login if not
+ */
+const AdminRedirectRoute = () => {
+  const { isAuthenticated, isLoading } = useAdminAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4 border-purple-600"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  
+  return <Navigate to="/admin/login" replace />;
+};
 
 // Create router configuration
 const router = createBrowserRouter([
@@ -135,9 +164,10 @@ const router = createBrowserRouter([
         path: "admin/login",
         element: <AdminLoginPage />,
       },
+      // Admin root route - redirects based on authentication
       {
-        path: "admin/signup",
-        element: <AdminSignupPage />,
+        path: "admin",
+        element: <AdminRedirectRoute />,
       },
       // Admin Routes (require admin role and use AdminLayout)
       {
@@ -181,6 +211,14 @@ const router = createBrowserRouter([
               {
                 path: "admin/cars",
                 element: <CarListPage />,
+              },
+              {
+                path: "admin/cars/new",
+                element: <AddCarPage />,
+              },
+              {
+                path: "admin/cars/:carId/edit",
+                element: <EditCarPage />,
               },
               {
                 path: "admin/cars/pending",

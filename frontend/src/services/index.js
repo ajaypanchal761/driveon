@@ -11,3 +11,4 @@ export { default as bookingService } from "./booking.service";
 export { default as paymentService } from "./payment.service";
 export { default as kycService } from "./kyc.service";
 export { default as pricingService } from "./pricing.service";
+export { adminService } from "./admin.service";

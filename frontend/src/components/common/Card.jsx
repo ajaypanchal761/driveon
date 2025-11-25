@@ -46,16 +46,30 @@ const Card = ({
     ${className}
   `.trim().replace(/\s+/g, ' ');
 
-  const Component = onClick ? 'button' : 'div';
+  // Always use div to avoid nested button issues
+  // Add accessibility attributes if clickable
+  const accessibilityProps = onClick
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(e);
+          }
+        },
+      }
+    : {};
 
   return (
-    <Component
+    <div
       className={classes}
       onClick={onClick}
+      {...accessibilityProps}
       {...props}
     >
       {children}
-    </Component>
+    </div>
   );
 };
 

@@ -4,9 +4,9 @@ export const lightTheme = {
   name: 'light',
   colors: {
     primary: {
-      DEFAULT: '#3d096d',
-      dark: '#2d0750',
-      light: '#5d0d8a',
+      DEFAULT: '#272343',
+      dark: '#1f1c35',
+      light: '#3a4169',
     },
     secondary: {
       DEFAULT: '#808080',
@@ -15,8 +15,8 @@ export const lightTheme = {
     black: '#000000',
     background: {
       primary: '#ffffff',
-      secondary: '#f1f1f1',
-      tertiary: '#e8e8e8',
+      secondary: '#e3f6f5',
+      tertiary: '#bae8e8',
     },
     text: {
       primary: '#1a1a1a',
@@ -25,10 +25,10 @@ export const lightTheme = {
       inverse: '#ffffff',
     },
     border: {
-      light: '#e8e8e8',
+      light: '#bae8e8',
       DEFAULT: '#d0d0d0',
       dark: '#a0a0a0',
-      focus: '#3d096d',
+      focus: '#272343',
     },
     success: {
       DEFAULT: '#28a745',

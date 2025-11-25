@@ -28,10 +28,9 @@ const PageLayout = () => {
     /^\/booking\/[^/]+\/review$/
   ); // Matches /booking/:bookingId/review
 
-  // Check if current route is an admin panel page (excluding login/signup)
+  // Check if current route is an admin panel page (excluding login)
   const isAdminPage = location.pathname.startsWith("/admin/") && 
-    !location.pathname.startsWith("/admin/login") && 
-    !location.pathname.startsWith("/admin/signup");
+    !location.pathname.startsWith("/admin/login");
 
   // Routes where header and bottom navbar should be hidden
   const hideNavigationRoutes = [
@@ -39,7 +38,6 @@ const PageLayout = () => {
     "/register",
     "/verify-otp",
     "/admin/login",
-    "/admin/signup",
   ];
   const shouldHideNavigation = hideNavigationRoutes.includes(location.pathname);
 

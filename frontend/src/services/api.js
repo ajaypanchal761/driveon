@@ -23,22 +23,88 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    // Get token from Redux store or localStorage
-    const token = store.getState().auth.token || localStorage.getItem('authToken');
+    // Check if this is an admin route
+    const isAdminRoute = config.url?.includes('/admin/');
     
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Get appropriate token (admin or user)
+    let token;
+    if (isAdminRoute) {
+      token = localStorage.getItem('adminToken');
     } else {
-      // Log warning if no token is available for protected routes
-      console.warn('No authentication token found for request:', config.url);
+      token = store.getState().auth.token || localStorage.getItem('authToken');
+    }
+    
+    // List of public routes that don't require authentication
+    const publicRoutes = [
+      '/auth/register',
+      '/auth/send-login-otp',
+      '/auth/verify-otp',
+      '/auth/resend-otp',
+      '/auth/refresh-token',
+      '/admin/signup',
+      '/admin/login',
+      '/admin/refresh-token', // Also include refresh token
+    ];
+    
+    // Check if this is a public route
+    // Use exact URL matching to avoid false positives
+    const requestUrl = config.url || '';
+    const isPublicRoute = publicRoutes.some(route => {
+      // Check if URL exactly matches or ends with the route
+      return requestUrl === route || 
+             requestUrl.endsWith(route) ||
+             requestUrl.includes(route);
+    });
+    
+    // CRITICAL: Never add Authorization header for public routes
+    // This prevents middleware from being triggered incorrectly
+    if (isPublicRoute) {
+      // Explicitly remove Authorization header for public routes
+      // Also remove it from common header locations
+      delete config.headers.Authorization;
+      delete config.headers.authorization;
+      if (config.headers.common) {
+        delete config.headers.common.Authorization;
+      }
+      
+      if (isAdminRoute) {
+        console.log('✅ Public admin route - NO token sent:', {
+          url: config.url,
+          hasAuthHeader: !!config.headers.Authorization,
+          method: config.method,
+        });
+      }
+    } else if (token) {
+      // Only add token for protected routes
+      config.headers.Authorization = `Bearer ${token}`;
+      // Debug log for admin routes
+      if (isAdminRoute && process.env.NODE_ENV === 'development') {
+        console.log('Admin request with token:', {
+          url: config.url,
+          hasToken: !!token,
+          tokenLength: token.length,
+          tokenPreview: token.substring(0, 30) + '...',
+        });
+      }
+    } else {
+      // Only log warning for protected routes that don't have a token
+      if (isAdminRoute) {
+        console.error('❌ No admin token found for protected admin route:', config.url);
+        console.error('Available tokens:', {
+          adminToken: !!localStorage.getItem('adminToken'),
+          authToken: !!localStorage.getItem('authToken'),
+        });
+      } else {
+        console.warn('No authentication token found for request:', config.url);
+      }
     }
 
     // Don't set Content-Type for FormData - let browser set it with boundary
     // But ensure Authorization header is still set
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
-      // Explicitly ensure Authorization header is set for FormData requests
-      if (token && !config.headers.Authorization) {
+      // Only add Authorization header for FormData if it's NOT a public route
+      if (token && !isPublicRoute && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } else if (!config.headers['Content-Type']) {
@@ -77,7 +143,132 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      // Log token status for debugging
+      // Check if this is an admin route
+      const isAdminRoute = originalRequest.url?.includes('/admin/');
+      
+      // List of public admin routes that don't require token refresh
+      const publicAdminRoutes = [
+        '/admin/login',
+        '/admin/signup',
+        '/admin/refresh-token',
+      ];
+      
+      const isPublicAdminRoute = publicAdminRoutes.some(route => originalRequest.url?.includes(route));
+      
+      // For public admin routes (login, signup), don't try to refresh - just reject the error
+      // These routes can return 401 for invalid credentials, not token issues
+      // Don't log confusing messages for these routes
+      if (isPublicAdminRoute) {
+        // For public routes, preserve the original error but don't try to refresh token
+        // The error might be a legitimate backend error (like validation failure)
+        // Create a clean error object without token-related messages
+        
+        // Extract the actual backend error message
+        let errorMessage = 'Request failed';
+        
+        // For login route, check if it's a credential error or route issue
+        if (originalRequest.url?.includes('/admin/login')) {
+          // For login, the backend should return proper error messages
+          if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response?.status === 401) {
+            // 401 from login usually means invalid credentials
+            // But if message is "No token provided", it means middleware was called (route issue)
+            if (error.response?.data?.message?.includes('No token provided')) {
+              errorMessage = 'Login route error. Please contact support.';
+              console.error('⚠️ Login route reached middleware - this should not happen!');
+            } else {
+              errorMessage = 'Invalid email or password. Please check your credentials.';
+            }
+          } else {
+            errorMessage = error.response?.data?.message || error.message || 'Login failed';
+          }
+        } else {
+          // For other public routes
+          if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+          } else if (error.message && !error.message.includes('No token provided')) {
+            errorMessage = error.message;
+          }
+        }
+        
+        // Create a clean error object
+        const cleanError = new Error(errorMessage);
+        cleanError.response = error.response;
+        cleanError.config = error.config;
+        cleanError.status = error.response?.status;
+        
+        // Only log if it's not a normal login failure
+        if (!originalRequest.url?.includes('/admin/login') || 
+            (error.response?.data?.message && !error.response.data.message.includes('Invalid'))) {
+          console.log('Public route error:', {
+            url: originalRequest.url,
+            message: errorMessage,
+            status: error.response?.status,
+            backendMessage: error.response?.data?.message,
+          });
+        }
+        
+        return Promise.reject(cleanError);
+      }
+      
+      // Only try to refresh token for protected admin routes
+      if (isAdminRoute) {
+        // Try to refresh admin token
+        const adminRefreshToken = localStorage.getItem('adminRefreshToken');
+        
+        if (adminRefreshToken) {
+          try {
+            const refreshResponse = await axios.post(`${API_BASE_URL}/admin/refresh-token`, {
+              refreshToken: adminRefreshToken,
+            });
+            
+            if (refreshResponse.data?.success && refreshResponse.data?.data) {
+              const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data.data;
+              
+              // Store new tokens
+              localStorage.setItem('adminToken', newToken);
+              if (newRefreshToken) {
+                localStorage.setItem('adminRefreshToken', newRefreshToken);
+              }
+              
+              // Update authorization header and retry original request
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return api(originalRequest);
+            }
+          } catch (refreshError) {
+            console.error('Admin token refresh failed:', refreshError);
+            // Refresh failed, clear tokens
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminRefreshToken');
+            return Promise.reject(refreshError);
+          }
+        }
+        
+        // No refresh token or refresh failed
+        // Only log for protected routes, not public routes
+        if (!isPublicAdminRoute) {
+          console.error('Admin authentication failed:', {
+            url: originalRequest.url,
+            message: error.response?.data?.message || 'Unauthorized',
+            hasAdminToken: !!localStorage.getItem('adminToken'),
+            hasRefreshToken: !!adminRefreshToken,
+          });
+          
+          // Clear admin tokens only for protected routes
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminRefreshToken');
+        }
+        
+        return Promise.reject(error);
+      }
+      
+      // For public admin routes (login, signup), just pass through the error
+      // Don't log confusing messages - these routes can legitimately return 401 for invalid credentials
+
+      // Log token status for debugging (user routes)
       const currentToken = store.getState().auth.token || localStorage.getItem('authToken');
       console.warn('401 Unauthorized - Token status:', {
         hasToken: !!currentToken,
@@ -86,7 +277,7 @@ api.interceptors.response.use(
       });
 
       try {
-        // Try to refresh token
+        // Try to refresh token (only for user routes)
         const refreshToken = store.getState().auth.refreshToken || 
                             localStorage.getItem('refreshToken');
 

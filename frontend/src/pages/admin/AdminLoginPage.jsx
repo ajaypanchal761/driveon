@@ -19,12 +19,11 @@ const adminLoginSchema = z.object({
     .string()
     .min(1, 'Password is required')
     .min(6, 'Password must be at least 6 characters'),
-  rememberMe: z.boolean().optional(),
 });
 
 /**
  * AdminLoginPage Component
- * Password-based login for admin panel with purple theme
+ * Password-based login for admin panel with blue theme
  * Fixed view, no scrolling
  */
 const AdminLoginPage = () => {
@@ -64,7 +63,6 @@ const AdminLoginPage = () => {
     defaultValues: {
       email: '',
       password: '',
-      rememberMe: false,
     },
   });
 
@@ -72,13 +70,27 @@ const AdminLoginPage = () => {
     setIsLoading(true);
 
     try {
-      await login(data.email, data.password);
+      console.log('🔵 AdminLoginPage: Attempting login with:', { email: data.email });
+      const result = await login(data.email, data.password);
+      console.log('✅ AdminLoginPage: Login successful:', result);
       toastUtils.success('Login successful!');
       navigate(from, { replace: true });
     } catch (error) {
-      console.error('Admin Login Error:', error);
-      const errorMessage =
-        error.message || 'Login failed. Please check your credentials.';
+      console.error('❌ AdminLoginPage: Login Error:', error);
+      // Extract user-friendly error message
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (error.message) {
+        // Filter out technical error messages
+        if (error.message.includes('No token provided')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (error.message.includes('authorization denied')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (!error.message.includes('Request failed') && !error.message.includes('Network')) {
+          errorMessage = error.message;
+        }
+      }
+      
       toastUtils.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -89,7 +101,7 @@ const AdminLoginPage = () => {
     <div
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{
-        backgroundColor: '#3d096d',
+        backgroundColor: '#272343',
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -149,7 +161,7 @@ const AdminLoginPage = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="mt-2 text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
-                style={{ color: '#3d096d' }}
+                style={{ color: '#272343' }}
               >
                 {showPassword ? (
                   <>
@@ -195,28 +207,6 @@ const AdminLoginPage = () => {
               </button>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  {...register('rememberMe')}
-                  className="w-4 h-4 rounded focus:ring-2"
-                  style={{
-                    accentColor: '#3d096d',
-                    borderColor: '#d0d0d0',
-                  }}
-                />
-                <span className="ml-2 text-sm text-gray-700">Remember me</span>
-              </label>
-              <Link
-                to="/admin/forgot-password"
-                className="text-sm font-medium hover:underline"
-                style={{ color: '#3d096d' }}
-              >
-                Forgot password?
-              </Link>
-            </div>
 
             {/* Submit Button */}
             <Button
@@ -227,25 +217,13 @@ const AdminLoginPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-6"
-              style={{ backgroundColor: '#3d096d' }}
+              style={{ backgroundColor: '#272343' }}
             >
               Login
             </Button>
           </form>
         </div>
 
-        {/* Sign Up Link */}
-        <div className="mt-6 text-center">
-          <p className="text-white/90 text-sm md:text-base">
-            Don't have an admin account?{' '}
-            <Link
-              to="/admin/signup"
-              className="text-white font-semibold hover:underline"
-            >
-              Sign up
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -23,11 +23,7 @@ const adminSignupSchema = z
     password: z
       .string()
       .min(1, 'Password is required')
-      .min(6, 'Password must be at least 6 characters long')
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-      ),
+      .min(6, 'Password must be at least 6 characters long'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
     termsAccepted: z
       .boolean()
@@ -106,7 +102,7 @@ const AdminSignupPage = () => {
     <div
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{
-        backgroundColor: '#3d096d',
+        backgroundColor: '#272343',
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -176,7 +172,7 @@ const AdminSignupPage = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="mt-0.5 text-[10px] text-gray-600 hover:text-gray-900 flex items-center gap-0.5"
-                style={{ color: '#3d096d' }}
+                style={{ color: '#272343' }}
               >
                 {showPassword ? (
                   <>
@@ -236,7 +232,7 @@ const AdminSignupPage = () => {
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="mt-0.5 text-[10px] text-gray-600 hover:text-gray-900 flex items-center gap-0.5"
-                style={{ color: '#3d096d' }}
+                style={{ color: '#272343' }}
               >
                 {showConfirmPassword ? (
                   <>
@@ -290,7 +286,7 @@ const AdminSignupPage = () => {
                   {...register('termsAccepted')}
                   className="mt-0.5 w-3 h-3 rounded focus:ring-2"
                   style={{
-                    accentColor: '#3d096d',
+                    accentColor: '#272343',
                     borderColor: '#d0d0d0',
                   }}
                 />
@@ -299,7 +295,7 @@ const AdminSignupPage = () => {
                   <Link
                     to="/terms"
                     className="font-medium hover:underline"
-                    style={{ color: '#3d096d' }}
+                    style={{ color: '#272343' }}
                     target="_blank"
                   >
                     Terms
@@ -308,7 +304,7 @@ const AdminSignupPage = () => {
                   <Link
                     to="/privacy"
                     className="font-medium hover:underline"
-                    style={{ color: '#3d096d' }}
+                    style={{ color: '#272343' }}
                     target="_blank"
                   >
                     Privacy
@@ -331,7 +327,7 @@ const AdminSignupPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-2"
-              style={{ backgroundColor: '#3d096d' }}
+              style={{ backgroundColor: '#272343' }}
             >
               Create Account
             </Button>

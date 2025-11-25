@@ -1,16 +1,18 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { logout } from '../../store/slices/authSlice';
-import { clearUser } from '../../store/slices/userSlice';
+import { clearUser, updateUser } from '../../store/slices/userSlice';
+import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
 // Theme color constant
-const PRIMARY_COLOR = '#3d096d';
-const PRIMARY_COLOR_LIGHT = '#5d0d8a';
+const PRIMARY_COLOR = '#272343';
+const PRIMARY_COLOR_LIGHT = '#3a4169';
 
 /**
  * ProfileDashboardPage Component
  * Beautiful profile page with user info and menu options
- * Matches homepage theme (purple #3d096d)
+ * Matches homepage theme (blue #272343)
  * Mobile-first design
  */
 const ProfileDashboardPage = () => {
@@ -22,8 +24,29 @@ const ProfileDashboardPage = () => {
   );
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
-  // Show loading only if explicitly loading, otherwise show page with default data
-  // Don't block rendering if user data is not loaded yet
+  // Fetch user profile data when component mounts
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await userService.getProfile();
+        
+        // Extract user data from response
+        const userData = response.data?.user || response.data?.data?.user || response.user;
+        
+        if (userData) {
+          // Update Redux store with fetched data
+          dispatch(updateUser(userData));
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Don't show error toast - just use Redux store data as fallback
+      }
+    };
+
+    fetchUserProfile();
+  }, [dispatch, isAuthenticated]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -128,9 +151,9 @@ const ProfileDashboardPage = () => {
 
   return (
     <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0" style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
-      {/* Header Section - Purple Background */}
+      {/* Header Section - Blue Background */}
       <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: PRIMARY_COLOR }}>
-        {/* Abstract purple pattern background */}
+        {/* Abstract blue pattern background */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
@@ -216,8 +239,8 @@ const ProfileDashboardPage = () => {
 
       {/* Main Content */}
       <main className="px-3 pt-4 pb-3 md:px-6 md:pt-8 md:pb-6 w-full max-w-7xl mx-auto" style={{ backgroundColor: '#ffffff' }}>
-        {/* Profile Completion Status Card */}
-        {!profileComplete && (
+        {/* Profile Completion Status Card - Only show if profile is not complete */}
+        {(!profileComplete && (!user?.profileComplete || user.profileComplete < 100)) && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 mb-3 md:mb-6">
             <div className="flex items-start gap-2 md:gap-3">
               <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full flex items-center justify-center">
@@ -240,7 +263,9 @@ const ProfileDashboardPage = () => {
                   <h3 className="text-xs md:text-sm font-semibold text-yellow-900">
                     Complete Your Profile
                   </h3>
-                  <span className="text-xs md:text-sm font-bold text-yellow-900">0%</span>
+                  <span className="text-xs md:text-sm font-bold text-yellow-900">
+                    {user?.profileComplete || 0}%
+                  </span>
                 </div>
                 <p className="text-xs md:text-sm text-yellow-700 mb-1.5 md:mb-2">
                   Complete your profile to start booking cars

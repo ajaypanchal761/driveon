@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
 import Card from '../../components/common/Card';
+import { adminService } from '../../services/admin.service';
 
 /**
  * Admin Dashboard Page
@@ -30,60 +31,37 @@ const AdminDashboardPage = () => {
     userGrowth: [],
   });
 
-  // Mock data - In real app, this would come from API
+  // Fetch dashboard data from API
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setDashboardData({
-        loading: false,
-        stats: {
-          totalUsers: 1248,
-          totalCars: 342,
-          activeBookings: 45,
-          pendingKYC: 23,
-          todayRevenue: 125000,
-          activeTrips: 12,
-        },
-        recentBookings: [
-          { id: '1', userId: 'John Doe', car: 'Toyota Camry', amount: 5000, status: 'confirmed', time: '2 mins ago' },
-          { id: '2', userId: 'Jane Smith', car: 'Honda City', amount: 3500, status: 'pending', time: '15 mins ago' },
-          { id: '3', userId: 'Mike Johnson', car: 'BMW 7 Series', amount: 12000, status: 'active', time: '1 hour ago' },
-          { id: '4', userId: 'Sarah Williams', car: 'Mercedes S-Class', amount: 15000, status: 'confirmed', time: '2 hours ago' },
-          { id: '5', userId: 'David Brown', car: 'Audi A8', amount: 11000, status: 'completed', time: '3 hours ago' },
-        ],
-        pendingKYC: [
-          { id: '1', userId: 'Rajesh Kumar', documentType: 'Aadhaar', submittedDate: '2024-01-20', time: '5 mins ago' },
-          { id: '2', userId: 'Priya Sharma', documentType: 'PAN', submittedDate: '2024-01-20', time: '1 hour ago' },
-          { id: '3', userId: 'Amit Patel', documentType: 'Driving License', submittedDate: '2024-01-19', time: '2 hours ago' },
-        ],
-        recentPayments: [
-          { id: '1', userId: 'John Doe', amount: 5000, status: 'success', bookingId: 'BK001', time: '10 mins ago' },
-          { id: '2', userId: 'Jane Smith', amount: 3500, status: 'pending', bookingId: 'BK002', time: '30 mins ago' },
-          { id: '3', userId: 'Mike Johnson', amount: 12000, status: 'success', bookingId: 'BK003', time: '1 hour ago' },
-        ],
-        revenueTrend: [
-          { date: 'Mon', revenue: 45000 },
-          { date: 'Tue', revenue: 52000 },
-          { date: 'Wed', revenue: 48000 },
-          { date: 'Thu', revenue: 61000 },
-          { date: 'Fri', revenue: 55000 },
-          { date: 'Sat', revenue: 72000 },
-          { date: 'Sun', revenue: 68000 },
-        ],
-        bookingTrends: [
-          { month: 'Jan', bookings: 120 },
-          { month: 'Feb', bookings: 145 },
-          { month: 'Mar', bookings: 168 },
-          { month: 'Apr', bookings: 192 },
-        ],
-        userGrowth: [
-          { date: 'Week 1', users: 200 },
-          { date: 'Week 2', users: 350 },
-          { date: 'Week 3', users: 480 },
-          { date: 'Week 4', users: 620 },
-        ],
-      });
-    }, 500);
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch total users count
+        const usersResponse = await adminService.getAllUsers({
+          page: 1,
+          limit: 1, // We only need the total count
+        });
+
+        if (usersResponse.success && usersResponse.data) {
+          const totalUsers = usersResponse.data.pagination?.total || 0;
+          
+          setDashboardData(prev => ({
+            ...prev,
+            loading: false,
+            stats: {
+              ...prev.stats,
+              totalUsers: totalUsers,
+            },
+          }));
+        } else {
+          setDashboardData(prev => ({ ...prev, loading: false }));
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setDashboardData(prev => ({ ...prev, loading: false }));
+      }
+    };
+    
+    fetchDashboardData();
   }, []);
 
   // Overview Statistics Cards
@@ -97,8 +75,8 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: theme.colors.primary,
-      change: '+12%',
-      changeType: 'positive',
+      change: '--',
+      changeType: 'neutral',
       onClick: () => navigate('/admin/users'),
     },
     {
@@ -111,8 +89,8 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: theme.colors.info,
-      change: '+8%',
-      changeType: 'positive',
+      change: '--',
+      changeType: 'neutral',
       onClick: () => navigate('/admin/cars'),
     },
     {
@@ -124,8 +102,8 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: theme.colors.success,
-      change: '+5',
-      changeType: 'positive',
+      change: '--',
+      changeType: 'neutral',
       onClick: () => navigate('/admin/bookings/active'),
     },
     {
@@ -137,8 +115,8 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: theme.colors.warning,
-      change: dashboardData.stats.pendingKYC > 0 ? `${dashboardData.stats.pendingKYC} pending` : 'All clear',
-      changeType: dashboardData.stats.pendingKYC > 0 ? 'warning' : 'positive',
+      change: dashboardData.stats.pendingKYC > 0 ? `${dashboardData.stats.pendingKYC} pending` : '--',
+      changeType: dashboardData.stats.pendingKYC > 0 ? 'warning' : 'neutral',
       onClick: () => navigate('/admin/kyc/pending'),
     },
     {
@@ -150,8 +128,8 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: theme.colors.success,
-      change: '+18%',
-      changeType: 'positive',
+      change: '--',
+      changeType: 'neutral',
       onClick: () => navigate('/admin/payments'),
     },
     {
@@ -244,7 +222,8 @@ const AdminDashboardPage = () => {
                   <div className={`text-xs font-medium whitespace-nowrap ${
                     stat.changeType === 'positive' ? 'text-green-600' :
                     stat.changeType === 'warning' ? 'text-yellow-600' :
-                    stat.changeType === 'info' ? 'text-blue-600' : 'text-gray-600'
+                    stat.changeType === 'info' ? 'text-blue-600' :
+                    stat.changeType === 'neutral' ? 'text-gray-500' : 'text-gray-600'
                   }`}>
                     {stat.change}
                   </div>
@@ -269,30 +248,36 @@ const AdminDashboardPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {dashboardData.recentBookings.slice(0, 5).map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/admin/bookings/${booking.id}`)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{booking.userId}</p>
-                    <p className="text-xs text-gray-600">{booking.car}</p>
-                    <p className="text-xs text-gray-500 mt-1">{booking.time}</p>
+              {dashboardData.recentBookings.length > 0 ? (
+                dashboardData.recentBookings.slice(0, 5).map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/admin/bookings/${booking.id}`)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{booking.userId}</p>
+                      <p className="text-xs text-gray-600">{booking.car}</p>
+                      <p className="text-xs text-gray-500 mt-1">{booking.time}</p>
+                    </div>
+                    <div className="flex flex-col items-end ml-3">
+                      <span className="text-sm font-bold" style={{ color: theme.colors.primary }}>
+                        {formatCurrency(booking.amount)}
+                      </span>
+                      <span
+                        className="text-xs px-2 py-1 rounded-full text-white mt-1"
+                        style={{ backgroundColor: getStatusColor(booking.status) }}
+                      >
+                        {booking.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end ml-3">
-                    <span className="text-sm font-bold" style={{ color: theme.colors.primary }}>
-                      {formatCurrency(booking.amount)}
-                    </span>
-                    <span
-                      className="text-xs px-2 py-1 rounded-full text-white mt-1"
-                      style={{ backgroundColor: getStatusColor(booking.status) }}
-                    >
-                      {booking.status}
-                    </span>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No recent bookings</p>
                 </div>
-              ))}
+              )}
             </div>
           </Card>
 
@@ -309,7 +294,8 @@ const AdminDashboardPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {dashboardData.pendingKYC.map((kyc) => (
+              {dashboardData.pendingKYC.length > 0 ? (
+                dashboardData.pendingKYC.map((kyc) => (
                 <div
                   key={kyc.id}
                   className="flex items-start justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer border-l-4"
@@ -332,8 +318,8 @@ const AdminDashboardPage = () => {
                     Review
                   </button>
                 </div>
-              ))}
-              {dashboardData.pendingKYC.length === 0 && (
+                ))
+              ) : (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">No pending KYC verifications</p>
                 </div>
@@ -354,7 +340,8 @@ const AdminDashboardPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {dashboardData.recentPayments.map((payment) => (
+              {dashboardData.recentPayments.length > 0 ? (
+                dashboardData.recentPayments.map((payment) => (
                 <div
                   key={payment.id}
                   className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
@@ -377,7 +364,12 @@ const AdminDashboardPage = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No recent payments</p>
+                </div>
+              )}
             </div>
           </Card>
         </div>

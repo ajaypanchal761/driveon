@@ -36,9 +36,9 @@ import { theme } from '../theme/theme.constants';
 ### Available Theme Colors
 
 ```javascript
-theme.colors.primary          // #3d096d (Main purple)
-theme.colors.primaryDark      // #2d0750
-theme.colors.primaryLight     // #5d0d8a
+theme.colors.primary          // #272343 (Main blue)
+theme.colors.primaryDark      // #1f1c35
+theme.colors.primaryLight      // #3a4169
 theme.colors.background       // #ffffff
 theme.colors.backgroundSecondary  // #f1f1f1
 theme.colors.textPrimary      // #1a1a1a
@@ -56,7 +56,7 @@ theme.colors.warning          // #ffc107
 To change theme colors, edit **only** these files:
 
 1. **`src/theme/themes/custom.theme.js`** - Main theme definition
-   - Change `primary.DEFAULT` to change main purple color
+   - Change `primary.DEFAULT` to change main blue color
    - All other colors will update automatically
 
 2. **`src/theme/theme.constants.js`** - Exported constants
@@ -81,7 +81,7 @@ All pages will automatically use the new color!
 1. ✅ **DO**: Use `theme.colors.primary` in inline styles
 2. ✅ **DO**: Use Tailwind classes like `bg-primary` when possible
 3. ✅ **DO**: Import from `theme.constants.js` for consistency
-4. ❌ **DON'T**: Hardcode colors like `#3d096d` directly
+4. ❌ **DON'T**: Hardcode colors like `#272343` directly
 5. ❌ **DON'T**: Use different color values in different files
 
 ## Files Updated

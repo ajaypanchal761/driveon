@@ -118,7 +118,7 @@ const RegisterPage = () => {
     <div 
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{ 
-        backgroundColor: '#3d096d',
+        backgroundColor: '#272343',
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -203,7 +203,7 @@ const RegisterPage = () => {
                   {...register('termsAccepted')}
                   className="mt-1 w-4 h-4 rounded focus:ring-2"
                     style={{ 
-                    accentColor: '#3d096d',
+                    accentColor: '#272343',
                     borderColor: '#d0d0d0'
                   }}
                 />
@@ -212,7 +212,7 @@ const RegisterPage = () => {
                   <Link
                     to="/terms"
                     className="font-medium hover:underline"
-                    style={{ color: '#3d096d' }}
+                    style={{ color: '#272343' }}
                     target="_blank"
                   >
                     Terms and Conditions
@@ -221,7 +221,7 @@ const RegisterPage = () => {
                   <Link
                     to="/privacy"
                     className="font-medium hover:underline"
-                    style={{ color: '#3d096d' }}
+                    style={{ color: '#272343' }}
                     target="_blank"
                   >
                     Privacy Policy
@@ -244,7 +244,7 @@ const RegisterPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-4"
-              style={{ backgroundColor: '#3d096d' }}
+              style={{ backgroundColor: '#272343' }}
             >
               Send OTP
             </Button>

@@ -7,9 +7,13 @@ import smsIndiaHubService from '../services/smsIndiaHubService.js';
 
 /**
  * Test phone numbers for development/testing
- * These numbers will receive OTP 123456 without sending SMS
+ * These numbers will receive default OTP without sending SMS
  */
-const TEST_PHONE_NUMBERS = ['9993911855', '9685974247'];
+const TEST_PHONE_NUMBERS = {
+  '9993911855': '123456', // Default test OTP
+  '9685974247': '123456', // Default test OTP
+  '7610416911': '110211', // Custom OTP for this number
+};
 
 /**
  * Check if a phone number is a test number
@@ -21,7 +25,25 @@ export const isTestPhoneNumber = (phone) => {
   // Remove all non-digit characters for comparison
   const normalizedPhone = phone.replace(/\D/g, '');
   // Check if it ends with any test number (handles cases with country code)
-  return TEST_PHONE_NUMBERS.some(testNum => normalizedPhone.endsWith(testNum));
+  return Object.keys(TEST_PHONE_NUMBERS).some(testNum => normalizedPhone.endsWith(testNum));
+};
+
+/**
+ * Get test OTP for a phone number
+ * @param {string} phone - Phone number
+ * @returns {string|null} - Test OTP if it's a test number, null otherwise
+ */
+export const getTestOTP = (phone) => {
+  if (!phone) return null;
+  // Remove all non-digit characters for comparison
+  const normalizedPhone = phone.replace(/\D/g, '');
+  // Find matching test number
+  for (const testNum of Object.keys(TEST_PHONE_NUMBERS)) {
+    if (normalizedPhone.endsWith(testNum)) {
+      return TEST_PHONE_NUMBERS[testNum];
+    }
+  }
+  return null;
 };
 
 /**
@@ -30,8 +52,13 @@ export const isTestPhoneNumber = (phone) => {
  * @returns {string} - 6-digit OTP
  */
 export const generateOTP = (phone = null) => {
-  // If it's a test phone number, return default OTP
+  // If it's a test phone number, return the configured test OTP
   if (phone && isTestPhoneNumber(phone)) {
+    const testOTP = getTestOTP(phone);
+    if (testOTP) {
+      return testOTP;
+    }
+    // Fallback to default test OTP
     return '123456';
   }
   
@@ -71,14 +98,15 @@ export const sendOTP = async (phone, otp) => {
   try {
     // Skip SMS sending for test phone numbers
     if (isTestPhoneNumber(phone)) {
+      const testOTP = getTestOTP(phone) || otp;
       console.log(`🧪 Test phone number detected: ${phone}`);
-      console.log(`🧪 Skipping SMS send. OTP for testing: ${otp}`);
+      console.log(`🧪 Skipping SMS send. OTP for testing: ${testOTP}`);
       return {
         success: true,
         messageId: `test_${Date.now()}`,
         status: 'skipped',
         to: phone,
-        body: `Test OTP: ${otp}`,
+        body: `Test OTP: ${testOTP}`,
         provider: 'Test Mode',
         isTest: true,
       };

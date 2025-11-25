@@ -12,7 +12,7 @@ Copy this entire content into a file named ".env" in the backend directory:
 # MongoDB Configuration
 # For local MongoDB: mongodb://localhost:27017/driveon
 # For MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/driveon
-MONGODB_URI=mongodb+srv://driveon:driveon@cluster0.xzxln3b.mongodb.net/?appName=Cluster0
+MONGODB_URI=mongodb+srv://driveon:driveon2025@cluster0.dbvxz1c.mongodb.net/driveon?appName=Cluster0
 
 # Server Configuration
 PORT=5000

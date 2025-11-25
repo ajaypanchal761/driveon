@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { theme } from '../../theme/theme.constants';
+import { carService } from '../../services/car.service';
 // Import car images from assets folder
 import carBannerImage from '../../assets/car_img1-removebg-preview.png';
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -15,73 +16,132 @@ import carImg7 from '../../assets/car_img7-removebg-preview.png';
 /**
  * HomePage Component
  * Exact match to the mobile app design shown in the image
- * Mobile-first design with purple theme
+ * Mobile-first design with blue theme
+ * Now with dynamic data from backend
  */
 const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.user);
   const [location, setLocation] = useState('Lombok mataram');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [topCarTypes, setTopCarTypes] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Top Brands data with images and names
-  const topBrands = [
-    { id: 1, name: 'Toyota', image: carImg1 },
-    { id: 2, name: 'Honda', image: carImg2 },
-    { id: 3, name: 'BMW', image: carImg3 },
-    { id: 4, name: 'Mercedes', image: carImg4 },
-    { id: 5, name: 'Audi', image: carImg5 },
-    { id: 6, name: 'Hyundai', image: carImg6 },
-    { id: 7, name: 'Ford', image: carImg7 },
-  ];
+  // Default car type images mapping (fallback)
+  const carTypeImageMap = {
+    'sedan': carImg1,
+    'suv': carImg2,
+    'hatchback': carImg3,
+    'luxury': carImg4,
+    'sports': carImg5,
+    'compact': carImg6,
+    'muv': carImg7,
+    'coupe': carImg1,
+  };
 
-  // Mock data for vehicles - matching the image design
-  const vehicles = [
-    { 
-      id: 1, 
-      brand: 'Toyota',
-      model: 'Camry',
-      dealership: 'DriveOn Premium',
-      price: 890,
-      image: carImg1,
-      rating: 4.7,
-    },
-    { 
-      id: 2, 
-      brand: 'Honda',
-      model: 'City',
-      dealership: 'DriveOn Premium',
-      price: 620,
-      image: carImg2,
-      rating: 4.8,
-    },
-    { 
-      id: 3, 
-      brand: 'Maruti',
-      model: 'Swift',
-      dealership: 'DriveOn Premium',
-      price: 750,
-      image: carImg3,
-      rating: 4.5,
-    },
-    { 
-      id: 4, 
-      brand: 'Hyundai',
-      model: 'i20',
-      dealership: 'DriveOn Premium',
-      price: 680,
-      image: carImg4,
-      rating: 4.6,
-    },
-    { 
-      id: 5, 
-      brand: 'Tata',
-      model: 'Nexon',
-      dealership: 'DriveOn Premium',
-      price: 920,
-      image: carImg5,
-      rating: 4.9,
-    },
-  ];
+  // Helper function to format car type name
+  const formatCarType = (carType) => {
+    if (!carType) return '';
+    return carType.charAt(0).toUpperCase() + carType.slice(1);
+  };
+
+  // Fetch top car types from backend
+  useEffect(() => {
+    const fetchTopCarTypes = async () => {
+      try {
+        const response = await carService.getTopCarTypes({ limit: 10 });
+        if (response.success && response.data.carTypes) {
+          const carTypesWithImages = response.data.carTypes.map((carType, index) => ({
+            id: index + 1,
+            name: formatCarType(carType.carType),
+            carType: carType.carType, // Keep original for filtering
+            count: carType.count,
+            avgRating: carType.avgRating,
+            totalBookings: carType.totalBookings,
+            // Use sample car image if available, otherwise fallback
+            image: carType.sampleCar?.primaryImage?.url || 
+                   carType.sampleCar?.images?.[0]?.url || 
+                   carTypeImageMap[carType.carType] || 
+                   carImg1,
+            // Store sample car ID for navigation
+            sampleCarId: carType.sampleCar?._id,
+          }));
+          setTopCarTypes(carTypesWithImages);
+        }
+      } catch (error) {
+        console.error('Error fetching top car types:', error);
+        // Fallback to default car types
+        setTopCarTypes([
+          { id: 1, name: 'Sedan', carType: 'sedan', image: carImg1 },
+          { id: 2, name: 'SUV', carType: 'suv', image: carImg2 },
+          { id: 3, name: 'Hatchback', carType: 'hatchback', image: carImg3 },
+          { id: 4, name: 'Luxury', carType: 'luxury', image: carImg4 },
+          { id: 5, name: 'Sports', carType: 'sports', image: carImg5 },
+          { id: 6, name: 'Compact', carType: 'compact', image: carImg6 },
+          { id: 7, name: 'MUV', carType: 'muv', image: carImg7 },
+        ]);
+      }
+    };
+
+    fetchTopCarTypes();
+  }, []);
+
+  // Fetch nearby cars from backend
+  useEffect(() => {
+    const fetchNearbyCars = async () => {
+      try {
+        setLoading(true);
+        // Extract city from location (e.g., "Lombok mataram" -> "mataram")
+        const city = location.split(' ').pop() || location;
+        const response = await carService.getNearbyCars({ 
+          city,
+          limit: 10,
+        });
+        
+        if (response.success && response.data.cars) {
+          const formattedCars = response.data.cars.map((car) => ({
+            id: car._id || car.id,
+            brand: car.brand,
+            model: car.model,
+            dealership: car.owner?.name || 'DriveOn Premium',
+            price: car.pricePerDay,
+            image: car.primaryImage || car.images?.[0]?.url || carImg1,
+            rating: car.averageRating || 0,
+            carId: car._id || car.id,
+          }));
+          setVehicles(formattedCars);
+        }
+      } catch (error) {
+        console.error('Error fetching nearby cars:', error);
+        // Fallback to default vehicles
+        setVehicles([
+          { 
+            id: 1, 
+            brand: 'Toyota',
+            model: 'Camry',
+            dealership: 'DriveOn Premium',
+            price: 890,
+            image: carImg1,
+            rating: 4.7,
+          },
+          { 
+            id: 2, 
+            brand: 'Honda',
+            model: 'City',
+            dealership: 'DriveOn Premium',
+            price: 620,
+            image: carImg2,
+            rating: 4.8,
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNearbyCars();
+  }, [location]);
 
   const handleProfileClick = () => {
     navigate('/profile');
@@ -89,12 +149,9 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen w-full bg-white">
-      {/* Status Bar Spacing - Fixed */}
-      <div className="h-6 shrink-0 fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: theme.colors.primary }}></div>
-
-      {/* Header Section - Purple Background - Fixed */}
-      <header className="text-white overflow-hidden md:rounded-none rounded-b-3xl shrink-0 max-w-full z-40 fixed left-0 right-0" style={{ backgroundColor: theme.colors.primary, top: '24px', width: '100%' }}>
-        {/* Abstract purple pattern background */}
+      {/* Header Section - Blue Background - Fixed */}
+      <header className="text-white overflow-hidden md:rounded-none rounded-b-3xl shrink-0 max-w-full z-40 fixed left-0 right-0 top-0" style={{ backgroundColor: theme.colors.primary, width: '100%' }}>
+        {/* Abstract blue pattern background */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full -ml-24 -mb-24"></div>
@@ -182,7 +239,7 @@ const HomePage = () => {
 
       {/* Main Content Area - Scrollable with padding for fixed header and bottom navbar */}
       <main className="px-4 md:px-6 lg:px-8 space-y-6 max-w-full md:max-w-7xl md:mx-auto" style={{ 
-        paddingTop: '90px', // Space for status bar (24px) + header (~66px)
+        paddingTop: '66px', // Space for header (~66px)
         paddingBottom: '90px', // Space for bottom navbar
       }}>
         {/* Search Bar */}
@@ -252,7 +309,7 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Top Brands Section */}
+        {/* Top Car Types Section */}
         <div className="max-w-full overflow-hidden">
           <div className="flex items-center justify-between mb-1 md:mb-4 lg:mb-6">
             <h3 className="text-lg md:text-2xl lg:text-3xl font-semibold text-gray-900">Top Brands</h3>
@@ -264,21 +321,25 @@ const HomePage = () => {
               See All
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto -mx-4 pl-4 pr-0 scrollbar-hide max-w-full md:grid md:grid-cols-4 lg:grid-cols-7 md:gap-6 lg:gap-8 md:mx-0 md:px-0 md:overflow-x-visible">
-            {topBrands.slice(0, 7).map((brand) => (
+          <div className="flex gap-3 md:gap-4 lg:gap-6 overflow-x-auto -mx-4 pl-4 pr-4 scrollbar-hide md:overflow-x-visible md:mx-0 md:px-0">
+            {topCarTypes.map((carType) => (
               <div
-                key={brand.id}
-                className="shrink-0 flex flex-col items-center md:shrink hover:scale-105 transition-transform cursor-pointer"
+                key={carType.id}
+                onClick={() => {
+                  // Navigate to browse cars page with carType filter
+                  navigate(`/cars?carType=${encodeURIComponent(carType.carType)}`);
+                }}
+                className="shrink-0 flex flex-col items-center hover:scale-105 transition-transform cursor-pointer active:scale-95"
               >
-                <div className="w-28 h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 flex items-center justify-center bg-gray-50 rounded-lg p-2 md:p-3 lg:p-4">
+                <div className="w-28 h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 flex items-center justify-center bg-gray-50 rounded-lg p-2 md:p-3 lg:p-4 hover:bg-gray-100 transition-colors">
                   <img
-                    src={brand.image}
-                    alt={brand.name}
+                    src={carType.image}
+                    alt={carType.name}
                     className="w-full h-full object-contain m-0 p-0"
                   />
                 </div>
                 <span className="text-xs md:text-sm lg:text-base font-medium text-gray-700 text-center max-w-[80px] md:max-w-full truncate m-0 p-0 mt-2 md:mt-3">
-                  {brand.name}
+                  {carType.name}
                 </span>
               </div>
             ))}
@@ -347,13 +408,13 @@ const HomePage = () => {
               <div
                 key={vehicle.id}
                 className="shrink-0 w-56 md:w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden relative cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                onClick={() => navigate(`/cars/${vehicle.id}`)}
+                onClick={() => navigate(`/cars/${vehicle.carId || vehicle.id}`)}
               >
                 {/* View Button - Top Right */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(`/cars/${vehicle.id}`);
+                    navigate(`/cars/${vehicle.carId || vehicle.id}`);
                   }}
                   className="absolute top-2 right-2 md:top-3 md:right-3 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all shadow-md hover:opacity-90 hover:scale-105 bg-white"
                   style={{ 

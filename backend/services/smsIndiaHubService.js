@@ -111,9 +111,23 @@ class SMSIndiaHubService {
         );
       }
 
-      // Use the exact template that works with SMSIndiaHub (from CreateBharat)
-      const message = `Welcome to the CreateBharat powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
+      // SMSIndia Hub requires DLT registered templates for transactional SMS
+      // Use a simple, compliant OTP message format
+      // Format: Simple OTP message without special characters that might cause template issues
+      const message = `Your DriveOn OTP is ${otp}. Valid for 10 minutes. Do not share.`;
 
+      // Check if template ID is provided (for DLT registered templates)
+      const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
+      
+      // Check if promotional SMS is enabled (temporary workaround for template issues)
+      // ⚠️ WARNING: Promotional SMS is not recommended for OTP - use only for testing
+      const usePromotional = process.env.SMSINDIAHUB_USE_PROMOTIONAL === 'true';
+      const gatewayId = usePromotional ? "1" : "2"; // 1 = promotional, 2 = transactional
+      
+      if (usePromotional) {
+        console.warn("⚠️ Using promotional SMS mode - not recommended for production OTP!");
+      }
+      
       // Build the API URL with query parameters
       const params = new URLSearchParams({
         APIKey: apiKey,
@@ -122,8 +136,15 @@ class SMSIndiaHubService {
         msg: message,
         fl: "0", // Flash message flag (0 = normal SMS)
         dc: "0", // Delivery confirmation (0 = no confirmation)
-        gwid: "2", // Gateway ID (2 = transactional)
+        gwid: gatewayId, // Gateway ID (1 = promotional, 2 = transactional)
       });
+
+      // Add template ID if provided (for DLT compliance)
+      if (templateId) {
+        params.append('peid', templateId); // Principal Entity ID (DLT)
+        // Note: Some SMSIndia Hub APIs use 'templateid' parameter
+        // Check your SMSIndia Hub dashboard for exact parameter name
+      }
 
       const apiUrl = `${this.baseUrl}?${params.toString()}`;
 
@@ -202,10 +223,28 @@ class SMSIndiaHubService {
             response: responseData,
           };
         } else if (responseData.ErrorCode && responseData.ErrorCode !== "000") {
+          // Handle specific error codes
+          let errorMessage = responseData.ErrorMessage || "Unknown error";
+          
+          // Provide helpful error messages for common issues
+          if (responseData.ErrorCode === "006" || errorMessage.includes("template")) {
+            errorMessage = `Template Error: ${errorMessage}. You need to register a DLT template with SMSIndia Hub. Contact SMSIndia Hub support or use a registered template ID.`;
+            console.error("\n⚠️ SMSIndia Hub Template Error:");
+            console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            console.error("Error Code: 006 - Invalid template text");
+            console.error("\n📋 To fix this:");
+            console.error("   1. Log in to SMSIndia Hub dashboard");
+            console.error("   2. Register a DLT template for OTP messages");
+            console.error("   3. Get your template ID from the dashboard");
+            console.error("   4. Add SMSINDIAHUB_TEMPLATE_ID to your .env file");
+            console.error("   5. Or contact SMSIndia Hub support for template registration");
+            console.error("\n💡 Alternative: Use promotional SMS (not recommended for OTP)");
+            console.error("   Change gwid parameter to '1' for promotional SMS");
+            console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+          }
+          
           throw new Error(
-            `SMSIndia Hub API error: ${
-              responseData.ErrorMessage || "Unknown error"
-            } (Code: ${responseData.ErrorCode})`
+            `SMSIndia Hub API error: ${errorMessage} (Code: ${responseData.ErrorCode})`
           );
         }
       }

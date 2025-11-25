@@ -17,6 +17,13 @@ export const API_ENDPOINTS = {
     KYC_STATUS: '/user/kyc-status',
     UPLOAD_PHOTO: '/user/upload-photo',
   },
+  ADMIN: {
+    SIGNUP: '/admin/signup',
+    LOGIN: '/admin/login',
+    PROFILE: '/admin/profile',
+    REFRESH_TOKEN: '/admin/refresh-token',
+    LOGOUT: '/admin/logout',
+  },
   CARS: {
     LIST: '/cars',
     DETAILS: '/cars',

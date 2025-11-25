@@ -11,7 +11,7 @@ import { generateToken, generateRefreshToken } from '../utils/generateToken.js';
  */
 export const register = async (req, res) => {
   try {
-    const { email, phone, referralCode } = req.body;
+    const { email, phone, referralCode, fullName, name } = req.body;
 
     // Validation
     if (!email || !phone) {
@@ -93,13 +93,21 @@ export const register = async (req, res) => {
     }
 
     // Create user (but not verified yet)
+    // Save name if provided during registration (will be updated during profile completion)
+    const userName = (fullName || name || '').trim();
+    console.log('📝 Registration - Name received:', { fullName, name, userName });
+    
     const user = await User.create({
       email,
       phone,
+      name: userName,
       referredBy,
       isEmailVerified: false,
       isPhoneVerified: false,
+      profileComplete: 0, // Will be updated during profile completion
     });
+    
+    console.log('✅ User created with name:', user.name);
 
     res.status(200).json({
       success: true,
@@ -298,6 +306,21 @@ export const verifyOTP = async (req, res) => {
     const token = generateToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());
 
+    // Calculate profile completion
+    const calculateProfileComplete = (user) => {
+      const fields = ['name', 'email', 'phone', 'age', 'gender', 'address', 'profilePhoto'];
+      let completedFields = 0;
+      fields.forEach((field) => {
+        if (user[field] && user[field] !== '') {
+          completedFields++;
+        }
+      });
+      return Math.round((completedFields / fields.length) * 100);
+    };
+    
+    user.profileComplete = calculateProfileComplete(user);
+    await user.save();
+
     res.status(200).json({
       success: true,
       message: 'OTP verified successfully',
@@ -308,11 +331,16 @@ export const verifyOTP = async (req, res) => {
           id: user._id,
           email: user.email,
           phone: user.phone,
-          name: user.name,
+          name: user.name || '',
+          age: user.age,
+          gender: user.gender,
+          address: user.address,
+          profilePhoto: user.profilePhoto,
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
           referralCode: user.referralCode,
+          profileComplete: user.profileComplete,
         },
       },
     });
