@@ -71,23 +71,47 @@ export const updateUserLocation = async (lat, lng, address = '') => {
 
 /**
  * Request location permission and get current position
+ * @param {Object} options - Geolocation options
  * @returns {Promise<GeolocationPosition>} - Current position
  */
-export const getCurrentPosition = () => {
+export const getCurrentPosition = (options = {}) => {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation is not supported by this browser'));
       return;
     }
 
+    const defaultOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000, // Increased to 10 seconds for better reliability
+      maximumAge: 60000, // Allow cached location up to 1 minute old
+      ...options,
+    };
+
+    // Try with high accuracy first
     navigator.geolocation.getCurrentPosition(
       (position) => resolve(position),
-      (error) => reject(error),
-      {
-        enableHighAccuracy: true,
-        timeout: 5000, // Reduced from 10000 to 5000ms for faster response
-        maximumAge: 0, // Always get fresh location
-      }
+      (error) => {
+        // If timeout or position unavailable, retry with lower accuracy
+        if (error.code === 3 || error.code === 2) {
+          // Retry with less strict options
+          const fallbackOptions = {
+            enableHighAccuracy: false,
+            timeout: 15000, // Longer timeout for fallback
+            maximumAge: 300000, // Allow cached location up to 5 minutes old
+            ...options,
+          };
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => resolve(position),
+            (fallbackError) => reject(fallbackError),
+            fallbackOptions
+          );
+        } else {
+          reject(error);
+        }
+      },
+      defaultOptions
     );
   });
 };
