@@ -629,7 +629,7 @@ const CarDetailsPage = () => {
           {/* Right Column - Details (Desktop) */}
           <div className="md:order-1 md:space-y-6 lg:space-y-8">
             {/* Additional Car Details Section - Purple Background */}
-            <div className="px-4 pb-24 md:pb-0" style={{ backgroundColor: theme.colors.primary }}>
+            <div className="px-4 pb-24 md:pb-32 lg:pb-36" style={{ backgroundColor: theme.colors.primary }}>
               {/* Car Specifications Grid */}
               <div className="grid grid-cols-2 gap-3 md:gap-4 lg:gap-5 mb-4 md:mb-6 lg:mb-8">
           {/* Car Type */}

@@ -144,7 +144,7 @@ const LoginPage = () => {
             Welcome Back
           </h1>
           <p className="text-white/90 text-sm md:text-base">
-            Enter your email or phone to receive OTP
+            Enter your phone number to receive OTP
           </p>
         </div>
 
@@ -154,8 +154,8 @@ const LoginPage = () => {
             {/* Email/Phone Input */}
             <Input
               type="text"
-              label="Email or Phone Number"
-              placeholder="Enter your email or phone"
+              label="Phone Number"
+              placeholder="Enter your phone number"
               error={errors.emailOrPhone?.message}
               {...register('emailOrPhone')}
               autoComplete="username"

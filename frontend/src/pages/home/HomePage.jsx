@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAppSelector } from "../../hooks/redux";
+import { useAppSelector, useAppDispatch } from "../../hooks/redux";
 import { theme } from "../../theme/theme.constants";
 import { carService } from "../../services/car.service";
+import { userService } from "../../services/user.service";
+import { updateUser } from "../../store/slices/userSlice";
 import { useLocationTracking } from "../../hooks/useLocationTracking";
 // Import car images from assets folder
 import carBannerImage from "../../assets/car_img1-removebg-preview.png";
@@ -22,6 +24,7 @@ import carImg7 from "../../assets/car_img7-removebg-preview.png";
  */
 const HomePage = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.user);
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
@@ -177,6 +180,31 @@ const HomePage = () => {
 
     fetchNearbyCars();
   }, [currentLocation, coordinates]);
+
+  // Fetch user profile when authenticated
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated || user) return; // Skip if not authenticated or user already exists
+
+      try {
+        const response = await userService.getProfile();
+
+        // Extract user data from response
+        const userData =
+          response.data?.user || response.data?.data?.user || response.user;
+
+        if (userData) {
+          // Update Redux store with fetched data
+          dispatch(updateUser(userData));
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Don't show error toast - just use Redux store data as fallback
+      }
+    };
+
+    fetchUserProfile();
+  }, [dispatch, isAuthenticated, user]);
 
   // Check if desktop view
   useEffect(() => {
@@ -358,44 +386,44 @@ const HomePage = () => {
           </div>
 
           {/* Desktop View - User Name and Location in Center */}
-          {isAuthenticated && user && (
-            <div className="hidden md:flex flex-col items-center gap-1 flex-1 justify-center">
+          <div className="hidden md:flex flex-col items-center gap-1 flex-1 justify-center">
+            {isAuthenticated && user && (
               <span className="text-sm lg:text-base font-bold text-white">
                 Hello {user.name || user.email?.split("@")[0] || "User"}
               </span>
-              <div className="flex items-center gap-1.5">
-                <svg
-                  className="w-3 h-3 lg:w-4 lg:h-4 text-white flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span className="text-xs lg:text-sm text-white uppercase font-medium">
-                  {currentLocation &&
-                  !currentLocation.includes("error") &&
-                  !currentLocation.includes("timeout") &&
-                  !currentLocation.includes("denied") &&
-                  !currentLocation.includes("unavailable") &&
-                  !currentLocation.includes("Loading")
-                    ? currentLocation
-                    : "Mumbai, Maharashtra"}
-                </span>
-              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <svg
+                className="w-3 h-3 lg:w-4 lg:h-4 text-white flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              <span className="text-xs lg:text-sm text-white uppercase font-medium">
+                {currentLocation &&
+                !currentLocation.includes("error") &&
+                !currentLocation.includes("timeout") &&
+                !currentLocation.includes("denied") &&
+                !currentLocation.includes("unavailable") &&
+                !currentLocation.includes("Loading")
+                  ? currentLocation
+                  : "Mumbai, Maharashtra"}
+              </span>
             </div>
-          )}
+          </div>
 
           {/* Desktop View - Profile Icon on Right */}
           <div className="hidden md:flex items-center gap-2 flex-shrink-0">
@@ -440,11 +468,11 @@ const HomePage = () => {
         style={{
           paddingTop: showLocation
             ? isDesktop
-              ? "120px"
-              : "100px" // Desktop: 120px, Mobile: 100px
+              ? "90px"
+              : "100px" // Desktop: 90px, Mobile: 100px
             : isDesktop
-            ? "80px"
-            : "70px", // Desktop: 80px, Mobile: 70px
+            ? "70px"
+            : "70px", // Desktop: 70px, Mobile: 70px
           paddingBottom: "90px", // Space for bottom navbar
         }}
       >

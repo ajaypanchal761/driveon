@@ -25,8 +25,8 @@ const Footer = () => {
     ],
     legal: [
       { label: 'Terms & Conditions', path: '/terms' },
-      { label: 'Privacy Policy', path: '/privacy' },
-      { label: 'Cookie Policy', path: '/privacy' },
+      { label: 'Privacy Policy', path: '/policies' },
+      { label: 'Cookie Policy', path: '/policies' },
       { label: 'KYC Policy', path: '/profile/kyc' },
     ],
   };
@@ -163,7 +163,7 @@ const Footer = () => {
               Terms & Conditions
             </Link>
             <Link
-              to="/privacy"
+              to="/policies"
               className="text-white/80 hover:text-white transition-colors text-sm"
             >
               Privacy Policy

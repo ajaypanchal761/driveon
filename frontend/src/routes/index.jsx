@@ -126,6 +126,7 @@ const OwnerBookingsPage = lazy(() =>
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const TermsAndConditionsPage = lazy(() => import("../pages/TermsAndConditionsPage"));
 const PrivacyPolicyPage = lazy(() => import("../pages/PrivacyPolicyPage"));
+const PoliciesPage = lazy(() => import("../pages/PoliciesPage"));
 const AboutUsPage = lazy(() => import("../pages/AboutUsPage"));
 
 /**
@@ -182,7 +183,11 @@ const router = createBrowserRouter([
       },
       {
         path: "privacy",
-        element: <PrivacyPolicyPage />,
+        element: <PoliciesPage />,
+      },
+      {
+        path: "policies",
+        element: <PoliciesPage />,
       },
       {
         path: "about",
