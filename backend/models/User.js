@@ -74,6 +74,25 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'suspended', 'banned'],
       default: 'active',
     },
+    // Location tracking fields
+    location: {
+      latitude: {
+        type: Number,
+        default: null,
+      },
+      longitude: {
+        type: Number,
+        default: null,
+      },
+      address: {
+        type: String,
+        default: '',
+      },
+      lastLocationUpdate: {
+        type: Date,
+        default: null,
+      },
+    },
     password: {
       type: String,
       select: false, // Don't include password in queries by default

@@ -12,3 +12,4 @@ export { default as paymentService } from "./payment.service";
 export { default as kycService } from "./kyc.service";
 export { default as pricingService } from "./pricing.service";
 export { adminService } from "./admin.service";
+export * as locationService from "./location.service";
