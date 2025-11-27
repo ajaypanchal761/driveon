@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * Active Booking Page - Trip Details
@@ -92,7 +93,7 @@ const ActiveBookingPage = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: '#1e6262' }}></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
           <p className="text-gray-600">Loading trip details...</p>
         </div>
       </div>
@@ -108,7 +109,7 @@ const ActiveBookingPage = () => {
           <button
             onClick={() => navigate('/bookings')}
             className="px-6 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-            style={{ backgroundColor: '#1e6262' }}
+            style={{ backgroundColor: theme.colors.primary }}
           >
             Back to Bookings
           </button>
@@ -120,7 +121,7 @@ const ActiveBookingPage = () => {
   return (
     <div className="min-h-screen bg-white pb-20">
       {/* Header Section - Purple Background */}
-      <header className="bg-[#1e6262] text-white relative overflow-hidden">
+      <header className="text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
@@ -160,7 +161,7 @@ const ActiveBookingPage = () => {
         <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Live Tracking Information */}
         {booking.trackingEnabled && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg md:rounded-xl border-l-4 border-[#1e6262] p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow">
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg md:rounded-xl border-l-4 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow" style={{ borderLeftColor: theme.colors.primary }}>
             <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
               <div className="w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full animate-pulse"></div>
               <h2 className="text-base md:text-lg font-semibold text-gray-900">Live Tracking Active</h2>
@@ -199,7 +200,7 @@ const ActiveBookingPage = () => {
 
         {/* Trip Information */}
         <div className="bg-white rounded-lg md:rounded-xl border border-gray-200 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow">
-          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: '#1e6262' }}>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: theme.colors.primary }}>
             Trip Information
           </h2>
           <div className="space-y-3 md:space-y-4">
@@ -256,7 +257,7 @@ const ActiveBookingPage = () => {
 
         {/* Car Information */}
         <div className="bg-white rounded-lg md:rounded-xl border border-gray-200 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow">
-          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: '#1e6262' }}>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: theme.colors.primary }}>
             Car Information
           </h2>
           <div className="space-y-3 md:space-y-4">
@@ -324,7 +325,7 @@ const ActiveBookingPage = () => {
 
         {/* Payment Details */}
         <div className="bg-white rounded-lg md:rounded-xl border border-gray-200 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow">
-          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: '#1e6262' }}>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: theme.colors.primary }}>
             Payment Details
           </h2>
           <div className="space-y-3 md:space-y-4">
@@ -407,7 +408,7 @@ const ActiveBookingPage = () => {
         {/* Guarantor Information */}
         {booking.guarantor && (
           <div className="bg-white rounded-lg md:rounded-xl border border-gray-200 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: '#1e6262' }}>
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: theme.colors.primary }}>
               Guarantor Information
             </h2>
             <div className="space-y-2 md:space-y-3">
@@ -433,13 +434,19 @@ const ActiveBookingPage = () => {
         <div className="flex flex-col md:flex-row gap-3 md:gap-4 pt-2 md:pt-4">
           <button
             onClick={() => navigate(`/booking/${booking.id}/active`)}
-            className="flex-1 md:flex-none md:w-auto md:min-w-[200px] px-4 md:px-6 py-3 md:py-3.5 bg-[#1e6262] text-white rounded-lg md:rounded-xl font-medium text-sm md:text-base hover:bg-[#1e6262]/90 transition-all duration-200 shadow-md hover:shadow-lg"
+            className="flex-1 md:flex-none md:w-auto md:min-w-[200px] px-4 md:px-6 py-3 md:py-3.5 text-white rounded-lg md:rounded-xl font-medium text-sm md:text-base transition-all duration-200 shadow-md hover:shadow-lg"
+            style={{ backgroundColor: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + 'E6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
           >
             Track Trip
           </button>
           <button
             onClick={() => navigate('/bookings')}
-            className="flex-1 md:flex-none md:w-auto md:min-w-[200px] px-4 md:px-6 py-3 md:py-3.5 bg-white border-2 border-[#1e6262] text-[#1e6262] rounded-lg md:rounded-xl font-medium text-sm md:text-base hover:bg-[#1e6262]/10 transition-all duration-200 shadow-md hover:shadow-lg"
+            className="flex-1 md:flex-none md:w-auto md:min-w-[200px] px-4 md:px-6 py-3 md:py-3.5 bg-white border-2 rounded-lg md:rounded-xl font-medium text-sm md:text-base transition-all duration-200 shadow-md hover:shadow-lg"
+            style={{ borderColor: theme.colors.primary, color: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + '10'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             Back to Bookings
           </button>

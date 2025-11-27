@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Button, Input } from '../../components/common';
 import { useAdminAuth } from '../../context/AdminContext';
 import toastUtils from '../../config/toast';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * Admin Login Schema Validation - Password Based
@@ -101,7 +102,7 @@ const AdminLoginPage = () => {
     <div
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{
-        backgroundColor: '#1e6262',
+        backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -161,7 +162,7 @@ const AdminLoginPage = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="mt-2 text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
-                style={{ color: '#1e6262' }}
+                style={{ color: theme.colors.primary }}
               >
                 {showPassword ? (
                   <>
@@ -217,7 +218,7 @@ const AdminLoginPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-6"
-              style={{ backgroundColor: '#1e6262' }}
+              style={{ backgroundColor: theme.colors.primary }}
             >
               Login
             </Button>

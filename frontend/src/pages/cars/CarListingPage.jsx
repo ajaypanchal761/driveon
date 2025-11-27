@@ -254,7 +254,7 @@ const CarListingPage = () => {
               showFilters ? 'translate-x-0' : 'translate-x-full'
             }`}
           >
-            <div className="p-4">
+            <div className="p-4 pt-20 pb-24">
               {/* Filter Header */}
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-900">Filters</h2>
@@ -416,7 +416,7 @@ const CarListingPage = () => {
                             },
                           }))
                         }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         placeholder="Min"
                       />
                       <span className="text-gray-500">-</span>
@@ -432,7 +432,7 @@ const CarListingPage = () => {
                             },
                           }))
                         }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         placeholder="Max"
                       />
                     </div>
@@ -527,7 +527,7 @@ const CarListingPage = () => {
       <div className={`hidden md:block fixed top-0 right-0 h-full w-80 bg-white z-30 shadow-lg overflow-y-auto border-l border-gray-200 transform transition-transform duration-300 ease-in-out ${
         showDesktopFilters ? 'translate-x-0' : 'translate-x-full'
       }`}>
-        <div className="p-6">
+        <div className="p-6 pt-24">
           {/* Filter Header */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900">Filters</h2>
@@ -689,7 +689,7 @@ const CarListingPage = () => {
                         },
                       }))
                     }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     placeholder="Min"
                   />
                   <span className="text-gray-500">-</span>
@@ -705,7 +705,7 @@ const CarListingPage = () => {
                         },
                       }))
                     }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     placeholder="Max"
                   />
                 </div>
@@ -787,7 +787,7 @@ const CarListingPage = () => {
       </div>
 
       {/* Header Section - Purple Background - Sticky */}
-      <header className="sticky top-0 z-50 bg-[#1e6262] text-white relative overflow-hidden shadow-md">
+      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md" style={{ backgroundColor: theme.colors.primary }}>
         <div className="px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 md:max-w-7xl md:mx-auto">
           {/* Back Button, Title and Filter - Same Line */}
           <div className="flex items-center justify-between">

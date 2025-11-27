@@ -8,8 +8,7 @@ import { updateUser, setProfileComplete } from '../../store/slices/userSlice';
 import { Input, Button, LoadingSpinner } from '../../components/common';
 import { userService } from '../../services';
 import toastUtils from '../../config/toast';
-// Theme color constant - using direct value to avoid import issues
-const PRIMARY_COLOR = '#1e6262';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * Profile Completion Schema
@@ -314,7 +313,7 @@ const ProfileCompletePage = () => {
   return (
     <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0">
       {/* Header Section - Blue Background */}
-      <header className="w-full bg-[#1e6262] text-white relative overflow-hidden">
+      <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
@@ -324,7 +323,7 @@ const ProfileCompletePage = () => {
           <div className="max-w-4xl mx-auto">
             {/* Back Button */}
             <button
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/profile', { state: { from: '/profile/complete' } })}
               className="mb-1.5 md:mb-2 p-1 -ml-1 md:p-1.5 touch-target"
               aria-label="Go back"
             >
@@ -483,8 +482,8 @@ const ProfileCompletePage = () => {
                           isSelected ? '' : 'border-gray-200 hover:border-gray-300'
                         }`}
                         style={isSelected ? {
-                          borderColor: '#1e6262',
-                          backgroundColor: '#1e62621A',
+                          borderColor: theme.colors.primary,
+                          backgroundColor: `${theme.colors.primary}1A`,
                         } : {}}
                       >
                         <input
@@ -516,12 +515,12 @@ const ProfileCompletePage = () => {
                     errors.address ? 'border-red-500' : 'border-gray-300'
                   }`}
                   style={!errors.address ? {
-                    '--focus-border': '#1e6262',
-                    '--focus-ring': '#1e626233',
+                    '--focus-border': theme.colors.primary,
+                    '--focus-ring': `${theme.colors.primary}33`,
                   } : {}}
                   onFocus={!errors.address ? (e) => {
-                    e.currentTarget.style.borderColor = '#1e6262';
-                    e.currentTarget.style.boxShadow = '0 0 0 2px #1e626233';
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.colors.primary}33`;
                   } : undefined}
                   onBlur={!errors.address ? (e) => {
                     e.currentTarget.style.borderColor = '#d1d5db';
@@ -565,7 +564,7 @@ const ProfileCompletePage = () => {
                       src={photoPreview}
                       alt="Profile"
                       className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 object-cover shadow-lg"
-                    style={{ borderColor: '#1e6262' }}
+                    style={{ borderColor: theme.colors.primary }}
                     />
                   ) : (
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-gray-300 bg-gray-100 flex items-center justify-center">
@@ -599,10 +598,10 @@ const ProfileCompletePage = () => {
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
-                <div className="w-full border-2 border-dashed rounded-lg p-2.5 md:p-3 text-center cursor-pointer transition-colors" style={{ backgroundColor: '#1e62621A', borderColor: '#1e6262' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1e626233'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1e62621A'}>
+                <div className="w-full border-2 border-dashed rounded-lg p-2.5 md:p-3 text-center cursor-pointer transition-colors" style={{ backgroundColor: `${theme.colors.primary}1A`, borderColor: theme.colors.primary }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>
                   <svg
                     className="w-7 h-7 mx-auto mb-1.5"
-                    style={{ color: '#1e6262' }}
+                    style={{ color: theme.colors.primary }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -614,7 +613,7 @@ const ProfileCompletePage = () => {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  <p className="text-sm font-medium" style={{ color: '#1e6262' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.colors.primary }}>
                     {photoPreview ? 'Change Photo' : 'Select Photo'}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">Max 5MB, JPG/PNG</p>

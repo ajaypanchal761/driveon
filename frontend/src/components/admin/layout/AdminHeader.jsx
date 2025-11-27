@@ -24,9 +24,16 @@ const AdminHeader = () => {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between px-4 md:px-6 lg:px-8 overflow-hidden">
-      {/* Left Side - Search Bar (Desktop) */}
-      <div className="hidden md:flex flex-1 max-w-md min-w-0 mr-4">
+    <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between pl-16 lg:pl-4 pr-3 md:pr-4 md:px-6 lg:px-8 overflow-hidden">
+      {/* Mobile: Left Side - Title/Logo (only on mobile) */}
+      <div className="lg:hidden flex items-center min-w-0 flex-1">
+        <h1 className="text-base font-bold truncate" style={{ color: theme.colors.primary }}>
+          Admin Panel
+        </h1>
+      </div>
+
+      {/* Desktop: Left Side - Search Bar */}
+      <div className="hidden lg:flex flex-1 max-w-md min-w-0 mr-4">
         <div className="relative w-full">
           <svg
             className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
@@ -44,16 +51,16 @@ const AdminHeader = () => {
           <input
             type="text"
             placeholder="Search users, cars, bookings..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
           />
         </div>
       </div>
 
       {/* Right Side - Admin Info & Actions */}
-      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+      <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 flex-shrink-0">
         {/* Notifications Icon */}
         <button
-          className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+          className="relative p-1.5 md:p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors flex-shrink-0 touch-target"
           aria-label="Notifications"
         >
           <svg
@@ -69,13 +76,13 @@ const AdminHeader = () => {
               d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
             />
           </svg>
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
 
         {/* Logout Icon */}
         <button
           onClick={handleLogout}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+          className="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors flex-shrink-0 touch-target"
           aria-label="Logout"
           title="Logout"
         >
@@ -94,11 +101,15 @@ const AdminHeader = () => {
           </svg>
         </button>
 
-        {/* Admin Profile Info - No dropdown */}
-        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        {/* Admin Profile Info */}
+        <button
+          onClick={() => navigate('/admin/profile')}
+          className="flex items-center gap-1.5 md:gap-2 lg:gap-3 flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+          aria-label="View Profile"
+        >
           {/* Avatar */}
           <div
-            className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white text-xs md:text-sm font-semibold flex-shrink-0"
+            className="w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-full flex items-center justify-center text-white text-xs md:text-sm font-semibold flex-shrink-0"
             style={{ backgroundColor: theme.colors.primary }}
           >
             {displayUser.avatar ? (
@@ -112,13 +123,13 @@ const AdminHeader = () => {
             )}
           </div>
           {/* Name - Hidden on mobile, shown on tablet+ */}
-          <div className="hidden lg:block text-left min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+          <div className="hidden md:block text-left min-w-0">
+            <p className="text-xs md:text-sm font-medium text-gray-900 truncate">
               {displayUser.name}
             </p>
-            <p className="text-xs text-gray-500 truncate">{displayUser.email}</p>
+            <p className="text-xs text-gray-500 truncate hidden lg:block">{displayUser.email}</p>
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );

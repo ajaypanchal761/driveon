@@ -33,6 +33,11 @@ const PageLayout = () => {
   const isAdminPage = location.pathname.startsWith("/admin/") && 
     !location.pathname.startsWith("/admin/login");
 
+  // Pages with custom headers (terms, privacy, about, etc.)
+  const isTermsPage = location.pathname === "/terms";
+  const isPrivacyPage = location.pathname === "/privacy";
+  const isAboutPage = location.pathname === "/about";
+
   // Routes where header and bottom navbar should be hidden
   const hideNavigationRoutes = [
     "/login",
@@ -42,7 +47,7 @@ const PageLayout = () => {
   ];
   const shouldHideNavigation = hideNavigationRoutes.includes(location.pathname);
 
-  // Hide default header on homepage, profile pages, booking pages, cars page, rent-now page, and admin pages (they have custom headers)
+  // Hide default header on homepage, profile pages, booking pages, cars page, rent-now page, admin pages, and pages with custom headers (they have custom headers)
   const shouldShowHeader =
     !isHomePage &&
     !isProfilePage &&
@@ -50,9 +55,12 @@ const PageLayout = () => {
     !isCarsPage &&
     !isRentNowPage &&
     !isAdminPage &&
-    !shouldHideNavigation;
+      !isTermsPage &&
+      !isPrivacyPage &&
+      !isAboutPage &&
+      !shouldHideNavigation;
 
-  // Hide bottom navbar on car details page, car reviews page, booking form page, payment page, review form page, rent now page, and all admin pages
+  // Hide bottom navbar on car details page, car reviews page, booking form page, payment page, review form page, rent now page, admin pages, and pages with custom headers
   const shouldShowBottomNavbar =
     !shouldHideNavigation &&
     !isCarDetailsPage &&
@@ -61,7 +69,10 @@ const PageLayout = () => {
     !isBookingPaymentPage &&
     !isReviewFormPage &&
     !isRentNowPage &&
-    !isAdminPage;
+    !isAdminPage &&
+      !isTermsPage &&
+      !isPrivacyPage &&
+      !isAboutPage;
 
   return (
     <div
@@ -100,8 +111,8 @@ const PageLayout = () => {
         </Suspense>
       </main>
 
-      {/* Footer - Desktop Only (hidden on auth pages, homepage, and profile pages) */}
-      {shouldShowHeader && <Footer />}
+      {/* Footer - Desktop Only, shown only on homepage */}
+      {isHomePage && <Footer />}
 
       {/* Bottom Navbar - Mobile Only (hidden on auth pages and car details page) */}
       {shouldShowBottomNavbar && <BottomNavbar />}

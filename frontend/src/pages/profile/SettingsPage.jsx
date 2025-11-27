@@ -129,7 +129,7 @@ const SettingsPage = () => {
           id: 'privacy-policy',
           label: 'Privacy Policy',
           description: 'View our privacy policy',
-          action: () => toastUtils.info('Privacy policy page coming soon'),
+          action: () => navigate('/privacy'),
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -140,7 +140,7 @@ const SettingsPage = () => {
           id: 'terms',
           label: 'Terms & Conditions',
           description: 'View terms and conditions',
-          action: () => toastUtils.info('Terms & conditions page coming soon'),
+          action: () => navigate('/terms'),
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -217,47 +217,47 @@ const SettingsPage = () => {
 
       {/* Settings Sections */}
       <div className="px-4 pt-6 pb-4 md:pt-8 md:pb-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="space-y-4 md:space-y-5">
+        <div className="max-w-4xl mx-auto">
+          <div className="space-y-4 md:space-y-6">
             {settingsSections.map((section) => (
-              <div key={section.id} className="bg-white rounded-xl shadow-lg border-2 overflow-hidden hover:shadow-xl transition-shadow" style={{ borderColor: theme.colors.borderLight }}>
+              <div key={section.id} className="bg-white rounded-xl shadow-md border overflow-hidden hover:shadow-lg transition-all duration-200" style={{ borderColor: `${theme.colors.borderLight}80` }}>
                 {/* Section Header */}
-                <div className="px-4 md:px-5 pt-3 md:pt-4 pb-2.5 md:pb-3 border-b-2 bg-gradient-to-r to-white" style={{ borderColor: `${theme.colors.primary}20`, background: `linear-gradient(to right, ${theme.colors.primary}08, white)` }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${theme.colors.primary}20` }}>
-                      <div className="w-5 h-5 md:w-6 md:h-6" style={{ color: theme.colors.primary }}>
+                <div className="px-4 md:px-6 pt-4 md:pt-5 pb-3 md:pb-4 border-b" style={{ borderColor: `${theme.colors.borderLight}60`, backgroundColor: `${theme.colors.primary}03` }}>
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${theme.colors.primary}15` }}>
+                      <div className="w-5 h-5 md:w-5 md:h-5" style={{ color: theme.colors.primary }}>
                         {section.icon}
                       </div>
                     </div>
-                    <h2 className="text-base md:text-lg font-bold" style={{ color: theme.colors.textPrimary }}>
+                    <h2 className="text-base md:text-lg font-semibold" style={{ color: theme.colors.textPrimary }}>
                       {section.title}
                     </h2>
                   </div>
                 </div>
 
                 {/* Section Items */}
-                <div className="divide-y" style={{ borderColor: `${theme.colors.borderLight}80` }}>
+                <div className="divide-y" style={{ borderColor: `${theme.colors.borderLight}40` }}>
                   {section.items.map((item, index) => (
                     <div
                       key={item.id}
-                      className={`px-4 md:px-5 transition-colors hover:bg-gray-50 ${index === 0 ? 'pt-3 md:pt-4' : ''} ${index === section.items.length - 1 ? 'pb-3 md:pb-4' : 'py-3 md:py-4'}`}
+                      className={`px-4 md:px-6 transition-colors hover:bg-gray-50 active:bg-gray-100 ${index === 0 ? 'pt-4 md:pt-5' : ''} ${index === section.items.length - 1 ? 'pb-4 md:pb-5' : 'py-4 md:py-5'}`}
                     >
                       {item.toggle !== undefined ? (
                         // Toggle Item
                         <div className="flex items-center justify-between gap-3 md:gap-4">
-                          <div className="flex items-start gap-2.5 md:gap-3 flex-1 min-w-0">
+                          <div className="flex items-start gap-3 md:gap-3.5 flex-1 min-w-0">
                             {item.icon && (
-                              <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: `${theme.colors.primary}10` }}>
-                                <div className="w-4 h-4 md:w-5 md:h-5" style={{ color: theme.colors.primary }}>
+                              <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ backgroundColor: `${theme.colors.primary}10` }}>
+                                <div className="w-4 h-4 md:w-4.5 md:h-4.5" style={{ color: theme.colors.primary }}>
                                   {item.icon}
                                 </div>
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm md:text-base font-bold mb-0.5 md:mb-1" style={{ color: theme.colors.textPrimary }}>
+                              <p className="text-sm md:text-base font-semibold mb-1" style={{ color: theme.colors.textPrimary }}>
                                 {item.label}
                               </p>
-                              <p className="text-xs md:text-sm leading-relaxed" style={{ color: theme.colors.textSecondary }}>
+                              <p className="text-xs md:text-sm leading-relaxed text-gray-600" style={{ color: theme.colors.textSecondary }}>
                                 {item.description}
                               </p>
                             </div>
@@ -268,29 +268,20 @@ const SettingsPage = () => {
                               checked={item.toggle}
                               onChange={(e) => item.onToggle(e.target.checked)}
                               className="sr-only peer"
-                              style={{
-                                '--tw-ring-color': `${theme.colors.primary}50`,
-                              }}
-                              onFocus={(e) => {
-                                e.target.parentElement.querySelector('div').style.outline = `2px solid ${theme.colors.primary}50`;
-                                e.target.parentElement.querySelector('div').style.outlineOffset = '2px';
-                              }}
-                              onBlur={(e) => {
-                                e.target.parentElement.querySelector('div').style.outline = 'none';
-                                e.target.parentElement.querySelector('div').style.outlineOffset = '0';
-                              }}
                             />
                             <div 
-                              className="w-12 h-6 md:w-14 md:h-7 rounded-full transition-all duration-300 shadow-inner"
+                              className="w-11 h-6 md:w-12 md:h-6 rounded-full transition-all duration-300 relative"
                               style={{
                                 backgroundColor: item.toggle ? theme.colors.primary : '#d1d5db',
-                                boxShadow: item.toggle ? `inset 0 2px 4px ${theme.colors.primary}40` : 'inset 0 2px 4px rgba(0,0,0,0.1)',
                               }}
                             >
                               <div 
-                                className={`absolute top-0.5 left-0.5 w-5 h-5 md:w-6 md:h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
-                                  item.toggle ? 'md:translate-x-7 translate-x-6' : 'translate-x-0'
+                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 ${
+                                  item.toggle ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'
                                 }`}
+                                style={{
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                }}
                               ></div>
                             </div>
                           </label>
@@ -299,58 +290,47 @@ const SettingsPage = () => {
                         // Action Item
                         <button
                           onClick={item.action}
-                          className="w-full flex items-center justify-between group active:scale-[0.98] transition-transform"
+                          className="w-full flex items-center justify-between group active:scale-[0.99] transition-all"
                         >
-                          <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-3 md:gap-3.5 flex-1 min-w-0 text-left">
                             {item.icon && (
-                              <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors group-hover:scale-110" style={{ backgroundColor: `${theme.colors.primary}10`, color: theme.colors.primary }}>
-                                <div className="w-4 h-4 md:w-5 md:h-5">
+                              <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105" style={{ backgroundColor: `${theme.colors.primary}10` }}>
+                                <div className="w-4 h-4 md:w-4.5 md:h-4.5" style={{ color: theme.colors.primary }}>
                                   {item.icon}
                                 </div>
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5 md:mb-1">
+                              <div className="flex items-center gap-2 mb-1">
                                 <p 
-                                  className="text-sm md:text-base font-bold transition-colors" 
+                                  className="text-sm md:text-base font-semibold transition-colors" 
                                   style={{ 
                                     color: theme.colors.textPrimary,
                                   }}
-                                  onMouseEnter={(e) => e.target.style.color = theme.colors.primary}
-                                  onMouseLeave={(e) => e.target.style.color = theme.colors.textPrimary}
                                 >
                                   {item.label}
                                 </p>
                               </div>
-                              <p className="text-xs md:text-sm leading-relaxed mb-0.5" style={{ color: theme.colors.textSecondary }}>
+                              <p className="text-xs md:text-sm leading-relaxed mb-1 text-gray-600" style={{ color: theme.colors.textSecondary }}>
                                 {item.description}
                               </p>
                               {item.value && (
-                                <p className="text-xs md:text-sm font-semibold mt-1 inline-block px-2 md:px-3 py-0.5 md:py-1 rounded-md" style={{ backgroundColor: `${theme.colors.primary}15`, color: theme.colors.primary }}>
+                                <p className="text-xs md:text-sm font-medium mt-1.5 inline-block px-2.5 md:px-3 py-1 rounded-md" style={{ backgroundColor: `${theme.colors.primary}12`, color: theme.colors.primary }}>
                                   {item.value}
                                 </p>
                               )}
                             </div>
                           </div>
                           <div className="flex-shrink-0 ml-2">
-                            <div 
-                              className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center transition-colors"
-                              style={{ backgroundColor: 'transparent' }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = `${theme.colors.primary}15`}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                            <svg 
+                              className="w-5 h-5 md:w-5 md:h-5 transition-colors" 
+                              style={{ color: '#9ca3af' }}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
                             >
-                              <svg 
-                                className="w-5 h-5 md:w-6 md:h-6 transition-colors" 
-                                style={{ color: '#9ca3af' }}
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                                onMouseEnter={(e) => e.target.style.color = theme.colors.primary}
-                                onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
                           </div>
                         </button>
                       )}
@@ -362,29 +342,20 @@ const SettingsPage = () => {
           </div>
 
           {/* Buttons Container */}
-          <div className="flex flex-col md:flex-row gap-3 md:gap-4 mt-5 md:mt-6">
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 mt-6 md:mt-8">
             {/* Save Button */}
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
-              className="flex-1 md:flex-none md:w-auto md:min-w-[200px] py-3.5 md:py-4 px-6 md:px-8 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-2xl active:scale-[0.98] flex items-center justify-center gap-2 md:gap-3"
+              className="flex-1 md:flex-none md:w-auto md:min-w-[180px] py-3.5 md:py-3.5 px-6 md:px-7 rounded-xl font-semibold text-sm md:text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2.5"
               style={{
-                background: `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.primaryLight} 100%)`,
+                backgroundColor: theme.colors.primary,
                 color: theme.colors.white,
-                boxShadow: `0 10px 25px -5px ${theme.colors.primary}30`,
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.boxShadow = `0 15px 35px -5px ${theme.colors.primary}40`;
-                e.target.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.boxShadow = `0 10px 25px -5px ${theme.colors.primary}30`;
-                e.target.style.transform = 'translateY(0)';
               }}
             >
               {isSaving ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 md:h-6 md:w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -392,7 +363,7 @@ const SettingsPage = () => {
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                   <span>Save Settings</span>
@@ -403,25 +374,14 @@ const SettingsPage = () => {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="flex-1 md:flex-none md:w-auto md:min-w-[200px] py-3.5 md:py-4 px-6 md:px-8 rounded-xl md:rounded-2xl font-bold text-sm md:text-base transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-[0.98] flex items-center justify-center gap-2 md:gap-3 border-2"
+              className="flex-1 md:flex-none md:w-auto md:min-w-[180px] py-3.5 md:py-3.5 px-6 md:px-7 rounded-xl font-semibold text-sm md:text-base transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2.5 border-2"
               style={{
                 backgroundColor: theme.colors.white,
                 color: theme.colors.error,
                 borderColor: theme.colors.error,
-                boxShadow: `0 10px 25px -5px ${theme.colors.error}20`,
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.boxShadow = `0 15px 35px -5px ${theme.colors.error}30`;
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.backgroundColor = `${theme.colors.error}05`;
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.boxShadow = `0 10px 25px -5px ${theme.colors.error}20`;
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.backgroundColor = theme.colors.white;
               }}
             >
-              <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               <span>Logout</span>

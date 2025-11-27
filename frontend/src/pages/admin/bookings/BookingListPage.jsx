@@ -396,25 +396,29 @@ const BookingListPage = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // Get unique cars
-  const cars = Array.from(
-    new Set(
-      bookings.map((booking) => ({
+  // Get unique cars using Map to handle duplicates by ID
+  const carsMap = new Map();
+  bookings.forEach((booking) => {
+    if (booking.carId && booking.carName) {
+      carsMap.set(booking.carId, {
         id: booking.carId,
         name: booking.carName,
-      }))
-    )
-  );
+      });
+    }
+  });
+  const cars = Array.from(carsMap.values());
 
-  // Get unique users
-  const users = Array.from(
-    new Set(
-      bookings.map((booking) => ({
+  // Get unique users using Map to handle duplicates by ID
+  const usersMap = new Map();
+  bookings.forEach((booking) => {
+    if (booking.userId && booking.userName) {
+      usersMap.set(booking.userId, {
         id: booking.userId,
         name: booking.userName,
-      }))
-    )
-  );
+      });
+    }
+  });
+  const users = Array.from(usersMap.values());
 
   // Stats calculation
   const stats = {
@@ -578,8 +582,8 @@ const BookingListPage = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
               >
                 <option value="all">All Cars</option>
-                {cars.map((car) => (
-                  <option key={car.id} value={car.id}>
+                {cars.map((car, index) => (
+                  <option key={car.id || `car-${index}`} value={car.id}>
                     {car.name}
                   </option>
                 ))}
@@ -595,8 +599,8 @@ const BookingListPage = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
               >
                 <option value="all">All Users</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
+                {users.map((user, index) => (
+                  <option key={user.id || `user-${index}`} value={user.id}>
                     {user.name}
                   </option>
                 ))}

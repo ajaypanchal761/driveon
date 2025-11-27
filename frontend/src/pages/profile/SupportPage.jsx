@@ -63,7 +63,7 @@ const SupportPage = () => {
   }, []);
 
   // Load tickets function - using useCallback to memoize
-  const loadTickets = useCallback(async () => {
+  const loadTickets = useCallback(async (shouldUpdateSelectedTicket = false) => {
     console.log('loadTickets function called');
     const userId = user?.id || user?._id;
     
@@ -83,12 +83,15 @@ const SupportPage = () => {
         console.log('Tickets found:', response.data.tickets.length);
         setTickets(response.data.tickets);
         
-        // If a ticket is selected, reload its details to get updated status
-        if (selectedTicket) {
-          const updatedTicket = response.data.tickets.find(t => t.id === selectedTicket.id);
-          if (updatedTicket) {
-            await loadTicketDetails(updatedTicket.id);
-          }
+        // Only update selected ticket if explicitly requested (e.g., after adding a message)
+        if (shouldUpdateSelectedTicket) {
+          setSelectedTicket(prevTicket => {
+            if (prevTicket) {
+              const updatedTicket = response.data.tickets.find(t => t.id === prevTicket.id);
+              return updatedTicket || prevTicket;
+            }
+            return prevTicket;
+          });
         }
       } else {
         console.log('No tickets in response or invalid structure:', response);
@@ -102,7 +105,7 @@ const SupportPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?._id, selectedTicket, loadTicketDetails]);
+  }, [user?.id, user?._id]);
 
   // Load tickets from backend - run when user ID changes or component mounts
   useEffect(() => {
@@ -117,7 +120,7 @@ const SupportPage = () => {
       // Auto-refresh tickets every 30 seconds to get status updates from admin
       const interval = setInterval(() => {
         console.log('Auto-refreshing tickets...');
-        loadTickets();
+        loadTickets(true); // Update selected ticket on auto-refresh
       }, 30000); // 30 seconds
       
       return () => {
@@ -137,7 +140,7 @@ const SupportPage = () => {
       
       return () => clearTimeout(retryTimer);
     }
-  }, [loadTickets, user?.id, user?._id]); // Depend on loadTickets function and user IDs
+  }, [loadTickets]); // Only depend on loadTickets function
   
   // Auto-refresh selected ticket details every 20 seconds if a ticket is selected
   useEffect(() => {
@@ -148,7 +151,7 @@ const SupportPage = () => {
       
       return () => clearInterval(interval);
     }
-  }, [selectedTicket?.id]);
+  }, [selectedTicket?.id, loadTicketDetails]);
 
   // Create new support ticket
   const handleCreateTicket = async (e) => {
@@ -211,8 +214,8 @@ const SupportPage = () => {
         
         // Reload ticket details to get updated messages
         await loadTicketDetails(ticketId);
-        // Reload tickets list
-        await loadTickets();
+        // Reload tickets list and update selected ticket
+        await loadTickets(true);
       }
     } catch (error) {
       console.error('Error adding message:', error);
@@ -270,6 +273,17 @@ const SupportPage = () => {
     { value: 'other', label: 'Other' },
   ];
 
+  // Handle back button click
+  const handleBackClick = () => {
+    // If a ticket is selected, go back to ticket list first
+    if (selectedTicket) {
+      setSelectedTicket(null);
+    } else {
+      // Otherwise, navigate back to previous page
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
@@ -279,7 +293,7 @@ const SupportPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 md:gap-4">
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={handleBackClick}
                   className="p-1.5 md:p-2 -ml-1 touch-target hover:bg-white/10 rounded-lg transition-colors"
                   aria-label="Go back"
                 >

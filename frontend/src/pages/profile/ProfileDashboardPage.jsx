@@ -1,13 +1,11 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { logout } from '../../store/slices/authSlice';
 import { clearUser, updateUser } from '../../store/slices/userSlice';
 import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
-// Theme color constant
-const PRIMARY_COLOR = '#1e6262';
-const PRIMARY_COLOR_LIGHT = '#2d767f';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * ProfileDashboardPage Component
@@ -17,12 +15,26 @@ const PRIMARY_COLOR_LIGHT = '#2d767f';
  */
 const ProfileDashboardPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((state) => state.user);
   const { profileComplete, kycStatus, guarantor, referralCode, points } = useAppSelector(
     (state) => state.user
   );
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // Handle back navigation - if came from complete profile, go to home, otherwise go back
+  const handleBack = () => {
+    const state = location.state;
+    // If we came from complete profile page, navigate to home instead of going back
+    // This prevents the loop where back would go to complete profile page
+    if (state?.from === '/profile/complete') {
+      navigate('/');
+    } else {
+      // Otherwise, go back in history to the previous page
+      navigate(-1);
+    }
+  };
 
   // Fetch user profile data when component mounts
   useEffect(() => {
@@ -165,7 +177,7 @@ const ProfileDashboardPage = () => {
   return (
     <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0" style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
       {/* Header Section - Blue Background */}
-      <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: PRIMARY_COLOR }}>
+      <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
         {/* Abstract blue pattern background */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
@@ -179,7 +191,7 @@ const ProfileDashboardPage = () => {
             <div className="flex items-center gap-3 md:gap-6">
               {/* Back Button */}
               <button
-                onClick={() => navigate(-1)}
+                onClick={handleBack}
                 className="p-1.5 -ml-1 touch-target flex-shrink-0 md:p-2"
                 aria-label="Go back"
               >
@@ -224,7 +236,7 @@ const ProfileDashboardPage = () => {
                   </div>
                 )}
                 {profileComplete && (
-                  <div className="absolute bottom-0 right-0 w-4 h-4 md:w-5 md:h-5 bg-green-500 rounded-full border-2 flex items-center justify-center" style={{ borderColor: PRIMARY_COLOR }}>
+                  <div className="absolute bottom-0 right-0 w-4 h-4 md:w-5 md:h-5 bg-green-500 rounded-full border-2 flex items-center justify-center" style={{ borderColor: theme.colors.primary }}>
                     <svg
                       className="w-2 h-2 md:w-2.5 md:h-2.5 text-white"
                       fill="currentColor"
@@ -304,10 +316,10 @@ const ProfileDashboardPage = () => {
             >
               <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Icon */}
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${PRIMARY_COLOR}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${PRIMARY_COLOR}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${PRIMARY_COLOR}1A`}>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${theme.colors.primary}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>
                   <svg
                     className="w-5 h-5 md:w-6 md:h-6"
-                    style={{ color: PRIMARY_COLOR }}
+                    style={{ color: theme.colors.primary }}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -331,7 +343,7 @@ const ProfileDashboardPage = () => {
                 )}
                 <svg
                   className="w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-colors"
-                  onMouseEnter={(e) => e.currentTarget.style.color = PRIMARY_COLOR}
+                  onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.primary}
                   onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
                   fill="none"
                   stroke="currentColor"
@@ -394,7 +406,7 @@ const ProfileDashboardPage = () => {
 
         {/* Referral Code Display */}
         {referralCode && (
-          <div className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white" style={{ background: `linear-gradient(to right, ${PRIMARY_COLOR}, ${PRIMARY_COLOR_LIGHT})` }}>
+          <div className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white" style={{ background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.primaryLight || theme.colors.primary})` }}>
             <div className="flex items-center justify-between gap-2 md:gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-xs md:text-sm text-white/80 mb-0.5 md:mb-1">Your Referral Code</p>

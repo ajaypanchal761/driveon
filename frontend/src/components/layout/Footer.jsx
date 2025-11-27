@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * Footer Component
  * Desktop-only footer with theme colors
  * Hidden on mobile view
+ * Based on document.txt - includes company info, links, and legal pages
  */
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -11,36 +13,59 @@ const Footer = () => {
   const footerLinks = {
     company: [
       { label: 'About Us', path: '/about' },
-      { label: 'Contact', path: '/contact' },
-      { label: 'Careers', path: '/careers' },
-      { label: 'Blog', path: '/blog' },
-    ],
-    support: [
-      { label: 'Help Center', path: '/help' },
-      { label: 'FAQs', path: '/faq' },
-      { label: 'Terms & Conditions', path: '/terms' },
-      { label: 'Privacy Policy', path: '/privacy' },
+      { label: 'How It Works', path: '/how-it-works' },
+      { label: 'Contact Us', path: '/contact' },
+      { label: 'Support', path: '/support' },
     ],
     services: [
+      { label: 'Browse Cars', path: '/cars' },
       { label: 'Car Rental', path: '/cars' },
-      { label: 'How It Works', path: '/how-it-works' },
-      { label: 'Pricing', path: '/pricing' },
-      { label: 'Referral Program', path: '/referrals' },
+      { label: 'Referral Program', path: '/profile/referrals' },
+      { label: 'Pricing', path: '/cars' },
+    ],
+    legal: [
+      { label: 'Terms & Conditions', path: '/terms' },
+      { label: 'Privacy Policy', path: '/privacy' },
+      { label: 'Cookie Policy', path: '/privacy' },
+      { label: 'KYC Policy', path: '/profile/kyc' },
     ],
   };
 
   return (
-    <footer className="hidden md:block bg-primary text-white">
+    <footer className="hidden md:block text-white" style={{ backgroundColor: theme.colors.primary }}>
       <div className="container-mobile py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand Column */}
           <div className="lg:col-span-1">
             <Link to="/" className="inline-block mb-4">
-              <h3 className="text-2xl font-bold">DriveOn</h3>
+              <h3 className="text-2xl font-bold text-white">DriveOn</h3>
             </Link>
-            <p className="text-white/80 text-sm mb-4">
-              Your trusted car rental platform. Find and rent the perfect car for your journey.
+            <p className="text-white/80 text-sm mb-4 leading-relaxed">
+              Your trusted car rental platform. Browse, filter, and book cars with ease. Complete KYC verification, add a guarantor, and enjoy seamless car rental experience.
             </p>
+            {/* Contact Information */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 text-white/80 text-sm">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <a href="mailto:support@driveon.com" className="hover:text-white transition-colors">
+                  support@driveon.com
+                </a>
+              </div>
+              <div className="flex items-center gap-2 text-white/80 text-sm">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <span>+91-XXXXX-XXXXX</span>
+              </div>
+              <div className="flex items-center gap-2 text-white/80 text-sm">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Mon-Fri, 9:00 AM - 6:00 PM IST</span>
+              </div>
+            </div>
             {/* Social Media Icons */}
             <div className="flex gap-3">
               <a
@@ -75,27 +100,10 @@ const Footer = () => {
 
           {/* Company Links */}
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
+            <h4 className="font-semibold mb-4 text-white">Company</h4>
             <ul className="space-y-2">
-              {footerLinks.company.map((link) => (
-                <li key={link.path}>
-                  <Link
-                    to={link.path}
-                    className="text-white/80 hover:text-white transition-colors text-sm"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.path}>
+              {footerLinks.company.map((link, index) => (
+                <li key={`company-${link.label}-${index}`}>
                   <Link
                     to={link.path}
                     className="text-white/80 hover:text-white transition-colors text-sm"
@@ -109,10 +117,27 @@ const Footer = () => {
 
           {/* Services Links */}
           <div>
-            <h4 className="font-semibold mb-4">Services</h4>
+            <h4 className="font-semibold mb-4 text-white">Services</h4>
             <ul className="space-y-2">
-              {footerLinks.services.map((link) => (
-                <li key={link.path}>
+              {footerLinks.services.map((link, index) => (
+                <li key={`services-${link.label}-${index}`}>
+                  <Link
+                    to={link.path}
+                    className="text-white/80 hover:text-white transition-colors text-sm"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal Links */}
+          <div>
+            <h4 className="font-semibold mb-4 text-white">Legal</h4>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link, index) => (
+                <li key={`legal-${link.label}-${index}`}>
                   <Link
                     to={link.path}
                     className="text-white/80 hover:text-white transition-colors text-sm"
@@ -135,19 +160,13 @@ const Footer = () => {
               to="/terms"
               className="text-white/80 hover:text-white transition-colors text-sm"
             >
-              Terms
+              Terms & Conditions
             </Link>
             <Link
               to="/privacy"
               className="text-white/80 hover:text-white transition-colors text-sm"
             >
-              Privacy
-            </Link>
-            <Link
-              to="/cookies"
-              className="text-white/80 hover:text-white transition-colors text-sm"
-            >
-              Cookies
+              Privacy Policy
             </Link>
           </div>
         </div>

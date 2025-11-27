@@ -195,23 +195,24 @@ const AddCarPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 pt-20 pb-6 md:px-6 md:pt-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 pt-16 pb-6 md:px-6 md:pt-4 lg:px-8">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.colors.primary }}>
-                Add New Car
-              </h1>
-              <p className="text-sm text-gray-600">Fill in all the details to add a new car</p>
-            </div>
-            <Button
-              variant="secondary"
+          <div className="flex items-center gap-3 md:gap-4 mb-2">
+            <button
               onClick={() => navigate('/admin/cars')}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label="Go back"
             >
-              Cancel
-            </Button>
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-2xl md:text-3xl font-bold" style={{ color: theme.colors.primary }}>
+              Add New Car
+            </h1>
           </div>
+          <p className="text-sm text-gray-600 ml-10 md:ml-11">Fill in all the details to add a new car</p>
         </div>
 
         {/* Form */}

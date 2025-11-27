@@ -32,8 +32,8 @@ export const createTicket = async (req, res) => {
       });
     }
 
-    // Get user details
-    const user = await User.findById(userId);
+    // Get user details - explicitly select name, email, and phone fields
+    const user = await User.findById(userId).select('name email phone');
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -41,11 +41,34 @@ export const createTicket = async (req, res) => {
       });
     }
 
+    // Extract user information with proper fallbacks
+    // Name: Use name if it exists and is not empty, otherwise use email, then phone, then 'User'
+    const userName = (user.name && user.name.trim()) 
+      ? user.name.trim() 
+      : (user.email ? user.email : (user.phone ? user.phone : 'User'));
+    
+    // Email: Use email if available, otherwise use phone, otherwise empty string
+    const userEmail = user.email 
+      ? user.email.trim().toLowerCase() 
+      : (user.phone ? user.phone.trim() : '');
+
+    // Log user information for debugging
+    console.log('Creating ticket with user info:', {
+      userId: userIdObjectId.toString(),
+      userName,
+      userEmail,
+      userFromDB: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
+    });
+
     // Create ticket (token will be auto-generated in pre-save hook)
     const ticket = new SupportTicket({
       userId: userIdObjectId,
-      userName: user.name || user.email || 'User',
-      userEmail: user.email || user.phone || '',
+      userName: userName,
+      userEmail: userEmail,
       subject: subject.trim(),
       category: category || 'general',
       description: description.trim(),
@@ -54,7 +77,7 @@ export const createTicket = async (req, res) => {
       messages: [
         {
           sender: 'user',
-          senderName: user.name || user.email || 'User',
+          senderName: userName,
           message: description.trim(),
         },
       ],
@@ -184,6 +207,8 @@ export const getUserTickets = async (req, res) => {
           description: ticket.description,
           priority: ticket.priority,
           status: ticket.status,
+          userName: ticket.userName || (ticket.userId?.name || ticket.userId?.email || 'User'),
+          userEmail: ticket.userEmail || (ticket.userId?.email || ticket.userId?.phone || ''),
           createdAt: ticket.createdAt,
           updatedAt: ticket.updatedAt,
         })),
@@ -244,6 +269,8 @@ export const getTicketById = async (req, res) => {
           description: ticket.description,
           priority: ticket.priority,
           status: ticket.status,
+          userName: ticket.userName || (ticket.userId?.name || ticket.userId?.email || 'User'),
+          userEmail: ticket.userEmail || (ticket.userId?.email || ticket.userId?.phone || ''),
           messages: ticket.messages.map((msg) => ({
             id: msg._id.toString(),
             sender: msg.sender,
@@ -364,11 +391,25 @@ export const getAllTickets = async (req, res) => {
     const query = {};
 
     if (status && status !== 'all') {
-      query.status = status;
+      // Normalize status to lowercase for consistent matching
+      const normalizedStatus = status.toLowerCase().trim();
+      // Map common variations to correct enum values
+      const statusMap = {
+        'open': 'open',
+        'pending': 'pending',
+        'in_progress': 'in_progress',
+        'in progress': 'in_progress',
+        'resolved': 'resolved',
+        'closed': 'closed',
+      };
+      
+      const mappedStatus = statusMap[normalizedStatus] || normalizedStatus;
+      query.status = mappedStatus;
     }
 
     if (category && category !== 'all') {
-      query.category = category;
+      // Normalize category to lowercase for consistent matching
+      query.category = category.toLowerCase();
     }
 
     if (search) {
@@ -387,15 +428,29 @@ export const getAllTickets = async (req, res) => {
       let startDate;
 
       switch (dateFilter) {
-        case 'today':
-          startDate = new Date(now.setHours(0, 0, 0, 0));
+        case 'today': {
+          // Create a new date for today at 00:00:00
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          startDate = today;
           break;
-        case 'week':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        }
+        case 'week': {
+          // Last 7 days from now
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          weekAgo.setHours(0, 0, 0, 0);
+          startDate = weekAgo;
           break;
-        case 'month':
-          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        }
+        case 'month': {
+          // Last 30 days from now
+          const monthAgo = new Date();
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          monthAgo.setHours(0, 0, 0, 0);
+          startDate = monthAgo;
           break;
+        }
         default:
           startDate = null;
       }
@@ -404,6 +459,16 @@ export const getAllTickets = async (req, res) => {
         query.createdAt = { $gte: startDate };
       }
     }
+
+    // Debug logging
+    console.log('Admin getAllTickets - Query params:', {
+      originalStatus: status,
+      originalCategory: category,
+      search,
+      dateFilter,
+      finalQuery: JSON.stringify(query),
+      queryKeys: Object.keys(query),
+    });
 
     // Get tickets with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -415,6 +480,13 @@ export const getAllTickets = async (req, res) => {
       .lean();
 
     const total = await SupportTicket.countDocuments(query);
+    
+    // Debug logging for results
+    console.log('Admin getAllTickets - Results:', {
+      ticketsFound: tickets.length,
+      totalCount: total,
+      queryUsed: JSON.stringify(query),
+    });
 
     // Get statistics
     const stats = {

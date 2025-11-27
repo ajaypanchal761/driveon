@@ -41,6 +41,40 @@ const RentNowPage = () => {
         return;
       }
 
+      // Check if it's a mock car ID (like "car1", "car2", etc.)
+      // If it is, use mock data directly without API call
+      if (carId.startsWith('car')) {
+        const carNumber = parseInt(carId.replace(/\D/g, '')) || 1;
+        
+        // Create mock car data based on car number
+        const mockCarData = {
+          id: carId,
+          brand: ['Toyota', 'Honda', 'Maruti', 'Hyundai', 'Tata', 'Mahindra', 'Ford'][(carNumber - 1) % 7] || 'Car',
+          model: ['Camry', 'City', 'Swift', 'i20', 'Nexon', 'XUV700', 'EcoSport'][(carNumber - 1) % 7] || 'Model',
+          variant: '',
+          year: new Date().getFullYear(),
+          price: [3500, 3200, 1800, 2800, 2600, 2750, 3000][(carNumber - 1) % 7] || 2500,
+          images: null,
+          seats: 5,
+          transmission: 'Manual',
+          fuelType: 'Petrol',
+          color: 'White',
+          carType: 'Sedan',
+          rating: [4.7, 4.8, 4.4, 4.3, 4.9, 4.6, 4.5][(carNumber - 1) % 7] || 4.5,
+          location: 'Mumbai, Maharashtra',
+          ownerName: 'DriveOn Premium',
+          ownerRating: 4.5,
+          description: 'Premium car available for rent.',
+          features: ['Air Conditioning', 'GPS Navigation', 'Bluetooth', 'USB Charging', 'Leather Seats'],
+        };
+        
+        setCar(mockCarData);
+        setPickupLocation(mockCarData.location);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -96,12 +130,13 @@ const RentNowPage = () => {
           setPickupLocation(formattedCar.location);
         } else {
           setError('Car not found');
-          toastUtils.error('Car not found');
+          // Don't show toast for now since backend might not be ready
         }
       } catch (error) {
         console.error('Error fetching car details:', error);
-        setError('Failed to load car details');
-        toastUtils.error('Failed to load car details');
+        // For real car IDs that fail, show error but don't show toast (backend might not be ready)
+        setError('Failed to load car details. Please try browsing cars.');
+        // Don't show toast to avoid annoying errors when backend is not ready
       } finally {
         setLoading(false);
       }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { BOOKING_STATUS } from '../../constants';
+import { theme } from '../../theme/theme.constants';
 
 // Import car images from assets
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -146,7 +147,7 @@ const BookingHistoryPage = () => {
   const currentBookings = mockBookings[activeTab] || [];
 
   const handleReBook = (carId) => {
-    navigate(`/booking/${carId}/date-time`);
+    navigate(`/rent-now/${carId}`);
   };
 
   const handleWriteReview = (bookingId) => {
@@ -157,6 +158,8 @@ const BookingHistoryPage = () => {
   const handleViewDetails = (bookingId) => {
     if (activeTab === 'active') {
       navigate(`/booking/${bookingId}/active`);
+    } else if (activeTab === 'cancelled') {
+      navigate(`/booking/${bookingId}/cancelled`);
     } else {
       navigate(`/booking/${bookingId}`);
     }
@@ -168,13 +171,19 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleViewDetails(booking.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#1e6262] text-[#1e6262] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#1e6262]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            style={{ borderColor: theme.colors.primary, color: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + '10'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             View Details
           </button>
           <button
             onClick={() => navigate(`/booking/${booking.id}/active`)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-[#1e6262] text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#1e6262]/90 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+            style={{ backgroundColor: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + 'E6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
           >
             Track Trip
           </button>
@@ -185,13 +194,19 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleReBook(booking.car.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#1e6262] text-[#1e6262] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#1e6262]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            style={{ borderColor: theme.colors.primary, color: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + '10'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             Re-Book
           </button>
           <button
             onClick={() => handleWriteReview(booking.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-[#1e6262] text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#1e6262]/90 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+            style={{ backgroundColor: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + 'E6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
           >
             Write Review
           </button>
@@ -202,7 +217,10 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleReBook(booking.car.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 border-[#1e6262] text-[#1e6262] rounded-lg md:rounded-xl font-semibold text-xs md:text-sm hover:bg-[#1e6262]/10 transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            style={{ borderColor: theme.colors.primary, color: theme.colors.primary }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + '10'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             Book Again
           </button>
@@ -219,8 +237,8 @@ const BookingHistoryPage = () => {
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header Section - Purple Background */}
-      <header className="bg-[#1e6262] text-white relative overflow-hidden">
+      {/* Header Section - Purple Background - Sticky */}
+      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md" style={{ backgroundColor: theme.colors.primary }}>
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>

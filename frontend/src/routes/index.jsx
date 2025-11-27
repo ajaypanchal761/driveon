@@ -39,6 +39,9 @@ const ActiveBookingPage = lazy(() =>
 const BookingHistoryPage = lazy(() =>
   import("../pages/booking/BookingHistoryPage")
 );
+const CancelledBookingDetailsPage = lazy(() =>
+  import("../pages/booking/CancelledBookingDetailsPage")
+);
 const ReviewFormPage = lazy(() => import("../pages/booking/ReviewFormPage"));
 const ProfileDashboardPage = lazy(() =>
   import("../pages/profile/ProfileDashboardPage")
@@ -100,6 +103,9 @@ const ReportsPage = lazy(() =>
 const AdminSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminSettingsPage")
 );
+const AdminProfilePage = lazy(() =>
+  import("../pages/admin/profile/AdminProfilePage")
+);
 const AdminSupportPage = lazy(() =>
   import("../pages/admin/support/AdminSupportPage")
 );
@@ -115,6 +121,9 @@ const OwnerBookingsPage = lazy(() =>
   import("../pages/owner/OwnerBookingsPage")
 );
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
+const TermsAndConditionsPage = lazy(() => import("../pages/TermsAndConditionsPage"));
+const PrivacyPolicyPage = lazy(() => import("../pages/PrivacyPolicyPage"));
+const AboutUsPage = lazy(() => import("../pages/AboutUsPage"));
 
 /**
  * AdminRedirectRoute Component
@@ -163,6 +172,18 @@ const router = createBrowserRouter([
       {
         path: "verify-otp",
         element: <VerifyOTPPage />,
+      },
+      {
+        path: "terms",
+        element: <TermsAndConditionsPage />,
+      },
+      {
+        path: "privacy",
+        element: <PrivacyPolicyPage />,
+      },
+      {
+        path: "about",
+        element: <AboutUsPage />,
       },
       // Admin Auth Routes (public - no authentication required)
       {
@@ -333,6 +354,10 @@ const router = createBrowserRouter([
                 path: "admin/settings/features",
                 element: <AdminSettingsPage />,
               },
+              {
+                path: "admin/profile",
+                element: <AdminProfilePage />,
+              },
               // Other admin routes will be added here
               // {
               //   path: "admin/users",
@@ -412,6 +437,10 @@ const router = createBrowserRouter([
           {
             path: "booking/:id/active",
             element: <ActiveBookingPage />,
+          },
+          {
+            path: "booking/:id/cancelled",
+            element: <CancelledBookingDetailsPage />,
           },
 
           // Booking Routes (require profile completion)

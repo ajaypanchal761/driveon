@@ -41,24 +41,59 @@ const AdminSupportPage = () => {
   const loadTickets = async () => {
     try {
       setLoading(true);
-      const response = await supportService.getAllTickets({
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        category: categoryFilter !== 'all' ? categoryFilter : undefined,
-        search: searchQuery || undefined,
-        dateFilter: dateFilter !== 'all' ? dateFilter : undefined,
+      
+      // Build filter params
+      const params = {
         page: 1,
         limit: 100,
-      });
+      };
+      
+      if (statusFilter && statusFilter !== 'all') {
+        params.status = statusFilter;
+        console.log('AdminSupportPage - Status filter applied:', statusFilter);
+      }
+      
+      if (categoryFilter && categoryFilter !== 'all') {
+        params.category = categoryFilter;
+        console.log('AdminSupportPage - Category filter applied:', categoryFilter);
+      }
+      
+      if (searchQuery && searchQuery.trim()) {
+        params.search = searchQuery.trim();
+        console.log('AdminSupportPage - Search query applied:', searchQuery.trim());
+      }
+      
+      if (dateFilter && dateFilter !== 'all') {
+        params.dateFilter = dateFilter;
+        console.log('AdminSupportPage - Date filter applied:', dateFilter);
+      }
+      
+      console.log('AdminSupportPage - Loading tickets with all filters:', params);
+      
+      const response = await supportService.getAllTickets(params);
+
+      console.log('AdminSupportPage - Tickets response:', response);
 
       if (response.success && response.data) {
-        setTickets(response.data.tickets || []);
+        const ticketsList = response.data.tickets || [];
+        console.log('AdminSupportPage - Setting tickets:', ticketsList.length);
+        setTickets(ticketsList);
         if (response.data.stats) {
           setStats(response.data.stats);
         }
+      } else {
+        console.warn('AdminSupportPage - Invalid response structure:', response);
+        setTickets([]);
       }
     } catch (error) {
       console.error('Error loading tickets:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
       toastUtils.error(error.response?.data?.message || 'Failed to load tickets');
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -79,6 +114,7 @@ const AdminSupportPage = () => {
 
   // Filter tickets locally (backend already filters, but we can do additional client-side filtering if needed)
   useEffect(() => {
+    console.log('AdminSupportPage - Updating filteredTickets, tickets count:', tickets.length);
     setFilteredTickets(tickets);
   }, [tickets]);
 
@@ -229,210 +265,213 @@ const AdminSupportPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Ticket List */}
-          <div className="lg:col-span-2">
-            {/* Filters */}
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Search */}
-                <div className="md:col-span-2 lg:col-span-4">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by subject, token, user name, email..."
-                    className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  />
-                </div>
-
-                {/* Status Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  >
-                    <option value="all">All Status</option>
-                    {statusOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Category Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  >
-                    <option value="all">All Categories</option>
-                    {categories.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Date Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">Last 7 Days</option>
-                    <option value="month">Last 30 Days</option>
-                  </select>
-                </div>
+        <div className="max-w-6xl mx-auto">
+          {/* Filters */}
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="md:col-span-2 lg:col-span-4">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by subject, token, user name, email..."
+                  className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
+                  style={{
+                    borderColor: theme.colors.borderDefault,
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                />
               </div>
-            </div>
 
-            {/* Ticket List */}
-            <div className="space-y-4">
-              {loading ? (
-                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 md:p-12 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
-                  <p className="text-gray-600">Loading tickets...</p>
-                </div>
-              ) : filteredTickets.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 md:p-12 text-center">
-                  <svg
-                    className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
-                    No Support Tickets Found
-                  </h3>
-                  <p className="text-sm md:text-base text-gray-600">
-                    {tickets.length === 0
-                      ? 'No support tickets have been created yet.'
-                      : 'No tickets match your current filters.'}
-                  </p>
-                </div>
-              ) : (
-                filteredTickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    onClick={() => loadTicketDetails(ticket.id)}
-                    className={`bg-white rounded-lg shadow-md border p-4 md:p-5 cursor-pointer hover:shadow-lg transition-all ${
-                      selectedTicket?.id === ticket.id
-                        ? 'ring-2'
-                        : 'border-gray-200'
-                    }`}
-                    style={
-                      selectedTicket?.id === ticket.id
-                        ? { borderColor: theme.colors.primary, ringColor: theme.colors.primary }
-                        : {}
-                    }
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
-                          <h3 className="text-base md:text-lg font-semibold truncate" style={{ color: theme.colors.textPrimary }}>
-                            {ticket.subject}
-                          </h3>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)} text-white flex-shrink-0`}>
-                            {ticket.status.replace('_', ' ').toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-gray-600 mb-2">
-                          <span className="font-mono font-medium" style={{ color: theme.colors.primary }}>
-                            {ticket.token}
-                          </span>
-                          <span>•</span>
-                          <span>{categories.find(c => c.value === ticket.category)?.label}</span>
-                          <span>•</span>
-                          <span>{ticket.userName}</span>
-                        </div>
-                        <p className="text-xs md:text-sm text-gray-600 line-clamp-2 mb-2">
-                          {ticket.description}
-                        </p>
-                        <div className="text-xs text-gray-500">
-                          Created: {new Date(ticket.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                      <svg
-                        className="w-5 h-5 md:w-6 md:h-6 text-gray-400 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                ))
-              )}
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
+                  style={{
+                    borderColor: theme.colors.borderDefault,
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                >
+                  <option value="all">All Status</option>
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
+                  style={{
+                    borderColor: theme.colors.borderDefault,
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
+                  style={{
+                    borderColor: theme.colors.borderDefault,
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Right Column - Ticket Details */}
-          <div className="lg:col-span-1">
-            {selectedTicket ? (
-              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 sticky top-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg md:text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-                    Ticket Details
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setSelectedTicket(null);
-                      setAdminMessage('');
-                      setSelectedStatus('');
-                    }}
-                    className="p-1 hover:bg-gray-100 rounded"
-                  >
-                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          {/* Ticket List */}
+          <div className="space-y-4">
+            {loading ? (
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 md:p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
+                <p className="text-gray-600">Loading tickets...</p>
+              </div>
+            ) : filteredTickets.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 md:p-12 text-center">
+                <svg
+                  className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+                  No Support Tickets Found
+                </h3>
+                <p className="text-sm md:text-base text-gray-600">
+                  {tickets.length === 0
+                    ? 'No support tickets have been created yet.'
+                    : 'No tickets match your current filters.'}
+                </p>
+              </div>
+            ) : (
+              filteredTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  onClick={() => loadTicketDetails(ticket.id)}
+                  className={`bg-white rounded-lg shadow-md border p-4 md:p-5 cursor-pointer hover:shadow-lg transition-all ${
+                    selectedTicket?.id === ticket.id
+                      ? 'ring-2'
+                      : 'border-gray-200'
+                  }`}
+                  style={
+                    selectedTicket?.id === ticket.id
+                      ? { borderColor: theme.colors.primary, ringColor: theme.colors.primary }
+                      : {}
+                  }
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
+                        <h3 className="text-base md:text-lg font-semibold truncate" style={{ color: theme.colors.textPrimary }}>
+                          {ticket.subject}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)} text-white flex-shrink-0`}>
+                          {ticket.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-gray-600 mb-2">
+                        <span className="font-mono font-medium" style={{ color: theme.colors.primary }}>
+                          {ticket.token}
+                        </span>
+                        <span>•</span>
+                        <span>{categories.find(c => c.value === ticket.category)?.label}</span>
+                        <span>•</span>
+                        <span>{ticket.userName}</span>
+                      </div>
+                      <p className="text-xs md:text-sm text-gray-600 line-clamp-2 mb-2">
+                        {ticket.description}
+                      </p>
+                      <div className="text-xs text-gray-500">
+                        Created: {new Date(ticket.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <svg
+                      className="w-5 h-5 md:w-6 md:h-6 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  </button>
+                  </div>
                 </div>
+              ))
+            )}
+          </div>
+        </div>
 
+        {/* Ticket Details Modal */}
+        {selectedTicket && (
+          <div className="fixed inset-0 bg-gray-200 bg-opacity-30 z-50 flex items-center justify-center p-4" onClick={() => {
+            setSelectedTicket(null);
+            setAdminMessage('');
+            setSelectedStatus('');
+          }}>
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl md:text-2xl font-bold" style={{ color: theme.colors.textPrimary }}>
+                  Ticket Details
+                </h2>
+                <button
+                  onClick={() => {
+                    setSelectedTicket(null);
+                    setAdminMessage('');
+                    setSelectedStatus('');
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
                 {/* Token */}
-                <div className="bg-gray-50 rounded-lg p-3 mb-4 border border-gray-200">
-                  <p className="text-xs text-gray-600 mb-1">Ticket Token</p>
-                  <p className="text-sm font-mono font-bold" style={{ color: theme.colors.primary }}>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <p className="text-sm text-gray-600 mb-1">Ticket Token</p>
+                  <p className="text-base font-mono font-bold" style={{ color: theme.colors.primary }}>
                     {selectedTicket.token}
                   </p>
                 </div>
 
                 {/* Status Update */}
-                <div className="mb-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Update Status
                   </label>
@@ -458,8 +497,8 @@ const AdminSupportPage = () => {
                 </div>
 
                 {/* User Information */}
-                <div className="border-t border-gray-200 pt-4 mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">User Information</p>
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">User Information</p>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-gray-600">Name:</span>{' '}
@@ -473,8 +512,8 @@ const AdminSupportPage = () => {
                 </div>
 
                 {/* Ticket Information */}
-                <div className="border-t border-gray-200 pt-4 mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Ticket Information</p>
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Ticket Information</p>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-gray-600">Category:</span>{' '}
@@ -502,34 +541,31 @@ const AdminSupportPage = () => {
                 </div>
 
                 {/* Description */}
-                <div className="border-t border-gray-200 pt-4 mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Description</p>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">
                       {selectedTicket.description}
                     </p>
                   </div>
                 </div>
 
-                {/* Conversation */}
+                {/* Messages */}
                 {selectedTicket.messages && selectedTicket.messages.length > 0 && (
-                  <div className="border-t border-gray-200 pt-4 mb-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">Conversation</p>
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                      {selectedTicket.messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`p-3 rounded-lg ${
-                            msg.sender === 'admin'
-                              ? 'text-white'
-                              : 'bg-gray-100 text-gray-900'
-                          }`}
-                          style={msg.sender === 'admin' ? { backgroundColor: theme.colors.primary } : {}}
-                        >
-                          <div className="text-xs opacity-80 mb-1">
-                            {msg.senderName} • {new Date(msg.timestamp).toLocaleString()}
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">Messages</p>
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {selectedTicket.messages.map((msg, index) => (
+                        <div key={index} className={`p-3 rounded-lg ${msg.sender === 'admin' ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold" style={{ color: theme.colors.primary }}>
+                              {msg.senderName} ({msg.sender === 'admin' ? 'Admin' : 'User'})
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(msg.timestamp).toLocaleString()}
+                            </span>
                           </div>
-                          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                          <p className="text-sm text-gray-700">{msg.message}</p>
                         </div>
                       ))}
                     </div>
@@ -560,26 +596,9 @@ const AdminSupportPage = () => {
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 text-center">
-                <svg
-                  className="w-16 h-16 mx-auto mb-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <p className="text-sm text-gray-600">Select a ticket to view details</p>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

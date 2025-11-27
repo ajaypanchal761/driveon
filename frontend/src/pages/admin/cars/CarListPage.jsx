@@ -286,18 +286,29 @@ const CarListPage = () => {
     return names[type] || type;
   };
 
-  // Get unique locations
-  const locations = Array.from(new Set(cars.map((car) => car.location)));
-
-  // Get unique owners
-  const owners = Array.from(
+  // Get unique locations (filter out null/undefined)
+  const locations = Array.from(
     new Set(
-      cars.map((car) => ({
-        id: car.ownerId,
-        name: car.ownerName,
-      }))
+      cars
+        .map((car) => car.location)
+        .filter((location) => location != null && location !== '')
     )
   );
+
+  // Get unique owners (filter out null/undefined and deduplicate properly)
+  const ownersMap = new Map();
+  cars.forEach((car) => {
+    if (car.ownerId && car.ownerName) {
+      // Use ownerId as key to ensure uniqueness
+      if (!ownersMap.has(car.ownerId)) {
+        ownersMap.set(car.ownerId, {
+          id: car.ownerId,
+          name: car.ownerName,
+        });
+      }
+    }
+  });
+  const owners = Array.from(ownersMap.values());
 
   // Stats calculation
   const stats = {
@@ -461,9 +472,9 @@ const CarListPage = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
               >
                 <option value="all">All Owners</option>
-                {owners.map((owner) => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.name}
+                {owners.map((owner, index) => (
+                  <option key={owner.id || `owner-${index}`} value={owner.id}>
+                    {owner.name || 'Unknown Owner'}
                   </option>
                 ))}
               </select>
@@ -478,9 +489,9 @@ const CarListPage = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
               >
                 <option value="all">All Locations</option>
-                {locations.map((location) => (
-                  <option key={location} value={location}>
-                    {location}
+                {locations.map((location, index) => (
+                  <option key={location || `location-${index}`} value={location}>
+                    {location || 'Unknown Location'}
                   </option>
                 ))}
               </select>

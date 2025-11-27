@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Button, Input } from '../../components/common';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
+import { theme } from '../../theme/theme.constants';
 
 /**
  * Register Schema Validation - OTP Based
@@ -118,7 +119,7 @@ const RegisterPage = () => {
     <div 
       className="fixed inset-0 flex items-center justify-center px-4"
       style={{ 
-        backgroundColor: '#1e6262',
+        backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -203,7 +204,7 @@ const RegisterPage = () => {
                   {...register('termsAccepted')}
                   className="mt-1 w-4 h-4 rounded focus:ring-2"
                     style={{ 
-                    accentColor: '#1e6262',
+                    accentColor: theme.colors.primary,
                     borderColor: '#d0d0d0'
                   }}
                 />
@@ -212,7 +213,7 @@ const RegisterPage = () => {
                   <Link
                     to="/terms"
                     className="font-medium hover:underline"
-                    style={{ color: '#1e6262' }}
+                    style={{ color: theme.colors.primary }}
                     target="_blank"
                   >
                     Terms and Conditions
@@ -221,7 +222,7 @@ const RegisterPage = () => {
                   <Link
                     to="/privacy"
                     className="font-medium hover:underline"
-                    style={{ color: '#1e6262' }}
+                    style={{ color: theme.colors.primary }}
                     target="_blank"
                   >
                     Privacy Policy
@@ -244,7 +245,7 @@ const RegisterPage = () => {
               isLoading={isLoading}
               disabled={isLoading}
               className="mt-4"
-              style={{ backgroundColor: '#1e6262' }}
+              style={{ backgroundColor: theme.colors.primary }}
             >
               Send OTP
             </Button>
