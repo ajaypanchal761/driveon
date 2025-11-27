@@ -15,63 +15,7 @@ const GuarantorManagementPage = () => {
   const dispatch = useAppDispatch();
   const { guarantor } = useAppSelector((state) => state.user);
 
-  // Form state
-  const [name, setName] = useState(guarantor?.details?.name || '');
-  const [phone, setPhone] = useState(guarantor?.details?.phone || '');
-  const [email, setEmail] = useState(guarantor?.details?.email || '');
-  const [relationship, setRelationship] = useState(guarantor?.details?.relationship || '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validation
-    if (!name.trim()) {
-      toastUtils.error('Please enter guarantor name');
-      return;
-    }
-
-    if (!phone.trim() && !email.trim()) {
-      toastUtils.error('Please enter either phone number or email');
-      return;
-    }
-
-    // Phone validation (10 digits)
-    if (phone.trim() && !/^\d{10}$/.test(phone.trim())) {
-      toastUtils.error('Please enter a valid 10-digit phone number');
-      return;
-    }
-
-    // Email validation
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toastUtils.error('Please enter a valid email address');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    // Simulate API call to send invite
-    setTimeout(() => {
-      setIsSubmitting(false);
-      
-      const guarantorDetails = {
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-        relationship: relationship.trim() || 'Friend',
-      };
-
-      // Update Redux state
-      dispatch(setGuarantor({
-        added: true,
-        verified: false,
-        details: guarantorDetails,
-      }));
-
-      toastUtils.success('Guarantor invite sent successfully!');
-    }, 1500);
-  };
+  // Form state removed - fields have been removed
 
   // Handle remove guarantor
   const handleRemoveGuarantor = () => {
@@ -80,20 +24,12 @@ const GuarantorManagementPage = () => {
       verified: false,
       details: null,
     }));
-    setName('');
-    setPhone('');
-    setEmail('');
-    setRelationship('');
     toastUtils.success('Guarantor removed successfully');
   };
 
   // Handle resend invite
   const handleResendInvite = () => {
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
       toastUtils.success('Invite resent successfully!');
-    }, 1000);
   };
 
   return (
@@ -117,7 +53,15 @@ const GuarantorManagementPage = () => {
                 </svg>
               </button>
               <h1 className="text-lg md:text-2xl font-bold text-white">Guarantor</h1>
-              <div className="w-8"></div>
+              <button
+                onClick={() => navigate('/profile/guarantor/history')}
+                className="p-1 -mr-1 touch-target hover:bg-white/10 rounded-lg transition-colors md:p-1.5"
+                aria-label="View history"
+              >
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -208,8 +152,7 @@ const GuarantorManagementPage = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleResendInvite}
-                    disabled={isSubmitting}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
                     style={{
                       backgroundColor: theme.colors.primary,
                       color: theme.colors.white,
@@ -241,251 +184,7 @@ const GuarantorManagementPage = () => {
       </div>
       )}
 
-      {/* Form Section */}
-      <div className="px-4 pt-4 pb-4 md:pt-6 md:pb-4">
-        <div className="max-w-7xl mx-auto">
-          {!guarantor.added ? (
-            <>
-              {/* Header Card */}
-              <div className="bg-white rounded-xl p-3 md:p-5 shadow-md mb-3 md:mb-4 border" style={{ borderColor: theme.colors.borderLight }}>
-                <div className="flex items-center gap-2.5 md:gap-4 mb-1.5 md:mb-2">
-                  <div className="w-9 h-9 md:w-12 md:h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${theme.colors.primary}15` }}>
-                    <svg className="w-4.5 h-4.5 md:w-6 md:h-6" style={{ color: theme.colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-base md:text-xl font-bold" style={{ color: theme.colors.textPrimary }}>
-                      Add Guarantor
-                    </h2>
-                    <p className="text-xs md:text-sm mt-0.5" style={{ color: theme.colors.textSecondary }}>
-                      Required for booking cars
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs md:text-sm leading-relaxed mt-1.5 md:mt-2" style={{ color: theme.colors.textSecondary }}>
-                  Add a guarantor who will be responsible for your bookings. They need to complete registration and KYC verification via DigiLocker.
-                </p>
-              </div>
-
-              {/* Form Card */}
-              <form onSubmit={handleSubmit} className="bg-white rounded-xl p-3 md:p-5 shadow-md border space-y-3 md:space-y-4" style={{ borderColor: theme.colors.borderLight }}>
-              <div className="md:grid md:grid-cols-2 md:gap-4 md:space-y-0 space-y-3">
-                {/* Name */}
-                <div>
-                  <label className="text-xs md:text-sm font-semibold block mb-1.5 flex items-center gap-1" style={{ color: theme.colors.textPrimary }}>
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Guarantor Name <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter full name"
-                      className="w-full pl-10 pr-3 py-2 md:py-2.5 rounded-lg bg-gray-50 border text-sm md:text-base focus:outline-none transition-all"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                      color: theme.colors.textPrimary,
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.colors.primary;
-                      e.target.style.backgroundColor = theme.colors.white;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.colors.borderDefault;
-                      e.target.style.backgroundColor = '#f9fafb';
-                    }}
-                    required
-                  />
-                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: theme.colors.textTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-              </div>
-
-                {/* Phone Number */}
-                <div>
-                  <label className="text-xs md:text-sm font-semibold block mb-1.5 flex items-center gap-1" style={{ color: theme.colors.textPrimary }}>
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    Phone Number <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      placeholder="Enter 10-digit number"
-                      className="w-full pl-10 pr-3 py-2 md:py-2.5 rounded-lg bg-gray-50 border text-sm md:text-base focus:outline-none transition-all"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                      color: theme.colors.textPrimary,
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.colors.primary;
-                      e.target.style.backgroundColor = theme.colors.white;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.colors.borderDefault;
-                      e.target.style.backgroundColor = '#f9fafb';
-                    }}
-                    maxLength={10}
-                  />
-                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: theme.colors.textTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </div>
-                  <p className="text-xs md:text-sm mt-1 flex items-center gap-1" style={{ color: theme.colors.textTertiary }}>
-                    <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    At least phone number or email is required
-                  </p>
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="text-xs md:text-sm font-semibold block mb-1.5 flex items-center gap-1" style={{ color: theme.colors.textPrimary }}>
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter email address"
-                      className="w-full pl-10 pr-3 py-2 md:py-2.5 rounded-lg bg-gray-50 border text-sm md:text-base focus:outline-none transition-all"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                      color: theme.colors.textPrimary,
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.colors.primary;
-                      e.target.style.backgroundColor = theme.colors.white;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.colors.borderDefault;
-                      e.target.style.backgroundColor = '#f9fafb';
-                    }}
-                  />
-                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: theme.colors.textTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-
-                {/* Relationship */}
-                <div className="md:col-span-2">
-                  <label className="text-xs md:text-sm font-semibold block mb-1.5 flex items-center gap-1" style={{ color: theme.colors.textPrimary }}>
-                    <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Relationship
-                  </label>
-                  <select
-                    value={relationship}
-                    onChange={(e) => setRelationship(e.target.value)}
-                    className="w-full px-3 py-2 md:py-2.5 rounded-lg bg-gray-50 border text-sm md:text-base focus:outline-none transition-all"
-                  style={{
-                    borderColor: theme.colors.borderDefault,
-                    color: theme.colors.textPrimary,
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.colors.primary;
-                    e.target.style.backgroundColor = theme.colors.white;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.colors.borderDefault;
-                    e.target.style.backgroundColor = '#f9fafb';
-                  }}
-                >
-                  <option value="">Select relationship</option>
-                  <option value="Friend">Friend</option>
-                  <option value="Family">Family</option>
-                  <option value="Colleague">Colleague</option>
-                  <option value="Relative">Relative</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting || (!phone.trim() && !email.trim())}
-                className="w-full md:col-span-2 py-2.5 md:py-3 rounded-lg font-bold text-sm md:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95"
-                style={{
-                  backgroundColor: theme.colors.primary,
-                  color: theme.colors.white,
-                }}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 md:h-5 md:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Sending Invite...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Send Invite</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </>
-        ) : (
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-3 md:p-5 border-2 shadow-md" style={{ borderColor: `${theme.colors.primary}40` }}>
-            <div className="flex items-start gap-2.5 md:gap-4">
-              <div className="w-9 h-9 md:w-12 md:h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${theme.colors.primary}20` }}>
-                <svg className="w-4.5 h-4.5 md:w-6 md:h-6" style={{ color: theme.colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm md:text-lg font-bold mb-1.5 md:mb-2" style={{ color: theme.colors.primary }}>
-                  About Guarantor Process
-                </h4>
-                <p className="text-xs md:text-sm leading-relaxed mb-2 md:mb-3" style={{ color: theme.colors.textSecondary }}>
-                  Your guarantor will receive an invite via <span className="font-semibold">{guarantor.details?.phone ? 'SMS' : 'email'}</span>. They need to:
-                </p>
-                <ul className="text-xs md:text-sm space-y-1.5 md:space-y-2 mb-2 md:mb-3" style={{ color: theme.colors.textSecondary }}>
-                  <li className="flex items-start gap-2 md:gap-3">
-                    <span className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs md:text-sm font-bold" style={{ backgroundColor: `${theme.colors.primary}20`, color: theme.colors.primary }}>1</span>
-                    <span>Install the app and register with their details</span>
-                  </li>
-                  <li className="flex items-start gap-2 md:gap-3">
-                    <span className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs md:text-sm font-bold" style={{ backgroundColor: `${theme.colors.primary}20`, color: theme.colors.primary }}>2</span>
-                    <span>Complete their profile (100% required)</span>
-                  </li>
-                  <li className="flex items-start gap-2 md:gap-3">
-                    <span className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs md:text-sm font-bold" style={{ backgroundColor: `${theme.colors.primary}20`, color: theme.colors.primary }}>3</span>
-                    <span>Complete KYC verification via DigiLocker</span>
-                  </li>
-                </ul>
-                <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t" style={{ borderColor: `${theme.colors.primary}30` }}>
-                  <p className="text-xs md:text-sm font-semibold" style={{ color: theme.colors.primary }}>
-                    ⚠️ You can only make bookings once your guarantor is verified.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        </div>
-      </div>
+      {/* Form Section - Add Guarantor section removed */}
     </div>
   );
 };

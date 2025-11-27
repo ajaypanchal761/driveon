@@ -24,10 +24,6 @@ const BookingFormPage = () => {
   const [dropDate, setDropDate] = useState('');
   const [dropTime, setDropTime] = useState('');
   const [paymentOption, setPaymentOption] = useState('full'); // 'full' or 'advance'
-  const [guarantorName, setGuarantorName] = useState('');
-  const [guarantorPhone, setGuarantorPhone] = useState('');
-  const [guarantorEmail, setGuarantorEmail] = useState('');
-  const [hasGuarantor, setHasGuarantor] = useState(false);
   const [location, setLocation] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -57,23 +53,11 @@ const BookingFormPage = () => {
     const basePrice = car?.price || 0;
     let totalPrice = basePrice * totalDays;
 
-    // Dynamic pricing based on day of week (weekend multiplier)
-    const pickupDay = pickup.getDay();
-    const dropDay = drop.getDay();
-    const isWeekend = pickupDay === 0 || pickupDay === 6 || dropDay === 0 || dropDay === 6;
-    
-    if (isWeekend) {
-      totalPrice = totalPrice * 1.2; // 20% weekend surcharge
-    }
-
-    // Security deposit (10% of total)
-    const securityDeposit = totalPrice * 0.1;
 
     return {
       basePrice,
       totalDays,
       totalPrice: Math.round(totalPrice),
-      securityDeposit: Math.round(securityDeposit),
       advancePayment: Math.round(totalPrice * 0.35),
       remainingPayment: Math.round(totalPrice * 0.65),
     };
@@ -310,19 +294,9 @@ const BookingFormPage = () => {
                       <span>Base Price ({priceDetails.totalDays} {priceDetails.totalDays === 1 ? 'day' : 'days'})</span>
                       <span className="font-medium">Rs. {priceDetails.basePrice * priceDetails.totalDays}</span>
                     </div>
-                    {priceDetails.totalPrice > priceDetails.basePrice * priceDetails.totalDays && (
-                      <div className="flex justify-between" style={{ color: theme.colors.textSecondary }}>
-                        <span>Weekend Surcharge</span>
-                        <span className="font-medium">Rs. {priceDetails.totalPrice - (priceDetails.basePrice * priceDetails.totalDays)}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between font-semibold pt-2 md:pt-3 border-t text-base md:text-lg" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
                       <span>Total Amount</span>
                       <span>Rs. {priceDetails.totalPrice}</span>
-                    </div>
-                    <div className="flex justify-between text-xs md:text-sm pt-1" style={{ color: theme.colors.textSecondary }}>
-                      <span>Security Deposit</span>
-                      <span>Rs. {priceDetails.securityDeposit}</span>
                     </div>
                     {paymentOption === 'advance' && (
                       <>
@@ -340,68 +314,6 @@ const BookingFormPage = () => {
                 </div>
               )}
 
-              {/* Guarantor Section */}
-              <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-5 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
-                <div className="flex items-center justify-between mb-3 md:mb-4">
-                  <h2 className="font-semibold text-base md:text-lg" style={{ color: theme.colors.primary }}>Guarantor Details</h2>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hasGuarantor}
-                      onChange={(e) => setHasGuarantor(e.target.checked)}
-                      className="w-4 h-4 md:w-5 md:h-5 rounded"
-                      style={{ accentColor: theme.colors.primary }}
-                    />
-                    <span className="text-sm md:text-base" style={{ color: theme.colors.textSecondary }}>Add Guarantor</span>
-                  </label>
-                </div>
-                {hasGuarantor && (
-                  <div className="space-y-3 mt-3">
-                    <input
-                      type="text"
-                      value={guarantorName}
-                      onChange={(e) => setGuarantorName(e.target.value)}
-                      className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                      style={{ 
-                        borderColor: theme.colors.borderDefault,
-                        color: theme.colors.textPrimary,
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                      onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                      placeholder="Guarantor Name"
-                      required={hasGuarantor}
-                    />
-                    <input
-                      type="tel"
-                      value={guarantorPhone}
-                      onChange={(e) => setGuarantorPhone(e.target.value)}
-                      className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                      style={{ 
-                        borderColor: theme.colors.borderDefault,
-                        color: theme.colors.textPrimary,
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                      onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                      placeholder="Guarantor Phone"
-                      required={hasGuarantor}
-                    />
-                    <input
-                      type="email"
-                      value={guarantorEmail}
-                      onChange={(e) => setGuarantorEmail(e.target.value)}
-                      className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                      style={{ 
-                        borderColor: theme.colors.borderDefault,
-                        color: theme.colors.textPrimary,
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                      onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                      placeholder="Guarantor Email"
-                      required={hasGuarantor}
-                    />
-                  </div>
-                )}
-              </div>
 
               {/* Special Requests */}
               <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-5 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
@@ -433,7 +345,7 @@ const BookingFormPage = () => {
                     required
                   />
                   <span className="text-sm md:text-base" style={{ color: theme.colors.textSecondary }}>
-                    I agree to the terms and conditions, privacy policy, and rental agreement. I understand that I am responsible for the vehicle during the rental period.
+                    I agree to the terms and conditions, privacy policy, and rental agreement. I understand that I am responsible for the vehicle during the rental period. <span className="text-red-500 font-semibold">*</span>
                   </span>
                 </label>
               </div>
@@ -455,7 +367,8 @@ const BookingFormPage = () => {
               </div>
               <button
                 type="submit"
-                className="px-8 md:px-10 py-3.5 md:py-4 rounded-lg md:rounded-xl font-bold text-sm md:text-base shadow-xl touch-target active:scale-95 transition-transform hover:shadow-2xl hover:scale-105"
+                disabled={!agreeToTerms}
+                className="px-8 md:px-10 py-3.5 md:py-4 rounded-lg md:rounded-xl font-bold text-sm md:text-base shadow-xl touch-target active:scale-95 transition-transform hover:shadow-2xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
                   backgroundColor: '#ffffff',
                   color: theme.colors.primary,

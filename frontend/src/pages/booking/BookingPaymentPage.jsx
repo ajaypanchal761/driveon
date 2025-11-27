@@ -41,8 +41,8 @@ const BookingPaymentPage = () => {
 
   // Calculate payment amount
   const paymentAmount = paymentOption === 'advance' 
-    ? priceDetails.advancePayment + priceDetails.securityDeposit
-    : priceDetails.totalPrice + priceDetails.securityDeposit;
+    ? priceDetails.advancePayment
+    : priceDetails.totalPrice;
 
   // Handle payment submission
   const handlePayment = async (e) => {
@@ -153,19 +153,9 @@ const BookingPaymentPage = () => {
               <span>Base Price ({priceDetails.totalDays} {priceDetails.totalDays === 1 ? 'day' : 'days'})</span>
               <span>Rs. {priceDetails.basePrice * priceDetails.totalDays}</span>
             </div>
-            {priceDetails.totalPrice > priceDetails.basePrice * priceDetails.totalDays && (
-              <div className="flex justify-between" style={{ color: theme.colors.textSecondary }}>
-                <span>Weekend Surcharge</span>
-                <span>Rs. {priceDetails.totalPrice - (priceDetails.basePrice * priceDetails.totalDays)}</span>
-              </div>
-            )}
             <div className="flex justify-between font-semibold pt-2 border-t" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
               <span>Total Amount</span>
               <span>Rs. {priceDetails.totalPrice}</span>
-            </div>
-            <div className="flex justify-between text-xs pt-1" style={{ color: theme.colors.textSecondary }}>
-              <span>Security Deposit (10%)</span>
-              <span>Rs. {priceDetails.securityDeposit}</span>
             </div>
             {paymentOption === 'advance' && (
               <>
@@ -452,7 +442,7 @@ const BookingPaymentPage = () => {
                 Rs. {paymentAmount}
               </span>
               <span className="text-xs text-white/80">
-                {paymentOption === 'advance' ? 'Advance + Security Deposit' : 'Total + Security Deposit'}
+                {paymentOption === 'advance' ? 'Advance Payment' : 'Full Payment'}
               </span>
             </div>
             <button

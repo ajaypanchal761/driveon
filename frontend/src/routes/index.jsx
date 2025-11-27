@@ -53,6 +53,9 @@ const KYCStatusPage = lazy(() => import("../pages/profile/KYCStatusPage"));
 const GuarantorManagementPage = lazy(() =>
   import("../pages/profile/GuarantorManagementPage")
 );
+const GuarantorHistoryPage = lazy(() =>
+  import("../pages/profile/GuarantorHistoryPage")
+);
 const ReferralDashboardPage = lazy(() =>
   import("../pages/profile/ReferralDashboardPage")
 );
@@ -417,6 +420,10 @@ const router = createBrowserRouter([
           {
             path: "profile/guarantor",
             element: <GuarantorManagementPage />,
+          },
+          {
+            path: "profile/guarantor/history",
+            element: <GuarantorHistoryPage />,
           },
           {
             path: "profile/referrals",
