@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { theme } from '../../theme/theme.constants';
 import { carService } from '../../services/car.service';
+import { useLocationTracking } from '../../hooks/useLocationTracking';
 // Import car images from assets folder
 import carBannerImage from '../../assets/car_img1-removebg-preview.png';
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -22,7 +23,15 @@ import carImg7 from '../../assets/car_img7-removebg-preview.png';
 const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.user);
-  const [location] = useState('Lombok mataram');
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  
+  // Track user location
+  const { currentLocation, coordinates } = useLocationTracking(
+    true,
+    isAuthenticated,
+    user?.id
+  );
+  
   const [topCarTypes, setTopCarTypes] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,8 +101,18 @@ const HomePage = () => {
     const fetchNearbyCars = async () => {
       try {
         setLoading(true);
-        // Extract city from location (e.g., "Lombok mataram" -> "mataram")
-        const city = location.split(' ').pop() || location;
+        // Use coordinates if available, otherwise extract city from location string
+        let city = 'Mumbai'; // Default fallback
+        if (coordinates) {
+          // If we have coordinates, we can use them for more accurate nearby search
+          // For now, extract city from currentLocation string
+          const locationParts = currentLocation.split(',');
+          city = locationParts[locationParts.length - 2]?.trim() || locationParts[locationParts.length - 1]?.trim() || 'Mumbai';
+        } else if (currentLocation && currentLocation !== 'Loading location...' && currentLocation !== 'Location permission denied') {
+          const locationParts = currentLocation.split(',');
+          city = locationParts[locationParts.length - 2]?.trim() || locationParts[locationParts.length - 1]?.trim() || 'Mumbai';
+        }
+        
         const response = await carService.getNearbyCars({ 
           city,
           limit: 10,
@@ -141,11 +160,7 @@ const HomePage = () => {
     };
 
     fetchNearbyCars();
-  }, [location]);
-
-  const handleProfileClick = () => {
-    navigate('/profile');
-  };
+  }, [currentLocation, coordinates]);
 
   return (
     <div className="min-h-screen w-full bg-white">
@@ -158,72 +173,43 @@ const HomePage = () => {
         </div>
 
         {/* Header Content */}
-        <div className="relative px-3 py-2 flex items-center justify-between md:px-6 md:py-3 lg:px-8 lg:py-4 md:max-w-7xl md:mx-auto">
+        <div className="relative px-3 py-2 flex items-center md:px-6 md:py-3 lg:px-8 lg:py-4 md:max-w-7xl md:mx-auto">
           {/* Logo */}
-          <div className="flex items-center ml-2 md:-ml-2">
+          <div className="flex items-center flex-shrink-0">
             <img
               src="/driveonlogo.png"
               alt="DriveOn Logo"
-              className="h-10 md:h-12 lg:h-14 w-auto object-contain"
+              className="h-9 md:h-11 lg:h-12 w-auto object-contain"
             />
           </div>
 
-          {/* Location Icon with Name */}
-          <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-            <svg
-              className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            <span className="text-white text-xs md:text-sm lg:text-base font-medium whitespace-nowrap">
-              {location || 'Mumbai, Maharashtra'}
-            </span>
+          {/* Location Icon with Name - Slightly Right */}
+          <div className="flex-1 flex items-center justify-end px-2 min-w-0 ml-2">
+            <div className="flex items-start gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors max-w-[calc(100%-60px)] md:max-w-[calc(100%-80px)]">
+              <svg
+                className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-white flex-shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              <span className="text-white text-xs md:text-sm lg:text-base font-medium line-clamp-2 leading-tight break-words">
+                {currentLocation || 'Mumbai, Maharashtra'}
+              </span>
+            </div>
           </div>
-
-          {/* Profile Picture */}
-          <button
-            onClick={handleProfileClick}
-            className="ml-2 touch-target md:ml-4 lg:ml-6 hover:opacity-80 transition-opacity"
-            aria-label="Profile"
-          >
-            {user?.profilePhoto ? (
-              <img
-                src={user.profilePhoto}
-                alt="Profile"
-                className="w-8 h-8 rounded-full border-2 border-white object-cover md:w-10 md:h-10 lg:w-12 lg:h-12"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center border-2 border-white md:w-10 md:h-10 lg:w-12 lg:h-12">
-                <svg
-                  className="w-5 h-5 text-white md:w-6 md:h-6 lg:w-7 lg:h-7"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </div>
-            )}
-          </button>
         </div>
         </header>
 

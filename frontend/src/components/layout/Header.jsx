@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import MobileMenu from './MobileMenu';
+import { useLocationTracking } from '../../hooks/useLocationTracking';
 
 /**
  * Header Component
@@ -10,10 +11,19 @@ import MobileMenu from './MobileMenu';
  */
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, userRole } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isFavorites, setIsFavorites] = useState(false);
+  const isHomePage = location.pathname === '/';
+  
+  // Track location only on homepage
+  const { currentLocation } = useLocationTracking(
+    isHomePage,
+    isAuthenticated,
+    user?.id
+  );
 
   // Get current page title (you can customize this based on route)
   const getPageTitle = () => {
@@ -25,20 +35,12 @@ const Header = () => {
     return 'DriveOn';
   };
 
-  const handleProfileClick = () => {
-    if (isAuthenticated) {
-      navigate('/profile');
-    } else {
-      navigate('/login');
-    }
-  };
-
   return (
     <>
       {/* Mobile Header - Exactly like design */}
       <header className="md:hidden bg-primary text-white pt-0">
         {/* Main Header */}
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-4 py-4 flex items-center justify-between">
           {/* Hamburger Menu */}
           <button
             onClick={() => setIsMobileMenuOpen(true)}
@@ -87,37 +89,6 @@ const Header = () => {
                 />
               </svg>
             </button>
-
-            {/* Profile Picture */}
-            <button
-              onClick={handleProfileClick}
-              className="touch-target"
-              aria-label="Profile"
-            >
-              {user?.profilePhoto ? (
-                <img
-                  src={user.profilePhoto}
-                  alt="Profile"
-                  className="w-10 h-10 rounded-full border-2 border-white"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border-2 border-white">
-                  <svg
-                    className="w-6 h-6 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </div>
-              )}
-            </button>
           </div>
         </div>
 
@@ -146,7 +117,8 @@ const Header = () => {
             </svg>
             <input
               type="text"
-              placeholder="Florida, USA"
+              placeholder={currentLocation || 'Getting location...'}
+              value={currentLocation}
               className="flex-1 text-base text-text-primary placeholder-text-secondary outline-none bg-transparent"
               readOnly
             />
@@ -197,7 +169,7 @@ const Header = () => {
       {/* Desktop Header */}
       <header className="hidden md:block bg-primary text-white shadow-md">
         <div className="container-mobile">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
               <span className="text-2xl font-bold">DriveOn</span>
@@ -238,56 +210,25 @@ const Header = () => {
             {/* Right Side */}
             <div className="flex items-center gap-4">
               {isAuthenticated ? (
-                <>
-                  <button
-                    onClick={() => setIsFavorites(!isFavorites)}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    aria-label="Favorites"
+                <button
+                  onClick={() => setIsFavorites(!isFavorites)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  aria-label="Favorites"
+                >
+                  <svg
+                    className={`w-6 h-6 ${isFavorites ? 'fill-current' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      className={`w-6 h-6 ${isFavorites ? 'fill-current' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={handleProfileClick}
-                    className="touch-target"
-                    aria-label="Profile"
-                  >
-                    {user?.profilePhoto ? (
-                      <img
-                        src={user.profilePhoto}
-                        alt="Profile"
-                        className="w-10 h-10 rounded-full border-2 border-white"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border-2 border-white">
-                        <svg
-                          className="w-6 h-6 text-primary"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-                </>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
               ) : (
                 <div className="flex items-center gap-3">
                   <Link

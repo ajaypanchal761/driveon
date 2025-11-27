@@ -11,7 +11,7 @@ Backend API for DriveOn Car Rental Platform.
 
 ### Installation
 
-1. Install dependencies:
+1. Install dependencie:
 ```bash
 npm install
 ```

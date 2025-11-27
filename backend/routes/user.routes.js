@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { getProfile, updateProfile, uploadPhoto, getKYCStatus } from '../controllers/user.controller.js';
+import { getProfile, updateProfile, uploadPhoto, getKYCStatus, updateLocation } from '../controllers/user.controller.js';
 
 const router = express.Router();
 
@@ -51,6 +51,9 @@ router.post('/user/upload-photo', (req, res, next) => {
 }, uploadPhoto);
 
 router.get('/user/kyc-status', getKYCStatus);
+
+// Location update route
+router.post('/user/update-location', updateLocation);
 
 export default router;
 

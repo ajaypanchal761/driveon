@@ -341,3 +341,76 @@ export const getKYCStatus = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Update user location
+ * @route   POST /api/user/update-location
+ * @access  Private
+ */
+export const updateLocation = async (req, res) => {
+  try {
+    const { lat, lng, address } = req.body;
+
+    // Validate required fields
+    if (lat === undefined || lng === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required',
+      });
+    }
+
+    // Validate coordinates
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude must be numbers',
+      });
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates',
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Update location
+    user.location = {
+      latitude: lat,
+      longitude: lng,
+      address: address || user.location?.address || '',
+      lastLocationUpdate: new Date(),
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Location updated successfully',
+      data: {
+        location: {
+          latitude: user.location.latitude,
+          longitude: user.location.longitude,
+          address: user.location.address,
+          lastLocationUpdate: user.location.lastLocationUpdate,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update location error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating location',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
