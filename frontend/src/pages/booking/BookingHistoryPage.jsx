@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { BOOKING_STATUS } from '../../constants';
 import { theme } from '../../theme/theme.constants';
+import bookingService from '../../services/booking.service';
 
 // Import car images from assets
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -24,7 +25,10 @@ const carImages = [carImg1, carImg2, carImg3, carImg4, carImg5, carImg6, carImg7
 const BookingHistoryPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState('completed'); // 'active', 'completed', 'cancelled'
+  const [activeTab, setActiveTab] = useState('active'); // 'active', 'completed', 'cancelled'
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Get car image from assets based on car ID or index
   const getCarImage = (carId) => {
@@ -33,118 +37,90 @@ const BookingHistoryPage = () => {
     return carImages[index % carImages.length];
   };
 
-  // Mock booking data - Replace with actual API call later
-  const mockBookings = {
-    active: [
-      {
-        id: '1',
-        car: {
-          id: 'car1',
-          brand: 'Toyota',
-          model: 'Camry',
-          image: getCarImage('car1'),
-          rating: 4.7,
-        },
-        pickupDate: '2024-01-15',
-        dropDate: '2024-01-17',
-        duration: '2 days',
-        pickupLocation: '8502 Preston Rd. Inglewood, CA 90301',
-        totalPrice: 4500,
-        status: BOOKING_STATUS.ACTIVE,
-      },
-    ],
-    completed: [
-      {
-        id: '2',
-        car: {
-          id: 'car2',
-          brand: 'Honda',
-          model: 'City',
-          image: getCarImage('car2'),
-          rating: 4.8,
-        },
-        pickupDate: '2024-01-10',
-        dropDate: '2024-01-12',
-        duration: '2 days',
-        pickupLocation: '8502 Preston Rd. Inglewood, CA 90301',
-        totalPrice: 4200,
-        status: BOOKING_STATUS.COMPLETED,
-        completedDate: '2024-01-12',
-      },
-      {
-        id: '3',
-        car: {
-          id: 'car3',
-          brand: 'Maruti',
-          model: 'Swift',
-          image: getCarImage('car3'),
-          rating: 4.4,
-        },
-        pickupDate: '2024-01-05',
-        dropDate: '2024-01-06',
-        duration: '1 day',
-        pickupLocation: '6391 Elgin St. Celina, DE 19999',
-        totalPrice: 1800,
-        status: BOOKING_STATUS.COMPLETED,
-        completedDate: '2024-01-06',
-      },
-      {
-        id: '4',
-        car: {
-          id: 'car4',
-          brand: 'Hyundai',
-          model: 'i20',
-          image: getCarImage('car4'),
-          rating: 4.3,
-        },
-        pickupDate: '2024-01-01',
-        dropDate: '2024-01-03',
-        duration: '2 days',
-        pickupLocation: '3891 Ranchview Dr. Richardson, CA 62639',
-        totalPrice: 3800,
-        status: BOOKING_STATUS.COMPLETED,
-        completedDate: '2024-01-03',
-      },
-      {
-        id: '5',
-        car: {
-          id: 'car5',
-          brand: 'Tata',
-          model: 'Nexon',
-          image: getCarImage('car5'),
-          rating: 4.9,
-        },
-        pickupDate: '2023-12-25',
-        dropDate: '2023-12-27',
-        duration: '2 days',
-        pickupLocation: '1901 Thornridge Cir. Shiloh, HI 81063',
-        totalPrice: 5200,
-        status: BOOKING_STATUS.COMPLETED,
-        completedDate: '2023-12-27',
-      },
-    ],
-    cancelled: [
-      {
-        id: '6',
-        car: {
-          id: 'car6',
-          brand: 'Mahindra',
-          model: 'XUV700',
-          image: getCarImage('car6'),
-          rating: 4.6,
-        },
-        pickupDate: '2024-01-20',
-        dropDate: '2024-01-22',
-        duration: '2 days',
-        pickupLocation: '4517 Washington Ave. Manchester, KY 39495',
-        totalPrice: 5500,
-        status: BOOKING_STATUS.CANCELLED,
-        cancelledDate: '2024-01-18',
-      },
-    ],
-  };
+  // Fetch bookings from API
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
 
-  const currentBookings = mockBookings[activeTab] || [];
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Map tab to status - Active tab should show both 'active' and 'confirmed' bookings
+        let queryParams = {};
+        
+        if (activeTab === 'active') {
+          // For active tab, fetch bookings with status 'active' or 'confirmed' or 'pending'
+          // Don't filter by status, we'll filter on frontend
+          queryParams = {};
+        } else if (activeTab === 'completed') {
+          queryParams = { status: 'completed' };
+        } else if (activeTab === 'cancelled') {
+          queryParams = { status: 'cancelled' };
+        }
+
+        const response = await bookingService.getBookings(queryParams);
+
+        if (response.success && response.data?.bookings) {
+          let allBookings = response.data.bookings.map((booking) => {
+            const car = booking.car || {};
+            const carId = car._id || car.id || 'unknown';
+            
+            return {
+              id: booking._id || booking.id,
+              bookingId: booking.bookingId,
+              car: {
+                id: carId,
+                brand: car.brand || 'Unknown',
+                model: car.model || 'Car',
+                image: car.images && car.images.length > 0 
+                  ? (typeof car.images[0] === 'string' ? car.images[0] : car.images[0].url || car.images[0].path)
+                  : getCarImage(carId),
+                rating: car.averageRating || car.rating || 0,
+              },
+              pickupDate: booking.tripStart?.date || booking.pickupDate,
+              dropDate: booking.tripEnd?.date || booking.dropDate,
+              duration: `${booking.totalDays || 1} ${(booking.totalDays || 1) === 1 ? 'day' : 'days'}`,
+              pickupLocation: booking.tripStart?.location || booking.pickupLocation || 'Location not specified',
+              totalPrice: booking.pricing?.totalPrice || booking.totalPrice || 0,
+              status: booking.status,
+              completedDate: booking.completedDate,
+              cancelledDate: booking.cancelledDate,
+            };
+          });
+
+          // Filter bookings based on active tab
+          if (activeTab === 'active') {
+            // Show bookings that are pending, confirmed, or active (not completed or cancelled)
+            allBookings = allBookings.filter(booking => 
+              ['pending', 'confirmed', 'active'].includes(booking.status)
+            );
+          } else if (activeTab === 'completed') {
+            allBookings = allBookings.filter(booking => booking.status === 'completed');
+          } else if (activeTab === 'cancelled') {
+            allBookings = allBookings.filter(booking => booking.status === 'cancelled');
+          }
+
+          setBookings(allBookings);
+        } else {
+          setBookings([]);
+        }
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+        setError(err.response?.data?.message || 'Failed to fetch bookings');
+        setBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, [activeTab, isAuthenticated]);
+
+  const currentBookings = bookings;
 
   const handleReBook = (carId) => {
     navigate(`/rent-now/${carId}`);
@@ -160,6 +136,8 @@ const BookingHistoryPage = () => {
       navigate(`/booking/${bookingId}/active`);
     } else if (activeTab === 'cancelled') {
       navigate(`/booking/${bookingId}/cancelled`);
+    } else if (activeTab === 'completed') {
+      navigate(`/booking/${bookingId}/completed`);
     } else {
       navigate(`/booking/${bookingId}`);
     }
@@ -171,21 +149,12 @@ const BookingHistoryPage = () => {
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
             onClick={() => handleViewDetails(booking.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            className="w-full px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
             style={{ borderColor: theme.colors.primary, color: theme.colors.primary }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + '10'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
             View Details
-          </button>
-          <button
-            onClick={() => navigate(`/booking/${booking.id}/active`)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-            style={{ backgroundColor: theme.colors.primary }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + 'E6'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
-          >
-            Track Trip
           </button>
         </div>
       );
@@ -193,22 +162,13 @@ const BookingHistoryPage = () => {
       return (
         <div className="flex gap-2 md:gap-3 mt-2 md:mt-3">
           <button
-            onClick={() => handleReBook(booking.car.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+            onClick={() => handleViewDetails(booking.id)}
+            className="w-full px-3 py-2 md:px-4 md:py-2.5 bg-white border-2 rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
             style={{ borderColor: theme.colors.primary, color: theme.colors.primary }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + '10'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
           >
-            Re-Book
-          </button>
-          <button
-            onClick={() => handleWriteReview(booking.id)}
-            className="flex-1 px-3 py-2 md:px-4 md:py-2.5 text-white rounded-lg md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
-            style={{ backgroundColor: theme.colors.primary }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary + 'E6'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = theme.colors.primary}
-          >
-            Write Review
+            View Details
           </button>
         </div>
       );
@@ -295,7 +255,28 @@ const BookingHistoryPage = () => {
       {/* Main Content */}
       <main className="px-4 pt-6 pb-4 md:pt-8 md:pb-6">
         <div className="max-w-7xl mx-auto">
-          {currentBookings.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 md:py-24">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
+              <p className="text-gray-600">Loading bookings...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 md:py-24">
+              <div className="w-24 h-24 md:w-32 md:h-32 bg-red-100 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner">
+                <svg className="w-12 h-12 md:w-16 md:h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-red-500 text-center text-base md:text-lg font-medium mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
+                style={{ backgroundColor: theme.colors.primary }}
+              >
+                Retry
+              </button>
+            </div>
+          ) : currentBookings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 md:py-24">
               <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-inner">
                 <svg

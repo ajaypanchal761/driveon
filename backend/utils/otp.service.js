@@ -13,6 +13,8 @@ const TEST_PHONE_NUMBERS = {
   '9993911855': '123456', // Default test OTP
   '9685974247': '123456', // Default test OTP
   '7610416911': '110211', // Custom OTP for this number
+  '6268455485': '110211', // Custom OTP for this number
+  '9755262071': '110211', // Custom OTP for this number
 };
 
 /**

@@ -24,7 +24,6 @@ const BookingFormPage = () => {
   const [dropDate, setDropDate] = useState('');
   const [dropTime, setDropTime] = useState('');
   const [paymentOption, setPaymentOption] = useState('full'); // 'full' or 'advance'
-  const [location, setLocation] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
@@ -225,25 +224,6 @@ const BookingFormPage = () => {
                 </div>
               </div>
 
-              {/* Location */}
-              <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-5 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
-                <label className="text-sm md:text-base font-medium mb-2 md:mb-3 block" style={{ color: theme.colors.textSecondary }}>Pickup Location</label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                  style={{ 
-                    borderColor: theme.colors.borderDefault,
-                    color: theme.colors.textPrimary,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  placeholder="Enter pickup location"
-                  required
-                />
-              </div>
-
               {/* Payment Option */}
               <div className="bg-white rounded-lg md:rounded-xl p-4 md:p-5 shadow-md hover:shadow-lg transition-shadow border" style={{ borderColor: theme.colors.borderLight }}>
                 <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4" style={{ color: theme.colors.primary }}>Payment Option</h2>
@@ -275,7 +255,7 @@ const BookingFormPage = () => {
                     />
                     <div className="flex-1">
                       <span className="font-medium text-sm md:text-base" style={{ color: theme.colors.textPrimary }}>35% Advance Payment</span>
-                      <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>Pay 35% now, rest later</p>
+                      <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>Pay 35% now, rest later in office</p>
                     </div>
                   </label>
                 </div>

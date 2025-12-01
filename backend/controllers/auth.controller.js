@@ -155,9 +155,9 @@ export const sendLoginOTP = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        message: 'User not found with this email or phone number',
+        message: 'User not found. Please signup first.',
       });
     }
 

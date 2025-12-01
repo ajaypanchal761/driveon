@@ -49,12 +49,16 @@ import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import carRoutes from "./routes/car.routes.js";
 import supportRoutes from "./routes/support.routes.js";
+import bookingRoutes from "./routes/booking.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 // API Routes
 // IMPORTANT: Mount admin routes BEFORE user routes to avoid route conflicts
 // Admin routes are more specific, so they should be checked first
 app.use("/api/admin", adminRoutes);
 app.use("/api/cars", carRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api", supportRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
@@ -130,5 +134,23 @@ app.listen(PORT, () => {
     console.warn(
       `   SMSINDIAHUB_SENDER_ID: ${smsSenderId ? "✓ Set" : "✗ Missing"}`
     );
+  }
+
+  // Verify Razorpay configuration
+  const razorpayKeyId = process.env.RAZORPAY_KEY_ID?.trim();
+  const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+  if (razorpayKeyId && razorpayKeySecret) {
+    console.log(
+      `✅ Razorpay configured (Key ID: ${razorpayKeyId.substring(0, 8)}...)`
+    );
+  } else {
+    console.error(`❌ Razorpay NOT configured:`);
+    console.error(
+      `   RAZORPAY_KEY_ID: ${razorpayKeyId ? "✓ Set" : "✗ Missing"}`
+    );
+    console.error(
+      `   RAZORPAY_KEY_SECRET: ${razorpayKeySecret ? "✓ Set" : "✗ Missing"}`
+    );
+    console.error(`   ⚠️ Payment functionality will not work without Razorpay keys!`);
   }
 });

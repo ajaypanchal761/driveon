@@ -29,7 +29,7 @@ const HomePage = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
   // Track user location
-  const { currentLocation, coordinates } = useLocationTracking(
+  const { currentLocation, coordinates, locationPermission, apiKeyError } = useLocationTracking(
     true,
     isAuthenticated,
     user?.id
@@ -41,6 +41,8 @@ const HomePage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [showLocation, setShowLocation] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [showApiKeyError, setShowApiKeyError] = useState(true);
   const lastScrollYRef = useRef(0);
 
   // Default car type images mapping (fallback)
@@ -110,26 +112,36 @@ const HomePage = () => {
     const fetchNearbyCars = async () => {
       try {
         setLoading(true);
-        // Use coordinates if available, otherwise extract city from location string
-        let city = "Mumbai"; // Default fallback
-        if (coordinates) {
-          // If we have coordinates, we can use them for more accurate nearby search
-          // For now, extract city from currentLocation string
-          const locationParts = currentLocation.split(",");
-          city =
-            locationParts[locationParts.length - 2]?.trim() ||
-            locationParts[locationParts.length - 1]?.trim() ||
-            "Mumbai";
-        } else if (
+        // Extract city from current location - only if we have valid location
+        let city = null;
+        
+        // Only fetch if we have a valid location (not loading, not error, not denied)
+        if (
           currentLocation &&
           currentLocation !== "Loading location..." &&
-          currentLocation !== "Location permission denied"
+          currentLocation !== "Location permission denied" &&
+          currentLocation !== "Location unavailable" &&
+          currentLocation !== "Getting location..." &&
+          !currentLocation.includes("error") &&
+          !currentLocation.includes("timeout") &&
+          !currentLocation.includes("denied") &&
+          !currentLocation.includes("unavailable") &&
+          !currentLocation.includes("Loading") &&
+          !currentLocation.includes("Fetching")
         ) {
+          // Extract city from location string (format: "City, State")
           const locationParts = currentLocation.split(",");
-          city =
-            locationParts[locationParts.length - 2]?.trim() ||
-            locationParts[locationParts.length - 1]?.trim() ||
-            "Mumbai";
+          if (locationParts.length >= 1) {
+            city = locationParts[0]?.trim() || null;
+          }
+        }
+        
+        // If no valid city found, don't fetch nearby cars
+        if (!city) {
+          console.log('No valid location available, skipping nearby cars fetch');
+          setVehicles([]);
+          setLoading(false);
+          return;
         }
 
         const response = await carService.getNearbyCars({
@@ -180,6 +192,20 @@ const HomePage = () => {
 
     fetchNearbyCars();
   }, [currentLocation, coordinates]);
+
+  // Show location permission prompt if denied or not granted
+  useEffect(() => {
+    if (locationPermission === 'denied' || 
+        (locationPermission === null && currentLocation.includes('denied'))) {
+      // Show prompt after a short delay
+      const timer = setTimeout(() => {
+        setShowLocationPrompt(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (locationPermission === 'granted') {
+      setShowLocationPrompt(false);
+    }
+  }, [locationPermission, currentLocation]);
 
   // Fetch user profile when authenticated
   useEffect(() => {
@@ -335,16 +361,16 @@ const HomePage = () => {
           {/* Mobile View - User Name and Location Below Logo */}
           {isAuthenticated && user && (
             <div
-              className={`flex md:hidden flex-col gap-0.5 ml-2 transition-all duration-300 overflow-hidden ${
-                showLocation ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
+              className={`flex md:hidden flex-col gap-0.5 ml-2 transition-all duration-300 overflow-visible ${
+                showLocation ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
               }`}
             >
               <span className="text-sm font-bold text-white">
                 Hello {user.name || user.email?.split("@")[0] || "User"}
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-start gap-1.5">
                 <svg
-                  className="w-3 h-3 text-white flex-shrink-0"
+                  className="w-3 h-3 text-white flex-shrink-0 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -362,15 +388,23 @@ const HomePage = () => {
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <span className="text-xs text-white uppercase font-medium">
+                <span className="text-xs text-white font-medium flex-1" title={currentLocation} style={{ wordBreak: 'break-word', lineHeight: '1.4', display: 'block' }}>
                   {currentLocation &&
                   !currentLocation.includes("error") &&
                   !currentLocation.includes("timeout") &&
                   !currentLocation.includes("denied") &&
                   !currentLocation.includes("unavailable") &&
-                  !currentLocation.includes("Loading")
+                  !currentLocation.includes("Loading") &&
+                  !currentLocation.includes("Fetching") &&
+                  !currentLocation.includes("Location not supported")
                     ? currentLocation
-                    : "Mumbai, Maharashtra"}
+                    : locationPermission === "denied"
+                    ? "Location allow करें"
+                    : currentLocation?.includes("Loading") || currentLocation?.includes("Fetching")
+                    ? "Getting location..."
+                    : currentLocation?.includes("unavailable") || currentLocation?.includes("error")
+                    ? "Location unavailable"
+                    : "Getting location..."}
                 </span>
               </div>
             </div>
@@ -386,15 +420,15 @@ const HomePage = () => {
           </div>
 
           {/* Desktop View - User Name and Location in Center */}
-          <div className="hidden md:flex flex-col items-center gap-1 flex-1 justify-center">
+          <div className="hidden md:flex flex-col items-center gap-1 flex-1 justify-center max-w-md mx-auto">
             {isAuthenticated && user && (
               <span className="text-sm lg:text-base font-bold text-white">
                 Hello {user.name || user.email?.split("@")[0] || "User"}
               </span>
             )}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-start gap-1.5 w-full justify-center">
               <svg
-                className="w-3 h-3 lg:w-4 lg:h-4 text-white flex-shrink-0"
+                className="w-3 h-3 lg:w-4 lg:h-4 text-white flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -412,15 +446,23 @@ const HomePage = () => {
                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span className="text-xs lg:text-sm text-white uppercase font-medium">
+              <span className="text-xs lg:text-sm text-white font-medium text-center flex-1" title={currentLocation} style={{ wordBreak: 'break-word', lineHeight: '1.4', display: 'block' }}>
                 {currentLocation &&
                 !currentLocation.includes("error") &&
                 !currentLocation.includes("timeout") &&
                 !currentLocation.includes("denied") &&
                 !currentLocation.includes("unavailable") &&
-                !currentLocation.includes("Loading")
+                !currentLocation.includes("Loading") &&
+                !currentLocation.includes("Fetching") &&
+                !currentLocation.includes("Location not supported")
                   ? currentLocation
-                  : "Mumbai, Maharashtra"}
+                  : locationPermission === "denied"
+                  ? "Location allow करें"
+                  : currentLocation?.includes("Loading") || currentLocation?.includes("Fetching")
+                  ? "Getting location..."
+                  : currentLocation?.includes("unavailable") || currentLocation?.includes("error")
+                  ? "Location unavailable"
+                  : "Getting location..."}
               </span>
             </div>
           </div>
@@ -462,22 +504,194 @@ const HomePage = () => {
         </div>
       </header>
 
+      {/* Google Maps API Key Error Banner */}
+      {apiKeyError && apiKeyError.status === 'REQUEST_DENIED' && showApiKeyError && (
+        <div className="fixed top-20 left-0 right-0 z-50 mx-4 md:mx-auto md:max-w-2xl animate-slide-down">
+          <div className="bg-red-500 border-l-4 border-red-700 rounded-lg shadow-lg p-4 flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-white mb-1">
+                Google Maps API Key Invalid
+              </h3>
+              <p className="text-xs text-white/90 mb-2">
+                API key invalid है या Geocoding API enable नहीं है। कृपया:
+              </p>
+              <ol className="text-xs text-white/90 mb-2 list-decimal list-inside space-y-1">
+                <li>Google Cloud Console में जाएं</li>
+                <li>Geocoding API enable करें</li>
+                <li>Valid API key बनाएं</li>
+                <li>.env file में VITE_GOOGLE_MAPS_API_KEY add करें</li>
+                <li>Dev server restart करें</li>
+              </ol>
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href="https://console.cloud.google.com/apis/library/geocoding-backend.googleapis.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-md bg-white text-red-600 hover:bg-gray-100 transition-colors"
+                >
+                  Enable Geocoding API
+                </a>
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.removeItem('google_maps_api_error');
+                      window.location.reload();
+                    }
+                  }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-md bg-white/20 text-white hover:bg-white/30 transition-colors"
+                >
+                  Reload After Setup
+                </button>
+                <button
+                  onClick={() => {
+                    setShowApiKeyError(false);
+                  }}
+                  className="text-xs font-medium text-white/80 hover:text-white underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowApiKeyError(false);
+              }}
+              className="flex-shrink-0 text-white hover:text-white/80"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Location Permission Prompt Banner */}
+      {showLocationPrompt && !apiKeyError && (
+        <div className="fixed top-20 left-0 right-0 z-50 mx-4 md:mx-auto md:max-w-2xl animate-slide-down">
+          <div className="bg-yellow-400 border-l-4 border-yellow-600 rounded-lg shadow-lg p-4 flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg
+                className="w-5 h-5 text-yellow-800"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-yellow-900 mb-1">
+                Location Access Required
+              </h3>
+              <p className="text-xs text-yellow-800 mb-2">
+                कृपया location access allow करें ताकि आप nearby cars देख सकें और accurate results मिल सकें। Browser के address bar में location icon पर click करें और "Allow" select करें।
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    // Try to request location again
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        () => {
+                          setShowLocationPrompt(false);
+                          window.location.reload();
+                        },
+                        () => {
+                          // Still denied, keep showing prompt
+                        }
+                      );
+                    }
+                  }}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-md text-yellow-900 hover:bg-yellow-500 transition-colors"
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => setShowLocationPrompt(false)}
+                  className="text-xs font-medium text-yellow-800 hover:text-yellow-900 underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowLocationPrompt(false)}
+              className="flex-shrink-0 text-yellow-800 hover:text-yellow-900"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area - Scrollable with padding for fixed header and bottom navbar */}
       <main
         className="px-4 md:px-6 lg:px-8 space-y-6 max-w-full md:max-w-7xl md:mx-auto"
         style={{
-          paddingTop: showLocation
+          paddingTop: (showLocationPrompt || (apiKeyError && showApiKeyError))
+            ? showLocation
+              ? isDesktop
+                ? "160px"
+                : "180px"
+              : isDesktop
+              ? "140px"
+              : "160px"
+            : showLocation
             ? isDesktop
               ? "90px"
-              : "100px" // Desktop: 90px, Mobile: 100px
+              : "100px"
             : isDesktop
             ? "70px"
-            : "70px", // Desktop: 70px, Mobile: 70px
+            : "70px",
           paddingBottom: "90px", // Space for bottom navbar
         }}
       >
         {/* Search Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 md:px-6 md:py-4 flex items-center gap-3 mt-6 md:mt-8 lg:mt-10 md:max-w-2xl md:mx-auto lg:max-w-3xl">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 md:px-6 md:py-4 flex items-center gap-3 mt-16 md:mt-10 lg:mt-12 md:max-w-2xl md:mx-auto lg:max-w-3xl">
           <svg
             className="w-5 h-5 text-gray-400"
             fill="none"

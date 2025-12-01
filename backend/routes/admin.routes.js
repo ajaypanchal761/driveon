@@ -30,6 +30,19 @@ import {
   updateTicketStatus,
   addAdminResponse,
 } from '../controllers/support.controller.js';
+import {
+  getAllBookings,
+  getBookingById,
+  updateBooking,
+  getActiveBookingsWithTracking,
+  getBookingStats,
+} from '../controllers/admin.booking.controller.js';
+import {
+  sendGuarantorRequest,
+  getAllGuarantorRequests,
+  getGuarantorRequestById,
+  deleteGuarantorRequest,
+} from '../controllers/admin.guarantor.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 
 const router = express.Router();
@@ -187,6 +200,50 @@ router.put('/tickets/:ticketId/status', authenticateAdmin, updateTicketStatus);
 // Add Admin Response - PROTECTED
 // Route: POST /api/admin/tickets/:ticketId/response
 router.post('/tickets/:ticketId/response', authenticateAdmin, addAdminResponse);
+
+// ============================================
+// BOOKING MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Get All Bookings - PROTECTED
+// Route: GET /api/admin/bookings
+router.get('/bookings', authenticateAdmin, getAllBookings);
+
+// Get Booking Statistics - PROTECTED
+// Route: GET /api/admin/bookings/stats
+router.get('/bookings/stats', authenticateAdmin, getBookingStats);
+
+// Get Active Bookings with Tracking - PROTECTED
+// Route: GET /api/admin/bookings/active/tracking
+router.get('/bookings/active/tracking', authenticateAdmin, getActiveBookingsWithTracking);
+
+// Get Booking by ID - PROTECTED
+// Route: GET /api/admin/bookings/:id
+router.get('/bookings/:id', authenticateAdmin, getBookingById);
+
+// Update Booking - PROTECTED
+// Route: PATCH /api/admin/bookings/:id
+router.patch('/bookings/:id', authenticateAdmin, updateBooking);
+
+// ============================================
+// GUARANTOR REQUEST MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Send Guarantor Request - PROTECTED
+// Route: POST /api/admin/guarantor-requests
+router.post('/guarantor-requests', authenticateAdmin, sendGuarantorRequest);
+
+// Get All Guarantor Requests - PROTECTED
+// Route: GET /api/admin/guarantor-requests
+router.get('/guarantor-requests', authenticateAdmin, getAllGuarantorRequests);
+
+// Get Guarantor Request by ID - PROTECTED
+// Route: GET /api/admin/guarantor-requests/:id
+router.get('/guarantor-requests/:id', authenticateAdmin, getGuarantorRequestById);
+
+// Delete Guarantor Request - PROTECTED
+// Route: DELETE /api/admin/guarantor-requests/:id
+router.delete('/guarantor-requests/:id', authenticateAdmin, deleteGuarantorRequest);
 
 export default router;
 

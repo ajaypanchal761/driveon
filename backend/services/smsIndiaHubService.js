@@ -112,9 +112,13 @@ class SMSIndiaHubService {
       }
 
       // SMSIndia Hub requires DLT registered templates for transactional SMS
-      // Use a simple, compliant OTP message format
-      // Format: Simple OTP message without special characters that might cause template issues
-      const message = `Your DriveOn OTP is ${otp}. Valid for 10 minutes. Do not share.`;
+      // Check if custom message template is provided (must match registered DLT template exactly)
+      const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
+      // Use custom template if provided, otherwise use default format that matches registered template
+      // Based on working template: "Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is {otp}"
+      const message = customTemplate 
+        ? customTemplate.replace('{otp}', otp)
+        : `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
 
       // Check if template ID is provided (for DLT registered templates)
       const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
@@ -140,10 +144,11 @@ class SMSIndiaHubService {
       });
 
       // Add template ID if provided (for DLT compliance)
+      // SMSIndia Hub uses 'templateid' parameter for DLT template ID
       if (templateId) {
-        params.append('peid', templateId); // Principal Entity ID (DLT)
-        // Note: Some SMSIndia Hub APIs use 'templateid' parameter
-        // Check your SMSIndia Hub dashboard for exact parameter name
+        params.append('templateid', templateId); // DLT Template ID
+        // Also try peid parameter (some SMSIndia Hub versions use this)
+        // params.append('peid', templateId);
       }
 
       const apiUrl = `${this.baseUrl}?${params.toString()}`;
@@ -235,11 +240,16 @@ class SMSIndiaHubService {
             console.error("\n📋 To fix this:");
             console.error("   1. Log in to SMSIndia Hub dashboard");
             console.error("   2. Register a DLT template for OTP messages");
-            console.error("   3. Get your template ID from the dashboard");
-            console.error("   4. Add SMSINDIAHUB_TEMPLATE_ID to your .env file");
-            console.error("   5. Or contact SMSIndia Hub support for template registration");
-            console.error("\n💡 Alternative: Use promotional SMS (not recommended for OTP)");
-            console.error("   Change gwid parameter to '1' for promotional SMS");
+            console.error("      Example template: 'Your DriveOn OTP is {otp}. Valid for 10 minutes. Do not share.'");
+            console.error("   3. Get your DLT Template ID from the dashboard");
+            console.error("   4. Add to your .env file:");
+            console.error("      SMSINDIAHUB_TEMPLATE_ID=your_template_id_here");
+            console.error("   5. If your template message format is different, add:");
+            console.error("      SMSINDIAHUB_MESSAGE_TEMPLATE=Your exact template text with {otp} placeholder");
+            console.error("   6. Restart your server after adding these variables");
+            console.error("\n💡 Alternative (Testing Only): Use promotional SMS");
+            console.error("   Add to .env: SMSINDIAHUB_USE_PROMOTIONAL=true");
+            console.error("   ⚠️ WARNING: Not recommended for production OTP!");
             console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
           }
           

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { theme } from '../../../theme/theme.constants';
 import Card from '../../../components/common/Card';
+import { adminService } from '../../../services/admin.service';
+import toastUtils from '../../../config/toast';
 
 /**
  * Guarantor List Page
@@ -25,6 +27,11 @@ const GuarantorListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGuarantor, setSelectedGuarantor] = useState(null);
   const [showGuarantorDetail, setShowGuarantorDetail] = useState(false);
+  const [showAddGuarantorModal, setShowAddGuarantorModal] = useState(false);
+  const [selectedBookingForGuarantor, setSelectedBookingForGuarantor] = useState(null);
+  const [guarantorIdInput, setGuarantorIdInput] = useState('');
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [error, setError] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -33,155 +40,190 @@ const GuarantorListPage = () => {
     linkedUser: 'all', // all or specific user
   });
 
-  // Mock guarantor data
+  // Load guarantor data from both bookings and guarantor requests
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockGuarantors = [
-        {
-          id: '1',
-          guarantorId: 'g1',
-          guarantorName: 'Rajesh Kumar',
-          guarantorEmail: 'rajesh.k@example.com',
-          guarantorPhone: '+91 98765 43220',
-          guarantorKYCStatus: 'verified',
-          verificationStatus: 'verified',
-          verificationDate: '2024-03-10T10:00:00',
-          linkedUserId: '1',
-          linkedUserName: 'John Doe',
-          linkedUserEmail: 'john.doe@example.com',
-          invitationStatus: 'accepted',
-          invitationSentDate: '2024-03-05T09:00:00',
-          invitationAcceptedDate: '2024-03-08T14:30:00',
-          linkedBookings: 3,
-          avatar: null,
-        },
-        {
-          id: '2',
-          guarantorId: 'g2',
-          guarantorName: 'Priya Sharma',
-          guarantorEmail: 'priya.s@example.com',
-          guarantorPhone: '+91 98765 43221',
-          guarantorKYCStatus: 'pending',
-          verificationStatus: 'pending',
-          linkedUserId: '2',
-          linkedUserName: 'Jane Smith',
-          linkedUserEmail: 'jane.smith@example.com',
-          invitationStatus: 'accepted',
-          invitationSentDate: '2024-03-12T11:00:00',
-          invitationAcceptedDate: '2024-03-13T16:00:00',
-          linkedBookings: 1,
-          avatar: null,
-        },
-        {
-          id: '3',
-          guarantorId: 'g3',
-          guarantorName: 'Amit Patel',
-          guarantorEmail: 'amit.p@example.com',
-          guarantorPhone: '+91 98765 43222',
-          guarantorKYCStatus: 'verified',
-          verificationStatus: 'verified',
-          verificationDate: '2024-03-15T12:00:00',
-          linkedUserId: '5',
-          linkedUserName: 'David Brown',
-          linkedUserEmail: 'david.b@example.com',
-          invitationStatus: 'accepted',
-          invitationSentDate: '2024-03-10T10:00:00',
-          invitationAcceptedDate: '2024-03-11T09:00:00',
-          linkedBookings: 5,
-          avatar: null,
-        },
-        {
-          id: '4',
-          guarantorId: 'g4',
-          guarantorName: 'Sneha Reddy',
-          guarantorEmail: 'sneha.r@example.com',
-          guarantorPhone: '+91 98765 43223',
-          guarantorKYCStatus: 'rejected',
-          verificationStatus: 'rejected',
-          rejectionDate: '2024-03-14T15:00:00',
-          rejectionReason: 'KYC verification failed',
-          linkedUserId: '6',
-          linkedUserName: 'Emily Davis',
-          linkedUserEmail: 'emily.d@example.com',
-          invitationStatus: 'accepted',
-          invitationSentDate: '2024-03-08T08:00:00',
-          invitationAcceptedDate: '2024-03-09T10:00:00',
-          linkedBookings: 0,
-          avatar: null,
-        },
-        {
-          id: '5',
-          guarantorId: 'g5',
-          guarantorName: 'Vikram Singh',
-          guarantorEmail: 'vikram.s@example.com',
-          guarantorPhone: '+91 98765 43224',
-          guarantorKYCStatus: 'pending',
-          verificationStatus: 'pending',
-          linkedUserId: '4',
-          linkedUserName: 'Sarah Williams',
-          linkedUserEmail: 'sarah.w@example.com',
-          invitationStatus: 'sent',
-          invitationSentDate: '2024-03-16T10:00:00',
-          linkedBookings: 0,
-          avatar: null,
-        },
-        {
-          id: '6',
-          guarantorId: 'g6',
-          guarantorName: 'Anita Desai',
-          guarantorEmail: 'anita.d@example.com',
-          guarantorPhone: '+91 98765 43225',
-          guarantorKYCStatus: 'verified',
-          verificationStatus: 'verified',
-          verificationDate: '2024-03-12T11:00:00',
-          linkedUserId: '7',
-          linkedUserName: 'Robert Wilson',
-          linkedUserEmail: 'robert.w@example.com',
-          invitationStatus: 'accepted',
-          invitationSentDate: '2024-03-05T09:00:00',
-          invitationAcceptedDate: '2024-03-06T12:00:00',
-          linkedBookings: 8,
-          avatar: null,
-        },
-        {
-          id: '7',
-          guarantorId: 'g7',
-          guarantorName: 'Mohammed Ali',
-          guarantorEmail: 'mohammed.a@example.com',
-          guarantorPhone: '+91 98765 43226',
-          guarantorKYCStatus: 'pending',
-          verificationStatus: 'pending',
-          linkedUserId: '8',
-          linkedUserName: 'Lisa Anderson',
-          linkedUserEmail: 'lisa.a@example.com',
-          invitationStatus: 'pending',
-          invitationSentDate: '2024-03-17T09:00:00',
-          linkedBookings: 0,
-          avatar: null,
-        },
-        {
-          id: '8',
-          guarantorId: 'g8',
-          guarantorName: 'Deepak Mehta',
-          guarantorEmail: 'deepak.m@example.com',
-          guarantorPhone: '+91 98765 43227',
-          guarantorKYCStatus: 'verified',
-          verificationStatus: 'pending',
-          linkedUserId: '1',
-          linkedUserName: 'John Doe',
-          linkedUserEmail: 'john.doe@example.com',
-          invitationStatus: 'accepted',
-          invitationSentDate: '2024-03-15T10:00:00',
-          invitationAcceptedDate: '2024-03-16T14:00:00',
-          linkedBookings: 0,
-          avatar: null,
-        },
-      ];
-      setGuarantors(mockGuarantors);
-      setFilteredGuarantors(mockGuarantors);
-      setLoading(false);
-    }, 500);
+    const fetchGuarantors = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch both bookings and guarantor requests
+        const [bookingsResponse, guarantorRequestsResponse] = await Promise.all([
+          adminService.getAllBookings({ limit: 200 }),
+          adminService.getAllGuarantorRequests({ status: 'accepted' }),
+        ]);
+
+        const bookingsData = bookingsResponse?.data?.bookings || bookingsResponse?.bookings || [];
+        const guarantorRequestsData = guarantorRequestsResponse?.data?.requests || guarantorRequestsResponse?.requests || [];
+
+        // Create a map to store all guarantors per user
+        const userGuarantorsMap = new Map();
+
+        // Process bookings (for backward compatibility)
+        // First, get all guarantor requests to map them to bookings
+        const allRequestsMap = new Map();
+        guarantorRequestsData.forEach((req) => {
+          // Handle both populated and non-populated booking/guarantor
+          let reqBookingId = null;
+          let reqGuarantorId = null;
+          
+          if (req.booking) {
+            reqBookingId = req.booking._id?.toString() || req.booking.toString() || String(req.booking);
+          }
+          
+          if (req.guarantor) {
+            reqGuarantorId = req.guarantor._id?.toString() || req.guarantor.toString() || String(req.guarantor);
+          }
+          
+          if (reqBookingId && reqGuarantorId) {
+            const key = `${reqBookingId}-${reqGuarantorId}`;
+            allRequestsMap.set(key, req._id?.toString());
+            console.log('📝 Mapped request:', { key, requestId: req._id?.toString() });
+          }
+        });
+        
+        console.log('📊 Total requests mapped:', allRequestsMap.size);
+
+        bookingsData.forEach((booking) => {
+          const user = booking.user || {};
+          const guarantor = booking.guarantor || null;
+          const userId = user._id || booking.userId || 'unknown-user';
+
+          if (!userGuarantorsMap.has(userId)) {
+            userGuarantorsMap.set(userId, {
+              linkedUserId: userId,
+              linkedUserName: user.name || booking.userName || 'N/A',
+              linkedUserEmail: user.email || booking.userEmail || 'N/A',
+              avatar: user.profilePhoto || null,
+              guarantors: [],
+              bookings: new Set(),
+              bookingIds: new Set(),
+            });
+          }
+
+          const userData = userGuarantorsMap.get(userId);
+          if (booking.bookingId) {
+            userData.bookings.add(booking.bookingId);
+            userData.bookingIds.add(booking.bookingId);
+          } else if (booking._id) {
+            userData.bookings.add(booking._id);
+          }
+
+          if (guarantor) {
+            // Check if this guarantor already exists for this user
+            const existingGuarantor = userData.guarantors.find(
+              (g) => g.guarantorId === guarantor._id?.toString()
+            );
+
+            if (!existingGuarantor) {
+              // Try to find the request ID for this booking+guarantor combination
+              const bookingId = booking._id?.toString() || booking.id?.toString();
+              const guarantorId = guarantor._id?.toString();
+              const requestKey = `${bookingId}-${guarantorId}`;
+              const requestId = allRequestsMap.get(requestKey) || null;
+
+              console.log('🔍 Looking for request:', {
+                bookingId,
+                guarantorId,
+                requestKey,
+                found: !!requestId,
+                requestId,
+              });
+
+              userData.guarantors.push({
+                id: requestId || `${userId}-${guarantor._id}-${booking._id}`,
+                requestId: requestId, // Store the actual request ID if found
+                bookingId: booking.bookingId,
+                bookingMongoId: booking._id?.toString() || booking.id?.toString(),
+                guarantorId: guarantor._id?.toString() || null,
+                guarantorName: guarantor.name || 'N/A',
+                guarantorEmail: guarantor.email || '',
+                guarantorPhone: guarantor.phone || '',
+                guarantorKYCStatus: guarantor.kycStatus || 'pending',
+                verificationStatus: 'verified',
+                verificationDate: booking.updatedAt || booking.completedAt || booking.confirmedAt || new Date(),
+                invitationStatus: 'accepted',
+                invitationSentDate: booking.createdAt || booking.bookingDate || new Date(),
+                invitationAcceptedDate: booking.updatedAt || booking.completedAt || new Date(),
+              });
+            }
+          }
+        });
+
+        // Process guarantor requests (accepted ones)
+        guarantorRequestsData.forEach((request) => {
+          const user = request.user || {};
+          const guarantor = request.guarantor || {};
+          const userId = user._id?.toString() || 'unknown-user';
+
+          if (!userGuarantorsMap.has(userId)) {
+            userGuarantorsMap.set(userId, {
+              linkedUserId: userId,
+              linkedUserName: user.name || 'N/A',
+              linkedUserEmail: user.email || 'N/A',
+              avatar: user.profilePhoto || null,
+              guarantors: [],
+              bookings: new Set(),
+              bookingIds: new Set(),
+            });
+          }
+
+          const userData = userGuarantorsMap.get(userId);
+          if (request.booking?.bookingId) {
+            userData.bookings.add(request.booking.bookingId);
+            userData.bookingIds.add(request.booking.bookingId);
+          }
+
+          // Check if this guarantor already exists for this user
+          const existingGuarantor = userData.guarantors.find(
+            (g) => g.guarantorId === guarantor._id?.toString()
+          );
+
+          if (!existingGuarantor) {
+            userData.guarantors.push({
+              id: request._id?.toString() || `${userId}-${guarantor._id}`,
+              requestId: request._id?.toString() || null, // Store request ID separately
+              bookingId: request.booking?.bookingId || 'N/A',
+              bookingMongoId: request.booking?._id || request.booking?.id || null,
+              guarantorId: guarantor._id?.toString() || null,
+              guarantorName: guarantor.name || 'N/A',
+              guarantorEmail: guarantor.email || '',
+              guarantorPhone: guarantor.phone || '',
+              guarantorKYCStatus: guarantor.kycStatus || 'pending',
+              verificationStatus: request.status === 'accepted' ? 'verified' : 'pending',
+              verificationDate: request.acceptedAt || request.updatedAt || new Date(),
+              invitationStatus: request.status || 'pending',
+              invitationSentDate: request.createdAt || new Date(),
+              invitationAcceptedDate: request.acceptedAt || request.updatedAt || new Date(),
+            });
+          }
+        });
+
+        // Convert map to array format for display
+        const guarantorList = Array.from(userGuarantorsMap.values()).map((userData) => ({
+          id: userData.linkedUserId,
+          linkedUserId: userData.linkedUserId,
+          linkedUserName: userData.linkedUserName,
+          linkedUserEmail: userData.linkedUserEmail,
+          avatar: userData.avatar,
+          linkedBookings: userData.bookings.size,
+          bookingIds: Array.from(userData.bookingIds),
+          guarantors: userData.guarantors,
+        }));
+
+        setGuarantors(guarantorList);
+        setFilteredGuarantors(guarantorList);
+      } catch (err) {
+        console.error('Error loading guarantors:', err);
+        setGuarantors([]);
+        setFilteredGuarantors([]);
+        setError('Failed to load guarantor data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGuarantors();
   }, []);
 
   // Filter and search guarantors
@@ -191,29 +233,46 @@ const GuarantorListPage = () => {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (guarantor) =>
-          guarantor.guarantorName.toLowerCase().includes(query) ||
-          guarantor.guarantorEmail.toLowerCase().includes(query) ||
-          guarantor.guarantorPhone.includes(query) ||
-          guarantor.linkedUserName.toLowerCase().includes(query) ||
-          guarantor.linkedUserEmail.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((userGroup) => {
+        // Check linked user info
+        const matchesLinkedUser = 
+          userGroup.linkedUserName?.toLowerCase().includes(query) ||
+          userGroup.linkedUserEmail?.toLowerCase().includes(query);
+        
+        // Check guarantors info
+        const matchesGuarantor = userGroup.guarantors?.some((guarantor) =>
+          guarantor.guarantorName?.toLowerCase().includes(query) ||
+          guarantor.guarantorEmail?.toLowerCase().includes(query) ||
+          guarantor.guarantorPhone?.includes(query)
+        );
+        
+        return matchesLinkedUser || matchesGuarantor;
+      });
     }
 
     // Verification status filter
     if (filters.verificationStatus !== 'all') {
-      filtered = filtered.filter((guarantor) => guarantor.verificationStatus === filters.verificationStatus);
+      filtered = filtered.map((userGroup) => {
+        const filteredGuarantors = userGroup.guarantors?.filter(
+          (guarantor) => guarantor.verificationStatus === filters.verificationStatus
+        ) || [];
+        return { ...userGroup, guarantors: filteredGuarantors };
+      }).filter((userGroup) => userGroup.guarantors?.length > 0);
     }
 
     // Invitation status filter
     if (filters.invitationStatus !== 'all') {
-      filtered = filtered.filter((guarantor) => guarantor.invitationStatus === filters.invitationStatus);
+      filtered = filtered.map((userGroup) => {
+        const filteredGuarantors = userGroup.guarantors?.filter(
+          (guarantor) => guarantor.invitationStatus === filters.invitationStatus
+        ) || [];
+        return { ...userGroup, guarantors: filteredGuarantors };
+      }).filter((userGroup) => userGroup.guarantors?.length > 0);
     }
 
     // Linked user filter
     if (filters.linkedUser !== 'all') {
-      filtered = filtered.filter((guarantor) => guarantor.linkedUserId === filters.linkedUser);
+      filtered = filtered.filter((userGroup) => userGroup.linkedUserId === filters.linkedUser);
     }
 
     setFilteredGuarantors(filtered);
@@ -251,9 +310,113 @@ const GuarantorListPage = () => {
     );
   };
 
-  const handleRemoveLink = (guarantorId) => {
-    // In real app, this would make an API call
-    setGuarantors((prevList) => prevList.filter((guarantor) => guarantor.id !== guarantorId));
+  const handleRemoveLink = async (guarantor) => {
+    try {
+      console.log('🗑️ Delete guarantor clicked:', {
+        guarantorId: guarantor.id,
+        requestId: guarantor.requestId,
+        bookingMongoId: guarantor.bookingMongoId,
+        guarantorUserId: guarantor.guarantorId,
+      });
+
+      // Use requestId if available
+      let requestId = guarantor.requestId;
+      
+      // If no requestId, try to find it by booking and guarantor
+      if (!requestId && guarantor.bookingMongoId && guarantor.guarantorId) {
+        try {
+          console.log('🔍 Searching for request by booking and guarantor...');
+          const allRequests = await adminService.getAllGuarantorRequests({});
+          const requests = allRequests?.data?.requests || allRequests?.requests || [];
+          
+          console.log('📋 Total requests found:', requests.length);
+          
+          const matchingRequest = requests.find(req => {
+            const reqBookingId = req.booking?._id?.toString() || req.booking?.toString();
+            const reqGuarantorId = req.guarantor?._id?.toString() || req.guarantor?.toString();
+            const matches = reqBookingId === guarantor.bookingMongoId?.toString() &&
+                   reqGuarantorId === guarantor.guarantorId?.toString();
+            if (matches) {
+              console.log('✅ Found matching request:', req._id.toString());
+            }
+            return matches;
+          });
+          
+          if (matchingRequest && matchingRequest._id) {
+            requestId = matchingRequest._id.toString();
+            console.log('✅ Using found request ID:', requestId);
+          } else {
+            console.log('❌ No matching request found');
+          }
+        } catch (error) {
+          console.error('Error finding request:', error);
+        }
+      }
+      
+      // Check if we have a valid request ID
+      if (!requestId) {
+        console.error('❌ No request ID available for deletion');
+        toastUtils.error('Cannot delete: No guarantor request found');
+        return;
+      }
+      
+      // Check if it's a valid MongoDB ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(requestId);
+      if (!isValidObjectId) {
+        console.error('❌ Invalid ObjectId format:', requestId);
+        toastUtils.error('Cannot delete: Invalid request ID format');
+        return;
+      }
+      
+      console.log('🚀 Calling delete API with request ID:', requestId);
+      // Call API to delete from backend
+      const response = await adminService.deleteGuarantorRequest(requestId);
+      console.log('📥 Delete API response:', response);
+      
+      if (response.success) {
+        // Update state - remove guarantor from the nested structure
+        const guarantorIdToRemove = guarantor.id;
+        setGuarantors((prevList) => {
+          return prevList.map((userGroup) => {
+            // Filter out the deleted guarantor from this user's guarantors array
+            const updatedGuarantors = userGroup.guarantors?.filter(
+              (g) => g.id !== guarantorIdToRemove && g.requestId !== requestId
+            ) || [];
+            
+            // If no guarantors left, we can either keep the user group or remove it
+            // For now, keep it but with empty guarantors array
+            return {
+              ...userGroup,
+              guarantors: updatedGuarantors,
+            };
+          }).filter((userGroup) => {
+            // Optionally remove user groups with no guarantors
+            // For now, keep them so user can add new guarantors
+            return true;
+          });
+        });
+        
+        // Also update filtered guarantors
+        setFilteredGuarantors((prevList) => {
+          return prevList.map((userGroup) => {
+            const updatedGuarantors = userGroup.guarantors?.filter(
+              (g) => g.id !== guarantorIdToRemove && g.requestId !== requestId
+            ) || [];
+            return {
+              ...userGroup,
+              guarantors: updatedGuarantors,
+            };
+          });
+        });
+        
+        toastUtils.success('Guarantor removed successfully');
+      } else {
+        toastUtils.error(response.message || 'Failed to remove guarantor');
+      }
+    } catch (error) {
+      console.error('Error removing guarantor:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to remove guarantor');
+    }
   };
 
   const handleSendReminder = (guarantorId) => {
@@ -264,6 +427,66 @@ const GuarantorListPage = () => {
   const handleViewGuarantor = (guarantor) => {
     setSelectedGuarantor(guarantor);
     setShowGuarantorDetail(true);
+  };
+
+  const handleAddGuarantor = (guarantor) => {
+    setSelectedBookingForGuarantor(guarantor);
+    setGuarantorIdInput('');
+    setShowAddGuarantorModal(true);
+  };
+
+  const handleSendGuarantorRequest = async () => {
+    if (!guarantorIdInput.trim()) {
+      alert('Please enter a Guarantor ID');
+      return;
+    }
+
+    if (!selectedBookingForGuarantor) {
+      alert('Booking information not found');
+      return;
+    }
+
+    try {
+      setIsSendingRequest(true);
+      // Use bookingMongoId (MongoDB _id) for API call, fallback to id
+      const bookingId = selectedBookingForGuarantor.bookingMongoId || selectedBookingForGuarantor.id;
+      
+      if (!bookingId) {
+        alert('Invalid booking ID. Please try selecting the booking again.');
+        return;
+      }
+
+      console.log('Sending guarantor request:', {
+        bookingId,
+        guarantorId: guarantorIdInput.trim(),
+        bookingData: selectedBookingForGuarantor,
+      });
+
+      const response = await adminService.sendGuarantorRequest({
+        bookingId: bookingId,
+        guarantorId: guarantorIdInput.trim(),
+      });
+
+      if (response.success) {
+        alert('Guarantor request sent successfully!');
+        setShowAddGuarantorModal(false);
+        setGuarantorIdInput('');
+        setSelectedBookingForGuarantor(null);
+        // Refresh guarantors list
+        window.location.reload();
+      } else {
+        alert(response.message || 'Failed to send guarantor request');
+      }
+    } catch (error) {
+      console.error('Error sending guarantor request:', error);
+      const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           'Failed to send guarantor request. Please try again.';
+      alert(errorMessage);
+    } finally {
+      setIsSendingRequest(false);
+    }
   };
 
   // Get status badge color
@@ -281,11 +504,19 @@ const GuarantorListPage = () => {
 
   // Stats calculation
   const stats = {
-    total: guarantors.length,
-    verified: guarantors.filter((g) => g.verificationStatus === 'verified').length,
-    pending: guarantors.filter((g) => g.verificationStatus === 'pending').length,
-    rejected: guarantors.filter((g) => g.verificationStatus === 'rejected').length,
-    activeLinks: guarantors.filter((g) => g.verificationStatus === 'verified' && g.invitationStatus === 'accepted').length,
+    total: guarantors.reduce((sum, userGroup) => sum + (userGroup.guarantors?.length || 0), 0),
+    verified: guarantors.reduce((sum, userGroup) => 
+      sum + (userGroup.guarantors?.filter((g) => g.verificationStatus === 'verified').length || 0), 0
+    ),
+    pending: guarantors.reduce((sum, userGroup) => 
+      sum + (userGroup.guarantors?.filter((g) => g.verificationStatus === 'pending').length || 0), 0
+    ),
+    rejected: guarantors.reduce((sum, userGroup) => 
+      sum + (userGroup.guarantors?.filter((g) => g.verificationStatus === 'rejected').length || 0), 0
+    ),
+    activeLinks: guarantors.reduce((sum, userGroup) => 
+      sum + (userGroup.guarantors?.filter((g) => g.verificationStatus === 'verified' && g.invitationStatus === 'accepted').length || 0), 0
+    ),
   };
 
   if (loading) {
@@ -422,37 +653,115 @@ const GuarantorListPage = () => {
         {/* Guarantors List */}
         <div className="mb-4">
           <p className="text-sm text-gray-600">
-            Showing <span className="font-semibold">{filteredGuarantors.length}</span> of <span className="font-semibold">{guarantors.length}</span> guarantors
+            Showing <span className="font-semibold">
+              {filteredGuarantors.reduce((sum, userGroup) => sum + (userGroup.guarantors?.length || 0), 0)}
+            </span> of <span className="font-semibold">
+              {guarantors.reduce((sum, userGroup) => sum + (userGroup.guarantors?.length || 0), 0)}
+            </span> guarantors
           </p>
         </div>
 
         <div className="space-y-4">
-          {filteredGuarantors.map((guarantor) => (
-            <Card key={guarantor.id} className="p-4 hover:shadow-lg transition-all">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* Guarantor Info */}
-                <div className="flex-1">
-                  <div className="flex items-start gap-4 mb-4">
+          {filteredGuarantors.map((userGroup, groupIndex) => (
+            <Card key={userGroup.linkedUserId || groupIndex} className="p-4 hover:shadow-lg transition-all">
+              {/* Linked User Header */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-start gap-4">
                     {/* Avatar */}
                     <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                       style={{ backgroundColor: theme.colors.primary }}
                     >
-                      {guarantor.avatar ? (
-                        <img src={guarantor.avatar} alt={guarantor.guarantorName} className="w-full h-full rounded-full object-cover" />
+                    {userGroup.avatar ? (
+                      <img src={userGroup.avatar} alt={userGroup.linkedUserName} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        <span>{guarantor.guarantorName.charAt(0).toUpperCase()}</span>
+                      <span>{userGroup.linkedUserName?.charAt(0).toUpperCase() || 'U'}</span>
                       )}
                     </div>
-
-                    {/* Guarantor Details */}
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{guarantor.guarantorName}</h3>
-                      <p className="text-xs text-gray-500 mb-1">{guarantor.guarantorEmail}</p>
-                      <p className="text-xs text-gray-500 mb-2">{guarantor.guarantorPhone}</p>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">{userGroup.linkedUserName}</h3>
+                        <p className="text-xs text-gray-500 mb-1">{userGroup.linkedUserEmail}</p>
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-gray-600">Total Bookings: </span>
+                          <span className="text-xs font-semibold text-gray-900">{userGroup.linkedBookings}</span>
+                          {userGroup.bookingIds && userGroup.bookingIds.length > 0 && (
+                            <>
+                              <span className="text-xs text-gray-600">|</span>
+                              <span className="text-xs text-gray-600">Booking IDs: </span>
+                              {userGroup.bookingIds.map((bookingId, idx) => (
+                                <span key={idx} className="text-xs font-mono text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                                  {bookingId}
+                        </span>
+                              ))}
+                            </>
+                          )}
+                      </div>
+                    </div>
+                       {/* Add Guarantor Button - Top Right */}
+                       <button
+                         onClick={() => {
+                           // Find the first booking to use for adding guarantor
+                           const firstGuarantor = userGroup.guarantors?.[0];
+                           if (firstGuarantor) {
+                             handleAddGuarantor({
+                               ...firstGuarantor,
+                               linkedUserName: userGroup.linkedUserName,
+                               linkedUserEmail: userGroup.linkedUserEmail,
+                             });
+                           } else {
+                             // If no guarantors, create a dummy booking object
+                             handleAddGuarantor({
+                               linkedUserName: userGroup.linkedUserName,
+                               linkedUserEmail: userGroup.linkedUserEmail,
+                               bookingId: userGroup.bookingIds?.[0] || 'N/A',
+                               bookingMongoId: null,
+                             });
+                           }
+                         }}
+                         className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                         style={{ backgroundColor: theme.colors.primary }}
+                       >
+                         + Add Guarantor
+                       </button>
+                  </div>
+                      </div>
+                      </div>
+                    </div>
+
+              {/* Guarantors List - Horizontal Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {userGroup.guarantors && userGroup.guarantors.length > 0 ? (
+                  userGroup.guarantors.map((guarantor, guarantorIndex) => (
+                    <div key={guarantor.id || guarantorIndex} className="bg-gray-50 border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow relative">
+                      {/* Delete Button - Top Right Corner */}
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to remove ${guarantor.guarantorName} as a guarantor?`)) {
+                            handleRemoveLink(guarantor);
+                          }
+                        }}
+                        className="absolute top-2 right-2 p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        aria-label="Delete guarantor"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                      
+                      {/* Guarantor Header */}
+                      <div className="mb-2 pr-6">
+                        <p className="text-xs font-medium text-gray-500 mb-1">Guarantor {guarantorIndex + 1}</p>
+                        <h4 className="font-semibold text-sm text-gray-900 mb-1 break-words">{guarantor.guarantorName}</h4>
+                        <p className="text-xs text-gray-500 break-words">{guarantor.guarantorEmail}</p>
+                        {guarantor.guarantorPhone && (
+                          <p className="text-xs text-gray-500 mt-0.5">{guarantor.guarantorPhone}</p>
+                        )}
+                      </div>
                       
                       {/* Status Badges */}
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1 mb-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(guarantor.verificationStatus)}`}>
                           {guarantor.verificationStatus.charAt(0).toUpperCase() + guarantor.verificationStatus.slice(1)}
                         </span>
@@ -460,105 +769,49 @@ const GuarantorListPage = () => {
                           KYC: {guarantor.guarantorKYCStatus.charAt(0).toUpperCase() + guarantor.guarantorKYCStatus.slice(1)}
                         </span>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(guarantor.invitationStatus)}`}>
-                          Invitation: {guarantor.invitationStatus.charAt(0).toUpperCase() + guarantor.invitationStatus.slice(1)}
+                          {guarantor.invitationStatus.charAt(0).toUpperCase() + guarantor.invitationStatus.slice(1)}
                         </span>
                       </div>
+
+                      {/* Dates - Compact */}
+                      <div className="space-y-1 mb-2 text-xs text-gray-600">
+                        {guarantor.invitationSentDate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Invited:</span>
+                            <span>{new Date(guarantor.invitationSentDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {guarantor.invitationAcceptedDate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Accepted:</span>
+                            <span>{new Date(guarantor.invitationAcceptedDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {guarantor.verificationDate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Verified:</span>
+                            <span>{new Date(guarantor.verificationDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-2">
+                        <button
+                          onClick={() => handleViewGuarantor(guarantor)}
+                          className="w-full px-2 py-1.5 text-xs font-medium text-white rounded hover:opacity-90 transition-colors"
+                          style={{ backgroundColor: theme.colors.primary }}
+                        >
+                          View Details
+                        </button>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-4 text-gray-500 text-sm">
+                    No guarantors added yet
                   </div>
-
-                  {/* Linked User Info */}
-                  <div className="ml-16 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs font-medium text-gray-700 mb-2">Linked User:</p>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{guarantor.linkedUserName}</p>
-                        <p className="text-xs text-gray-500">{guarantor.linkedUserEmail}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-600">Linked Bookings:</p>
-                        <p className="text-sm font-semibold text-gray-900">{guarantor.linkedBookings}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dates */}
-                  <div className="ml-16 mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600">
-                    {guarantor.invitationSentDate && (
-                      <div>
-                        <span className="font-medium">Invited:</span> {new Date(guarantor.invitationSentDate).toLocaleDateString()}
-                      </div>
-                    )}
-                    {guarantor.invitationAcceptedDate && (
-                      <div>
-                        <span className="font-medium">Accepted:</span> {new Date(guarantor.invitationAcceptedDate).toLocaleDateString()}
-                      </div>
-                    )}
-                    {guarantor.verificationDate && (
-                      <div>
-                        <span className="font-medium">Verified:</span> {new Date(guarantor.verificationDate).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Rejection Reason */}
-                  {guarantor.verificationStatus === 'rejected' && guarantor.rejectionReason && (
-                    <div className="ml-16 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-xs font-medium text-red-800 mb-1">Rejection Reason:</p>
-                      <p className="text-sm text-red-700">{guarantor.rejectionReason}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col gap-2 md:w-40">
-                  <button
-                    onClick={() => handleViewGuarantor(guarantor)}
-                    className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: theme.colors.primary }}
-                  >
-                    View Details
-                  </button>
-                  
-                  {guarantor.verificationStatus === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => handleVerify(guarantor.id)}
-                        className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Verify
-                      </button>
-                      <button
-                        onClick={() => {
-                          const reason = prompt('Enter rejection reason:');
-                          if (reason) handleReject(guarantor.id, reason);
-                        }}
-                        className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                  
-                  {guarantor.guarantorKYCStatus === 'pending' && (
-                    <button
-                      onClick={() => handleSendReminder(guarantor.id)}
-                      className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors"
-                    >
-                      Send KYC Reminder
-                    </button>
-                  )}
-                  
-                  <button
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to remove this guarantor link?')) {
-                        handleRemoveLink(guarantor.id);
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                  >
-                    Remove Link
-                  </button>
-                </div>
+                )}
               </div>
             </Card>
           ))}
@@ -584,6 +837,76 @@ const GuarantorListPage = () => {
           onRemoveLink={handleRemoveLink}
           onSendReminder={handleSendReminder}
         />
+      )}
+
+      {/* Add Guarantor Modal */}
+      {showAddGuarantorModal && selectedBookingForGuarantor && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAddGuarantorModal(false)}>
+          <div
+            className="bg-white rounded-lg max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Add Guarantor</h2>
+              <button
+                onClick={() => setShowAddGuarantorModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Booking: <span className="font-semibold">{selectedBookingForGuarantor.bookingId}</span>
+              </p>
+              <p className="text-sm text-gray-600">
+                User: <span className="font-semibold">{selectedBookingForGuarantor.linkedUserName}</span>
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Enter Guarantor ID
+              </label>
+              <input
+                type="text"
+                value={guarantorIdInput}
+                onChange={(e) => setGuarantorIdInput(e.target.value)}
+                placeholder="e.g., GURN123456ABC"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={isSendingRequest}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter the Guarantor ID of the user you want to add as guarantor
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddGuarantorModal(false);
+                  setGuarantorIdInput('');
+                  setSelectedBookingForGuarantor(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                disabled={isSendingRequest}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendGuarantorRequest}
+                className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
+                style={{ backgroundColor: theme.colors.primary }}
+                disabled={isSendingRequest || !guarantorIdInput.trim()}
+              >
+                {isSendingRequest ? 'Sending...' : 'Send Request'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -625,7 +948,7 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
         <div className="p-6">
           {/* Tabs */}
           <div className="flex gap-2 mb-6 border-b border-gray-200">
-            {['profile', 'linkedUser', 'bookings', 'history'].map((tab) => (
+            {['profile', 'linkedUser', 'history'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -649,11 +972,11 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-700">Name</label>
-                    <p className="text-sm text-gray-900">{guarantor.guarantorName}</p>
+                    <p className="text-sm text-gray-900">{guarantor.linkedUserName}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Email</label>
-                    <p className="text-sm text-gray-900">{guarantor.guarantorEmail}</p>
+                    <p className="text-sm text-gray-900">{guarantor.linkedUserEmail}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Phone</label>
@@ -683,15 +1006,19 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-700">Name</label>
-                    <p className="text-sm text-gray-900">{guarantor.linkedUserName}</p>
+                    <p className="text-sm text-gray-900">{guarantor.guarantorName}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Email</label>
-                    <p className="text-sm text-gray-900">{guarantor.linkedUserEmail}</p>
+                    <p className="text-sm text-gray-900">{guarantor.guarantorEmail}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Linked Bookings</label>
-                    <p className="text-sm text-gray-900">{guarantor.linkedBookings}</p>
+                    {guarantor.bookingId ? (
+                      <p className="text-sm text-gray-900 font-mono">{guarantor.bookingId}</p>
+                    ) : (
+                      <p className="text-sm text-gray-500">No booking ID available</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Invitation Status</label>
@@ -710,14 +1037,6 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            {activeTab === 'bookings' && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Linked Bookings</h3>
-                <p className="text-gray-600">Total Bookings: {guarantor.linkedBookings}</p>
-                <p className="text-sm text-gray-500 mt-2">Booking history will be displayed here...</p>
               </div>
             )}
 
@@ -822,27 +1141,6 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
               )}
             </>
           )}
-          {guarantor.guarantorKYCStatus === 'pending' && (
-            <button
-              onClick={() => {
-                onSendReminder(guarantor.id);
-              }}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-            >
-              Send KYC Reminder
-            </button>
-          )}
-          <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to remove this guarantor link?')) {
-                onRemoveLink(guarantor.id);
-                onClose();
-              }
-            }}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Remove Link
-          </button>
         </div>
       </div>
     </div>

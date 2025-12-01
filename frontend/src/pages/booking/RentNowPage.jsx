@@ -23,8 +23,6 @@ const RentNowPage = () => {
   const [dropDate, setDropDate] = useState('');
   const [dropTime, setDropTime] = useState('');
   const [paymentOption, setPaymentOption] = useState('advance'); // Only 'advance' option available
-  const [pickupLocation, setPickupLocation] = useState('');
-  const [dropLocation, setDropLocation] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
@@ -65,7 +63,6 @@ const RentNowPage = () => {
         };
         
         setCar(mockCarData);
-        setPickupLocation(mockCarData.location);
         setError(null);
         setLoading(false);
         return;
@@ -122,8 +119,6 @@ const RentNowPage = () => {
           };
           
           setCar(formattedCar);
-          // Set default pickup location to car location
-          setPickupLocation(formattedCar.location);
         } else {
           setError('Car not found');
           // Don't show toast for now since backend might not be ready
@@ -156,16 +151,9 @@ const RentNowPage = () => {
     // Dynamic pricing based on document.txt:
     // - Weekend multiplier
     // - Holiday multiplier
-    // - Time of day multiplier
     // - Demand surge
 
-    // Time of day multiplier (peak hours: 8 AM - 10 AM, 5 PM - 7 PM)
-    const pickupHour = pickupTime ? parseInt(pickupTime.split(':')[0]) : 10;
-    const isPeakHour = (pickupHour >= 8 && pickupHour < 10) || (pickupHour >= 17 && pickupHour < 19);
-    const timeOfDayMultiplier = isPeakHour ? 0.1 : 0; // 10% peak hour surcharge
-
-    // Apply multipliers
-    totalPrice = totalPrice * (1 + timeOfDayMultiplier);
+    // No peak hour surcharge applied
 
     // Advance payment (35%)
     const advancePayment = Math.round(totalPrice * 0.35);
@@ -177,7 +165,6 @@ const RentNowPage = () => {
       totalPrice: Math.round(totalPrice),
       advancePayment,
       remainingPayment: Math.round(remainingPayment),
-      timeOfDayMultiplier,
     };
   };
 
@@ -198,11 +185,6 @@ const RentNowPage = () => {
       return;
     }
 
-    if (!pickupLocation) {
-      toastUtils.error('Please enter pickup location');
-      return;
-    }
-
     if (!agreeToTerms) {
       toastUtils.error('Please agree to terms and conditions');
       return;
@@ -218,8 +200,6 @@ const RentNowPage = () => {
         dropDate,
         dropTime,
         paymentOption,
-        pickupLocation,
-        dropLocation: dropLocation || pickupLocation,
         specialRequests,
         priceDetails,
       },
@@ -438,69 +418,6 @@ const RentNowPage = () => {
               </div>
             </div>
 
-            {/* Location */}
-            <div className="bg-white rounded-2xl p-5 space-y-4 shadow-md border border-gray-100">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-1 h-5 rounded-full" style={{ backgroundColor: theme.colors.primary }}></div>
-                <h2 className="font-bold text-lg" style={{ color: theme.colors.textPrimary }}>
-                  Location Details
-                </h2>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold block" style={{ color: theme.colors.textSecondary }}>
-                  Pickup Location
-                </label>
-                <input
-                  type="text"
-                  value={pickupLocation}
-                  onChange={(e) => setPickupLocation(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 text-sm focus:outline-none transition-all"
-                  style={{ 
-                    borderColor: theme.colors.borderDefault,
-                    color: theme.colors.textPrimary,
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.colors.primary;
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.colors.borderDefault;
-                    e.target.style.backgroundColor = '#f9fafb';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  placeholder="Enter pickup location"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold block" style={{ color: theme.colors.textSecondary }}>
-                  Drop Location <span className="text-gray-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={dropLocation}
-                  onChange={(e) => setDropLocation(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 text-sm focus:outline-none transition-all"
-                  style={{ 
-                    borderColor: theme.colors.borderDefault,
-                    color: theme.colors.textPrimary,
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.colors.primary;
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.colors.borderDefault;
-                    e.target.style.backgroundColor = '#f9fafb';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  placeholder="Enter drop location (same as pickup if not specified)"
-                />
-              </div>
-            </div>
-
             {/* Payment Option */}
             <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
               <div className="flex items-center gap-2 mb-4">
@@ -518,7 +435,7 @@ const RentNowPage = () => {
                   </div>
                   <div className="flex-1">
                     <span className="font-semibold text-base block" style={{ color: theme.colors.textPrimary }}>35% Advance Payment</span>
-                    <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>Pay 35% now, rest later</p>
+                    <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>Pay 35% now, rest later in office</p>
                   </div>
                 </div>
               </div>
@@ -584,12 +501,6 @@ const RentNowPage = () => {
                     <span>Base Price ({priceDetails.totalDays} {priceDetails.totalDays === 1 ? 'day' : 'days'})</span>
                     <span className="font-semibold">₹{priceDetails.basePrice * priceDetails.totalDays}</span>
                   </div>
-                  {priceDetails.timeOfDayMultiplier > 0 && (
-                    <div className="flex justify-between text-sm" style={{ color: theme.colors.textSecondary }}>
-                      <span>Peak Hour Surcharge (10%)</span>
-                      <span className="font-semibold">₹{Math.round((priceDetails.basePrice * priceDetails.totalDays) * priceDetails.timeOfDayMultiplier)}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between font-bold pt-3 border-t-2 text-lg" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
                     <span>Total Amount</span>
                     <span>₹{priceDetails.totalPrice.toLocaleString('en-IN')}</span>

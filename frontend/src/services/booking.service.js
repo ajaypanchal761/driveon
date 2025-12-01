@@ -56,6 +56,17 @@ export const bookingService = {
     const response = await api.post(`${API_ENDPOINTS.BOOKING.END}/${id}/end`);
     return response.data;
   },
+
+  /**
+   * Update booking location (for tracking)
+   * @param {string} id - Booking ID
+   * @param {Object} location - Location data (latitude, longitude, address)
+   * @returns {Promise}
+   */
+  updateLocation: async (id, location) => {
+    const response = await api.post(`${API_ENDPOINTS.BOOKING.UPDATE_LOCATION}/${id}/location`, location);
+    return response.data;
+  },
 };
 
 export default bookingService;

@@ -111,8 +111,8 @@ const ProfileDashboardPage = () => {
         />
       ),
       path: '/profile/guarantor',
-      badge: guarantor.verified ? 'Added' : 'Not Added',
-      badgeColor: guarantor.verified ? 'bg-green-500' : 'bg-gray-400',
+      badge: user?.guarantorId || (guarantor.verified ? 'Added' : 'Not Added'),
+      badgeColor: user?.guarantorId ? 'bg-blue-500' : (guarantor.verified ? 'bg-green-500' : 'bg-gray-400'),
     },
     {
       id: 'referrals',
@@ -173,6 +173,25 @@ const ProfileDashboardPage = () => {
   const userName = user?.name || 'User';
   const userEmail = user?.email || user?.phone || 'user@example.com';
   const userPhoto = user?.profilePhoto;
+
+  /**
+   * Format user ID to USER001 format
+   * Takes MongoDB ObjectId and converts to USER + padded number
+   */
+  const formatUserId = (userId) => {
+    if (!userId) return '';
+    
+    // Extract last 6 characters from ObjectId and convert to number
+    const lastChars = userId.slice(-6);
+    // Convert hex to decimal, then take modulo to get a number between 0-999
+    const num = parseInt(lastChars, 16) % 1000;
+    // Pad with zeros to make it 3 digits
+    const paddedNum = String(num).padStart(3, '0');
+    
+    return `USER${paddedNum}`;
+  };
+
+  const formattedUserId = user?._id || user?.id ? formatUserId(user._id || user.id) : '';
 
   return (
     <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0" style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
@@ -252,10 +271,13 @@ const ProfileDashboardPage = () => {
                 )}
               </div>
 
-              {/* Name and Email */}
+              {/* Name, Email, and User ID */}
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg md:text-2xl font-bold text-white mb-0.5 md:mb-1 truncate">{userName}</h1>
                 <p className="text-xs md:text-sm text-white/80 truncate">{userEmail}</p>
+                {formattedUserId && (
+                  <p className="text-xs md:text-sm text-white/70 font-mono mt-0.5 md:mt-1">{formattedUserId}</p>
+                )}
               </div>
             </div>
           </div>
@@ -335,11 +357,48 @@ const ProfileDashboardPage = () => {
               {/* Badge and Arrow */}
               <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
                 {option.badge && (
-                  <span
-                    className={`${option.badgeColor} text-white text-xs md:text-sm font-semibold px-1.5 md:px-2 py-0.5 md:py-1 rounded-full`}
-                  >
-                    {option.badge}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`${option.badgeColor} text-white text-xs md:text-sm font-semibold px-1.5 md:px-2 py-0.5 md:py-1 rounded-full`}
+                    >
+                      {option.badge}
+                    </span>
+                    {option.id === 'guarantor' && user?.guarantorId && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(user.guarantorId);
+                          toastUtils.success('Guarantor ID copied!');
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors touch-target cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Copy guarantor ID"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(user.guarantorId);
+                            toastUtils.success('Guarantor ID copied!');
+                          }
+                        }}
+                      >
+                        <svg
+                          className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-600 hover:text-gray-900"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                 )}
                 <svg
                   className="w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-colors"

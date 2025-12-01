@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { theme } from '../../../theme/theme.constants';
 import Card from '../../../components/common/Card';
+import { adminService } from '../../../services/admin.service';
 
 /**
  * Tracking Page
@@ -23,6 +24,7 @@ const TrackingPage = () => {
   const [activeTrips, setActiveTrips] = useState([]);
   const [completedTrips, setCompletedTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [showTripDetail, setShowTripDetail] = useState(false);
   const [viewMode, setViewMode] = useState(getInitialView()); // active, history
@@ -34,78 +36,155 @@ const TrackingPage = () => {
     booking: 'all',
   });
 
-  // Mock active trips data
+  // Fetch active trips with tracking data
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockActiveTrips = [
-        {
-          id: '1',
-          bookingId: 'BK003',
-          userId: '5',
-          userName: 'David Brown',
-          carId: '3',
-          carName: 'BMW 7 Series 2023',
-          carOwner: 'Mike Johnson',
-          startLocation: { lat: 19.0760, lng: 72.8777, address: 'Mumbai Downtown' },
-          endLocation: { lat: 19.2183, lng: 72.9781, address: 'Mumbai Airport' },
-          currentLocation: { lat: 19.1500, lng: 72.9000, address: 'Mumbai - Bandra' },
-          startTime: '2024-03-18T11:00:00',
-          expectedEndTime: '2024-03-20T11:00:00',
-          currentSpeed: 45,
-          averageSpeed: 42,
-          distanceTraveled: 25.5,
-          totalDistance: 50.0,
-          duration: '2h 30m',
-          status: 'active',
-        },
-        {
-          id: '2',
-          bookingId: 'BK008',
-          userId: '6',
-          userName: 'Emily Davis',
-          carId: '7',
-          carName: 'Tata Nexon 2022',
-          carOwner: 'Lisa Anderson',
-          startLocation: { lat: 18.5204, lng: 73.8567, address: 'Pune Station' },
-          endLocation: { lat: 18.5204, lng: 73.8567, address: 'Pune Station' },
-          currentLocation: { lat: 18.5500, lng: 73.8500, address: 'Pune - Hinjewadi' },
-          startTime: '2024-03-19T08:00:00',
-          expectedEndTime: '2024-03-22T08:00:00',
-          currentSpeed: 35,
-          averageSpeed: 38,
-          distanceTraveled: 15.2,
-          totalDistance: 30.0,
-          duration: '1h 45m',
-          status: 'active',
-        },
-      ];
+    const fetchActiveTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await adminService.getActiveBookingsWithTracking();
+        
+        // Transform API response to match component structure
+        const transformedActiveTrips = response.bookings?.map((booking) => {
+          const pickupDate = booking.pickupDate || booking.pickupDateTime;
+          const dropDate = booking.dropDate || booking.dropDateTime;
+          const startTime = pickupDate ? new Date(pickupDate) : new Date();
+          const expectedEndTime = dropDate ? new Date(dropDate) : null;
+          
+          // Calculate duration if trip has started
+          let duration = '0h 0m';
+          if (startTime) {
+            const now = new Date();
+            const diffMs = now - startTime;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            duration = `${diffHours}h ${diffMinutes}m`;
+          }
+          
+          return {
+            id: booking._id || booking.id,
+            bookingId: booking.bookingId,
+            userId: booking.user?._id || booking.userId,
+            userName: booking.user?.name || booking.userName || 'N/A',
+            carId: booking.car?._id || booking.carId,
+            carName: booking.car ? `${booking.car.brand || ''} ${booking.car.model || ''} ${booking.car.year || ''}`.trim() : booking.carName || 'N/A',
+            carOwner: booking.car?.owner || booking.carOwner || 'N/A',
+            startLocation: booking.pickupLocation 
+              ? { 
+                  lat: booking.pickupLocation.latitude || booking.pickupLocation.lat || 0, 
+                  lng: booking.pickupLocation.longitude || booking.pickupLocation.lng || 0, 
+                  address: booking.pickupLocation.address || booking.pickupLocation || 'N/A' 
+                }
+              : { lat: 0, lng: 0, address: 'N/A' },
+            endLocation: booking.dropLocation 
+              ? { 
+                  lat: booking.dropLocation.latitude || booking.dropLocation.lat || 0, 
+                  lng: booking.dropLocation.longitude || booking.dropLocation.lng || 0, 
+                  address: booking.dropLocation.address || booking.dropLocation || 'N/A' 
+                }
+              : { lat: 0, lng: 0, address: 'N/A' },
+            currentLocation: booking.currentLocation 
+              ? { 
+                  lat: booking.currentLocation.latitude || booking.currentLocation.lat || 0, 
+                  lng: booking.currentLocation.longitude || booking.currentLocation.lng || 0, 
+                  address: booking.currentLocation.address || booking.currentLocation || 'N/A' 
+                }
+              : null,
+            startTime: pickupDate || booking.createdAt,
+            expectedEndTime: dropDate,
+            currentSpeed: booking.currentSpeed || 0,
+            averageSpeed: booking.averageSpeed || 0,
+            distanceTraveled: booking.distanceTraveled || 0,
+            totalDistance: booking.totalDistance || 0,
+            duration: duration,
+            status: booking.status || 'active',
+          };
+        }) || [];
+        
+        setActiveTrips(transformedActiveTrips);
+      } catch (err) {
+        console.error('Error fetching active trips:', err);
+        setError(err.response?.data?.message || 'Failed to fetch active trips');
+        setActiveTrips([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const mockCompletedTrips = [
-        {
-          id: '3',
-          bookingId: 'BK004',
-          userId: '7',
-          userName: 'Robert Wilson',
-          carId: '7',
-          carName: 'Tata Nexon 2022',
-          carOwner: 'Lisa Anderson',
-          startLocation: { lat: 18.5204, lng: 73.8567, address: 'Pune Station' },
-          endLocation: { lat: 18.5204, lng: 73.8567, address: 'Pune Station' },
-          startTime: '2024-03-10T08:00:00',
-          endTime: '2024-03-12T08:30:00',
-          totalDistance: 120.5,
-          averageSpeed: 40,
-          duration: '48h 30m',
-          status: 'completed',
-        },
-      ];
-
-      setActiveTrips(mockActiveTrips);
-      setCompletedTrips(mockCompletedTrips);
-      setLoading(false);
-    }, 500);
+    fetchActiveTrips();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch completed trips
+  useEffect(() => {
+    const fetchCompletedTrips = async () => {
+      if (viewMode !== 'history') return;
+      
+      try {
+        setLoading(true);
+        const response = await adminService.getAllBookings({
+          status: 'completed',
+        });
+        
+        // Transform API response to match component structure
+        const transformedCompletedTrips = response.bookings?.map((booking) => {
+          const pickupDate = booking.pickupDate || booking.pickupDateTime;
+          const dropDate = booking.dropDate || booking.dropDateTime;
+          const startTime = pickupDate ? new Date(pickupDate) : new Date();
+          const endTime = dropDate ? new Date(dropDate) : null;
+          
+          // Calculate duration
+          let duration = '0h 0m';
+          if (startTime && endTime) {
+            const diffMs = endTime - startTime;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            duration = `${diffHours}h ${diffMinutes}m`;
+          }
+          
+          return {
+            id: booking._id || booking.id,
+            bookingId: booking.bookingId,
+            userId: booking.user?._id || booking.userId,
+            userName: booking.user?.name || booking.userName || 'N/A',
+            carId: booking.car?._id || booking.carId,
+            carName: booking.car ? `${booking.car.brand || ''} ${booking.car.model || ''} ${booking.car.year || ''}`.trim() : booking.carName || 'N/A',
+            carOwner: booking.car?.owner || booking.carOwner || 'N/A',
+            startLocation: booking.pickupLocation 
+              ? { 
+                  lat: booking.pickupLocation.latitude || booking.pickupLocation.lat || 0, 
+                  lng: booking.pickupLocation.longitude || booking.pickupLocation.lng || 0, 
+                  address: booking.pickupLocation.address || booking.pickupLocation || 'N/A' 
+                }
+              : { lat: 0, lng: 0, address: 'N/A' },
+            endLocation: booking.dropLocation 
+              ? { 
+                  lat: booking.dropLocation.latitude || booking.dropLocation.lat || 0, 
+                  lng: booking.dropLocation.longitude || booking.dropLocation.lng || 0, 
+                  address: booking.dropLocation.address || booking.dropLocation || 'N/A' 
+                }
+              : { lat: 0, lng: 0, address: 'N/A' },
+            startTime: pickupDate || booking.createdAt,
+            endTime: dropDate || booking.completedDate,
+            totalDistance: booking.totalDistance || 0,
+            averageSpeed: booking.averageSpeed || 0,
+            duration: duration,
+            status: 'completed',
+          };
+        }) || [];
+        
+        setCompletedTrips(transformedCompletedTrips);
+      } catch (err) {
+        console.error('Error fetching completed trips:', err);
+        // Don't set error here as it's a secondary fetch
+        setCompletedTrips([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompletedTrips();
+  }, [viewMode]);
 
   // Filter trips
   useEffect(() => {
@@ -184,6 +263,23 @@ const TrackingPage = () => {
             style={{ borderColor: theme.colors.primary }}
           ></div>
           <p className="text-gray-600">Loading tracking data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
+            style={{ backgroundColor: theme.colors.primary }}
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

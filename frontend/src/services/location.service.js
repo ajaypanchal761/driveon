@@ -7,6 +7,9 @@ import api from './api';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+// Track API key errors to prevent spam
+let apiKeyErrorShown = false;
+
 /**
  * Get address from coordinates using Google Maps Geocoding API
  * @param {number} lat - Latitude
@@ -15,23 +18,76 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
  */
 export const getAddressFromCoordinates = async (lat, lng) => {
   if (!GOOGLE_MAPS_API_KEY) {
-    console.warn('Google Maps API key not found');
+    console.error('Google Maps API key not found. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file');
+    return '';
+  }
+
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    console.error('Invalid coordinates:', { lat, lng });
     return '';
   }
 
   try {
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
-    );
+    // Use Google Maps Geocoding API with proper parameters
+    // language=hi for Hindi, en for English
+    // region=in for India (helps with better results)
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en&region=in`;
+    
+    console.log('Fetching address from Google Maps API...', { lat, lng });
+    
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error('Google Maps API HTTP error:', response.status, response.statusText);
+      return '';
+    }
 
     const data = await response.json();
+
+    console.log('Google Maps API response:', data.status);
 
     if (data.status === 'OK' && data.results && data.results.length > 0) {
       // Get the most relevant result (first one)
       const address = data.results[0].formatted_address;
+      console.log('Address received:', address);
       return address;
+    } else if (data.status === 'ZERO_RESULTS') {
+      console.warn('No results found for coordinates:', { lat, lng });
+      return '';
+    } else if (data.status === 'REQUEST_DENIED') {
+      const errorMsg = data.error_message || 'Unknown error';
+      
+      // Show detailed error only once to prevent console spam
+      if (!apiKeyErrorShown) {
+        console.error('❌ Google Maps API Error:', errorMsg);
+        console.error('📋 Setup Instructions:');
+        console.error('1. Go to https://console.cloud.google.com/');
+        console.error('2. Enable "Geocoding API" in your project');
+        console.error('3. Create/Get API key from Credentials section');
+        console.error('4. Add to .env file: VITE_GOOGLE_MAPS_API_KEY=your_key_here');
+        console.error('5. Restart dev server');
+        console.error('6. Make sure API key restrictions allow your domain/localhost');
+        apiKeyErrorShown = true;
+      }
+      
+      // Store error in sessionStorage to show UI message
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('google_maps_api_error', JSON.stringify({
+          status: 'REQUEST_DENIED',
+          message: errorMsg,
+          timestamp: Date.now()
+        }));
+      }
+      
+      return '';
+    } else if (data.status === 'OVER_QUERY_LIMIT') {
+      console.error('Google Maps API quota exceeded. Please check your billing.');
+      return '';
+    } else if (data.status === 'INVALID_REQUEST') {
+      console.error('Invalid request to Google Maps API:', data.error_message);
+      return '';
     } else {
-      console.warn('Geocoding failed:', data.status);
+      console.warn('Geocoding failed with status:', data.status, data.error_message);
       return '';
     }
   } catch (error) {
@@ -70,44 +126,102 @@ export const updateUserLocation = async (lat, lng, address = '') => {
 };
 
 /**
- * Request location permission and get current position
+ * Request location permission and get current position using browser Geolocation API
+ * This uses the browser's native geolocation which is then converted to address using Google Maps
  * @param {Object} options - Geolocation options
  * @returns {Promise<GeolocationPosition>} - Current position
  */
 export const getCurrentPosition = (options = {}) => {
   return new Promise((resolve, reject) => {
+    // Check if geolocation is supported
     if (!navigator.geolocation) {
-      reject(new Error('Geolocation is not supported by this browser'));
+      const error = new Error('Geolocation is not supported by this browser. Please use a modern browser.');
+      error.code = 0;
+      reject(error);
+      return;
+    }
+
+    // Check if we're in a secure context (HTTPS or localhost)
+    const isSecure = window.isSecureContext || 
+                     window.location.protocol === 'https:' || 
+                     window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1' ||
+                     window.location.hostname === '[::1]';
+
+    if (!isSecure) {
+      const error = new Error('Geolocation requires HTTPS or localhost. Current protocol: ' + window.location.protocol);
+      error.code = 0;
+      reject(error);
       return;
     }
 
     const defaultOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000, // Increased to 10 seconds for better reliability
+      enableHighAccuracy: true, // Use GPS if available for better accuracy
+      timeout: 15000, // 15 seconds timeout
       maximumAge: 60000, // Allow cached location up to 1 minute old
       ...options,
     };
 
-    // Try with high accuracy first
+    console.log('Requesting location with options:', defaultOptions);
+
+    // Try with high accuracy first (GPS)
     navigator.geolocation.getCurrentPosition(
-      (position) => resolve(position),
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        console.log('✅ Location obtained successfully:', {
+          latitude: latitude.toFixed(6),
+          longitude: longitude.toFixed(6),
+          accuracy: accuracy ? `${Math.round(accuracy)}m` : 'unknown'
+        });
+        resolve(position);
+      },
       (error) => {
-        // If timeout or position unavailable, retry with lower accuracy
+        const errorInfo = {
+          code: error.code,
+          message: error.message,
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3
+        };
+        console.error('❌ Geolocation error:', errorInfo);
+
+        // If timeout or position unavailable, retry with lower accuracy (network-based)
         if (error.code === 3 || error.code === 2) {
-          // Retry with less strict options
+          console.log('🔄 Retrying with network-based location (lower accuracy)...');
+          // Retry with less strict options (uses network/IP-based location)
           const fallbackOptions = {
-            enableHighAccuracy: false,
-            timeout: 15000, // Longer timeout for fallback
+            enableHighAccuracy: false, // Use network-based location
+            timeout: 20000, // Longer timeout for fallback
             maximumAge: 300000, // Allow cached location up to 5 minutes old
             ...options,
           };
 
           navigator.geolocation.getCurrentPosition(
-            (position) => resolve(position),
-            (fallbackError) => reject(fallbackError),
+            (position) => {
+              const { latitude, longitude, accuracy } = position.coords;
+              console.log('✅ Location obtained with network-based method:', {
+                latitude: latitude.toFixed(6),
+                longitude: longitude.toFixed(6),
+                accuracy: accuracy ? `${Math.round(accuracy)}m` : 'unknown'
+              });
+              resolve(position);
+            },
+            (fallbackError) => {
+              console.error('❌ Fallback geolocation also failed:', fallbackError);
+              // Ensure error has code property
+              if (!fallbackError.code) {
+                fallbackError.code = 2; // POSITION_UNAVAILABLE
+              }
+              reject(fallbackError);
+            },
             fallbackOptions
           );
         } else {
+          // Permission denied or other error
+          // Ensure error has code property
+          if (!error.code) {
+            error.code = 1; // PERMISSION_DENIED by default
+          }
           reject(error);
         }
       },
@@ -130,12 +244,13 @@ export const watchPosition = (onSuccess, onError, options = {}) => {
   }
 
   const defaultOptions = {
-    enableHighAccuracy: true,
-    timeout: 5000, // Reduced from 10000 to 5000ms for faster updates
-    maximumAge: 0, // Always get fresh location for accuracy
+    enableHighAccuracy: true, // Use GPS for high accuracy live tracking
+    timeout: 30000, // 30 seconds timeout - increased for better reliability
+    maximumAge: 60000, // Allow cached location up to 1 minute old - helps avoid timeouts
     ...options,
   };
 
+  console.log('🔴 Starting live location watch with options:', defaultOptions);
   return navigator.geolocation.watchPosition(onSuccess, onError, defaultOptions);
 };
 

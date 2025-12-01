@@ -2,6 +2,54 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { theme } from '../../../theme/theme.constants';
 import Card from '../../../components/common/Card';
+import { adminService } from '../../../services/admin.service';
+
+/**
+ * Format user ID to USER001 format
+ * Takes MongoDB ObjectId and converts to USER + padded number
+ */
+const formatUserId = (userId) => {
+  if (!userId) return 'N/A';
+  
+  // Extract last 6 characters from ObjectId and convert to number
+  const lastChars = userId.slice(-6);
+  // Convert hex to decimal, then take modulo to get a number between 0-999
+  const num = parseInt(lastChars, 16) % 1000;
+  // Pad with zeros to make it 3 digits
+  const paddedNum = String(num).padStart(3, '0');
+  
+  return `USER${paddedNum}`;
+};
+
+/**
+ * Format time to AM/PM format
+ * Converts 24-hour format (HH:mm) to 12-hour format with AM/PM
+ */
+const formatTimeToAMPM = (timeString) => {
+  if (!timeString) return '';
+  
+  // If already contains AM/PM, return as is
+  if (timeString.toLowerCase().includes('am') || timeString.toLowerCase().includes('pm')) {
+    return timeString;
+  }
+  
+  // Parse time string (format: HH:mm or HH:mm:ss)
+  const timeParts = timeString.split(':');
+  if (timeParts.length < 2) return timeString;
+  
+  let hours = parseInt(timeParts[0], 10);
+  const minutes = timeParts[1];
+  
+  if (isNaN(hours) || isNaN(parseInt(minutes, 10))) {
+    return timeString;
+  }
+  
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 should be 12
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+};
 
 /**
  * Booking List Page
@@ -23,6 +71,7 @@ const BookingListPage = () => {
   const [bookings, setBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
@@ -36,223 +85,67 @@ const BookingListPage = () => {
     user: 'all',
   });
 
-  // Mock bookings data
+  // Fetch bookings from API
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockBookings = [
-        {
-          id: '1',
-          bookingId: 'BK001',
-          userId: '1',
-          userName: 'John Doe',
-          userEmail: 'john.doe@example.com',
-          userPhone: '+91 98765 43210',
-          guarantorId: 'g1',
-          guarantorName: 'Rajesh Kumar',
-          carId: '1',
-          carName: 'Toyota Camry 2022',
-          carOwner: 'Mike Johnson',
-          status: 'confirmed',
-          paymentStatus: 'paid',
-          totalAmount: 15000,
-          paidAmount: 15000,
-          pickupDate: '2024-03-20',
-          pickupTime: '10:00 AM',
-          dropDate: '2024-03-22',
-          dropTime: '10:00 AM',
-          pickupLocation: 'Mumbai Airport',
-          dropLocation: 'Mumbai Airport',
-          bookingDate: '2024-03-15T10:00:00',
-          days: 2,
-        },
-        {
-          id: '2',
-          bookingId: 'BK002',
-          userId: '2',
-          userName: 'Jane Smith',
-          userEmail: 'jane.smith@example.com',
-          userPhone: '+91 98765 43211',
-          guarantorId: 'g2',
-          guarantorName: 'Priya Sharma',
-          carId: '4',
-          carName: 'Maruti Swift 2022',
-          carOwner: 'Lisa Anderson',
-          status: 'pending',
-          paymentStatus: 'pending',
-          totalAmount: 4800,
-          paidAmount: 0,
-          pickupDate: '2024-03-25',
-          pickupTime: '09:00 AM',
-          dropDate: '2024-03-27',
-          dropTime: '09:00 AM',
-          pickupLocation: 'Delhi Central',
-          dropLocation: 'Delhi Central',
-          bookingDate: '2024-03-16T14:30:00',
-          days: 2,
-        },
-        {
-          id: '3',
-          bookingId: 'BK003',
-          userId: '5',
-          userName: 'David Brown',
-          userEmail: 'david.b@example.com',
-          userPhone: '+91 98765 43214',
-          guarantorId: 'g3',
-          guarantorName: 'Amit Patel',
-          carId: '3',
-          carName: 'BMW 7 Series 2023',
-          carOwner: 'Mike Johnson',
-          status: 'active',
-          paymentStatus: 'paid',
-          totalAmount: 50000,
-          paidAmount: 50000,
-          pickupDate: '2024-03-18',
-          pickupTime: '11:00 AM',
-          dropDate: '2024-03-20',
-          dropTime: '11:00 AM',
-          pickupLocation: 'Mumbai Downtown',
-          dropLocation: 'Mumbai Downtown',
-          bookingDate: '2024-03-10T09:00:00',
-          days: 2,
-          currentLocation: 'Mumbai - Bandra',
-        },
-        {
-          id: '4',
-          bookingId: 'BK004',
-          userId: '7',
-          userName: 'Robert Wilson',
-          userEmail: 'robert.w@example.com',
-          userPhone: '+91 98765 43216',
-          guarantorId: 'g6',
-          guarantorName: 'Anita Desai',
-          carId: '7',
-          carName: 'Tata Nexon 2022',
-          carOwner: 'Lisa Anderson',
-          status: 'completed',
-          paymentStatus: 'paid',
-          totalAmount: 14400,
-          paidAmount: 14400,
-          pickupDate: '2024-03-10',
-          pickupTime: '08:00 AM',
-          dropDate: '2024-03-12',
-          dropTime: '08:00 AM',
-          pickupLocation: 'Pune Station',
-          dropLocation: 'Pune Station',
-          bookingDate: '2024-03-05T12:00:00',
-          days: 2,
-          completedDate: '2024-03-12T08:30:00',
-          rating: 4.5,
-        },
-        {
-          id: '5',
-          bookingId: 'BK005',
-          userId: '1',
-          userName: 'John Doe',
-          userEmail: 'john.doe@example.com',
-          userPhone: '+91 98765 43210',
-          guarantorId: 'g1',
-          guarantorName: 'Rajesh Kumar',
-          carId: '1',
-          carName: 'Toyota Camry 2022',
-          carOwner: 'Mike Johnson',
-          status: 'cancelled',
-          paymentStatus: 'refunded',
-          totalAmount: 15000,
-          paidAmount: 15000,
-          refundAmount: 15000,
-          pickupDate: '2024-03-12',
-          pickupTime: '10:00 AM',
-          dropDate: '2024-03-14',
-          dropTime: '10:00 AM',
-          pickupLocation: 'Mumbai Airport',
-          dropLocation: 'Mumbai Airport',
-          bookingDate: '2024-03-08T10:00:00',
-          days: 2,
-          cancelledDate: '2024-03-11T15:00:00',
-          cancellationReason: 'User requested cancellation',
-        },
-        {
-          id: '6',
-          bookingId: 'BK006',
-          userId: '5',
-          userName: 'David Brown',
-          userEmail: 'david.b@example.com',
-          userPhone: '+91 98765 43214',
-          guarantorId: 'g3',
-          guarantorName: 'Amit Patel',
-          carId: '4',
-          carName: 'Maruti Swift 2022',
-          carOwner: 'Lisa Anderson',
-          status: 'pending',
-          paymentStatus: 'pending',
-          totalAmount: 8000,
-          paidAmount: 0,
-          pickupDate: '2024-03-28',
-          pickupTime: '10:00 AM',
-          dropDate: '2024-03-30',
-          dropTime: '10:00 AM',
-          pickupLocation: 'Bangalore City',
-          dropLocation: 'Bangalore City',
-          bookingDate: '2024-03-17T11:00:00',
-          days: 2,
-        },
-        {
-          id: '7',
-          bookingId: 'BK007',
-          userId: '8',
-          userName: 'Lisa Anderson',
-          userEmail: 'lisa.a@example.com',
-          userPhone: '+91 98765 43217',
-          guarantorId: null,
-          guarantorName: null,
-          carId: '2',
-          carName: 'Honda City 2023',
-          carOwner: 'Lisa Anderson',
-          status: 'confirmed',
-          paymentStatus: 'paid',
-          totalAmount: 7200,
-          paidAmount: 7200,
-          pickupDate: '2024-03-22',
-          pickupTime: '09:00 AM',
-          dropDate: '2024-03-24',
-          dropTime: '09:00 AM',
-          pickupLocation: 'Delhi Airport',
-          dropLocation: 'Delhi Airport',
-          bookingDate: '2024-03-15T16:00:00',
-          days: 2,
-        },
-        {
-          id: '8',
-          bookingId: 'BK008',
-          userId: '6',
-          userName: 'Emily Davis',
-          userEmail: 'emily.d@example.com',
-          userPhone: '+91 98765 43215',
-          guarantorId: 'g2',
-          guarantorName: 'Priya Sharma',
-          carId: '7',
-          carName: 'Tata Nexon 2022',
-          carOwner: 'Lisa Anderson',
-          status: 'active',
-          paymentStatus: 'paid',
-          totalAmount: 18000,
-          paidAmount: 18000,
-          pickupDate: '2024-03-19',
-          pickupTime: '08:00 AM',
-          dropDate: '2024-03-22',
-          dropTime: '08:00 AM',
-          pickupLocation: 'Pune Station',
-          dropLocation: 'Pune Station',
-          bookingDate: '2024-03-12T10:00:00',
-          days: 3,
-          currentLocation: 'Pune - Hinjewadi',
-        },
-      ];
-      setBookings(mockBookings);
-      setFilteredBookings(mockBookings);
-      setLoading(false);
-    }, 500);
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await adminService.getAllBookings({
+          status: filters.status !== 'all' ? filters.status : undefined,
+          paymentStatus: filters.paymentStatus !== 'all' ? filters.paymentStatus : undefined,
+        });
+        
+        // Extract bookings from response.data (backend returns { success: true, data: { bookings, ... } })
+        const bookingsData = response?.data?.bookings || response?.bookings || [];
+        
+        // Transform API response to match component structure
+        const transformedBookings = bookingsData.map((booking) => ({
+          id: booking._id || booking.id,
+          bookingId: booking.bookingId,
+          userId: booking.user?._id || booking.userId,
+          userName: booking.user?.name || booking.userName || 'N/A',
+          userEmail: booking.user?.email || booking.userEmail || 'N/A',
+          userPhone: booking.user?.phone || booking.userPhone || 'N/A',
+          guarantorId: booking.guarantor?._id || booking.guarantorId,
+          guarantorName: booking.guarantor?.name || booking.guarantorName,
+          carId: booking.car?._id || booking.carId,
+          carName: booking.car ? `${booking.car.brand || ''} ${booking.car.model || ''} ${booking.car.year || ''}`.trim() : booking.carName || 'N/A',
+          carOwner: booking.car?.owner || booking.carOwner || 'N/A',
+          status: booking.status,
+          paymentStatus: booking.paymentStatus,
+          totalAmount: booking.pricing?.totalPrice || booking.totalAmount || 0,
+          paidAmount: booking.paidAmount || 0,
+          refundAmount: booking.refundAmount,
+          pickupDate: booking.tripStart?.date || booking.pickupDate || booking.pickupDateTime,
+          pickupTime: booking.tripStart?.time || booking.pickupTime || (booking.pickupDateTime ? new Date(booking.pickupDateTime).toLocaleTimeString() : 'N/A'),
+          dropDate: booking.tripEnd?.date || booking.dropDate || booking.dropDateTime,
+          dropTime: booking.tripEnd?.time || booking.dropTime || (booking.dropDateTime ? new Date(booking.dropDateTime).toLocaleTimeString() : 'N/A'),
+          pickupLocation: booking.tripStart?.location || booking.pickupLocation || 'N/A',
+          dropLocation: booking.tripEnd?.location || booking.dropLocation || 'N/A',
+          bookingDate: booking.createdAt || booking.bookingDate,
+          days: booking.totalDays || booking.days || booking.duration || 0,
+          currentLocation: booking.currentLocation,
+          completedDate: booking.completedDate,
+          cancelledDate: booking.cancelledDate,
+          cancellationReason: booking.cancellationReason,
+          rating: booking.rating,
+        })) || [];
+        
+        setBookings(transformedBookings);
+        setFilteredBookings(transformedBookings);
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+        setError(err.response?.data?.message || 'Failed to fetch bookings');
+        setBookings([]);
+        setFilteredBookings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter and search bookings
@@ -267,8 +160,7 @@ const BookingListPage = () => {
           booking.bookingId.toLowerCase().includes(query) ||
           booking.userName.toLowerCase().includes(query) ||
           booking.userEmail.toLowerCase().includes(query) ||
-          booking.carName.toLowerCase().includes(query) ||
-          booking.carOwner.toLowerCase().includes(query)
+          booking.carName.toLowerCase().includes(query)
       );
     }
 
@@ -316,59 +208,184 @@ const BookingListPage = () => {
   }, [bookings, searchQuery, filters]);
 
   // Handle booking actions
-  const handleApprove = (bookingId) => {
-    setBookings((prevList) =>
-      prevList.map((booking) => {
-        if (booking.id === bookingId) {
-          return { ...booking, status: 'confirmed' };
-        }
-        return booking;
-      })
-    );
-  };
+  const handleApprove = async (bookingId) => {
+    try {
+      // Call backend API to update booking status to confirmed
+      const response = await adminService.updateBooking(bookingId, {
+        status: 'confirmed',
+      });
 
-  const handleReject = (bookingId) => {
-    setBookings((prevList) =>
-      prevList.map((booking) => {
-        if (booking.id === bookingId) {
-          return { ...booking, status: 'cancelled', cancellationReason: 'Rejected by admin' };
-        }
-        return booking;
-      })
-    );
-  };
-
-  const handleCancel = (bookingId) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      setBookings((prevList) =>
-        prevList.map((booking) => {
-          if (booking.id === bookingId) {
-            return {
-              ...booking,
-              status: 'cancelled',
-              cancellationReason: 'Cancelled by admin',
-            };
-          }
-          return booking;
-        })
-      );
+      if (response.success) {
+        // Update local state
+        setBookings((prevList) =>
+          prevList.map((booking) => {
+            if (booking.id === bookingId) {
+              return { ...booking, status: 'confirmed' };
+            }
+            return booking;
+          })
+        );
+        
+        // Show success message
+        alert('Booking approved successfully! Status changed to Confirmed.');
+      } else {
+        alert('Failed to approve booking. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error approving booking:', error);
+      alert(error.response?.data?.message || 'Failed to approve booking. Please try again.');
     }
   };
 
-  const handleProcessRefund = (bookingId) => {
-    if (window.confirm('Process refund for this booking?')) {
-      setBookings((prevList) =>
-        prevList.map((booking) => {
-          if (booking.id === bookingId) {
-            return {
-              ...booking,
-              paymentStatus: 'refunded',
-              refundAmount: booking.totalAmount,
-            };
-          }
-          return booking;
-        })
-      );
+  const handleReject = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to reject this booking?')) {
+      return;
+    }
+
+    try {
+      // Call backend API to update booking status to cancelled
+      const response = await adminService.updateBooking(bookingId, {
+        status: 'cancelled',
+        cancellationReason: 'Rejected by admin',
+      });
+
+      if (response.success) {
+        // Update local state
+        setBookings((prevList) =>
+          prevList.map((booking) => {
+            if (booking.id === bookingId) {
+              return { ...booking, status: 'cancelled', cancellationReason: 'Rejected by admin' };
+            }
+            return booking;
+          })
+        );
+        
+        // Show success message
+        alert('Booking rejected successfully!');
+      } else {
+        alert('Failed to reject booking. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      alert(error.response?.data?.message || 'Failed to reject booking. Please try again.');
+    }
+  };
+
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+
+    try {
+      // Call backend API to update booking status to cancelled
+      const response = await adminService.updateBooking(bookingId, {
+        status: 'cancelled',
+        cancellationReason: 'Cancelled by admin',
+      });
+
+      if (response.success) {
+        // Update local state
+        setBookings((prevList) =>
+          prevList.map((booking) => {
+            if (booking.id === bookingId) {
+              return {
+                ...booking,
+                status: 'cancelled',
+                cancellationReason: 'Cancelled by admin',
+                cancelledDate: new Date().toISOString(),
+              };
+            }
+            return booking;
+          })
+        );
+        
+        // Show success message
+        alert('Booking cancelled successfully!');
+      } else {
+        alert('Failed to cancel booking. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      alert(error.response?.data?.message || 'Failed to cancel booking. Please try again.');
+    }
+  };
+
+  const handleProcessRefund = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to process refund for this booking?')) {
+      return;
+    }
+
+    try {
+      // Get the booking to calculate refund amount
+      const booking = bookings.find(b => b.id === bookingId);
+      const refundAmount = booking?.paidAmount || booking?.totalAmount || 0;
+
+      // Call backend API to update payment status to refunded
+      const response = await adminService.updateBooking(bookingId, {
+        paymentStatus: 'refunded',
+        refundAmount: refundAmount,
+      });
+
+      if (response.success) {
+        // Update local state
+        setBookings((prevList) =>
+          prevList.map((booking) => {
+            if (booking.id === bookingId) {
+              return {
+                ...booking,
+                paymentStatus: 'refunded',
+                refundAmount: refundAmount,
+              };
+            }
+            return booking;
+          })
+        );
+        
+        // Show success message
+        alert('Refund processed successfully! Payment status updated to refunded. User side will reflect the changes on next refresh.');
+      } else {
+        alert('Failed to process refund. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error processing refund:', error);
+      alert(error.response?.data?.message || 'Failed to process refund. Please try again.');
+    }
+  };
+
+  const handleMarkAsComplete = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to mark this booking as completed?')) {
+      return;
+    }
+
+    try {
+      // Call backend API to update booking status to completed
+      const response = await adminService.updateBooking(bookingId, {
+        status: 'completed',
+      });
+
+      if (response.success) {
+        // Update local state
+        setBookings((prevList) =>
+          prevList.map((booking) => {
+            if (booking.id === bookingId) {
+              return {
+                ...booking,
+                status: 'completed',
+                completedDate: new Date().toISOString(),
+              };
+            }
+            return booking;
+          })
+        );
+        
+        // Show success message
+        alert('Booking marked as completed! User will see it in completed bookings.');
+      } else {
+        alert('Failed to mark booking as completed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error marking booking as complete:', error);
+      alert(error.response?.data?.message || 'Failed to mark booking as completed. Please try again.');
     }
   };
 
@@ -377,9 +394,91 @@ const BookingListPage = () => {
     setShowBookingDetail(true);
   };
 
+  // Export bookings to CSV (Excel-readable)
   const handleExport = () => {
-    // In real app, this would generate and download CSV/Excel
-    console.log('Exporting bookings data...');
+    if (!bookings || bookings.length === 0) {
+      alert('No bookings available to export.');
+      return;
+    }
+
+    // Helper to safely format CSV values
+    const escapeCsvValue = (value) => {
+      if (value === null || value === undefined) return '';
+      const stringValue = String(value);
+      // Escape double quotes by doubling them
+      if (/[",\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const headers = [
+      'Booking ID',
+      'Status',
+      'Payment Status',
+      'User Name',
+      'User Email',
+      'User Phone',
+      'Car Name',
+      'Pickup Date',
+      'Pickup Time',
+      'Drop Date',
+      'Drop Time',
+      'Days',
+      'Total Amount',
+      'Paid Amount',
+      'Refund Amount',
+      'Booked At',
+      'Completed Date',
+      'Cancelled Date',
+      'Cancellation Reason',
+      'Current Location',
+      'Guarantor Name',
+      'Guarantor ID',
+    ];
+
+    const rows = bookings.map((b) => [
+      b.bookingId || '',
+      b.status || '',
+      b.paymentStatus || '',
+      b.userName || '',
+      b.userEmail || '',
+      b.userPhone || '',
+      b.carName || '',
+      b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : '',
+      b.pickupTime ? formatTimeToAMPM(b.pickupTime) : '',
+      b.dropDate ? new Date(b.dropDate).toLocaleDateString() : '',
+      b.dropTime ? formatTimeToAMPM(b.dropTime) : '',
+      b.days ?? '',
+      typeof b.totalAmount === 'number' ? b.totalAmount : '',
+      typeof b.paidAmount === 'number' ? b.paidAmount : '',
+      typeof b.refundAmount === 'number' ? b.refundAmount : '',
+      b.bookingDate ? new Date(b.bookingDate).toLocaleString() : '',
+      b.completedDate ? new Date(b.completedDate).toLocaleString() : '',
+      b.cancelledDate ? new Date(b.cancelledDate).toLocaleString() : '',
+      b.cancellationReason || '',
+      b.currentLocation || '',
+      b.guarantorName || '',
+      b.guarantorId || '',
+    ]);
+
+    const csvLines = [
+      headers.map(escapeCsvValue).join(','),
+      ...rows.map((row) => row.map(escapeCsvValue).join(',')),
+    ];
+
+    const csvContent = csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    link.download = `bookings-${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Get status badge color
@@ -442,6 +541,23 @@ const BookingListPage = () => {
             style={{ borderColor: theme.colors.primary }}
           ></div>
           <p className="text-gray-600">Loading bookings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
+            style={{ backgroundColor: theme.colors.primary }}
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -516,7 +632,7 @@ const BookingListPage = () => {
               </svg>
               <input
                 type="text"
-                placeholder="Search by booking ID, user name, email, car name, or owner..."
+                placeholder="Search by booking ID, user name, email, or car name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -628,16 +744,31 @@ const BookingListPage = () => {
                         {booking.bookingId} - {booking.carName}
                       </h3>
                       <p className="text-sm text-gray-500 mb-2">
-                        {booking.userName} • {booking.userEmail}
+                        {booking.userName} • {booking.userEmail} {booking.userPhone && `• ${booking.userPhone}`}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.status)}`}>
                         {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.paymentStatus)}`}>
-                        Payment: {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
-                      </span>
+                      {booking.paymentStatus === 'partial' ? (
+                        <>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor('paid')}`}>
+                            Advance Done
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor('pending')}`}>
+                            Remaining amount is Pending
+                          </span>
+                        </>
+                      ) : booking.paymentStatus === 'pending' ? (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.paymentStatus)}`}>
+                          Payment : Remaining Amount Pending
+                        </span>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.paymentStatus)}`}>
+                          Payment: {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -648,21 +779,24 @@ const BookingListPage = () => {
                       <p className="text-sm font-semibold text-gray-900">
                         {new Date(booking.pickupDate).toLocaleDateString()}
                       </p>
-                      <p className="text-xs text-gray-500">{booking.pickupTime}</p>
-                      <p className="text-xs text-gray-500">{booking.pickupLocation}</p>
+                      <p className="text-xs text-gray-500">{formatTimeToAMPM(booking.pickupTime)}</p>
+                      {booking.pickupLocation && booking.pickupLocation !== 'Location to be confirmed' && booking.pickupLocation !== 'N/A' && (
+                        <p className="text-xs text-gray-500">{booking.pickupLocation}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Drop</p>
                       <p className="text-sm font-semibold text-gray-900">
                         {new Date(booking.dropDate).toLocaleDateString()}
                       </p>
-                      <p className="text-xs text-gray-500">{booking.dropTime}</p>
-                      <p className="text-xs text-gray-500">{booking.dropLocation}</p>
+                      <p className="text-xs text-gray-500">{formatTimeToAMPM(booking.dropTime)}</p>
+                      {booking.dropLocation && booking.dropLocation !== 'Location to be confirmed' && booking.dropLocation !== 'N/A' && (
+                        <p className="text-xs text-gray-500">{booking.dropLocation}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Duration</p>
                       <p className="text-sm font-semibold text-gray-900">{booking.days} days</p>
-                      <p className="text-xs text-gray-500">Owner: {booking.carOwner}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Amount</p>
@@ -727,20 +861,28 @@ const BookingListPage = () => {
                   )}
                   
                   {(booking.status === 'confirmed' || booking.status === 'active') && (
-                    <button
-                      onClick={() => handleCancel(booking.id)}
-                      className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Cancel Booking
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleCancel(booking.id)}
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Cancel Booking
+                      </button>
+                      <button
+                        onClick={() => handleMarkAsComplete(booking.id)}
+                        className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Mark as Complete
+                      </button>
+                    </>
                   )}
                   
-                  {booking.status === 'cancelled' && booking.paymentStatus === 'paid' && booking.paymentStatus !== 'refunded' && (
+                  {booking.status === 'cancelled' && booking.paymentStatus !== 'refunded' && (
                     <button
                       onClick={() => handleProcessRefund(booking.id)}
                       className="w-full px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                     >
-                      Process Refund
+                      Refund
                     </button>
                   )}
                 </div>
@@ -779,6 +921,58 @@ const BookingListPage = () => {
  */
 const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, onProcessRefund }) => {
   const [activeTab, setActiveTab] = useState('details');
+  const [paymentStatus, setPaymentStatus] = useState(booking.paymentStatus || 'pending');
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+
+  // Update payment status when booking prop changes
+  useEffect(() => {
+    setPaymentStatus(booking.paymentStatus || 'pending');
+  }, [booking.paymentStatus]);
+
+  // Calculate remaining amount
+  const remainingAmount = (booking.totalAmount || 0) - (booking.paidAmount || 0);
+  const advanceAmount = booking.paidAmount || 0;
+  
+  // Determine advance payment status
+  const advancePaymentStatus = advanceAmount > 0 ? 'done' : 'pending';
+  
+  // Determine remaining payment status based on overall payment status
+  // If payment status is "paid", remaining payment is done, otherwise check remaining amount
+  const remainingPaymentStatus = paymentStatus === 'paid' ? 'done' : (remainingAmount <= 0 ? 'done' : 'pending');
+
+  // Handle payment status update
+  const handlePaymentStatusUpdate = async (newStatus) => {
+    if (!window.confirm(`Are you sure you want to change payment status to "${newStatus}"?`)) {
+      return;
+    }
+
+    try {
+      setIsUpdatingPayment(true);
+      const response = await adminService.updateBooking(booking.id, {
+        paymentStatus: newStatus,
+      });
+
+      if (response.success) {
+        setPaymentStatus(newStatus);
+        // Update booking object locally
+        booking.paymentStatus = newStatus;
+        
+        // If status is changed to "paid", update paidAmount to totalAmount
+        if (newStatus === 'paid' && booking.paidAmount < booking.totalAmount) {
+          booking.paidAmount = booking.totalAmount;
+        }
+        
+        alert('Payment status updated successfully! User side will reflect the changes on next refresh.');
+      } else {
+        alert('Failed to update payment status. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      alert(error.response?.data?.message || 'Failed to update payment status. Please try again.');
+    } finally {
+      setIsUpdatingPayment(false);
+    }
+  };
 
   if (!booking) return null;
 
@@ -831,14 +1025,10 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 {/* Car Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Car Information</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-700">Car</label>
                       <p className="text-sm text-gray-900">{booking.carName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Owner</label>
-                      <p className="text-sm text-gray-900">{booking.carOwner}</p>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700">Status</label>
@@ -852,18 +1042,22 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-700">Pickup Date & Time</label>
+                      <label className="text-xs font-medium text-gray-700">Trip Start Date & Time</label>
                       <p className="text-sm text-gray-900">
-                        {new Date(booking.pickupDate).toLocaleDateString()} at {booking.pickupTime}
+                        {new Date(booking.pickupDate).toLocaleDateString()} at {formatTimeToAMPM(booking.pickupTime)}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">{booking.pickupLocation}</p>
+                      {booking.pickupLocation && booking.pickupLocation !== 'Location to be confirmed' && booking.pickupLocation !== 'N/A' && (
+                        <p className="text-xs text-gray-500 mt-1">{booking.pickupLocation}</p>
+                      )}
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-700">Drop Date & Time</label>
+                      <label className="text-xs font-medium text-gray-700">Trip End Date & Time</label>
                       <p className="text-sm text-gray-900">
-                        {new Date(booking.dropDate).toLocaleDateString()} at {booking.dropTime}
+                        {new Date(booking.dropDate).toLocaleDateString()} at {formatTimeToAMPM(booking.dropTime)}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">{booking.dropLocation}</p>
+                      {booking.dropLocation && booking.dropLocation !== 'Location to be confirmed' && booking.dropLocation !== 'N/A' && (
+                        <p className="text-xs text-gray-500 mt-1">{booking.dropLocation}</p>
+                      )}
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700">Duration</label>
@@ -923,7 +1117,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700">User ID</label>
-                      <p className="text-sm text-gray-900">{booking.userId}</p>
+                      <p className="text-sm text-gray-900 font-mono">{formatUserId(booking.userId)}</p>
                     </div>
                   </div>
                 </div>
@@ -950,11 +1144,25 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
             {activeTab === 'payment' && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-gray-700">Payment Status</label>
-                    <p className="text-sm text-gray-900 capitalize">{booking.paymentStatus}</p>
-                  </div>
+                
+                {/* Payment Status Dropdown */}
+                <div className="mb-6">
+                  <label className="text-xs font-medium text-gray-700 mb-2 block">Payment Status</label>
+                  <select
+                    value={paymentStatus}
+                    onChange={(e) => handlePaymentStatusUpdate(e.target.value)}
+                    disabled={isUpdatingPayment}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                  {isUpdatingPayment && (
+                    <p className="text-xs text-gray-500 mt-1">Updating...</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-xs font-medium text-gray-700">Total Amount</label>
                     <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
@@ -963,15 +1171,46 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Paid Amount</label>
-                    <p className="text-sm text-gray-900">₹{booking.paidAmount.toLocaleString()}</p>
+                    <p className="text-sm text-gray-900">₹{advanceAmount.toLocaleString()}</p>
                   </div>
-                  {booking.refundAmount && (
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Refund Amount</label>
-                      <p className="text-sm text-gray-900">₹{booking.refundAmount.toLocaleString()}</p>
-                    </div>
-                  )}
                 </div>
+
+                {/* Advance Payment Status */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Advance Payment Status</label>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      advancePaymentStatus === 'done' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {advancePaymentStatus === 'done' ? 'Done' : 'Pending'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">Advance Amount: ₹{advanceAmount.toLocaleString()}</p>
+                </div>
+
+                {/* Remaining Payment Status */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Remaining Payment Status</label>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      remainingPaymentStatus === 'done' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {remainingPaymentStatus === 'done' ? 'Done' : 'Pending'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">Remaining Amount: ₹{remainingAmount.toLocaleString()}</p>
+                </div>
+
+                {booking.refundAmount && booking.refundAmount > 0 && (
+                  <div className="mt-4">
+                    <label className="text-xs font-medium text-gray-700">Refund Amount</label>
+                    <p className="text-sm text-gray-900">₹{booking.refundAmount.toLocaleString()}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1029,8 +1268,8 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
           {booking.status === 'pending' && (
             <>
               <button
-                onClick={() => {
-                  onApprove(booking.id);
+                onClick={async () => {
+                  await onApprove(booking.id);
                   onClose();
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -1038,8 +1277,8 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 Approve
               </button>
               <button
-                onClick={() => {
-                  onReject(booking.id);
+                onClick={async () => {
+                  await onReject(booking.id);
                   onClose();
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -1050,8 +1289,8 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
           )}
           {(booking.status === 'confirmed' || booking.status === 'active') && (
             <button
-              onClick={() => {
-                onCancel(booking.id);
+              onClick={async () => {
+                await onCancel(booking.id);
                 onClose();
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"

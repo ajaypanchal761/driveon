@@ -96,7 +96,15 @@ export const authService = {
       });
       return response.data;
     } catch (error) {
-      console.error('sendLoginOTP error:', error);
+      // Don't log expected errors (user not found) to console
+      const isUserNotFound = error.response?.status === 400 && (
+        error.response?.data?.message?.toLowerCase().includes('user not found') ||
+        error.response?.data?.message?.toLowerCase().includes('signup first')
+      );
+      
+      if (!isUserNotFound) {
+        console.error('sendLoginOTP error:', error);
+      }
       throw error;
     }
   },

@@ -3,27 +3,27 @@ import { API_ENDPOINTS } from '../constants';
 
 /**
  * Payment Service
- * Handles all payment-related API calls
+ * Handles all payment-related API calls (PhonePe integration)
  */
 
 export const paymentService = {
   /**
-   * Create payment order (Razorpay)
-   * @param {Object} data - Payment data (amount, bookingId, etc.)
+   * Create payment request (PhonePe)
+   * @param {Object} data - Payment data (bookingId, amount)
    * @returns {Promise}
    */
-  createOrder: async (data) => {
-    const response = await api.post(API_ENDPOINTS.PAYMENT.CREATE_ORDER, data);
+  createPayment: async (data) => {
+    const response = await api.post(API_ENDPOINTS.PAYMENT.CREATE, data);
     return response.data;
   },
 
   /**
-   * Verify payment
-   * @param {Object} data - Payment verification data
+   * Check payment status
+   * @param {string} transactionId - Transaction ID
    * @returns {Promise}
    */
-  verifyPayment: async (data) => {
-    const response = await api.post(API_ENDPOINTS.PAYMENT.VERIFY, data);
+  checkPaymentStatus: async (transactionId) => {
+    const response = await api.get(`${API_ENDPOINTS.PAYMENT.STATUS}/${transactionId}`);
     return response.data;
   },
 };

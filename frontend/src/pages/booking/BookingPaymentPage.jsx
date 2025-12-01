@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
+import razorpayService from '../../services/razorpay.service';
+import bookingService from '../../services/booking.service';
+import { useSelector } from 'react-redux';
 
 /**
  * BookingPaymentPage Component
@@ -15,16 +18,9 @@ const BookingPaymentPage = () => {
   // Get booking data from navigation state
   const bookingData = location.state;
 
-  // Payment form state
-  const [paymentMethod, setPaymentMethod] = useState('card'); // 'card', 'upi', 'netbanking', 'wallet'
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [walletType, setWalletType] = useState('paytm'); // 'paytm', 'phonepe', 'gpay'
+  const { user } = useSelector((state) => state.auth);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [bookingId, setBookingId] = useState(null);
 
   // Redirect if no booking data
   useEffect(() => {
@@ -39,81 +35,232 @@ const BookingPaymentPage = () => {
 
   const { car, priceDetails, paymentOption } = bookingData;
 
+  // Get car image URL - handle both car.image and car.images (array or string)
+  const getCarImageUrl = () => {
+    if (car.image) {
+      return car.image;
+    }
+    if (car.images) {
+      // If images is an array, get first image
+      if (Array.isArray(car.images)) {
+        const firstImage = car.images[0];
+        return typeof firstImage === 'string' ? firstImage : (firstImage?.url || firstImage?.path || null);
+      }
+      // If images is a string, use it directly
+      return car.images;
+    }
+    return null;
+  };
+
+  const carImageUrl = getCarImageUrl();
+
   // Calculate payment amount
   const paymentAmount = paymentOption === 'advance' 
     ? priceDetails.advancePayment
     : priceDetails.totalPrice;
 
-  // Handle payment submission
+  // Create booking first, then proceed to payment
   const handlePayment = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // Validate payment details based on method
-    if (paymentMethod === 'card') {
-      if (!cardNumber || !cardName || !cardExpiry || !cardCvv) {
-        alert('Please fill all card details');
-        setIsProcessing(false);
-        return;
-      }
-    } else if (paymentMethod === 'upi') {
-      if (!upiId) {
-        alert('Please enter UPI ID');
-        setIsProcessing(false);
-        return;
-      }
-    } else if (paymentMethod === 'netbanking') {
-      if (!bankName) {
-        alert('Please select bank');
-        setIsProcessing(false);
-        return;
-      }
-    }
+    try {
+      // Step 1: Create booking if not already created
+      let booking;
+      if (!bookingId) {
+        console.log('📝 Creating booking...');
+        // Validate required data
+        const pickupDate = bookingData.pickupDate || bookingData.tripStart?.date;
+        const dropDate = bookingData.dropDate || bookingData.tripEnd?.date;
+        
+        if (!pickupDate) {
+          throw new Error('Pickup date is required');
+        }
+        if (!dropDate) {
+          throw new Error('Drop date is required');
+        }
 
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      // Navigate to confirmation page
-      navigate(`/booking/${carId}/confirm`, {
-        state: {
-          ...bookingData,
-          paymentMethod,
-          paymentAmount,
-          transactionId: `TXN${Date.now()}`,
+        // Validate dates on frontend before sending
+        const startDateObj = new Date(pickupDate);
+        const endDateObj = new Date(dropDate);
+        
+        // If same date, check times
+        if (startDateObj.toDateString() === endDateObj.toDateString()) {
+          const pickupTime = bookingData.pickupTime || bookingData.tripStart?.time || '10:00';
+          const dropTime = bookingData.dropTime || bookingData.tripEnd?.time || '18:00';
+          
+          if (pickupTime >= dropTime) {
+            throw new Error('Drop time must be after pickup time when dates are the same');
+          }
+        } else if (endDateObj <= startDateObj) {
+          throw new Error('Drop date must be after pickup date');
+        }
+
+        // Use default location if not provided
+        const pickupLocation = bookingData.tripStart?.location || bookingData.location?.start || bookingData.pickupLocation || 'Location to be confirmed';
+        const dropLocation = bookingData.tripEnd?.location || bookingData.location?.end || bookingData.dropLocation || 'Location to be confirmed';
+
+        const bookingDataToSend = {
+          carId: carId,
+          tripStart: {
+            location: pickupLocation,
+            coordinates: bookingData.tripStart?.coordinates || bookingData.pickupCoordinates || {},
+            date: pickupDate,
+            time: bookingData.pickupTime || bookingData.tripStart?.time || '10:00',
+          },
+          tripEnd: {
+            location: dropLocation,
+            coordinates: bookingData.tripEnd?.coordinates || bookingData.dropCoordinates || {},
+            date: dropDate,
+            time: bookingData.dropTime || bookingData.tripEnd?.time || '18:00',
+          },
+          paymentOption: paymentOption || 'full',
+          specialRequests: bookingData.specialRequests || '',
+        };
+
+        console.log('📝 Booking data to send:', bookingDataToSend);
+        console.log('📅 Date validation:', {
+          pickupDate,
+          dropDate,
+          pickupTime: bookingDataToSend.tripStart.time,
+          dropTime: bookingDataToSend.tripEnd.time,
+        });
+
+        const bookingResponse = await bookingService.createBooking(bookingDataToSend);
+        console.log('📦 Booking creation response:', bookingResponse);
+        
+        if (bookingResponse.success && bookingResponse.data?.booking) {
+          booking = bookingResponse.data.booking;
+          setBookingId(booking._id);
+          console.log('✅ Booking created:', {
+            bookingId: booking.bookingId,
+            _id: booking._id,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+          });
+        } else {
+          const errorMsg = bookingResponse.message || bookingResponse.error || 'Failed to create booking';
+          console.error('❌ Booking creation failed:', bookingResponse);
+          throw new Error(errorMsg);
+        }
+      } else {
+        // Get existing booking
+        const bookingResponse = await bookingService.getBooking(bookingId);
+        if (bookingResponse.success) {
+          booking = bookingResponse.data.booking;
+        }
+      }
+
+      // Step 2: Process payment through Razorpay
+      if (!booking || !booking._id) {
+        throw new Error('Booking ID is missing. Cannot proceed with payment.');
+      }
+      
+      console.log('💳 Processing payment through Razorpay...');
+      console.log('📦 Payment details:', {
+        bookingId: booking._id,
+        bookingIdString: booking._id.toString(),
+        amount: paymentAmount,
+        car: `${car.brand} ${car.model}`,
+      });
+      
+      await razorpayService.processBookingPayment({
+        bookingId: booking._id.toString(),
+        amount: paymentAmount,
+        description: `Car booking payment - ${car.brand} ${car.model}`,
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        onSuccess: (verificationResult) => {
+          console.log('✅ Payment successful:', verificationResult);
+          setIsProcessing(false);
+          
+          // Show success message briefly, then redirect to My Bookings
+          alert('Payment successful! Your booking has been confirmed.');
+          
+          // Navigate to My Bookings page
+          navigate('/bookings', {
+            replace: true, // Replace current history entry
+          });
+        },
+        onError: (error) => {
+          setIsProcessing(false);
+          
+          // Handle payment cancellation silently (user intentionally closed the modal)
+          if (error.message === 'PAYMENT_CANCELLED') {
+            console.log('ℹ️ Payment cancelled by user');
+            return; // Don't show any error for user cancellation
+          }
+          
+          // Log other errors for debugging
+          console.error('❌ Payment error:', error);
+          
+          // Show error message for actual payment failures
+          alert(error.message || 'Payment failed. Please try again.');
         },
       });
-    }, 2000);
+    } catch (error) {
+      console.error('❌ Error in payment process:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack,
+      });
+      
+      // Log full error response for debugging
+      if (error.response?.data) {
+        console.error('📋 Full error response:', JSON.stringify(error.response.data, null, 2));
+      }
+      
+      setIsProcessing(false);
+      
+      // Show user-friendly error message
+      let errorMessage = 'Failed to process payment. Please try again.';
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        // Handle validation errors with details
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          console.error('🔍 Validation errors:', errorData.errors);
+          const validationErrors = errorData.errors.map(err => {
+            const field = err.field || 'Unknown field';
+            const msg = err.message || 'Invalid value';
+            const value = err.value !== undefined ? ` (value: ${JSON.stringify(err.value)})` : '';
+            return `${field}: ${msg}${value}`;
+          }).join('\n');
+          errorMessage = `Validation Error:\n${validationErrors}`;
+        } 
+        // Handle error with details object
+        else if (errorData.details) {
+          const detailsStr = typeof errorData.details === 'object' 
+            ? JSON.stringify(errorData.details, null, 2)
+            : errorData.details;
+          errorMessage = `${errorData.message || 'Validation Error'}\n\nDetails:\n${detailsStr}`;
+        }
+        // Handle simple error message
+        else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+        // Handle error field
+        else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Show alert with error message
+      alert(errorMessage);
+    }
   };
 
-  // Format card number with spaces
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  // Format expiry date
-  const formatExpiry = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
 
   return (
     <div className="min-h-screen pb-24 bg-white">
-      {/* Header */}
-      <header className="text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
+      {/* Header - Sticky */}
+      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md" style={{ backgroundColor: theme.colors.primary }}>
         <div className="relative px-4 pt-3 pb-2">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -134,7 +281,29 @@ const BookingPaymentPage = () => {
       {/* Car Summary Card */}
       <div className="px-4 pt-4 pb-2">
         <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-          <img src={car.image} alt={`${car.brand} ${car.model}`} className="w-16 h-16 object-contain" />
+          {carImageUrl ? (
+            <img 
+              src={carImageUrl} 
+              alt={`${car.brand} ${car.model}`} 
+              className="w-16 h-16 object-contain rounded-lg bg-gray-50 p-1 flex-shrink-0"
+              onError={(e) => {
+                // Hide image on error and show placeholder
+                e.target.style.display = 'none';
+                const placeholder = e.target.nextElementSibling;
+                if (placeholder) placeholder.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          {/* Placeholder icon when image fails or doesn't exist */}
+          <div 
+            className="w-16 h-16 flex items-center justify-center bg-gray-100 rounded-lg flex-shrink-0"
+            style={{ display: carImageUrl ? 'none' : 'flex' }}
+          >
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+            </svg>
+          </div>
           <div className="flex-1">
             <h3 className="font-bold" style={{ color: theme.colors.textPrimary }}>{car.brand} {car.model}</h3>
             <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
@@ -177,250 +346,14 @@ const BookingPaymentPage = () => {
         </div>
       </div>
 
-      {/* Payment Method Selection */}
+      {/* Payment Info */}
       <form onSubmit={handlePayment} className="px-4 py-4 space-y-4">
         <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-          <h2 className="font-semibold mb-3" style={{ color: theme.colors.primary }}>Payment Method</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <label className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer border transition-colors ${
-              paymentMethod === 'card' ? 'bg-purple-50' : ''
-            }`} style={{ borderColor: paymentMethod === 'card' ? theme.colors.primary : theme.colors.borderLight }}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="card"
-                checked={paymentMethod === 'card'}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-4 h-4"
-                style={{ accentColor: theme.colors.primary }}
-              />
-              <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>Card</span>
-            </label>
-            <label className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer border transition-colors ${
-              paymentMethod === 'upi' ? 'bg-purple-50' : ''
-            }`} style={{ borderColor: paymentMethod === 'upi' ? theme.colors.primary : theme.colors.borderLight }}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="upi"
-                checked={paymentMethod === 'upi'}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-4 h-4"
-                style={{ accentColor: theme.colors.primary }}
-              />
-              <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>UPI</span>
-            </label>
-            <label className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer border transition-colors ${
-              paymentMethod === 'netbanking' ? 'bg-purple-50' : ''
-            }`} style={{ borderColor: paymentMethod === 'netbanking' ? theme.colors.primary : theme.colors.borderLight }}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="netbanking"
-                checked={paymentMethod === 'netbanking'}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-4 h-4"
-                style={{ accentColor: theme.colors.primary }}
-              />
-              <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>Net Banking</span>
-            </label>
-            <label className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer border transition-colors ${
-              paymentMethod === 'wallet' ? 'bg-purple-50' : ''
-            }`} style={{ borderColor: paymentMethod === 'wallet' ? theme.colors.primary : theme.colors.borderLight }}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="wallet"
-                checked={paymentMethod === 'wallet'}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-4 h-4"
-                style={{ accentColor: theme.colors.primary }}
-              />
-              <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>Wallet</span>
-            </label>
-          </div>
+          <h2 className="font-semibold mb-3" style={{ color: theme.colors.primary }}>Payment Information</h2>
+          <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
+            Click "Pay Now" to proceed with Razorpay payment. You can pay using Card, UPI, Net Banking, or Wallet.
+          </p>
         </div>
-
-        {/* Card Payment Form */}
-        {paymentMethod === 'card' && (
-          <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-            <h3 className="font-semibold mb-3" style={{ color: theme.colors.primary }}>Card Details</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm mb-1 block" style={{ color: theme.colors.textSecondary }}>Card Number</label>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                  maxLength={19}
-                  className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                  style={{ 
-                    borderColor: theme.colors.borderDefault,
-                    color: theme.colors.textPrimary,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  placeholder="1234 5678 9012 3456"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm mb-1 block" style={{ color: theme.colors.textSecondary }}>Cardholder Name</label>
-                <input
-                  type="text"
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                  style={{ 
-                    borderColor: theme.colors.borderDefault,
-                    color: theme.colors.textPrimary,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-sm mb-1 block" style={{ color: theme.colors.textSecondary }}>Expiry</label>
-                  <input
-                    type="text"
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                    maxLength={5}
-                    className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                    style={{ 
-                      borderColor: theme.colors.borderDefault,
-                      color: theme.colors.textPrimary,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                    placeholder="MM/YY"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm mb-1 block" style={{ color: theme.colors.textSecondary }}>CVV</label>
-                  <input
-                    type="text"
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    maxLength={3}
-                    className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                    style={{ 
-                      borderColor: theme.colors.borderDefault,
-                      color: theme.colors.textPrimary,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                    placeholder="123"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* UPI Payment Form */}
-        {paymentMethod === 'upi' && (
-          <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-            <h3 className="font-semibold mb-3" style={{ color: theme.colors.primary }}>UPI Details</h3>
-            <div>
-              <label className="text-sm mb-1 block" style={{ color: theme.colors.textSecondary }}>UPI ID</label>
-              <input
-                type="text"
-                value={upiId}
-                onChange={(e) => setUpiId(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                style={{ 
-                  borderColor: theme.colors.borderDefault,
-                  color: theme.colors.textPrimary,
-                }}
-                onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                placeholder="yourname@paytm"
-                required
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Net Banking Form */}
-        {paymentMethod === 'netbanking' && (
-          <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-            <h3 className="font-semibold mb-3" style={{ color: theme.colors.primary }}>Select Bank</h3>
-            <div>
-              <label className="text-sm mb-1 block" style={{ color: theme.colors.textSecondary }}>Bank Name</label>
-              <select
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm focus:outline-none transition-colors"
-                style={{ 
-                  borderColor: theme.colors.borderDefault,
-                  color: theme.colors.textPrimary,
-                }}
-                onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                required
-              >
-                <option value="">Select Bank</option>
-                <option value="sbi">State Bank of India</option>
-                <option value="hdfc">HDFC Bank</option>
-                <option value="icici">ICICI Bank</option>
-                <option value="axis">Axis Bank</option>
-                <option value="pnb">Punjab National Bank</option>
-                <option value="bob">Bank of Baroda</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Wallet Form */}
-        {paymentMethod === 'wallet' && (
-          <div className="bg-white rounded-lg p-4 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
-            <h3 className="font-semibold mb-3" style={{ color: theme.colors.primary }}>Select Wallet</h3>
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors" style={{ borderColor: walletType === 'paytm' ? theme.colors.primary : theme.colors.borderLight }}>
-                <input
-                  type="radio"
-                  name="walletType"
-                  value="paytm"
-                  checked={walletType === 'paytm'}
-                  onChange={(e) => setWalletType(e.target.value)}
-                  className="w-4 h-4"
-                  style={{ accentColor: theme.colors.primary }}
-                />
-                <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>Paytm</span>
-              </label>
-              <label className="flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors" style={{ borderColor: walletType === 'phonepe' ? theme.colors.primary : theme.colors.borderLight }}>
-                <input
-                  type="radio"
-                  name="walletType"
-                  value="phonepe"
-                  checked={walletType === 'phonepe'}
-                  onChange={(e) => setWalletType(e.target.value)}
-                  className="w-4 h-4"
-                  style={{ accentColor: theme.colors.primary }}
-                />
-                <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>PhonePe</span>
-              </label>
-              <label className="flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors" style={{ borderColor: walletType === 'gpay' ? theme.colors.primary : theme.colors.borderLight }}>
-                <input
-                  type="radio"
-                  name="walletType"
-                  value="gpay"
-                  checked={walletType === 'gpay'}
-                  onChange={(e) => setWalletType(e.target.value)}
-                  className="w-4 h-4"
-                  style={{ accentColor: theme.colors.primary }}
-                />
-                <span className="text-sm font-medium" style={{ color: theme.colors.textPrimary }}>Google Pay</span>
-              </label>
-            </div>
-          </div>
-        )}
 
         {/* Security Notice */}
         <div className="bg-purple-50 rounded-lg p-3 border" style={{ borderColor: theme.colors.primary + '30' }}>
@@ -455,7 +388,7 @@ const BookingPaymentPage = () => {
                 boxShadow: '0 4px 14px 0 rgba(255, 255, 255, 0.3)',
               }}
             >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
+              {isProcessing ? 'Processing...' : 'Proceed to Payment'}
             </button>
           </div>
         </div>

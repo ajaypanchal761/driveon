@@ -163,6 +163,74 @@ export const userService = {
       throw error;
     }
   },
+
+  /**
+   * Get My Guarantor Requests
+   * @returns {Promise}
+   */
+  getMyGuarantorRequests: async () => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.get(API_ENDPOINTS.USER.GUARANTOR_REQUESTS || '/user/guarantor-requests');
+      return response.data;
+    } catch (error) {
+      console.error('Get guarantor requests error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Guarantor Request Details
+   * @param {String} requestId - Request ID
+   * @returns {Promise}
+   */
+  getGuarantorRequestDetails: async (requestId) => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.get(`${API_ENDPOINTS.USER.GUARANTOR_REQUESTS || '/user/guarantor-requests'}/${requestId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get guarantor request details error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Accept Guarantor Request
+   * @param {String} requestId - Request ID
+   * @returns {Promise}
+   */
+  acceptGuarantorRequest: async (requestId) => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.post(`${API_ENDPOINTS.USER.GUARANTOR_REQUESTS || '/user/guarantor-requests'}/${requestId}/accept`);
+      return response.data;
+    } catch (error) {
+      console.error('Accept guarantor request error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reject Guarantor Request
+   * @param {String} requestId - Request ID
+   * @param {String} reason - Rejection reason (optional)
+   * @returns {Promise}
+   */
+  rejectGuarantorRequest: async (requestId, reason) => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.post(`${API_ENDPOINTS.USER.GUARANTOR_REQUESTS || '/user/guarantor-requests'}/${requestId}/reject`, { reason });
+      return response.data;
+    } catch (error) {
+      console.error('Reject guarantor request error:', error);
+      throw error;
+    }
+  },
 };
 
 export default userService;

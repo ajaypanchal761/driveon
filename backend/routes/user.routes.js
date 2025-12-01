@@ -2,6 +2,12 @@ import express from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { getProfile, updateProfile, uploadPhoto, getKYCStatus, updateLocation } from '../controllers/user.controller.js';
+import {
+  getMyGuarantorRequests,
+  getGuarantorRequestDetails,
+  acceptGuarantorRequest,
+  rejectGuarantorRequest,
+} from '../controllers/user.guarantor.controller.js';
 
 const router = express.Router();
 
@@ -54,6 +60,26 @@ router.get('/user/kyc-status', getKYCStatus);
 
 // Location update route
 router.post('/user/update-location', updateLocation);
+
+// ============================================
+// GUARANTOR REQUEST ROUTES - PROTECTED
+// ============================================
+
+// Get My Guarantor Requests - PROTECTED
+// Route: GET /api/user/guarantor-requests
+router.get('/user/guarantor-requests', getMyGuarantorRequests);
+
+// Get Guarantor Request Details - PROTECTED
+// Route: GET /api/user/guarantor-requests/:id
+router.get('/user/guarantor-requests/:id', getGuarantorRequestDetails);
+
+// Accept Guarantor Request - PROTECTED
+// Route: POST /api/user/guarantor-requests/:id/accept
+router.post('/user/guarantor-requests/:id/accept', acceptGuarantorRequest);
+
+// Reject Guarantor Request - PROTECTED
+// Route: POST /api/user/guarantor-requests/:id/reject
+router.post('/user/guarantor-requests/:id/reject', rejectGuarantorRequest);
 
 export default router;
 

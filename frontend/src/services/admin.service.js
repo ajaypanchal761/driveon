@@ -293,6 +293,81 @@ export const adminService = {
   },
 
   /**
+   * Get All Bookings (Admin)
+   * @param {Object} params - Query parameters (page, limit, status, paymentStatus, etc.)
+   * @returns {Promise}
+   */
+  getAllBookings: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/bookings', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get all bookings (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Booking by ID (Admin)
+   * @param {String} bookingId - Booking ID
+   * @returns {Promise}
+   */
+  getBookingById: async (bookingId) => {
+    try {
+      const response = await api.get(`/admin/bookings/${bookingId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get booking by ID (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update Booking (Admin)
+   * @param {String} bookingId - Booking ID
+   * @param {Object} data - Booking update data (status, adminNotes, etc.)
+   * @returns {Promise}
+   */
+  updateBooking: async (bookingId, data) => {
+    try {
+      const response = await api.patch(`/admin/bookings/${bookingId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Update booking (admin) error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Active Bookings with Tracking (Admin)
+   * @returns {Promise}
+   */
+  getActiveBookingsWithTracking: async () => {
+    try {
+      const response = await api.get('/admin/bookings/active/tracking');
+      return response.data;
+    } catch (error) {
+      console.error('Get active bookings with tracking error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Booking Statistics (Admin)
+   * @param {Object} params - Query parameters (dateFrom, dateTo)
+   * @returns {Promise}
+   */
+  getBookingStats: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/bookings/stats', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get booking stats error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Change Admin Password
    * @param {Object} data - Password data (currentPassword, newPassword)
    * @returns {Promise}
@@ -349,6 +424,66 @@ export const adminService = {
       return response.data;
     } catch (error) {
       console.error('Update system settings error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send Guarantor Request
+   * @param {Object} data - Request data (bookingId, guarantorId)
+   * @returns {Promise}
+   */
+  sendGuarantorRequest: async (data) => {
+    try {
+      const response = await api.post('/admin/guarantor-requests', data);
+      return response.data;
+    } catch (error) {
+      console.error('Send guarantor request error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get All Guarantor Requests
+   * @param {Object} params - Query parameters (status, bookingId)
+   * @returns {Promise}
+   */
+  getAllGuarantorRequests: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/guarantor-requests', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get guarantor requests error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Guarantor Request by ID
+   * @param {String} requestId - Request ID
+   * @returns {Promise}
+   */
+  getGuarantorRequestById: async (requestId) => {
+    try {
+      const response = await api.get(`/admin/guarantor-requests/${requestId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get guarantor request error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete Guarantor Request
+   * @param {String} requestId - Request ID
+   * @returns {Promise}
+   */
+  deleteGuarantorRequest: async (requestId) => {
+    try {
+      const response = await api.delete(`/admin/guarantor-requests/${requestId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete guarantor request error:', error);
       throw error;
     }
   },

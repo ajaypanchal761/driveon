@@ -6,12 +6,11 @@ import { carService } from '../../services/car.service';
 import jsPDF from 'jspdf';
 
 /**
- * Active Booking Page - Trip Details
- * Shows detailed information about user's active booking/trip
- * Based on document.txt specifications
- * Uses website theme (#1e6262 teal)
+ * CompletedBookingDetailsPage Component
+ * Shows detailed information about a completed booking
+ * Based on ActiveBookingPage and CancelledBookingDetailsPage
  */
-const ActiveBookingPage = () => {
+const CompletedBookingDetailsPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [booking, setBooking] = useState(null);
@@ -76,6 +75,7 @@ const ActiveBookingPage = () => {
             duration: `${bookingData.totalDays || 1} ${(bookingData.totalDays || 1) === 1 ? 'day' : 'days'}`,
             days: bookingData.totalDays || 1,
             bookingDate: bookingData.createdAt || bookingData.bookingDate,
+            completedDate: bookingData.completedAt || bookingData.completedDate,
             status: bookingData.status,
             paymentStatus: bookingData.paymentStatus,
             paymentType: bookingData.paymentOption || 'full',
@@ -88,13 +88,6 @@ const ActiveBookingPage = () => {
             timeOfDayMultiplier: bookingData.pricing?.timeOfDayMultiplier || 0,
             demandSurge: bookingData.pricing?.demandSurge || 0,
             durationPrice: bookingData.pricing?.durationPrice || 0,
-            trackingEnabled: bookingData.trackingEnabled || false,
-            currentLocation: bookingData.currentLocation || bookingData.pickupLocation,
-            currentSpeed: bookingData.currentSpeed || 0,
-            distanceTraveled: bookingData.distanceTraveled || 0,
-            totalDistance: bookingData.totalDistance || 0,
-            tripStartTime: bookingData.tripStartTime || bookingData.tripStart?.date,
-            tripDuration: bookingData.tripDuration || '0h 0m',
             user: bookingData.user || {},
             guarantor: bookingData.guarantor || {},
           };
@@ -112,34 +105,6 @@ const ActiveBookingPage = () => {
     };
 
     fetchBooking();
-  }, [id]);
-
-  // Refresh booking data when page comes into focus (to get updated status)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (id) {
-        // Refetch booking data when window regains focus
-        const fetchBooking = async () => {
-          try {
-            const response = await bookingService.getBooking(id);
-            if (response.success && response.data?.booking) {
-              const bookingData = response.data.booking;
-              setBooking(prev => ({
-                ...prev,
-                status: bookingData.status,
-                paymentStatus: bookingData.paymentStatus,
-              }));
-            }
-          } catch (err) {
-            console.error('Error refreshing booking:', err);
-          }
-        };
-        fetchBooking();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
   }, [id]);
 
   // Download Receipt as PDF
@@ -245,6 +210,18 @@ const ActiveBookingPage = () => {
     addText(`Total: Rs. ${booking.totalPrice.toLocaleString('en-IN')}`, margin, yPos, 12, true);
     yPos += sectionSpacing + lineHeight;
 
+    // Completion Information
+    if (booking.completedDate) {
+      addText('COMPLETION INFORMATION', margin, yPos, 12, true);
+      yPos += lineHeight + 2;
+      addText(`Completed Date: ${new Date(booking.completedDate).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })}`, margin, yPos, 10);
+      yPos += sectionSpacing + lineHeight;
+    }
+
     // Footer
     const footerY = pageHeight - 20;
     doc.setFontSize(8);
@@ -262,7 +239,7 @@ const ActiveBookingPage = () => {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
-          <p className="text-gray-600">Loading trip details...</p>
+          <p className="text-gray-600">Loading booking details...</p>
         </div>
       </div>
     );
@@ -272,8 +249,8 @@ const ActiveBookingPage = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Trip Not Found</h2>
-          <p className="text-gray-600 mb-6">{error || 'The trip details you\'re looking for could not be found.'}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Booking Not Found</h2>
+          <p className="text-gray-600 mb-6">{error || 'The booking details you\'re looking for could not be found.'}</p>
           <button
             onClick={() => navigate('/bookings')}
             className="px-6 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
@@ -312,27 +289,13 @@ const ActiveBookingPage = () => {
             <div className="flex gap-2 md:gap-3">
               <span 
                 className={`px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-xs md:text-sm font-medium ${
-                  booking.status === 'pending' 
-                    ? 'bg-yellow-500/30 text-yellow-100' 
-                    : booking.status === 'confirmed'
-                    ? 'bg-blue-500/30 text-blue-100'
-                    : booking.status === 'active'
-                    ? 'bg-green-500/30 text-green-100'
-                    : booking.status === 'completed'
+                  booking.status === 'completed' 
                     ? 'bg-gray-500/30 text-gray-100'
-                    : booking.status === 'cancelled'
-                    ? 'bg-red-500/30 text-red-100'
                     : 'bg-white/20 text-white'
                 }`}
               >
-                {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Pending'}
+                {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Completed'}
               </span>
-              {booking.trackingEnabled && (
-                <span className="px-3 md:px-4 py-1 md:py-1.5 bg-green-500/30 rounded-lg md:rounded-xl text-xs md:text-sm font-medium flex items-center gap-1 md:gap-2">
-                  <div className="w-2 h-2 md:w-2.5 md:h-2.5 bg-green-400 rounded-full animate-pulse"></div>
-                  Live Tracking ON
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -341,36 +304,24 @@ const ActiveBookingPage = () => {
       {/* Main Content */}
       <main className="px-4 pt-6 pb-4 md:pt-8 md:pb-4">
         <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        {/* Live Tracking Information */}
-        {booking.trackingEnabled && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg md:rounded-xl border-l-4 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow" style={{ borderLeftColor: theme.colors.primary }}>
-            <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-              <div className="w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full animate-pulse"></div>
-              <h2 className="text-base md:text-lg font-semibold text-gray-900">Live Tracking Active</h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500 uppercase">Current Location</label>
-                <p className="text-sm md:text-base font-semibold text-gray-900 mt-1">📍 {booking.currentLocation}</p>
+        {/* Completion Status Banner */}
+        {booking.completedDate && (
+          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 md:p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500 uppercase">Current Speed</label>
-                <p className="text-sm md:text-base font-semibold text-gray-900 mt-1">{booking.currentSpeed} km/h</p>
-              </div>
-              <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500 uppercase">Distance Traveled</label>
-                <p className="text-sm md:text-base font-semibold text-gray-900 mt-1">
-                  {booking.distanceTraveled} / {booking.totalDistance} km
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-green-900 mb-1">Trip Completed</h3>
+                <p className="text-sm text-green-700">
+                  This trip was completed on {new Date(booking.completedDate).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
                 </p>
-              </div>
-              <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500 uppercase">Trip Duration</label>
-                <p className="text-sm md:text-base font-semibold text-gray-900 mt-1">{booking.tripDuration}</p>
-              </div>
-            </div>
-            <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-200">
-              <div className="flex flex-wrap gap-2 text-xs md:text-sm text-gray-600">
-                <span>Started: {new Date(booking.tripStartTime).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -470,26 +421,6 @@ const ActiveBookingPage = () => {
                 </div>
               </div>
             )}
-            <div className="pt-3 md:pt-4 border-t border-gray-200">
-              <div>
-                <label className="text-xs md:text-sm font-medium text-gray-500 uppercase">Car Owner</label>
-                <p className="text-sm md:text-base font-semibold text-gray-900 mt-1">{booking.car.owner.name}</p>
-                <p className="text-xs md:text-sm text-gray-600 mt-1">{booking.car.owner.phone}</p>
-              </div>
-              <div className="mt-2 md:mt-3 flex items-center gap-2">
-                <label className="text-xs md:text-sm font-medium text-gray-500 uppercase">Rating</label>
-                <div className="flex items-center gap-1">
-                  <p className="text-sm md:text-base font-semibold text-gray-900">{booking.car.rating}</p>
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <svg key={i} className="w-3.5 h-3.5 md:w-4 md:h-4 fill-current" viewBox="0 0 20 20">
-                        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                      </svg>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -600,4 +531,5 @@ const ActiveBookingPage = () => {
   );
 };
 
-export default ActiveBookingPage;
+export default CompletedBookingDetailsPage;
+

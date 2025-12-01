@@ -16,162 +16,98 @@ const CancelledBookingDetailsPage = () => {
   const [carDetails, setCarDetails] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Mock booking data generator
-  const getMockBookingData = (bookingId) => {
-    return {
-      id: bookingId || '6',
-      bookingId: `BK${String(bookingId || '006').padStart(3, '0')}`,
-      car: {
-        id: 'car6',
-        brand: 'Mahindra',
-        model: 'XUV700',
-        image: null,
-      },
-      pickupDate: '2024-01-20',
-      pickupTime: '10:00 AM',
-      dropDate: '2024-01-22',
-      dropTime: '10:00 AM',
-      pickupLocation: '4517 Washington Ave. Manchester, KY 39495',
-      dropLocation: '4517 Washington Ave. Manchester, KY 39495',
-      duration: '2 days',
-      days: 2,
-      bookingDate: '2024-01-15T10:00:00',
-      cancelledDate: '2024-01-18T15:30:00',
-      cancellationReason: 'Change in travel plans',
-      cancelledBy: 'user',
-      status: 'cancelled',
-      paymentStatus: 'paid',
-      paymentType: 'full',
-      totalPrice: 5500,
-      paidAmount: 5500,
-      refundAmount: 5500,
-      refundStatus: 'processed',
-      refundDate: '2024-01-19T10:00:00',
-      basePrice: 4500,
-      user: {
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+91 98765 43210',
-      },
-      guarantor: {
-        name: 'Rajesh Kumar',
-        phone: '+91 98765 43220',
-        id: 'g1',
-      },
-    };
-  };
-
   useEffect(() => {
     const fetchBookingDetails = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         
-        // Check if it's a mock booking ID (numeric or starts with specific pattern)
-        // For mock IDs, skip API call and use mock data directly to avoid 404 errors
-        // Mock booking IDs are typically simple numbers like '6', '1', '2', etc.
-        const isMockBookingId = !id || 
-                                id === '6' || 
-                                /^[0-9]+$/.test(id) || 
-                                id.startsWith('mock') ||
-                                id.length <= 2; // Short IDs are likely mock IDs
+        // Fetch booking from API
+        const response = await bookingService.getBooking(id);
         
-        if (isMockBookingId) {
-          // Use mock data directly for mock booking IDs - no API call needed
-          setBooking(getMockBookingData(id));
-          setLoading(false);
-          return;
-        }
-        
-        let fetchedCarDetails = null;
-        
-        // Try to fetch from API first (only for real booking IDs)
-        try {
-          const response = await bookingService.getBooking(id);
-          if (response.success && response.data?.booking) {
-            const bookingData = response.data.booking;
-            
-            // Fetch car details
-            const carId = bookingData.car?._id || bookingData.car?.id || bookingData.carId;
-            if (carId && !carId.startsWith('car')) {
-              try {
-                const carResponse = await carService.getCarDetails(carId);
-                if (carResponse.success && carResponse.data?.car) {
-                  const carData = carResponse.data.car;
-                  let images = [];
-                  if (carData.images && Array.isArray(carData.images)) {
-                    images = carData.images.map(img => {
-                      if (typeof img === 'string') return img;
-                      return img.url || img.path || null;
-                    }).filter(img => img);
-                  } else if (carData.primaryImage) {
-                    images = [carData.primaryImage];
-                  }
-                  
-                  fetchedCarDetails = {
-                    id: carData._id || carData.id,
-                    brand: carData.brand || '',
-                    model: carData.model || '',
-                    image: images.length > 0 ? images[0] : null,
-                    year: carData.year || new Date().getFullYear(),
-                    seats: carData.seatingCapacity || 5,
-                    transmission: carData.transmission || 'Manual',
-                    fuelType: carData.fuelType || 'Petrol',
-                    color: carData.color || 'N/A',
-                    features: carData.features || [],
-                    rating: carData.averageRating || 0,
-                  };
-                  setCarDetails(fetchedCarDetails);
+        if (response.success && response.data?.booking) {
+          const bookingData = response.data.booking;
+          
+          // Fetch car details
+          let fetchedCarDetails = null;
+          const carId = bookingData.car?._id || bookingData.car?.id || bookingData.carId;
+          if (carId && !carId.startsWith('car')) {
+            try {
+              const carResponse = await carService.getCarDetails(carId);
+              if (carResponse.success && carResponse.data?.car) {
+                const carData = carResponse.data.car;
+                let images = [];
+                if (carData.images && Array.isArray(carData.images)) {
+                  images = carData.images.map(img => {
+                    if (typeof img === 'string') return img;
+                    return img.url || img.path || null;
+                  }).filter(img => img);
+                } else if (carData.primaryImage) {
+                  images = [carData.primaryImage];
                 }
-              } catch (error) {
-                // Silently handle car details error
+                
+                fetchedCarDetails = {
+                  id: carData._id || carData.id,
+                  brand: carData.brand || '',
+                  model: carData.model || '',
+                  image: images.length > 0 ? images[0] : null,
+                  year: carData.year || new Date().getFullYear(),
+                  seats: carData.seatingCapacity || 5,
+                  transmission: carData.transmission || 'Manual',
+                  fuelType: carData.fuelType || 'Petrol',
+                  color: carData.color || 'N/A',
+                  features: carData.features || [],
+                  rating: carData.averageRating || 0,
+                };
+                setCarDetails(fetchedCarDetails);
               }
+            } catch (error) {
+              console.error('Error fetching car details:', error);
             }
-
-            // Format booking data
-            const formattedBooking = {
-              id: bookingData._id || bookingData.id,
-              bookingId: bookingData.bookingId || bookingData._id || bookingData.id,
-              car: {
-                id: carId,
-                brand: fetchedCarDetails?.brand || bookingData.car?.brand || 'Unknown',
-                model: fetchedCarDetails?.model || bookingData.car?.model || 'Car',
-                image: fetchedCarDetails?.image || bookingData.car?.image || null,
-              },
-              pickupDate: bookingData.pickupDate || bookingData.pickup?.date,
-              pickupTime: bookingData.pickupTime || bookingData.pickup?.time || '10:00 AM',
-              dropDate: bookingData.dropDate || bookingData.drop?.date,
-              dropTime: bookingData.dropTime || bookingData.drop?.time || '10:00 AM',
-              pickupLocation: bookingData.pickupLocation || bookingData.pickup?.location || 'Location not specified',
-              dropLocation: bookingData.dropLocation || bookingData.drop?.location || bookingData.pickupLocation,
-              duration: bookingData.duration || `${bookingData.totalDays || 1} ${(bookingData.totalDays || 1) === 1 ? 'day' : 'days'}`,
-              days: bookingData.totalDays || bookingData.days || 1,
-              bookingDate: bookingData.createdAt || bookingData.bookingDate || new Date().toISOString(),
-              cancelledDate: bookingData.cancelledDate || bookingData.cancellationDate || new Date().toISOString(),
-              cancellationReason: bookingData.cancellationReason || bookingData.reason || 'Not specified',
-              cancelledBy: bookingData.cancelledBy || 'user',
-              status: bookingData.status || 'cancelled',
-              paymentStatus: bookingData.paymentStatus || 'pending',
-              paymentType: bookingData.paymentType || 'full',
-              totalPrice: bookingData.totalPrice || bookingData.amount || 0,
-              paidAmount: bookingData.paidAmount || bookingData.amountPaid || 0,
-              refundAmount: bookingData.refundAmount || 0,
-              refundStatus: bookingData.refundStatus || 'pending',
-              refundDate: bookingData.refundDate || null,
-              basePrice: bookingData.basePrice || 0,
-              user: bookingData.user || {},
-              guarantor: bookingData.guarantor || {},
-            };
-            setBooking(formattedBooking);
-          } else {
-            setBooking(getMockBookingData(id));
           }
-        } catch (error) {
-          // Silently fall back to mock data if API call fails
-          setBooking(getMockBookingData(id));
+
+          // Format booking data
+          const formattedBooking = {
+            id: bookingData._id || bookingData.id,
+            bookingId: bookingData.bookingId || bookingData._id || bookingData.id,
+            car: {
+              id: carId,
+              brand: fetchedCarDetails?.brand || bookingData.car?.brand || 'Unknown',
+              model: fetchedCarDetails?.model || bookingData.car?.model || 'Car',
+              image: fetchedCarDetails?.image || bookingData.car?.image || null,
+            },
+            pickupDate: bookingData.tripStart?.date || bookingData.pickupDate,
+            pickupTime: bookingData.tripStart?.time || bookingData.pickupTime || '10:00 AM',
+            dropDate: bookingData.tripEnd?.date || bookingData.dropDate,
+            dropTime: bookingData.tripEnd?.time || bookingData.dropTime || '10:00 AM',
+            pickupLocation: bookingData.tripStart?.location || bookingData.pickupLocation || 'Location not specified',
+            dropLocation: bookingData.tripEnd?.location || bookingData.dropLocation || bookingData.pickupLocation,
+            duration: `${bookingData.totalDays || 1} ${(bookingData.totalDays || 1) === 1 ? 'day' : 'days'}`,
+            days: bookingData.totalDays || bookingData.days || 1,
+            bookingDate: bookingData.createdAt || bookingData.bookingDate,
+            cancelledDate: bookingData.cancelledAt || bookingData.cancelledDate || bookingData.cancellationDate,
+            cancellationReason: bookingData.cancellationReason || bookingData.reason || 'Not specified',
+            cancelledBy: bookingData.cancelledBy || 'user',
+            status: bookingData.status || 'cancelled',
+            paymentStatus: bookingData.paymentStatus || 'pending',
+            paymentType: bookingData.paymentOption || bookingData.paymentType || 'full',
+            totalPrice: bookingData.pricing?.totalPrice || bookingData.totalPrice || 0,
+            paidAmount: bookingData.paidAmount || 0,
+            refundAmount: bookingData.refundAmount || 0,
+            refundStatus: bookingData.refundStatus || 'pending',
+            refundDate: bookingData.refundDate || null,
+            basePrice: bookingData.pricing?.basePrice || bookingData.basePrice || 0,
+            user: bookingData.user || {},
+            guarantor: bookingData.guarantor || {},
+          };
+          setBooking(formattedBooking);
         }
       } catch (error) {
-        // Silently fall back to mock data
-        setBooking(getMockBookingData(id));
+        console.error('Error fetching booking details:', error);
       } finally {
         setLoading(false);
       }
@@ -388,7 +324,6 @@ const CancelledBookingDetailsPage = () => {
                 <p className="text-base font-semibold text-gray-900">
                   {formatDate(booking.pickupDate)} at {booking.pickupTime}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">{booking.pickupLocation}</p>
               </div>
             </div>
             
@@ -403,7 +338,6 @@ const CancelledBookingDetailsPage = () => {
                 <p className="text-base font-semibold text-gray-900">
                   {formatDate(booking.dropDate)} at {booking.dropTime}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">{booking.dropLocation}</p>
               </div>
             </div>
           </div>

@@ -42,6 +42,9 @@ const BookingHistoryPage = lazy(() =>
 const CancelledBookingDetailsPage = lazy(() =>
   import("../pages/booking/CancelledBookingDetailsPage")
 );
+const CompletedBookingDetailsPage = lazy(() =>
+  import("../pages/booking/CompletedBookingDetailsPage")
+);
 const ReviewFormPage = lazy(() => import("../pages/booking/ReviewFormPage"));
 const ProfileDashboardPage = lazy(() =>
   import("../pages/profile/ProfileDashboardPage")
@@ -55,6 +58,9 @@ const GuarantorManagementPage = lazy(() =>
 );
 const GuarantorHistoryPage = lazy(() =>
   import("../pages/profile/GuarantorHistoryPage")
+);
+const GuarantorRequestsPage = lazy(() =>
+  import("../pages/profile/GuarantorRequestsPage")
 );
 const ReferralDashboardPage = lazy(() =>
   import("../pages/profile/ReferralDashboardPage")
@@ -427,6 +433,18 @@ const router = createBrowserRouter([
             element: <GuarantorManagementPage />,
           },
           {
+            path: "profile/guarantor/requests",
+            element: <GuarantorRequestsPage />,
+          },
+          {
+            path: "profile/guarantor/history",
+            element: <GuarantorHistoryPage />,
+          },
+          {
+            path: "profile/guarantor",
+            element: <GuarantorManagementPage />,
+          },
+          {
             path: "profile/guarantor/history",
             element: <GuarantorHistoryPage />,
           },
@@ -453,6 +471,10 @@ const router = createBrowserRouter([
           {
             path: "booking/:id/cancelled",
             element: <CancelledBookingDetailsPage />,
+          },
+          {
+            path: "booking/:id/completed",
+            element: <CompletedBookingDetailsPage />,
           },
 
           // Booking Routes (require profile completion)

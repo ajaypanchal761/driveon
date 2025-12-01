@@ -85,10 +85,6 @@ const LoginPage = () => {
         replace: true,
       });
     } catch (error) {
-      console.error('Login OTP Error:', error);
-      console.error('Error Response:', error.response);
-      console.error('Error Data:', error.response?.data);
-      
       // Extract error message from various possible formats
       const errorMessage = 
         error.response?.data?.message || 
@@ -96,17 +92,34 @@ const LoginPage = () => {
         error.message || 
         'Failed to send OTP. Please try again.';
       
+      // Check if it's user not found error (expected error, don't log to console)
+      const isUserNotFound = errorMessage.toLowerCase().includes('user not found') || 
+                            errorMessage.toLowerCase().includes('signup first') ||
+                            (error.response?.status === 400 && error.response?.data?.message?.toLowerCase().includes('user not found'));
+      
+      // Only log unexpected errors to console
+      if (!isUserNotFound) {
+        console.error('Login OTP Error:', error);
+        console.error('Error Response:', error.response);
+        console.error('Error Data:', error.response?.data);
+      }
+      
       toastUtils.error(errorMessage);
       
-      // Always navigate to OTP page (mock mode or if API fails)
-      navigate('/verify-otp', {
-        state: {
-          emailOrPhone: data.emailOrPhone,
-          type: 'login',
-          from: from,
-        },
-        replace: true,
-      });
+      // Don't navigate to OTP page if user not found - stay on login page
+      // Only navigate if it's a different error (like network issue) or in mock mode
+      if (!isUserNotFound) {
+        // For other errors (network, server issues), still navigate to OTP page
+        navigate('/verify-otp', {
+          state: {
+            emailOrPhone: data.emailOrPhone,
+            type: 'login',
+            from: from,
+          },
+          replace: true,
+        });
+      }
+      // If user not found, stay on login page (don't navigate)
     } finally {
       setIsLoading(false);
     }

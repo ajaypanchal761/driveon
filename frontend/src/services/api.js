@@ -324,18 +324,26 @@ api.interceptors.response.use(
       const { status, data } = error.response;
       
       // Handle specific error codes
-      switch (status) {
-        case 403:
-          console.error('Forbidden: You do not have permission to access this resource');
-          break;
-        case 404:
-          console.error('Not Found: The requested resource was not found');
-          break;
-        case 500:
-          console.error('Server Error: Something went wrong on the server');
-          break;
-        default:
-          console.error(`API Error: ${status} - ${data?.message || 'Unknown error'}`);
+      // Don't log expected errors (like user not found for login)
+      const isExpectedError = status === 400 && (
+        data?.message?.toLowerCase().includes('user not found') ||
+        data?.message?.toLowerCase().includes('signup first')
+      );
+      
+      if (!isExpectedError) {
+        switch (status) {
+          case 403:
+            console.error('Forbidden: You do not have permission to access this resource');
+            break;
+          case 404:
+            console.error('Not Found: The requested resource was not found');
+            break;
+          case 500:
+            console.error('Server Error: Something went wrong on the server');
+            break;
+          default:
+            console.error(`API Error: ${status} - ${data?.message || 'Unknown error'}`);
+        }
       }
     } else if (error.request) {
       // Request was made but no response received

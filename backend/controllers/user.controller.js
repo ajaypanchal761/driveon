@@ -59,6 +59,7 @@ export const getProfile = async (req, res) => {
       data: {
         user: {
           id: user._id,
+          _id: user._id,
           name: user.name || '',
           email: user.email,
           phone: user.phone,
@@ -70,6 +71,7 @@ export const getProfile = async (req, res) => {
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
           referralCode: user.referralCode,
+          guarantorId: user.guarantorId || '',
           profileComplete: user.profileComplete,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
