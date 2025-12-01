@@ -4,6 +4,23 @@ import Car from '../models/Car.js';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 
 /**
+ * Format user ID to USER001 format (same as frontend)
+ * Takes MongoDB ObjectId and converts to USER + padded number
+ */
+const formatUserId = (userId) => {
+  if (!userId) return '';
+
+  const idString = userId.toString();
+  const lastChars = idString.slice(-6);
+
+  // Convert hex to decimal, then take modulo to get a number between 0-999
+  const num = parseInt(lastChars, 16) % 1000;
+  const paddedNum = String(Number.isNaN(num) ? 0 : num).padStart(3, '0');
+
+  return `USER${paddedNum}`;
+};
+
+/**
  * @desc    Admin Signup
  * @route   POST /api/admin/signup
  * @access  Public
@@ -752,17 +769,106 @@ export const updateSystemSettings = async (req, res) => {
  * @desc    Get User by ID (Admin)
  * @route   GET /api/admin/users/:userId
  * @access  Private (Admin)
+ * @note    Supports MongoDB ObjectId, phone number, email, or custom user ID format
  */
 export const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const user = await User.findById(userId).select('-password -__v');
+    if (!userId || userId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+      });
+    }
+
+    const trimmedId = userId.trim();
+    let user = null;
+
+    // 0. If ID is in formatted form (e.g. USER001), try to resolve it
+    if (/^USER\d{3}$/i.test(trimmedId)) {
+      try {
+        const allUsers = await User.find().select('-password -__v');
+        const upperId = trimmedId.toUpperCase();
+
+        user = allUsers.find((u) => formatUserId(u._id) === upperId) || null;
+      } catch (formattedError) {
+        console.log('Formatted USER ID search failed:', formattedError.message);
+      }
+    }
+
+    // 1. Check if it's a valid MongoDB ObjectId format (24 hex characters)
+    if (!user) {
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(trimmedId);
+
+      if (isValidObjectId) {
+        // Try to find by MongoDB _id first
+        try {
+          user = await User.findById(trimmedId).select('-password -__v');
+        } catch (findError) {
+          // If findById fails, continue to other search methods
+          console.log('findById failed, trying other search methods:', findError.message);
+        }
+      }
+    }
+
+    // 2. If not found by _id or formatted ID, try searching by phone number
+    if (!user) {
+      try {
+        // Check if it looks like a phone number (10 digits)
+        if (/^[6-9]\d{9}$/.test(trimmedId)) {
+          user = await User.findOne({ phone: trimmedId }).select('-password -__v');
+        }
+      } catch (phoneError) {
+        console.log('Phone search failed:', phoneError.message);
+      }
+    }
+
+    // 3. If not found, try searching by email
+    if (!user) {
+      try {
+        // Check if it looks like an email
+        if (trimmedId.includes('@')) {
+          user = await User.findOne({ email: trimmedId.toLowerCase() }).select('-password -__v');
+        }
+      } catch (emailError) {
+        console.log('Email search failed:', emailError.message);
+      }
+    }
+
+    // 4. If not found, try searching by referralCode or guarantorId (custom IDs)
+    if (!user) {
+      try {
+        user = await User.findOne({
+          $or: [
+            { referralCode: trimmedId },
+            { guarantorId: trimmedId },
+          ]
+        }).select('-password -__v');
+      } catch (customError) {
+        console.log('Custom ID search failed:', customError.message);
+      }
+    }
+
+    // 5. If still not found, try partial match on phone or email or name
+    if (!user) {
+      try {
+        user = await User.findOne({
+          $or: [
+            { phone: { $regex: trimmedId, $options: 'i' } },
+            { email: { $regex: trimmedId, $options: 'i' } },
+            { name: { $regex: trimmedId, $options: 'i' } },
+          ]
+        }).select('-password -__v');
+      } catch (partialError) {
+        console.log('Partial search failed:', partialError.message);
+      }
+    }
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
       });
     }
 
@@ -802,6 +908,8 @@ export const getUserById = async (req, res) => {
     });
   } catch (error) {
     console.error('Get user by ID error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request params:', req.params);
     res.status(500).json({
       success: false,
       message: 'Server error fetching user',

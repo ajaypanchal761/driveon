@@ -43,6 +43,10 @@ import {
   getGuarantorRequestById,
   deleteGuarantorRequest,
 } from '../controllers/admin.guarantor.controller.js';
+import {
+  getLatestLocations,
+  getUserLocationHistory,
+} from '../controllers/location.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 
 const router = express.Router();
@@ -244,6 +248,18 @@ router.get('/guarantor-requests/:id', authenticateAdmin, getGuarantorRequestById
 // Delete Guarantor Request - PROTECTED
 // Route: DELETE /api/admin/guarantor-requests/:id
 router.delete('/guarantor-requests/:id', authenticateAdmin, deleteGuarantorRequest);
+
+// ============================================
+// LOCATION TRACKING ROUTES - PROTECTED
+// ============================================
+
+// Get Latest Locations - PROTECTED
+// Route: GET /api/admin/locations/latest
+router.get('/locations/latest', authenticateAdmin, getLatestLocations);
+
+// Get User Location History - PROTECTED
+// Route: GET /api/admin/locations/user/:userId
+router.get('/locations/user/:userId', authenticateAdmin, getUserLocationHistory);
 
 export default router;
 

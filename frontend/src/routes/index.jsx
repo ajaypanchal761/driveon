@@ -100,14 +100,8 @@ const TrackingPage = lazy(() =>
 const ReferralManagementPage = lazy(() =>
   import("../pages/admin/referrals/ReferralManagementPage")
 );
-const PricingManagementPage = lazy(() =>
-  import("../pages/admin/pricing/PricingManagementPage")
-);
 const CouponManagementPage = lazy(() =>
   import("../pages/admin/coupons/CouponManagementPage")
-);
-const ReportsPage = lazy(() =>
-  import("../pages/admin/reports/ReportsPage")
 );
 const AdminSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminSettingsPage")
@@ -313,40 +307,8 @@ const router = createBrowserRouter([
                 element: <ReferralManagementPage />,
               },
               {
-                path: "admin/pricing",
-                element: <PricingManagementPage />,
-              },
-              {
-                path: "admin/pricing/holidays",
-                element: <PricingManagementPage />,
-              },
-              {
-                path: "admin/pricing/surge",
-                element: <PricingManagementPage />,
-              },
-              {
                 path: "admin/coupons",
                 element: <CouponManagementPage />,
-              },
-              {
-                path: "admin/reports",
-                element: <ReportsPage />,
-              },
-              {
-                path: "admin/reports/users",
-                element: <ReportsPage />,
-              },
-              {
-                path: "admin/reports/bookings",
-                element: <ReportsPage />,
-              },
-              {
-                path: "admin/reports/revenue",
-                element: <ReportsPage />,
-              },
-              {
-                path: "admin/reports/custom",
-                element: <ReportsPage />,
               },
               {
                 path: "admin/support",

@@ -4,6 +4,8 @@ import { theme } from '../../theme/theme.constants';
 import bookingService from '../../services/booking.service';
 import { carService } from '../../services/car.service';
 import jsPDF from 'jspdf';
+import LocationTracker from '../../components/common/LocationTracker';
+import { useAppSelector } from '../../hooks/redux';
 
 /**
  * Active Booking Page - Trip Details
@@ -14,6 +16,7 @@ import jsPDF from 'jspdf';
 const ActiveBookingPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAppSelector((state) => state.user);
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -288,6 +291,15 @@ const ActiveBookingPage = () => {
 
   return (
     <div className="min-h-screen bg-white pb-20">
+      {/* Hidden auto location tracking while trip is active */}
+      {user && (
+        <LocationTracker
+          userId={user._id || user.id}
+          userType="user"
+          autoStart={true}
+          hidden={true}
+        />
+      )}
       {/* Header Section - Purple Background - Sticky */}
       <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md" style={{ backgroundColor: theme.colors.primary }}>
         <div className="absolute inset-0 opacity-10">

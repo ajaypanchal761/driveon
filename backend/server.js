@@ -2,12 +2,17 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import multer from "multer";
+import http from "http";
+import { Server } from "socket.io";
 import { connectDB } from "./config/database.js";
+import Location from "./models/Location.js";
+import User from "./models/User.js";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -51,6 +56,180 @@ import carRoutes from "./routes/car.routes.js";
 import supportRoutes from "./routes/support.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
+import locationRoutes from "./routes/location.routes.js";
+
+// Socket.IO Configuration
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+// Socket.IO connection handling
+io.on("connection", (socket) => {
+  console.log("🔌 Socket connected:", socket.id);
+
+  // Client registers as user, guarantor, or admin
+  socket.on("register", async (payload) => {
+    try {
+      const { role, userId } = payload;
+
+      if (!role || !userId) {
+        socket.emit("error", { message: "Role and userId are required" });
+        return;
+      }
+
+      socket.data.role = role;
+      socket.data.userId = userId;
+
+      if (role === "admin") {
+        socket.join("admins");
+        console.log(`✅ Admin connected: ${socket.id}`);
+        socket.emit("registered", { role: "admin", socketId: socket.id });
+      } else if (role === "user" || role === "guarantor") {
+        // Join user-specific room
+        socket.join(`user_${userId}`);
+        // Also join a room for their type
+        socket.join(`${role}s`);
+        console.log(`✅ ${role} connected: ${userId} (${socket.id})`);
+        socket.emit("registered", { role, userId, socketId: socket.id });
+      } else {
+        socket.emit("error", { message: "Invalid role" });
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      socket.emit("error", { message: "Registration failed" });
+    }
+  });
+
+  // Receive location update from user/guarantor client
+  socket.on("location:update", async (loc) => {
+    try {
+      const { userId, userType, lat, lng, accuracy, speed, heading, altitude, address, timestamp } = loc;
+
+      if (!userId || !lat || !lng) {
+        socket.emit("location:error", { message: "userId, lat, and lng are required" });
+        return;
+      }
+
+      // Validate userType
+      const type = userType === "guarantor" ? "guarantor" : "user";
+
+      // Create location document
+      const locationDoc = await Location.create({
+        userId: userId.toString(),
+        userType: type,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        accuracy: accuracy ? parseFloat(accuracy) : null,
+        speed: speed ? parseFloat(speed) : null,
+        heading: heading ? parseFloat(heading) : null,
+        altitude: altitude ? parseFloat(altitude) : null,
+        address: address || "",
+        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        isLatest: true,
+      });
+
+      // Update user's location in User model
+      await User.findByIdAndUpdate(userId, {
+        "location.latitude": lat,
+        "location.longitude": lng,
+        "location.address": address || "",
+        "location.lastLocationUpdate": new Date(),
+      });
+
+      // Get user details for admin view
+      const user = await User.findById(userId).select("name email phone role").lean();
+
+      // Broadcast to admin clients
+      const locationData = {
+        userId: userId.toString(),
+        userType: type,
+        name: user?.name || "Unknown",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        accuracy: accuracy ? parseFloat(accuracy) : null,
+        speed: speed ? parseFloat(speed) : null,
+        heading: heading ? parseFloat(heading) : null,
+        address: address || "",
+        timestamp: locationDoc.timestamp,
+      };
+
+      io.to("admins").emit("location:update", locationData);
+
+      // Acknowledge to user
+      socket.emit("location:ack", { ok: true, timestamp: locationDoc.timestamp });
+    } catch (error) {
+      console.error("Error saving location:", error);
+      socket.emit("location:error", { message: "Failed to save location" });
+    }
+  });
+
+  // Admin requests latest locations
+  socket.on("location:request", async () => {
+    try {
+      if (socket.data.role !== "admin") {
+        socket.emit("error", { message: "Unauthorized" });
+        return;
+      }
+
+      const locations = await Location.find({ isLatest: true })
+        .sort({ timestamp: -1 })
+        .limit(1000);
+
+      // Get user details for each location
+      const locationsWithDetails = await Promise.all(
+        locations.map(async (loc) => {
+          try {
+            const user = await User.findById(loc.userId).select("name email phone role").lean();
+            return {
+              userId: loc.userId.toString(),
+              userType: loc.userType,
+              name: user?.name || "Unknown",
+              email: user?.email || "",
+              phone: user?.phone || "",
+              lat: loc.lat,
+              lng: loc.lng,
+              accuracy: loc.accuracy,
+              speed: loc.speed,
+              heading: loc.heading,
+              address: loc.address,
+              timestamp: loc.timestamp,
+            };
+          } catch (err) {
+            return {
+              userId: loc.userId.toString(),
+              userType: loc.userType,
+              name: "Unknown",
+              email: "",
+              phone: "",
+              lat: loc.lat,
+              lng: loc.lng,
+              accuracy: loc.accuracy,
+              speed: loc.speed,
+              heading: loc.heading,
+              address: loc.address,
+              timestamp: loc.timestamp,
+            };
+          }
+        })
+      );
+
+      socket.emit("location:latest", { locations: locationsWithDetails });
+    } catch (error) {
+      console.error("Error fetching latest locations:", error);
+      socket.emit("error", { message: "Failed to fetch locations" });
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Socket disconnected:", socket.id, socket.data.role);
+  });
+});
 
 // API Routes
 // IMPORTANT: Mount admin routes BEFORE user routes to avoid route conflicts
@@ -62,6 +241,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api", supportRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
+app.use("/api", locationRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
@@ -81,11 +261,12 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server with Socket.IO
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`🔌 Socket.IO enabled for real-time location tracking`);
 
   // Verify Cloudinary configuration
   const cloudinaryName = process.env.CLOUDINARY_CLOUD_NAME?.trim();

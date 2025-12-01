@@ -487,6 +487,37 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Get Latest Locations (Admin)
+   * @param {Object} params - Query parameters (userType: 'user' | 'guarantor')
+   * @returns {Promise}
+   */
+  getLatestLocations: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/locations/latest', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get latest locations error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get User Location History (Admin)
+   * @param {String} userId - User ID
+   * @param {Object} params - Query parameters (userType, limit)
+   * @returns {Promise}
+   */
+  getUserLocationHistory: async (userId, params = {}) => {
+    try {
+      const response = await api.get(`/admin/locations/user/${userId}`, { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get user location history error:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;

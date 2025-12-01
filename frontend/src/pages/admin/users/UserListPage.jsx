@@ -36,6 +36,23 @@ const getUserId = (user) => {
 };
 
 /**
+ * Format user ID to USER001 format
+ * Takes MongoDB ObjectId and converts to USER + padded number
+ */
+const formatUserId = (userId) => {
+  if (!userId) return 'N/A';
+  
+  // Extract last 6 characters from ObjectId and convert to number
+  const lastChars = userId.toString().slice(-6);
+  // Convert hex to decimal, then take modulo to get a number between 0-999
+  const num = parseInt(lastChars, 16) % 1000;
+  // Pad with zeros to make it 3 digits
+  const paddedNum = String(num).padStart(3, '0');
+  
+  return `USER${paddedNum}`;
+};
+
+/**
  * User List Page
  * Admin can view, search, filter, and manage all users
  * No localStorage or Redux - All state managed via React hooks
@@ -534,8 +551,8 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
                     <p className="text-xs text-gray-900 capitalize">{user.role || 'user'}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-700">Account Status</label>
-                    <p className="text-xs text-gray-900 capitalize">{user.accountStatus || 'active'}</p>
+                    <label className="text-xs font-medium text-gray-700">User ID</label>
+                    <p className="text-xs text-gray-900 font-mono">{formatUserId(user._id || user.id)}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">KYC Status</label>

@@ -6,6 +6,7 @@ import { clearUser, updateUser } from '../../store/slices/userSlice';
 import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
+import LocationTracker from '../../components/common/LocationTracker';
 
 /**
  * ProfileDashboardPage Component
@@ -463,9 +464,26 @@ const ProfileDashboardPage = () => {
           </button>
         </div>
 
+        {/* Background Location Tracking for User (hidden) */}
+        {user && (
+          <LocationTracker
+            userId={user._id || user.id}
+            userType="user"
+            autoStart={true}
+            hidden={true}
+          />
+        )}
+
         {/* Referral Code Display */}
         {referralCode && (
-          <div className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white" style={{ background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.primaryLight || theme.colors.primary})` }}>
+          <div
+            className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white"
+            style={{
+              background: `linear-gradient(to right, ${theme.colors.primary}, ${
+                theme.colors.primaryLight || theme.colors.primary
+              })`,
+            }}
+          >
             <div className="flex items-center justify-between gap-2 md:gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-xs md:text-sm text-white/80 mb-0.5 md:mb-1">Your Referral Code</p>

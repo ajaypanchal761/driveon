@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import io from 'socket.io-client';
 import { theme } from '../../../theme/theme.constants';
 import Card from '../../../components/common/Card';
+import GoogleMap from '../../../components/common/GoogleMap';
 import { adminService } from '../../../services/admin.service';
+import { API_BASE_URL } from '../../../config/api';
 
 /**
  * Tracking Page
- * Admin can view active trips on map and track vehicles
- * No localStorage or Redux - All state managed via React hooks
+ * Admin can view live locations of users and guarantors on Google Maps
  */
 const TrackingPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const socketRef = useRef(null);
   
   // Get initial view from URL
   const getInitialView = () => {
@@ -21,240 +24,297 @@ const TrackingPage = () => {
   };
 
   // State management
-  const [activeTrips, setActiveTrips] = useState([]);
-  const [completedTrips, setCompletedTrips] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedTrip, setSelectedTrip] = useState(null);
-  const [showTripDetail, setShowTripDetail] = useState(false);
   const [viewMode, setViewMode] = useState(getInitialView()); // active, history
-  const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Mumbai default
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [showLocationDetail, setShowLocationDetail] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [filterType, setFilterType] = useState('all'); // all, user, guarantor
+  const [userId, setUserId] = useState('');
+  const [userDetails, setUserDetails] = useState(null);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState(null);
+  const [addressCache, setAddressCache] = useState({});
   
-  // Filter states
-  const [filters, setFilters] = useState({
-    dateRange: 'all', // all, today, week, month
-    booking: 'all',
-  });
+  // Google Maps API Key (should be in environment variable)
+  const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-  // Fetch active trips with tracking data
+  // Get server URL from API_BASE_URL
+  const getServerUrl = () => {
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    if (baseUrl.startsWith('http')) {
+      return baseUrl;
+    }
+    return window.location.origin;
+  };
+
+  // Connect to Socket.IO for real-time updates
   useEffect(() => {
-    const fetchActiveTrips = async () => {
+    const serverUrl = getServerUrl();
+    
+    // Get admin token from localStorage
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (!adminToken) {
+      setError('Admin authentication required');
+      setLoading(false);
+      return;
+    }
+
+    socketRef.current = io(serverUrl, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      auth: {
+        token: adminToken,
+      },
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('✅ Admin socket connected:', socketRef.current.id);
+      setIsConnected(true);
+      
+      // Register as admin
+      socketRef.current.emit('register', {
+        role: 'admin',
+        userId: 'admin', // Admin doesn't need a specific userId
+      });
+    });
+
+    socketRef.current.on('registered', (data) => {
+      console.log('✅ Admin registered:', data);
+      
+      // Request latest locations
+      socketRef.current.emit('location:request');
+    });
+
+    // Receive location updates
+    socketRef.current.on('location:update', (locationData) => {
+      console.log('📍 Location update received:', locationData);
+      
+      setLocations((prev) => {
+        // Update or add location
+        const existingIndex = prev.findIndex(
+          (loc) => loc.userId === locationData.userId && loc.userType === locationData.userType
+        );
+        
+        if (existingIndex >= 0) {
+          // Update existing location
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            ...locationData,
+          };
+          return updated;
+        } else {
+          // Add new location
+          return [...prev, locationData];
+        }
+      });
+    });
+
+    // Receive latest locations batch
+    socketRef.current.on('location:latest', (data) => {
+      console.log('📍 Latest locations received:', data.locations.length);
+      setLocations(data.locations || []);
+      setLoading(false);
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('❌ Admin socket disconnected');
+      setIsConnected(false);
+    });
+
+    socketRef.current.on('connect_error', (err) => {
+      console.error('❌ Socket connection error:', err);
+      setError('Failed to connect to server');
+      setIsConnected(false);
+      setLoading(false);
+    });
+
+    socketRef.current.on('error', (data) => {
+      console.error('❌ Socket error:', data);
+      setError(data.message || 'Connection error');
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+  // Fetch initial locations via REST API
+  useEffect(() => {
+    const fetchLocations = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await adminService.getActiveBookingsWithTracking();
         
-        // Transform API response to match component structure
-        const transformedActiveTrips = response.bookings?.map((booking) => {
-          const pickupDate = booking.pickupDate || booking.pickupDateTime;
-          const dropDate = booking.dropDate || booking.dropDateTime;
-          const startTime = pickupDate ? new Date(pickupDate) : new Date();
-          const expectedEndTime = dropDate ? new Date(dropDate) : null;
-          
-          // Calculate duration if trip has started
-          let duration = '0h 0m';
-          if (startTime) {
-            const now = new Date();
-            const diffMs = now - startTime;
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            duration = `${diffHours}h ${diffMinutes}m`;
-          }
-          
-          return {
-            id: booking._id || booking.id,
-            bookingId: booking.bookingId,
-            userId: booking.user?._id || booking.userId,
-            userName: booking.user?.name || booking.userName || 'N/A',
-            carId: booking.car?._id || booking.carId,
-            carName: booking.car ? `${booking.car.brand || ''} ${booking.car.model || ''} ${booking.car.year || ''}`.trim() : booking.carName || 'N/A',
-            carOwner: booking.car?.owner || booking.carOwner || 'N/A',
-            startLocation: booking.pickupLocation 
-              ? { 
-                  lat: booking.pickupLocation.latitude || booking.pickupLocation.lat || 0, 
-                  lng: booking.pickupLocation.longitude || booking.pickupLocation.lng || 0, 
-                  address: booking.pickupLocation.address || booking.pickupLocation || 'N/A' 
-                }
-              : { lat: 0, lng: 0, address: 'N/A' },
-            endLocation: booking.dropLocation 
-              ? { 
-                  lat: booking.dropLocation.latitude || booking.dropLocation.lat || 0, 
-                  lng: booking.dropLocation.longitude || booking.dropLocation.lng || 0, 
-                  address: booking.dropLocation.address || booking.dropLocation || 'N/A' 
-                }
-              : { lat: 0, lng: 0, address: 'N/A' },
-            currentLocation: booking.currentLocation 
-              ? { 
-                  lat: booking.currentLocation.latitude || booking.currentLocation.lat || 0, 
-                  lng: booking.currentLocation.longitude || booking.currentLocation.lng || 0, 
-                  address: booking.currentLocation.address || booking.currentLocation || 'N/A' 
-                }
-              : null,
-            startTime: pickupDate || booking.createdAt,
-            expectedEndTime: dropDate,
-            currentSpeed: booking.currentSpeed || 0,
-            averageSpeed: booking.averageSpeed || 0,
-            distanceTraveled: booking.distanceTraveled || 0,
-            totalDistance: booking.totalDistance || 0,
-            duration: duration,
-            status: booking.status || 'active',
-          };
-        }) || [];
+        const params = {};
+        if (filterType !== 'all') {
+          params.userType = filterType;
+        }
         
-        setActiveTrips(transformedActiveTrips);
+        const response = await adminService.getLatestLocations(params);
+        setLocations(response.data?.locations || []);
       } catch (err) {
-        console.error('Error fetching active trips:', err);
-        setError(err.response?.data?.message || 'Failed to fetch active trips');
-        setActiveTrips([]);
+        console.error('Error fetching locations:', err);
+        setError(err.response?.data?.message || 'Failed to fetch locations');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchActiveTrips();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (viewMode === 'active') {
+      fetchLocations();
+    }
+  }, [viewMode, filterType]);
 
-  // Fetch completed trips
-  useEffect(() => {
-    const fetchCompletedTrips = async () => {
-      if (viewMode !== 'history') return;
+
+  // Function to search user by ID
+  const handleSearchUser = async () => {
+    if (!userId || userId.trim() === '') {
+      setUserError('Please enter a User ID');
+      setUserDetails(null);
+      return;
+    }
+
+    try {
+      setUserLoading(true);
+      setUserError(null);
       
-      try {
-        setLoading(true);
-        const response = await adminService.getAllBookings({
-          status: 'completed',
-        });
-        
-        // Transform API response to match component structure
-        const transformedCompletedTrips = response.bookings?.map((booking) => {
-          const pickupDate = booking.pickupDate || booking.pickupDateTime;
-          const dropDate = booking.dropDate || booking.dropDateTime;
-          const startTime = pickupDate ? new Date(pickupDate) : new Date();
-          const endTime = dropDate ? new Date(dropDate) : null;
-          
-          // Calculate duration
-          let duration = '0h 0m';
-          if (startTime && endTime) {
-            const diffMs = endTime - startTime;
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            duration = `${diffHours}h ${diffMinutes}m`;
-          }
-          
-          return {
-            id: booking._id || booking.id,
-            bookingId: booking.bookingId,
-            userId: booking.user?._id || booking.userId,
-            userName: booking.user?.name || booking.userName || 'N/A',
-            carId: booking.car?._id || booking.carId,
-            carName: booking.car ? `${booking.car.brand || ''} ${booking.car.model || ''} ${booking.car.year || ''}`.trim() : booking.carName || 'N/A',
-            carOwner: booking.car?.owner || booking.carOwner || 'N/A',
-            startLocation: booking.pickupLocation 
-              ? { 
-                  lat: booking.pickupLocation.latitude || booking.pickupLocation.lat || 0, 
-                  lng: booking.pickupLocation.longitude || booking.pickupLocation.lng || 0, 
-                  address: booking.pickupLocation.address || booking.pickupLocation || 'N/A' 
-                }
-              : { lat: 0, lng: 0, address: 'N/A' },
-            endLocation: booking.dropLocation 
-              ? { 
-                  lat: booking.dropLocation.latitude || booking.dropLocation.lat || 0, 
-                  lng: booking.dropLocation.longitude || booking.dropLocation.lng || 0, 
-                  address: booking.dropLocation.address || booking.dropLocation || 'N/A' 
-                }
-              : { lat: 0, lng: 0, address: 'N/A' },
-            startTime: pickupDate || booking.createdAt,
-            endTime: dropDate || booking.completedDate,
-            totalDistance: booking.totalDistance || 0,
-            averageSpeed: booking.averageSpeed || 0,
-            duration: duration,
-            status: 'completed',
-          };
-        }) || [];
-        
-        setCompletedTrips(transformedCompletedTrips);
-      } catch (err) {
-        console.error('Error fetching completed trips:', err);
-        // Don't set error here as it's a secondary fetch
-        setCompletedTrips([]);
-      } finally {
-        setLoading(false);
+      const trimmedId = userId.trim();
+      const response = await adminService.getUserById(trimmedId);
+      
+      if (response && response.success && response.data?.user) {
+        setUserDetails(response.data.user);
+        setUserError(null);
+      } else {
+        setUserError('User not found');
+        setUserDetails(null);
       }
-    };
-
-    fetchCompletedTrips();
-  }, [viewMode]);
-
-  // Filter trips
-  useEffect(() => {
-    // Filtering logic can be added here if needed
-  }, [filters]);
-
-  const handleViewTrip = (trip) => {
-    setSelectedTrip(trip);
-    setShowTripDetail(true);
-    if (trip.currentLocation) {
-      setMapCenter(trip.currentLocation);
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      
+      let errorMessage = 'User not found';
+      
+      if (err.response) {
+        if (err.response.status === 404) {
+          errorMessage = 'User not found. Please check the User ID.';
+        } else if (err.response.status === 401 || err.response.status === 403) {
+          errorMessage = 'Unauthorized. Please login again.';
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        } else {
+          errorMessage = `Server error (${err.response.status}). Please try again.`;
+        }
+      } else if (err.request) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        errorMessage = err.message || 'An error occurred. Please try again.';
+      }
+      
+      setUserError(errorMessage);
+      setUserDetails(null);
+    } finally {
+      setUserLoading(false);
     }
   };
 
-  const handleDownloadTracking = (tripId) => {
-    // In real app, this would download tracking data
-    console.log(`Downloading tracking data for trip: ${tripId}`);
+  // Handle Enter key press in user input field
+  const handleUserKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearchUser();
+    }
   };
 
-  // Mock map component (placeholder)
-  const MapView = ({ trips, center }) => {
-    return (
-      <div className="w-full h-96 bg-gray-200 rounded-lg relative overflow-hidden">
-        {/* Map Placeholder */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <svg className="w-16 h-16 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <p className="text-gray-500 text-sm">Map View</p>
-            <p className="text-gray-400 text-xs mt-1">Active Trips: {trips.length}</p>
-          </div>
-        </div>
+  // Filter locations based on filterType or userId
+  const filteredLocations = locations.filter((loc) => {
+    // If User ID is provided, show only that user's location
+    if (userId && userDetails) {
+      const searchUserId = userDetails._id?.toString() || userDetails.id?.toString() || userDetails?.toString();
+      if (loc.userId === searchUserId) {
+        return true;
+      }
+      return false;
+    }
+    
+    // Otherwise, filter by type
+    if (filterType === 'all') return true;
+    return loc.userType === filterType;
+  });
 
-        {/* Trip Markers */}
-        {trips.map((trip, index) => (
-          <div
-            key={trip.id}
-            className="absolute"
-            style={{
-              left: `${20 + index * 30}%`,
-              top: `${30 + index * 20}%`,
-            }}
-          >
-            <div
-              className="w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs cursor-pointer hover:scale-110 transition-transform"
-              style={{ backgroundColor: theme.colors.primary }}
-              onClick={() => handleViewTrip(trip)}
-              title={trip.carName}
-            >
-              {index + 1}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  // Convert locations to map markers
+  const mapMarkers = filteredLocations
+    .filter((loc) => loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng))
+    .map((loc) => ({
+      userId: loc.userId,
+      name: loc.name || 'Unknown',
+      lat: loc.lat,
+      lng: loc.lng,
+      userType: loc.userType,
+      accuracy: loc.accuracy,
+      speed: loc.speed,
+      timestamp: loc.timestamp,
+      email: loc.email,
+      phone: loc.phone,
+    }));
+
+  // Resolve human-readable addresses on admin side for locations that don't have address
+  useEffect(() => {
+    if (!window.google || !window.google.maps) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+
+    filteredLocations.forEach((loc) => {
+      const key = `${loc.userId}-${loc.userType}`;
+
+      // Skip if we already have an address or it's cached
+      if ((loc.address && loc.address.trim() !== '') || addressCache[key]) return;
+      if (!loc.lat || !loc.lng || isNaN(loc.lat) || isNaN(loc.lng)) return;
+
+      geocoder.geocode(
+        {
+          location: {
+            lat: parseFloat(loc.lat),
+            lng: parseFloat(loc.lng),
+          },
+        },
+        (results, status) => {
+          if (status === 'OK' && results && results[0]) {
+            const addr = results[0].formatted_address;
+            if (addr) {
+              setAddressCache((prev) => ({
+                ...prev,
+                [key]: addr,
+              }));
+            }
+          }
+        }
+      );
+    });
+  }, [filteredLocations, addressCache]);
+
+  const handleMarkerClick = (markerData) => {
+    setSelectedLocation(markerData);
+    setShowLocationDetail(true);
   };
 
   // Stats calculation
   const stats = {
-    active: activeTrips.length,
-    completed: completedTrips.length,
-    totalDistance: activeTrips.reduce((sum, trip) => sum + trip.distanceTraveled, 0),
-    averageSpeed: activeTrips.length > 0
-      ? activeTrips.reduce((sum, trip) => sum + trip.currentSpeed, 0) / activeTrips.length
-      : 0,
+    total: locations.length,
+    users: locations.filter((loc) => loc.userType === 'user').length,
+    guarantors: locations.filter((loc) => loc.userType === 'guarantor').length,
+    active: filteredLocations.length,
   };
 
-  if (loading) {
+  if (loading && locations.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -262,13 +322,13 @@ const TrackingPage = () => {
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
             style={{ borderColor: theme.colors.primary }}
           ></div>
-          <p className="text-gray-600">Loading tracking data...</p>
+          <p className="text-gray-600">Loading location data...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && locations.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -295,32 +355,51 @@ const TrackingPage = () => {
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
                 Location & Tracking
               </h1>
-              <p className="text-sm md:text-base text-gray-600">Track active trips and view location data</p>
+              <p className="text-sm md:text-base text-gray-600">
+                Track live locations of users and guarantors
+                {isConnected && (
+                  <span className="ml-2 inline-flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></span>
+                    Live
+                  </span>
+                )}
+              </p>
             </div>
             <div className="flex gap-2">
-              {/* View Mode Toggle */}
+              {/* Filter Toggle */}
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <button
-                  onClick={() => setViewMode('active')}
+                  onClick={() => setFilterType('all')}
                   className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    viewMode === 'active'
+                    filterType === 'all'
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'active' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={filterType === 'all' ? { backgroundColor: theme.colors.primary } : {}}
                 >
-                  Active Trips
+                  All
                 </button>
                 <button
-                  onClick={() => setViewMode('history')}
+                  onClick={() => setFilterType('user')}
                   className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    viewMode === 'history'
+                    filterType === 'user'
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'history' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={filterType === 'user' ? { backgroundColor: theme.colors.primary } : {}}
                 >
-                  History
+                  Users
+                </button>
+                <button
+                  onClick={() => setFilterType('guarantor')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    filterType === 'guarantor'
+                      ? 'text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  style={filterType === 'guarantor' ? { backgroundColor: theme.colors.primary } : {}}
+                >
+                  Guarantors
                 </button>
               </div>
             </div>
@@ -330,256 +409,302 @@ const TrackingPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4 text-center">
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+              {stats.total}
+            </div>
+            <div className="text-xs md:text-sm text-gray-600">Total Tracked</div>
+          </Card>
+          <Card className="p-4 text-center">
+            <div className="text-2xl md:text-3xl font-bold mb-1 text-blue-600">{stats.users}</div>
+            <div className="text-xs md:text-sm text-gray-600">Users</div>
+          </Card>
+          <Card className="p-4 text-center">
+            <div className="text-2xl md:text-3xl font-bold mb-1 text-red-600">{stats.guarantors}</div>
+            <div className="text-xs md:text-sm text-gray-600">Guarantors</div>
+          </Card>
+          <Card className="p-4 text-center">
             <div className="text-2xl md:text-3xl font-bold mb-1 text-green-600">{stats.active}</div>
-            <div className="text-xs md:text-sm text-gray-600">Active Trips</div>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1 text-gray-600">{stats.completed}</div>
-            <div className="text-xs md:text-sm text-gray-600">Completed</div>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
-              {stats.totalDistance.toFixed(1)} km
-            </div>
-            <div className="text-xs md:text-sm text-gray-600">Total Distance</div>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
-              {stats.averageSpeed.toFixed(0)} km/h
-            </div>
-            <div className="text-xs md:text-sm text-gray-600">Avg Speed</div>
+            <div className="text-xs md:text-sm text-gray-600">Active Now</div>
           </Card>
         </div>
 
-        {/* Map View - Active Trips */}
+        {/* User ID Search */}
+        <Card className="p-4 md:p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search by User ID
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  onKeyPress={handleUserKeyPress}
+                  placeholder="Enter User ID (e.g. USER001), Phone, Email, or Name"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+                <button
+                  onClick={handleSearchUser}
+                  disabled={userLoading || !userId.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  {userLoading ? 'Searching...' : 'Search'}
+                </button>
+                {userId && (
+                  <button
+                    onClick={() => {
+                      setUserId('');
+                      setUserDetails(null);
+                      setUserError(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {userLoading && (
+                <p className="text-xs text-gray-500 mt-2">Searching user...</p>
+              )}
+              {userError && (
+                <p className="text-xs text-red-600 mt-2">❌ {userError}</p>
+              )}
+              {userDetails && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs font-medium text-green-800 mb-1">
+                    ✅ User Found: {userDetails.name || userDetails.email || 'N/A'}
+                  </p>
+                  <div className="text-xs text-green-700 space-y-1">
+                    <p>
+                      <strong>Name:</strong> {userDetails.name || 'N/A'}
+                    </p>
+                    <p>
+                      <strong>Email:</strong> {userDetails.email || 'N/A'}
+                    </p>
+                    <p>
+                      <strong>Phone:</strong> {userDetails.phone || 'N/A'}
+                    </p>
+                    <p>
+                      <strong>Role:</strong> <span className="capitalize">{userDetails.role || 'user'}</span>
+                    </p>
+                    {filteredLocations.some(loc => {
+                      const searchUserId = userDetails._id?.toString() || userDetails.id?.toString();
+                      return loc.userId === searchUserId;
+                    }) ? (
+                      <p className="mt-2">
+                        <span className="text-green-600 font-semibold">📍 Live Location Available</span>
+                      </p>
+                    ) : (
+                      <p className="mt-2">
+                        <span className="text-gray-500">⏸️ Location tracking not active</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Google Map View */}
         {viewMode === 'active' && (
           <>
             <Card className="p-4 md:p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Live Map - Active Trips</h2>
-              <MapView trips={activeTrips} center={mapCenter} />
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Live Map View</h2>
+                  {userDetails && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Showing location for User: <span className="font-semibold">{userDetails.name || userDetails.email || 'N/A'}</span>
+                    </p>
+                  )}
+                </div>
+                {!GOOGLE_MAPS_API_KEY && (
+                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                    ⚠️ Google Maps API key not configured
+                  </span>
+                )}
+              </div>
+              {userDetails && filteredLocations.length === 0 && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ No live location found for this user. The user needs to enable location tracking in their app.
+                  </p>
+                  <div className="mt-2 text-xs text-yellow-700">
+                    <p><strong>User:</strong> {userDetails.name || 'N/A'} ({userDetails.email || 'N/A'}) - Location tracking may not be active</p>
+                  </div>
+                </div>
+              )}
+              {GOOGLE_MAPS_API_KEY ? (
+                <div style={{ height: '600px', width: '100%' }}>
+                  {mapMarkers.length > 0 ? (
+                    <GoogleMap
+                      apiKey={GOOGLE_MAPS_API_KEY}
+                      markers={mapMarkers}
+                      center={
+                        mapMarkers.length === 1
+                          ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
+                          : { lat: 20.5937, lng: 78.9629 }
+                      }
+                      zoom={mapMarkers.length === 1 ? 15 : 5}
+                      onMarkerClick={handleMarkerClick}
+                      height="600px"
+                    />
+                  ) : (
+                    <GoogleMap
+                      apiKey={GOOGLE_MAPS_API_KEY}
+                      markers={mapMarkers}
+                      center={{ lat: 20.5937, lng: 78.9629 }}
+                      zoom={5}
+                      onMarkerClick={handleMarkerClick}
+                      height="600px"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-2">Google Maps API key required</p>
+                    <p className="text-sm text-gray-500">
+                      Set VITE_GOOGLE_MAPS_API_KEY in your .env file
+                    </p>
+                  </div>
+                </div>
+              )}
             </Card>
 
-            {/* Active Trips List */}
+            {/* Locations List */}
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Trips</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {userDetails
+                  ? `User Location (${filteredLocations.length})`
+                  : `Active Locations (${filteredLocations.length})`}
+              </h2>
             </div>
 
             <div className="space-y-4">
-              {activeTrips.map((trip) => (
-                <Card key={trip.id} className="p-4 hover:shadow-lg transition-all">
+              {filteredLocations.length === 0 && userDetails && (
+                <Card className="p-8 text-center">
+                  <p className="text-gray-600 mb-2">No live location available for this user.</p>
+                  <p className="text-sm text-gray-500">
+                    The user needs to enable location tracking in their app.
+                  </p>
+                </Card>
+              )}
+              {filteredLocations.map((loc) => {
+                const locationKey = `${loc.userId}-${loc.userType}`;
+                const displayAddress =
+                  loc.address && loc.address.trim() !== ''
+                    ? loc.address
+                    : addressCache[locationKey] || '';
+
+                return (
+                <Card key={`${loc.userId}-${loc.userType}`} className="p-4 hover:shadow-lg transition-all">
                   <div className="flex flex-col md:flex-row gap-4">
-                    {/* Trip Info */}
+                    {/* Location Info */}
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-gray-900 mb-1">
-                            {trip.bookingId} - {trip.carName}
+                            {loc.name || 'Unknown'}
                           </h3>
                           <p className="text-sm text-gray-500 mb-2">
-                            {trip.userName} • Owner: {trip.carOwner}
+                            {loc.userType === 'guarantor' ? '🛡️ Guarantor' : '👤 User'}
+                            {loc.email && ` • ${loc.email}`}
+                            {loc.phone && ` • ${loc.phone}`}
                           </p>
                         </div>
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Active
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            loc.userType === 'guarantor'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {loc.userType === 'guarantor' ? 'Guarantor' : 'User'}
                         </span>
                       </div>
 
-                      {/* Trip Details Grid */}
+                      {/* Location Details Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                         <div>
-                          <p className="text-xs text-gray-600">Current Location</p>
-                          <p className="text-sm font-semibold text-gray-900">📍 {trip.currentLocation.address}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600">Current Speed</p>
-                          <p className="text-sm font-semibold text-gray-900">{trip.currentSpeed} km/h</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600">Distance Traveled</p>
+                          <p className="text-xs text-gray-600">Coordinates</p>
                           <p className="text-sm font-semibold text-gray-900">
-                            {trip.distanceTraveled} / {trip.totalDistance} km
+                            {loc.lat?.toFixed(6)}, {loc.lng?.toFixed(6)}
                           </p>
                         </div>
+                        {loc.accuracy && (
+                          <div>
+                            <p className="text-xs text-gray-600">Accuracy</p>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {Math.round(loc.accuracy)}m
+                            </p>
+                          </div>
+                        )}
+                        {loc.speed && (
+                          <div>
+                            <p className="text-xs text-gray-600">Speed</p>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {Math.round(loc.speed)} km/h
+                            </p>
+                          </div>
+                        )}
                         <div>
-                          <p className="text-xs text-gray-600">Duration</p>
-                          <p className="text-sm font-semibold text-gray-900">{trip.duration}</p>
+                          <p className="text-xs text-gray-600">Last Update</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {loc.timestamp
+                              ? new Date(loc.timestamp).toLocaleTimeString()
+                              : 'N/A'}
+                          </p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <p className="text-xs text-gray-600">Current Location</p>
+                          <p className="text-sm font-semibold text-gray-900 whitespace-normal break-words">
+                            {displayAddress || 'Fetching address...'}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Route Info */}
-                      <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-                        <span>Start: {trip.startLocation.address}</span>
-                        <span>→</span>
-                        <span>End: {trip.endLocation.address}</span>
-                        <span>•</span>
-                        <span>Started: {new Date(trip.startTime).toLocaleString()}</span>
-                      </div>
+                      {/* Address icon row removed to avoid duplication; full address shown above */}
                     </div>
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 md:w-40">
                       <button
-                        onClick={() => handleViewTrip(trip)}
+                        onClick={() => handleMarkerClick(loc)}
                         className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                         style={{ backgroundColor: theme.colors.primary }}
                       >
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => navigate(`/admin/bookings/${trip.bookingId}/tracking`)}
-                        className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Live Tracking
-                      </button>
-                      <button
-                        onClick={() => handleDownloadTracking(trip.id)}
-                        className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        Download Data
+                        View on Map
                       </button>
                     </div>
                   </div>
                 </Card>
-              ))}
+              )})}
             </div>
 
-            {activeTrips.length === 0 && (
+            {filteredLocations.length === 0 && (
               <Card className="p-8 text-center">
-                <p className="text-gray-600">No active trips at the moment.</p>
-              </Card>
-            )}
-          </>
-        )}
-
-        {/* History View */}
-        {viewMode === 'history' && (
-          <>
-            {/* Filters */}
-            <Card className="p-4 md:p-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date Range</label>
-                  <select
-                    value={filters.dateRange}
-                    onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                  </select>
-                </div>
-              </div>
-            </Card>
-
-            {/* Completed Trips List */}
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Completed Trips</h2>
-            </div>
-
-            <div className="space-y-4">
-              {completedTrips.map((trip) => (
-                <Card key={trip.id} className="p-4 hover:shadow-lg transition-all">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Trip Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 mb-1">
-                            {trip.bookingId} - {trip.carName}
-                          </h3>
-                          <p className="text-sm text-gray-500 mb-2">
-                            {trip.userName} • Owner: {trip.carOwner}
-                          </p>
-                        </div>
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Completed
-                        </span>
-                      </div>
-
-                      {/* Trip Details Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                        <div>
-                          <p className="text-xs text-gray-600">Total Distance</p>
-                          <p className="text-sm font-semibold text-gray-900">{trip.totalDistance} km</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600">Average Speed</p>
-                          <p className="text-sm font-semibold text-gray-900">{trip.averageSpeed} km/h</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600">Duration</p>
-                          <p className="text-sm font-semibold text-gray-900">{trip.duration}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600">Completed</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {new Date(trip.endTime).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Route Info */}
-                      <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-                        <span>Start: {trip.startLocation.address}</span>
-                        <span>→</span>
-                        <span>End: {trip.endLocation.address}</span>
-                        <span>•</span>
-                        <span>Started: {new Date(trip.startTime).toLocaleString()}</span>
-                        <span>•</span>
-                        <span>Ended: {new Date(trip.endTime).toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 md:w-48">
-                      <button
-                        onClick={() => handleViewTrip(trip)}
-                        className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                        style={{ backgroundColor: theme.colors.primary }}
-                      >
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => handleDownloadTracking(trip.id)}
-                        className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        Download Data
-                      </button>
-                      <button
-                        onClick={() => {
-                          // View route replay
-                          console.log('View route replay for trip:', trip.id);
-                        }}
-                        className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        Route Replay
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {completedTrips.length === 0 && (
-              <Card className="p-8 text-center">
-                <p className="text-gray-600">No completed trips found.</p>
+                <p className="text-gray-600">No active locations to display.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Users and guarantors need to enable location tracking.
+                </p>
               </Card>
             )}
           </>
         )}
       </div>
 
-      {/* Trip Detail Modal */}
-      {showTripDetail && selectedTrip && (
-        <TripDetailModal
-          trip={selectedTrip}
+      {/* Location Detail Modal */}
+      {showLocationDetail && selectedLocation && (
+        <LocationDetailModal
+          location={selectedLocation}
           onClose={() => {
-            setShowTripDetail(false);
-            setSelectedTrip(null);
+            setShowLocationDetail(false);
+            setSelectedLocation(null);
           }}
-          onDownload={handleDownloadTracking}
         />
       )}
     </div>
@@ -587,203 +712,126 @@ const TrackingPage = () => {
 };
 
 /**
- * Trip Detail Modal Component
+ * Location Detail Modal Component
  */
-const TripDetailModal = ({ trip, onClose, onDownload }) => {
-  const [activeTab, setActiveTab] = useState('overview');
-
-  if (!trip) return null;
+const LocationDetailModal = ({ location, onClose }) => {
+  if (!location) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{trip.bookingId}</h2>
-            <p className="text-sm text-gray-600">{trip.carName}</p>
+            <h2 className="text-xl font-bold text-gray-900">{location.name || 'Unknown'}</h2>
+            <p className="text-sm text-gray-600">
+              {location.userType === 'guarantor' ? 'Guarantor' : 'User'}
+            </p>
           </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Modal Content */}
         <div className="p-6">
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-gray-200">
-            {['overview', 'route', 'analytics'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${
-                  activeTab === tab
-                    ? 'border-b-2 text-purple-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                style={activeTab === tab ? { borderBottomColor: theme.colors.primary } : {}}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab Content */}
-          <div>
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                {/* Trip Information */}
+          <div className="space-y-6">
+            {/* Location Information */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Location Information</h3>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Information</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Booking ID</label>
-                      <p className="text-sm text-gray-900">{trip.bookingId}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">User</label>
-                      <p className="text-sm text-gray-900">{trip.userName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Car</label>
-                      <p className="text-sm text-gray-900">{trip.carName}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Status</label>
-                      <p className="text-sm text-gray-900 capitalize">{trip.status}</p>
-                    </div>
-                    {trip.currentLocation && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">Current Location</label>
-                        <p className="text-sm text-gray-900">📍 {trip.currentLocation.address}</p>
-                      </div>
-                    )}
-                    {trip.currentSpeed && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">Current Speed</label>
-                        <p className="text-sm text-gray-900">{trip.currentSpeed} km/h</p>
-                      </div>
-                    )}
-                  </div>
+                  <label className="text-xs font-medium text-gray-700">Latitude</label>
+                  <p className="text-sm text-gray-900">{location.lat?.toFixed(6)}</p>
                 </div>
-
-                {/* Location Details */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Location Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Start Location</label>
-                      <p className="text-sm text-gray-900">{trip.startLocation.address}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {trip.startLocation.lat}, {trip.startLocation.lng}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">End Location</label>
-                      <p className="text-sm text-gray-900">{trip.endLocation.address}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {trip.endLocation.lat}, {trip.endLocation.lng}
-                      </p>
-                    </div>
-                  </div>
+                  <label className="text-xs font-medium text-gray-700">Longitude</label>
+                  <p className="text-sm text-gray-900">{location.lng?.toFixed(6)}</p>
                 </div>
-
-                {/* Trip Statistics */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Statistics</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {trip.distanceTraveled !== undefined && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">Distance Traveled</label>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {trip.distanceTraveled} / {trip.totalDistance} km
-                        </p>
-                      </div>
-                    )}
-                    {trip.totalDistance && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">Total Distance</label>
-                        <p className="text-sm font-semibold text-gray-900">{trip.totalDistance} km</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Average Speed</label>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {trip.averageSpeed || trip.currentSpeed} km/h
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Duration</label>
-                      <p className="text-sm font-semibold text-gray-900">{trip.duration}</p>
-                    </div>
+                {location.accuracy && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Accuracy</label>
+                    <p className="text-sm text-gray-900">{Math.round(location.accuracy)} meters</p>
                   </div>
-                </div>
-
-                {/* Timestamps */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Timestamps</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Start Time</label>
-                      <p className="text-sm text-gray-900">{new Date(trip.startTime).toLocaleString()}</p>
-                    </div>
-                    {trip.endTime && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">End Time</label>
-                        <p className="text-sm text-gray-900">{new Date(trip.endTime).toLocaleString()}</p>
-                      </div>
-                    )}
-                    {trip.expectedEndTime && (
-                      <div>
-                        <label className="text-xs font-medium text-gray-700">Expected End Time</label>
-                        <p className="text-sm text-gray-900">{new Date(trip.expectedEndTime).toLocaleString()}</p>
-                      </div>
-                    )}
+                )}
+                {location.speed && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Speed</label>
+                    <p className="text-sm text-gray-900">{Math.round(location.speed)} km/h</p>
                   </div>
+                )}
+                {location.heading && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Heading</label>
+                    <p className="text-sm text-gray-900">{Math.round(location.heading)}°</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-medium text-gray-700">Last Update</label>
+                  <p className="text-sm text-gray-900">
+                    {location.timestamp
+                      ? new Date(location.timestamp).toLocaleString()
+                      : 'N/A'}
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
 
-            {activeTab === 'route' && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Route Map</h3>
-                <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                    </svg>
-                    <p className="text-sm text-gray-500">Route visualization will appear here</p>
+            {/* User Details */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">User Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {location.email && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Email</label>
+                    <p className="text-sm text-gray-900">{location.email}</p>
                   </div>
+                )}
+                {location.phone && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700">Phone</label>
+                    <p className="text-sm text-gray-900">{location.phone}</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-medium text-gray-700">User Type</label>
+                  <p className="text-sm text-gray-900 capitalize">
+                    {location.userType === 'guarantor' ? 'Guarantor' : 'User'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700">User ID</label>
+                  <p className="text-sm text-gray-900 font-mono">{location.userId}</p>
                 </div>
               </div>
-            )}
+            </div>
 
-            {activeTab === 'analytics' && (
+            {/* Address */}
+            {location.address && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Analytics</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-1">Total Distance</p>
-                    <p className="text-lg font-semibold text-gray-900">{trip.totalDistance || trip.distanceTraveled} km</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-1">Average Speed</p>
-                    <p className="text-lg font-semibold text-gray-900">{trip.averageSpeed || trip.currentSpeed} km/h</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-1">Duration</p>
-                    <p className="text-lg font-semibold text-gray-900">{trip.duration}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500 mt-4">Detailed analytics will be displayed here...</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Address</h3>
+                <p className="text-sm text-gray-900">📍 {location.address}</p>
               </div>
             )}
           </div>
@@ -797,14 +845,6 @@ const TripDetailModal = ({ trip, onClose, onDownload }) => {
           >
             Close
           </button>
-          <button
-            onClick={() => {
-              onDownload(trip.id);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Download Tracking Data
-          </button>
         </div>
       </div>
     </div>
@@ -812,4 +852,3 @@ const TripDetailModal = ({ trip, onClose, onDownload }) => {
 };
 
 export default TrackingPage;
-

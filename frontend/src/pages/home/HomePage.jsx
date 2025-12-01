@@ -5,7 +5,7 @@ import { theme } from "../../theme/theme.constants";
 import { carService } from "../../services/car.service";
 import { userService } from "../../services/user.service";
 import { updateUser } from "../../store/slices/userSlice";
-import { useLocationTracking } from "../../hooks/useLocationTracking";
+import { useLocation as useUserLocation } from "../../hooks/useLocation";
 // Import car images from assets folder
 import carBannerImage from "../../assets/car_img1-removebg-preview.png";
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -30,10 +30,10 @@ const HomePage = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
   // Track user location
-  const { currentLocation, coordinates, locationPermission, apiKeyError } = useLocationTracking(
+  const { currentLocation, coordinates, locationPermission, apiKeyError } = useUserLocation(
     true,
     isAuthenticated,
-    user?.id
+    user?._id || user?.id
   );
 
   const [topCarTypes, setTopCarTypes] = useState([]);

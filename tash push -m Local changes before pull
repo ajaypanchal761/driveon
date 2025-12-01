@@ -1,0 +1,26 @@
+[1mdiff --git a/frontend/src/pages/home/HomePage.jsx b/frontend/src/pages/home/HomePage.jsx[m
+[1mindex 6eb9fdf..99cc186 100644[m
+[1m--- a/frontend/src/pages/home/HomePage.jsx[m
+[1m+++ b/frontend/src/pages/home/HomePage.jsx[m
+[36m@@ -5,7 +5,7 @@[m [mimport { theme } from "../../theme/theme.constants";[m
+ import { carService } from "../../services/car.service";[m
+ import { userService } from "../../services/user.service";[m
+ import { updateUser } from "../../store/slices/userSlice";[m
+[31m-import { useLocationTracking } from "../../hooks/useLocationTracking";[m
+[32m+[m[32mimport { useLocation as useUserLocation } from "../../hooks/useLocation";[m
+ // Import car images from assets folder[m
+ import carBannerImage from "../../assets/car_img1-removebg-preview.png";[m
+ import carImg1 from "../../assets/car_img1-removebg-preview.png";[m
+[36m@@ -29,10 +29,10 @@[m [mconst HomePage = () => {[m
+   const { isAuthenticated } = useAppSelector((state) => state.auth);[m
+ [m
+   // Track user location[m
+[31m-  const { currentLocation, coordinates, locationPermission, apiKeyError } = useLocationTracking([m
+[32m+[m[32m  const { currentLocation, coordinates, locationPermission, apiKeyError } = useUserLocation([m
+     true,[m
+     isAuthenticated,[m
+[31m-    user?.id[m
+[32m+[m[32m    user?._id || user?.id[m
+   );[m
+ [m
+   const [topCarTypes, setTopCarTypes] = useState([]);[m
