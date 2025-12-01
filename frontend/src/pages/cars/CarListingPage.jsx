@@ -99,6 +99,21 @@ const CarListingPage = () => {
             const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
             const imageUrl = primaryImage?.url || null;
 
+            // Format location
+            let locationStr = 'N/A';
+            if (car.location) {
+              if (typeof car.location === 'string') {
+                locationStr = car.location;
+              } else if (typeof car.location === 'object') {
+                const parts = [];
+                if (car.location.city) parts.push(car.location.city);
+                if (car.location.state) parts.push(car.location.state);
+                locationStr = parts.length > 0 ? parts.join(', ') : (car.location.address || 'N/A');
+              }
+            } else if (car.city) {
+              locationStr = car.city;
+            }
+
             return {
               id: car._id || car.id,
               brand: car.brand,
@@ -112,6 +127,7 @@ const CarListingPage = () => {
               color: car.color || 'N/A',
               rating: car.averageRating || 0,
               carType: car.carType,
+              location: locationStr,
             };
           });
           
@@ -787,8 +803,8 @@ const CarListingPage = () => {
       </div>
 
       {/* Header Section - Purple Background - Sticky */}
-      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md" style={{ backgroundColor: theme.colors.primary }}>
-        <div className="px-4 py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 md:max-w-7xl md:mx-auto">
+      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md rounded-b-3xl" style={{ backgroundColor: theme.colors.primary }}>
+        <div className="px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-7 md:max-w-7xl md:mx-auto">
           {/* Back Button, Title and Filter - Same Line */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4">
@@ -809,7 +825,7 @@ const CarListingPage = () => {
               </button>
 
               {/* Title */}
-              <h1 className="text-lg md:text-2xl lg:text-3xl font-bold text-white">Browse Cars</h1>
+              <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-white">Browse Cars</h1>
             </div>
             
             {/* Filter Button - Mobile Only */}
@@ -873,120 +889,150 @@ const CarListingPage = () => {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 lg:gap-5 md:max-w-7xl md:mx-auto">
+          <div className="grid grid-cols-2 max-[480px]:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 lg:gap-8 md:max-w-7xl md:mx-auto">
             {filteredCars.length > 0 ? (
               filteredCars.map((car) => (
               <div
                 key={car.id}
-                className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 relative cursor-pointer active:scale-[0.98] md:active:scale-100 transition-all hover:shadow-lg hover:-translate-y-1 p-3 md:p-3 lg:p-4"
+                onClick={() => handleDetailsClick(car.id)}
+                className="bg-white rounded-2xl overflow-hidden shadow-xl md:shadow-lg border border-gray-100/90 relative cursor-pointer active:scale-[0.98] md:active:scale-100 transition-all hover:shadow-2xl hover:-translate-y-1 flex flex-col"
               >
-              {/* Compact Horizontal Card Layout - Mobile, Vertical on Desktop */}
-              <div className="flex gap-3 md:flex-col md:gap-3">
-                {/* Car Image */}
-                <div className="flex-shrink-0 w-20 md:w-full flex items-center justify-center md:bg-gray-50 md:rounded-lg md:p-3">
-                  <div className="w-20 h-20 md:w-full md:h-36 lg:h-40 flex items-center justify-center">
-                    {car.image ? (
-                      <img
-                        src={car.image}
-                        alt={`${car.brand} ${car.model}`}
-                        className="max-w-full max-h-full object-contain"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          const placeholder = e.target.nextElementSibling;
-                          if (placeholder) placeholder.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div className="hidden w-full h-full items-center justify-center bg-gray-100 rounded-lg">
-                      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
+              {/* Mobile: Full-width vertical card with image on top */}
+              <div className="flex flex-col md:flex-col md:gap-3">
+                {/* Car Image - Full width on mobile with distinct background panel */}
+                <div className="relative w-full h-40 sm:h-44 md:h-36 lg:h-40 bg-gray-100 flex items-center justify-center border-b border-gray-100">
+                  {car.image ? (
+                    <img
+                      src={car.image}
+                      alt={`${car.brand} ${car.model}`}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const placeholder = e.target.nextElementSibling;
+                        if (placeholder) placeholder.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className="hidden w-full h-full items-center justify-center bg-gray-100">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
+                  
+                  {/* Heart Icon - Top Right Overlay */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Handle favorite toggle
+                    }}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white shadow-md ring-1 ring-white/80 flex items-center justify-center z-10 hover:bg-gray-50 transition-colors"
+                    aria-label="Add to favorites"
+                  >
+                    <svg
+                      className="w-4 h-4 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
+                  </button>
                 </div>
 
-                {/* Car Details */}
-                <div className="flex-1 flex flex-col justify-between min-w-0">
-                  {/* Top Section - Car Name, Year and Rating */}
-                  <div className="mb-1.5 md:mb-2">
-                    <div className="flex items-start justify-between mb-1">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <h3 className="text-base md:text-base lg:text-lg font-bold text-gray-900 leading-tight truncate">
+                {/* Car Details - Below Image */}
+                <div className="px-3 pt-3.5 pb-3.5 flex flex-col flex-1">
+                  {/* Car Name, Year and Rating in same row */}
+                  <div className="mb-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 
+                          className="text-base md:text-lg font-bold text-gray-900 truncate mb-0.5"
+                          onClick={() => handleDetailsClick(car.id)}
+                        >
                           {car.brand} {car.model}
                         </h3>
                         <span className="text-xs text-gray-500">{car.year}</span>
                       </div>
-                      {/* Rating at top right */}
-                      <div className="flex items-center flex-shrink-0">
-                        <svg className="w-3 h-3 md:w-3.5 md:h-3.5 text-yellow-400 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+
+                      {/* Rating - right aligned */}
+                      <div className="flex items-center gap-1 text-xs flex-shrink-0">
+                        <svg
+                          className="w-3.5 h-3.5 text-yellow-400"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
-                        <span className="text-xs font-semibold text-gray-900">{car.rating}</span>
+                        <span className="font-semibold text-gray-900">
+                          {car.rating.toFixed ? car.rating.toFixed(1) : car.rating}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Car Details - Seats, Fuel Type, Transmission, Color */}
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 md:gap-x-2 md:gap-y-1.5 mb-1.5 md:mb-2">
-                    <div className="flex items-center text-xs md:text-sm text-gray-700">
-                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                  {/* Car Details Grid - Seats, Transmission, Fuel Type, Color */}
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mb-2.5">
+                    {/* Seats */}
+                    <div className="flex items-center text-xs text-gray-700">
+                      <svg className="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                       <span className="font-medium">{car.seats}</span>
                     </div>
                     
-                    <div className="flex items-center text-xs md:text-sm text-gray-700">
-                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="font-medium">{car.fuelType}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-xs md:text-sm text-gray-700">
-                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Transmission */}
+                    <div className="flex items-center text-xs text-gray-700">
+                      <svg className="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                       <span className="font-medium">{car.transmission}</span>
                     </div>
                     
-                    <div className="flex items-center text-xs md:text-sm text-gray-700">
-                      <svg className="w-3 h-3 md:w-4 md:h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Fuel Type */}
+                    <div className="flex items-center text-xs text-gray-700">
+                      <svg className="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">{car.fuelType}</span>
+                    </div>
+                    
+                    {/* Color */}
+                    <div className="flex items-center text-xs text-gray-700">
+                      <svg className="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                       </svg>
                       <span className="font-medium">{car.color}</span>
                     </div>
                   </div>
-                  
-                  {/* Price and Action Buttons - Same Line */}
-                  <div className="flex items-center justify-between pt-1.5 md:pt-2 gap-2">
-                    {/* Price */}
-                    <div className="flex items-baseline">
-                      <span className="text-sm md:text-base lg:text-lg font-bold text-gray-900">
+
+                  {/* Price + Details Button */}
+                  <div className="mt-auto pt-1 flex items-center justify-between gap-2">
+                    <div className="text-sm md:text-base">
+                      <p className="font-bold text-gray-900">
                         Rs. {car.price}
-                      </span>
-                      <span className="text-xs text-gray-500 ml-0.5">/day</span>
+                        <span className="ml-0.5 text-[11px] md:text-xs text-gray-500 font-medium">/day</span>
+                      </p>
                     </div>
-                    
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      {/* Details Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDetailsClick(car.id);
-                        }}
-                        className="px-3 py-1 md:px-3 md:py-1.5 lg:px-4 lg:py-2 rounded-lg text-xs md:text-xs lg:text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all border-2"
-                        style={{ 
-                          backgroundColor: 'transparent',
-                          borderColor: theme.colors.primary,
-                          color: theme.colors.primary,
-                        }}
-                        aria-label="View details"
-                      >
-                        Details
-                      </button>
-                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDetailsClick(car.id);
+                      }}
+                      className="px-4 py-1.5 rounded-xl text-xs font-semibold shadow-sm hover:shadow-md transition-all border"
+                      style={{
+                        backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.primary,
+                        color: '#ffffff',
+                      }}
+                    >
+                      Details
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1034,4 +1080,5 @@ const CarListingPage = () => {
 };
 
 export default CarListingPage;
+
 

@@ -15,6 +15,7 @@ import carImg4 from "../../assets/car_img4-removebg-preview.png";
 import carImg5 from "../../assets/car_img5-removebg-preview.png";
 import carImg6 from "../../assets/car_img6-removebg-preview.png";
 import carImg7 from "../../assets/car_img7-removebg-preview.png";
+import BannerAd from "../../components/common/BannerAd";
 
 /**
  * HomePage Component
@@ -296,7 +297,7 @@ const HomePage = () => {
     <div className="min-h-screen w-full bg-white">
       {/* Header Section - Blue Background - Fixed */}
       <header
-        className="text-white overflow-hidden md:rounded-none rounded-b-3xl shrink-0 max-w-full z-40 fixed left-0 right-0 top-0"
+        className="text-white overflow-hidden rounded-b-3xl md:rounded-b-[2rem] lg:rounded-b-[2.5rem] shrink-0 max-w-full z-40 fixed left-0 right-0 top-0"
         style={{ backgroundColor: theme.colors.primary, width: "100%" }}
       >
         {/* Abstract blue pattern background */}
@@ -714,7 +715,7 @@ const HomePage = () => {
 
         {/* Featured Car Banner */}
         <div
-          className="rounded-xl p-3 md:p-6 lg:p-8 relative overflow-hidden max-w-full"
+          className="rounded-xl p-3 md:p-6 lg:p-8 relative overflow-hidden max-w-full mt-4 md:mt-6 lg:mt-8 mb-4 md:mb-6 lg:mb-8"
           style={{ backgroundColor: theme.colors.primary }}
         >
           {/* Background Pattern */}
@@ -724,14 +725,14 @@ const HomePage = () => {
 
           <div className="relative flex items-center justify-between gap-3 md:gap-6 lg:gap-8 max-w-full">
             {/* Left Side - Text Content */}
-            <div className="flex-1 min-w-0 z-10 max-w-full overflow-hidden">
-              <div className="text-xs md:text-sm lg:text-base text-white/70 mb-0.5 md:mb-1 uppercase tracking-wide">
+            <div className="flex-1 min-w-0 z-10 max-w-full overflow-hidden pr-20 md:pr-40 lg:pr-56">
+              <div className="text-xs md:text-sm lg:text-base text-white mb-0.5 md:mb-1 uppercase tracking-wide font-semibold">
                 Featured Today
               </div>
               <h2 className="text-lg md:text-2xl lg:text-4xl font-bold text-white mb-1.5 md:mb-2 lg:mb-3 leading-tight">
                 Rent Your Dream Car
               </h2>
-              <p className="text-xs md:text-base lg:text-lg text-white/80 mb-2 md:mb-4 line-clamp-2">
+              <p className="text-xs md:text-base lg:text-lg text-white mb-2 md:mb-4 line-clamp-2 font-semibold">
                 Premium cars available for rent at affordable prices
               </p>
               <button
@@ -756,7 +757,7 @@ const HomePage = () => {
             </div>
 
             {/* Right Side - Car Image */}
-            <div className="w-40 h-32 md:w-56 md:h-44 lg:w-80 lg:h-64 shrink-0 absolute right-0 top-1/2 -translate-y-1/2 z-30">
+            <div className="w-32 h-24 md:w-56 md:h-44 lg:w-80 lg:h-64 shrink-0 absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-none">
               <img
                 src={carBannerImage}
                 alt="Premium Car"
@@ -769,7 +770,7 @@ const HomePage = () => {
         {/* Top Car Types Section */}
         <div className="max-w-full overflow-hidden">
           <div className="flex items-center justify-between mb-1 md:mb-4 lg:mb-6">
-            <h3 className="text-lg md:text-2xl lg:text-3xl font-semibold text-gray-900">
+            <h3 className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900">
               Top Brands
             </h3>
             <button
@@ -799,7 +800,7 @@ const HomePage = () => {
                     className="w-full h-full object-contain m-0 p-0"
                   />
                 </div>
-                <span className="text-xs md:text-sm lg:text-base font-medium text-gray-700 text-center max-w-[80px] md:max-w-full truncate m-0 p-0 mt-2 md:mt-3">
+                <span className="text-xs md:text-sm lg:text-base font-semibold text-gray-700 text-center max-w-[80px] md:max-w-full truncate m-0 p-0 mt-2 md:mt-3">
                   {carType.name}
                 </span>
               </div>
@@ -854,7 +855,7 @@ const HomePage = () => {
         {/* Available Near You Section */}
         <div className="w-full overflow-visible">
           <div className="flex items-center justify-between mb-4 md:mb-6 lg:mb-8 px-0">
-            <h3 className="text-lg md:text-2xl lg:text-3xl font-semibold text-gray-900">
+            <h3 className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900">
               Available Near You
             </h3>
             <button
@@ -1091,41 +1092,8 @@ const HomePage = () => {
             </div>
           </section>
 
-          {/* Our Trusted Partners Section */}
-          <section className="py-16 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <div className="text-center mb-12">
-                <h2
-                  className="text-3xl lg:text-4xl font-bold mb-4"
-                  style={{ color: theme.colors.primary }}
-                >
-                  Our Trusted Partners
-                </h2>
-                <p className="text-gray-600 text-lg">
-                  We work with leading brands to provide you the best experience
-                </p>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center">
-                {[
-                  "DigiLocker",
-                  "Razorpay",
-                  "Stripe",
-                  "AWS",
-                  "Cloudinary",
-                  "Firebase",
-                ].map((partner, index) => (
-                  <div
-                    key={`partner-${index}`}
-                    className="flex items-center justify-center h-20 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4"
-                  >
-                    <span className="text-gray-700 font-semibold text-sm md:text-base">
-                      {partner}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+          {/* Banner Ad Section */}
+          <BannerAd />
 
           {/* FAQ Section */}
           <section className="py-16 bg-white">

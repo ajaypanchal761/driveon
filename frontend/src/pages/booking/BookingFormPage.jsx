@@ -27,6 +27,12 @@ const BookingFormPage = () => {
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
+  // Custom calendar modal state
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarTarget, setCalendarTarget] = useState(null); // 'pickup' | 'drop'
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(null);
+
   // Mock car data
   const carsData = {
     '1': { id: '1', brand: 'Tesla', model: 'Model X', price: 180, image: carImg1 },
@@ -70,6 +76,72 @@ const BookingFormPage = () => {
     return today.toISOString().split('T')[0];
   };
 
+  // Helpers for custom calendar
+  const openCalendar = (target) => {
+    setCalendarTarget(target);
+    const existing =
+      target === 'pickup'
+        ? pickupDate
+        : target === 'drop'
+        ? dropDate
+        : '';
+    let baseDate;
+    if (existing) {
+      baseDate = new Date(existing);
+    } else if (target === 'drop' && pickupDate) {
+      baseDate = new Date(pickupDate);
+    } else {
+      baseDate = new Date();
+    }
+    setCalendarMonth(new Date(baseDate.getFullYear(), baseDate.getMonth(), 1));
+    setCalendarSelectedDate(baseDate);
+    setIsCalendarOpen(true);
+  };
+
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = d.toLocaleString('default', { month: 'short' });
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  const getCalendarDays = () => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    for (let i = 0; i < firstDay; i += 1) {
+      days.push(null);
+    }
+    for (let d = 1; d <= daysInMonth; d += 1) {
+      days.push(new Date(year, month, d));
+    }
+    return days;
+  };
+
+  const handleCalendarDone = () => {
+    if (!calendarSelectedDate || !calendarTarget) {
+      setIsCalendarOpen(false);
+      return;
+    }
+    const iso = calendarSelectedDate.toISOString().split('T')[0];
+    if (calendarTarget === 'pickup') {
+      setPickupDate(iso);
+      // if drop date is before pickup, reset it
+      if (dropDate && new Date(dropDate) < calendarSelectedDate) {
+        setDropDate('');
+      }
+    } else if (calendarTarget === 'drop') {
+      setDropDate(iso);
+    }
+    setIsCalendarOpen(false);
+  };
+
   // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -108,7 +180,7 @@ const BookingFormPage = () => {
   }
 
   return (
-    <div className="min-h-screen pb-24 bg-white">
+    <div className="min-h-screen pb-24 bg-white relative">
       {/* Header */}
       <header className="text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
         <div className="relative px-4 pt-3 pb-2 md:px-6 md:py-4">
@@ -157,21 +229,32 @@ const BookingFormPage = () => {
                 <div className="space-y-2">
                   <label className="text-sm md:text-base font-medium" style={{ color: theme.colors.textSecondary }}>Pickup Date & Time</label>
                   <div className="grid grid-cols-2 gap-2 md:gap-3">
-                    <input
-                      type="date"
-                      value={pickupDate}
-                      onChange={(e) => setPickupDate(e.target.value)}
-                      min={getMinDate()}
-                      className="px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                      style={{ 
+                    <button
+                      type="button"
+                      onClick={() => openCalendar('pickup')}
+                      className="flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
+                      style={{
                         borderColor: theme.colors.borderDefault,
                         color: theme.colors.textPrimary,
                       }}
-                      onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                      onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                      placeholder="Pickup Date"
-                      required
-                    />
+                    >
+                      <span className={pickupDate ? '' : 'text-gray-400'}>
+                        {pickupDate ? formatDisplayDate(pickupDate) : 'Pickup Date'}
+                      </span>
+                      <svg
+                        className="w-4 h-4 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
                     <input
                       type="time"
                       value={pickupTime}
@@ -192,21 +275,32 @@ const BookingFormPage = () => {
                 <div className="space-y-2">
                   <label className="text-sm md:text-base font-medium" style={{ color: theme.colors.textSecondary }}>Drop Date & Time</label>
                   <div className="grid grid-cols-2 gap-2 md:gap-3">
-                    <input
-                      type="date"
-                      value={dropDate}
-                      onChange={(e) => setDropDate(e.target.value)}
-                      min={pickupDate || getMinDate()}
-                      className="px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                      style={{ 
+                    <button
+                      type="button"
+                      onClick={() => openCalendar('drop')}
+                      className="flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl bg-white border text-sm md:text-base focus:outline-none transition-colors"
+                      style={{
                         borderColor: theme.colors.borderDefault,
                         color: theme.colors.textPrimary,
                       }}
-                      onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                      onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                      placeholder="Drop Date"
-                      required
-                    />
+                    >
+                      <span className={dropDate ? '' : 'text-gray-400'}>
+                        {dropDate ? formatDisplayDate(dropDate) : 'Drop Date'}
+                      </span>
+                      <svg
+                        className="w-4 h-4 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
                     <input
                       type="time"
                       value={dropTime}
@@ -361,6 +455,130 @@ const BookingFormPage = () => {
           </div>
         </div>
       </form>
+
+      {/* Calendar Modal - Mobile friendly */}
+      {isCalendarOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40">
+          <div className="w-full max-w-xs bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="px-4 pt-3 pb-2 border-b border-gray-100 flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-900">
+                {calendarTarget === 'pickup' ? 'Pickup Date' : 'Drop Date'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsCalendarOpen(false)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Month header */}
+            <div className="px-4 pt-2 pb-1 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() =>
+                  setCalendarMonth(
+                    new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1)
+                  )
+                }
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="text-sm font-semibold text-gray-900">
+                {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setCalendarMonth(
+                    new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1)
+                  )
+                }
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Week days */}
+            <div className="px-4 pt-1 grid grid-cols-7 text-center text-[11px] text-gray-400">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                <span key={d}>{d}</span>
+              ))}
+            </div>
+
+            {/* Days grid */}
+            <div className="px-3 pb-3 pt-1 grid grid-cols-7 gap-1.5 text-sm">
+              {getCalendarDays().map((date, idx) => {
+                if (!date) return <div key={idx} />;
+
+                const isSelected =
+                  calendarSelectedDate &&
+                  date.toDateString() === calendarSelectedDate.toDateString();
+
+                const today = new Date();
+                const isToday = date.toDateString() === today.toDateString();
+
+                const minDate = new Date(getMinDate());
+                const isDisabled =
+                  (calendarTarget === 'pickup' && date < minDate) ||
+                  (calendarTarget === 'drop' &&
+                    (date < minDate || (pickupDate && date < new Date(pickupDate))));
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => setCalendarSelectedDate(date)}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs md:text-sm ${
+                      isDisabled
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : isSelected
+                        ? 'bg-primary text-white'
+                        : 'text-gray-800 hover:bg-gray-100'
+                    } ${isToday && !isSelected ? 'border border-primary/40' : ''}`}
+                    style={
+                      isSelected
+                        ? { backgroundColor: theme.colors.primary }
+                        : undefined
+                    }
+                  >
+                    {date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer buttons */}
+            <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCalendarOpen(false)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-300 text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCalendarDone}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm"
+                style={{ backgroundColor: theme.colors.primary }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

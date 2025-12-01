@@ -198,7 +198,7 @@ const BookingHistoryPage = () => {
   return (
     <div className="min-h-screen bg-white pb-20">
       {/* Header Section - Purple Background - Sticky */}
-      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md" style={{ backgroundColor: theme.colors.primary }}>
+      <header className="sticky top-0 z-50 text-white relative overflow-hidden shadow-md rounded-b-3xl" style={{ backgroundColor: theme.colors.primary }}>
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>

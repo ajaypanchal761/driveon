@@ -194,9 +194,9 @@ const ProfileDashboardPage = () => {
   const formattedUserId = user?._id || user?.id ? formatUserId(user._id || user.id) : '';
 
   return (
-    <div className="w-full min-h-screen bg-white pb-20 overflow-x-hidden relative z-0" style={{ backgroundColor: '#ffffff', minHeight: '100vh' }}>
+    <div className="w-full min-h-screen bg-gray-50 pb-20 overflow-x-hidden relative z-0" style={{ backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
       {/* Header Section - Blue Background */}
-      <header className="w-full text-white relative overflow-hidden" style={{ backgroundColor: theme.colors.primary }}>
+      <header className="w-full text-white relative overflow-hidden rounded-b-3xl shadow-md" style={{ backgroundColor: theme.colors.primary }}>
         {/* Abstract blue pattern background */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
@@ -204,7 +204,7 @@ const ProfileDashboardPage = () => {
         </div>
 
         {/* Header Content */}
-        <div className="relative px-4 py-3 md:px-6 md:py-6">
+        <div className="relative px-4 py-4 md:px-6 md:py-6">
           <div className="max-w-7xl mx-auto">
             {/* Back Button, Profile Icon, and User Name - All Aligned */}
             <div className="flex items-center gap-3 md:gap-6">
@@ -285,10 +285,10 @@ const ProfileDashboardPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="px-3 pt-4 pb-3 md:px-6 md:pt-8 md:pb-6 w-full max-w-7xl mx-auto" style={{ backgroundColor: '#ffffff' }}>
+      <main className="px-3 pt-10 pb-3 md:px-6 md:pt-14 md:pb-6 w-full max-w-7xl mx-auto">
         {/* Profile Completion Status Card - Only show if profile is not complete */}
         {(!profileComplete && (!user?.profileComplete || user.profileComplete < 100)) && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 mb-3 md:mb-6">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 mb-3 md:mb-6 mt-4 md:mt-6">
             <div className="flex items-start gap-2 md:gap-3">
               <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full flex items-center justify-center">
                 <svg
@@ -329,13 +329,13 @@ const ProfileDashboardPage = () => {
         )}
 
         {/* Menu Options */}
-        <div className="space-y-1.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 pt-2">
+        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 pt-3">
           {menuOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => navigate(option.path)}
-              className="w-full bg-white rounded-lg p-3 md:p-4 flex items-center justify-between shadow-sm border border-gray-100 hover:shadow-md md:hover:shadow-lg transition-all touch-target group"
-            >
+              <button
+                key={option.id}
+                onClick={() => navigate(option.path)}
+                className="w-full bg-white rounded-xl p-3.5 md:p-4 flex items-center justify-between shadow-md border border-gray-100/90 hover:shadow-lg md:hover:shadow-xl transition-all touch-target group"
+              >
               <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Icon */}
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${theme.colors.primary}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>

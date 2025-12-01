@@ -175,3 +175,38 @@ body {
 .animate-slide-down {
   animation: slideDown 0.3s ease-out;
 }
+
+/* Ticker scroll animation for BannerAd */
+.ticker-scroll-area {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.scroll-container {
+  display: flex;
+  width: fit-content;
+}
+
+.animate-ticker-scroll {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+.animate-ticker-scroll:hover {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
