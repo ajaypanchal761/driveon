@@ -76,7 +76,7 @@ const BannerAd = () => {
   ];
 
   return (
-    <section className="py-8 md:py-16 bg-white relative overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+    <section className="hidden md:block py-8 md:py-16 bg-white relative overflow-hidden" data-aos="fade-up" data-aos-delay="100">
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <div className="text-center mb-8 md:mb-12">
           <h2
