@@ -290,14 +290,176 @@ const ProfileDashboardPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="px-3 pt-10 pb-3 md:px-6 md:pt-14 md:pb-6 w-full max-w-7xl mx-auto">
-        {/* Profile Completion Status Card - Only show if profile is not complete */}
-        {(!profileComplete && (!user?.profileComplete || user.profileComplete < 100)) && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 mb-3 md:mb-6 mt-4 md:mt-6">
-            <div className="flex items-start gap-2 md:gap-3">
-              <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+      <main 
+        className="px-4 pt-6 pb-6 md:px-3 md:pt-10 md:pb-3 md:px-6 md:pt-14 md:pb-6 w-full max-w-7xl mx-auto"
+        style={{ 
+          backgroundColor: `${theme.colors.primary}08`,
+        }}
+      >
+        <style>{`
+          @media (min-width: 768px) {
+            main {
+              background-color: transparent !important;
+            }
+          }
+        `}</style>
+        {/* Mobile View - Single White Rounded Card */}
+        <div className="md:hidden mt-6">
+          {/* Profile Completion Banner - Between header and white card - Mobile Only */}
+          {(!profileComplete && (!user?.profileComplete || user.profileComplete < 100)) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 max-w-2xl mx-auto">
+              <div className="flex items-start gap-2">
+                <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-4 h-4 text-yellow-900"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <h3 className="text-xs font-semibold text-yellow-900">
+                      Complete Your Profile
+                    </h3>
+                    <span className="text-xs font-bold text-yellow-900">
+                      {user?.profileComplete || 0}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-yellow-700 mb-1.5">
+                    Complete your profile to start booking cars
+                  </p>
+                  <button
+                    onClick={() => navigate('/profile/complete')}
+                    className="text-xs font-medium text-yellow-900 underline hover:no-underline"
+                  >
+                    Complete Now →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl shadow-sm max-w-2xl mx-auto overflow-hidden">
+            {/* Menu Options - Clean Vertical List - Mobile Only */}
+            <div className="divide-y divide-gray-100">
+              {menuOptions.map((option, index) => (
+                <button
+                  key={option.id}
+                  onClick={() => navigate(option.path)}
+                  className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors touch-target"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {/* Icon in rounded square */}
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${theme.colors.primary}15` }}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        style={{ color: theme.colors.primary }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        {option.icon}
+                      </svg>
+                    </div>
+
+                    {/* Label */}
+                    <span className="text-base font-medium text-gray-900">{option.label}</span>
+                  </div>
+
+                  {/* Badge and Chevron */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {option.badge && (
+                      <>
+                        <span
+                          className={`${option.badgeColor} text-white text-xs font-semibold px-2 py-1 rounded-full`}
+                        >
+                          {option.badge}
+                        </span>
+                        {option.id === 'guarantor' && user?.guarantorId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(user.guarantorId);
+                              toastUtils.success('Guarantor ID copied!');
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            aria-label="Copy guarantor ID"
+                          >
+                            <svg
+                              className="w-4 h-4 text-gray-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+
+              {/* Logout Button - Mobile Only */}
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors touch-target"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Icon in rounded square */}
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-red-50">
+                    <svg
+                      className="w-5 h-5 text-red-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                  </div>
+
+                  {/* Label */}
+                  <span className="text-base font-medium text-gray-900">Logout</span>
+                </div>
+
+                {/* Chevron */}
                 <svg
-                  className="w-4 h-4 md:w-5 md:h-5 text-yellow-900"
+                  className="w-5 h-5 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -306,35 +468,97 @@ const ProfileDashboardPage = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-0.5 md:mb-1">
-                  <h3 className="text-xs md:text-sm font-semibold text-yellow-900">
-                    Complete Your Profile
-                  </h3>
-                  <span className="text-xs md:text-sm font-bold text-yellow-900">
-                    {user?.profileComplete || 0}%
-                  </span>
+              </button>
+            </div>
+
+            {/* Referral Code Display - Inside card - Mobile Only */}
+            {referralCode && (
+              <div className="mx-4 my-4 p-3 rounded-lg border" style={{ backgroundColor: `${theme.colors.primary}08`, borderColor: `${theme.colors.primary}20` }}>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-500 mb-1">Your Referral Code</p>
+                    <p className="text-sm font-bold font-mono truncate" style={{ color: theme.colors.primary }}>
+                      {referralCode}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(referralCode);
+                      toastUtils.success('Referral code copied!');
+                    }}
+                    className="p-2 rounded-lg hover:bg-white transition-colors flex-shrink-0 touch-target"
+                    style={{ color: theme.colors.primary }}
+                    aria-label="Copy referral code"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
                 </div>
-                <p className="text-xs md:text-sm text-yellow-700 mb-1.5 md:mb-2">
-                  Complete your profile to start booking cars
-                </p>
-                <button
-                  onClick={() => navigate('/profile/complete')}
-                  className="text-xs md:text-sm font-medium text-yellow-900 underline hover:no-underline"
-                >
-                  Complete Now →
-                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop View - Keep existing layout */}
+        <div className="hidden md:block">
+          {/* Profile Completion Status Card - Only show if profile is not complete */}
+          {(!profileComplete && (!user?.profileComplete || user.profileComplete < 100)) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 mb-3 md:mb-6 mt-4 md:mt-6">
+              <div className="flex items-start gap-2 md:gap-3">
+                <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-4 h-4 md:w-5 md:h-5 text-yellow-900"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-0.5 md:mb-1">
+                    <h3 className="text-xs md:text-sm font-semibold text-yellow-900">
+                      Complete Your Profile
+                    </h3>
+                    <span className="text-xs md:text-sm font-bold text-yellow-900">
+                      {user?.profileComplete || 0}%
+                    </span>
+                  </div>
+                  <p className="text-xs md:text-sm text-yellow-700 mb-1.5 md:mb-2">
+                    Complete your profile to start booking cars
+                  </p>
+                  <button
+                    onClick={() => navigate('/profile/complete')}
+                    className="text-xs md:text-sm font-medium text-yellow-900 underline hover:no-underline"
+                  >
+                    Complete Now →
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Menu Options */}
-        <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 pt-3">
+          {/* Menu Options */}
+          <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 pt-3">
           {menuOptions.map((option) => (
               <button
                 key={option.id}
@@ -468,6 +692,48 @@ const ProfileDashboardPage = () => {
           </button>
         </div>
 
+          {/* Referral Code Display - Desktop Only */}
+          {referralCode && (
+            <div
+              className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white"
+              style={{
+                background: `linear-gradient(to right, ${theme.colors.primary}, ${
+                  theme.colors.primaryLight || theme.colors.primary
+                })`,
+              }}
+            >
+              <div className="flex items-center justify-between gap-2 md:gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs md:text-sm text-white/80 mb-0.5 md:mb-1">Your Referral Code</p>
+                  <p className="text-sm md:text-lg font-bold font-mono truncate">{referralCode}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(referralCode);
+                    toastUtils.success('Referral code copied!');
+                  }}
+                  className="p-1.5 md:p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 touch-target"
+                  aria-label="Copy referral code"
+                >
+                  <svg
+                    className="w-4 h-4 md:w-5 md:h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Background Location Tracking for User (hidden) */}
         {user && (
           <LocationTracker
@@ -476,47 +742,6 @@ const ProfileDashboardPage = () => {
             autoStart={true}
             hidden={true}
           />
-        )}
-
-        {/* Referral Code Display */}
-        {referralCode && (
-          <div
-            className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white"
-            style={{
-              background: `linear-gradient(to right, ${theme.colors.primary}, ${
-                theme.colors.primaryLight || theme.colors.primary
-              })`,
-            }}
-          >
-            <div className="flex items-center justify-between gap-2 md:gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs md:text-sm text-white/80 mb-0.5 md:mb-1">Your Referral Code</p>
-                <p className="text-sm md:text-lg font-bold font-mono truncate">{referralCode}</p>
-              </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(referralCode);
-                  toastUtils.success('Referral code copied!');
-                }}
-                className="p-1.5 md:p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 touch-target"
-                aria-label="Copy referral code"
-              >
-                <svg
-                  className="w-4 h-4 md:w-5 md:h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
         )}
       </main>
     </div>

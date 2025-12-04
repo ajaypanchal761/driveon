@@ -500,7 +500,7 @@ const CarDetailsPage = () => {
           }
           .swiper-pagination-mobile {
             position: absolute;
-            bottom: 2px;
+            bottom: -8px;
             left: 0;
             right: 0;
             display: flex;
@@ -510,7 +510,7 @@ const CarDetailsPage = () => {
           }
           @media (min-width: 640px) {
             .swiper-pagination-mobile {
-              bottom: 4px;
+              bottom: -6px;
             }
           }
         `}</style>
@@ -547,7 +547,7 @@ const CarDetailsPage = () => {
           >
             {carImages.map((image, index) => (
               <SwiperSlide key={index} className="!w-full">
-                <div className="w-full h-[350px] sm:h-[450px] flex items-center justify-center bg-transparent pb-1">
+                <div className="w-full h-[350px] sm:h-[450px] flex items-center justify-center bg-transparent">
                   <img
                     src={image}
                     alt={`${car.brand} ${car.model} - Image ${index + 1}`}

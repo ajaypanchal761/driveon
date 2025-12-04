@@ -40,16 +40,15 @@ const HomePage = () => {
   const [vehicles, setVehicles] = useState([]);
   const [browseCars, setBrowseCars] = useState([]);
   const [topCars, setTopCars] = useState([]);
-  const [recommendedCars, setRecommendedCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [browseCarsLoading, setBrowseCarsLoading] = useState(true);
   const [topCarsLoading, setTopCarsLoading] = useState(true);
-  const [recommendedCarsLoading, setRecommendedCarsLoading] = useState(true);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [showLocation, setShowLocation] = useState(true);
   const [isDesktop, setIsDesktop] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showApiKeyError, setShowApiKeyError] = useState(true);
+  const [expandLocation, setExpandLocation] = useState(false);
   const lastScrollYRef = useRef(0);
 
   // Default car type images mapping (fallback)
@@ -153,98 +152,32 @@ const HomePage = () => {
     fetchBrowseCars();
   }, []);
 
-  // Fetch top cars for Top Cars section from database
+  // Fetch top cars for Top Cars section (2 cars)
   useEffect(() => {
     const fetchTopCars = async () => {
       try {
         setTopCarsLoading(true);
-        
-        // Get IDs of cars already shown in other sections to exclude them
-        const browseCarIds = browseCars.map(car => car.id);
-        const recommendedCarIds = recommendedCars.map(car => car.id);
-        const excludedIds = [...browseCarIds, ...recommendedCarIds];
-        
-        // Try to get featured/popular cars first
-        let response = await carService.getCars({
+        const response = await carService.getCars({
           page: 1,
-          limit: 10, // Get more to filter out excluded ones
+          limit: 2,
           status: 'active',
           isAvailable: true,
-          isPopular: true,
-          sortBy: 'totalBookings',
+          sortBy: 'createdAt',
           sortOrder: 'desc',
         });
 
-        // If no popular cars, try by highest bookings
-        if (!response.success || !response.data.cars || response.data.cars.length === 0) {
-          response = await carService.getCars({
-            page: 1,
-            limit: 10,
-            status: 'active',
-            isAvailable: true,
-            sortBy: 'totalBookings',
-            sortOrder: 'desc',
-          });
-        }
-
-        // If still no cars, try by highest rating
-        if (!response.success || !response.data.cars || response.data.cars.length === 0) {
-          response = await carService.getCars({
-            page: 1,
-            limit: 10,
-            status: 'active',
-            isAvailable: true,
-            sortBy: 'averageRating',
-            sortOrder: 'desc',
-          });
-        }
-
-        // If still no cars, get any available cars
-        if (!response.success || !response.data.cars || response.data.cars.length === 0) {
-          response = await carService.getCars({
-            page: 1,
-            limit: 10,
-            status: 'active',
-            isAvailable: true,
-            sortBy: 'createdAt',
-            sortOrder: 'desc',
-          });
-        }
-
-        if (response.success && response.data.cars && response.data.cars.length > 0) {
-          // Filter out cars that are already shown in other sections
-          let availableCars = response.data.cars.filter(
-            car => !excludedIds.includes(car._id || car.id)
-          );
-          
-          // If we filtered out too many, take from the original list but skip first few
-          if (availableCars.length < 2) {
-            availableCars = response.data.cars.slice(2, 4); // Skip first 2, take next 2
-          }
-          
-          // Take only 2 cars
-          const selectedCars = availableCars.slice(0, 2);
-          
-          const formattedCars = selectedCars.map((car) => {
-            // Calculate price range (show price per day with some variation)
-            const basePrice = car.pricePerDay || 0;
-            const minPrice = Math.floor(basePrice * 0.9);
-            const maxPrice = Math.ceil(basePrice * 1.1);
-            
-            return {
-              id: car._id || car.id,
-              brand: car.brand,
-              model: car.model,
-              price: car.pricePerDay,
-              priceRange: minPrice !== maxPrice ? `${minPrice} - ${maxPrice}` : basePrice,
-              image: car.primaryImage || car.images?.[0]?.url || carImg1,
-              rating: car.averageRating || 0,
-              carId: car._id || car.id,
-            };
-          });
+        if (response.success && response.data.cars) {
+          const formattedCars = response.data.cars.map((car) => ({
+            id: car._id || car.id,
+            brand: car.brand,
+            model: car.model,
+            price: car.pricePerDay,
+            image: car.primaryImage || car.images?.[0]?.url || carImg1,
+            rating: car.averageRating || 0,
+            location: car.location?.city || car.location?.state || "Location",
+            carId: car._id || car.id,
+          }));
           setTopCars(formattedCars);
-        } else {
-          setTopCars([]);
         }
       } catch (error) {
         console.error("Error fetching top cars:", error);
@@ -254,48 +187,7 @@ const HomePage = () => {
       }
     };
 
-    // Wait for browseCars and recommendedCars to be loaded first
-    if (!browseCarsLoading && !recommendedCarsLoading) {
-      fetchTopCars();
-    }
-  }, [browseCars, recommendedCars, browseCarsLoading, recommendedCarsLoading]);
-
-  // Fetch recommended cars for Recommended Cars section from database
-  useEffect(() => {
-    const fetchRecommendedCars = async () => {
-      try {
-        setRecommendedCarsLoading(true);
-        const response = await carService.getCars({
-          page: 1,
-          limit: 2,
-          status: 'active',
-          isAvailable: true,
-          sortBy: 'averageRating',
-          sortOrder: 'desc',
-        });
-
-        if (response.success && response.data.cars) {
-          const formattedCars = response.data.cars.map((car) => ({
-            id: car._id || car.id,
-            brand: car.brand,
-            model: car.model,
-            dealership: car.owner?.name || "DriveOn Premium",
-            price: car.pricePerDay,
-            image: car.primaryImage || car.images?.[0]?.url || carImg1,
-            rating: car.averageRating || 0,
-            carId: car._id || car.id,
-          }));
-          setRecommendedCars(formattedCars);
-        }
-      } catch (error) {
-        console.error("Error fetching recommended cars:", error);
-        setRecommendedCars([]);
-      } finally {
-        setRecommendedCarsLoading(false);
-      }
-    };
-
-    fetchRecommendedCars();
+    fetchTopCars();
   }, []);
 
   // Fetch nearby cars from backend
@@ -434,7 +326,6 @@ const HomePage = () => {
     return () => window.removeEventListener("resize", checkDesktop);
   }, []);
 
-
   // Handle scroll to show/hide location (only for mobile view)
   useEffect(() => {
     // Initial check - only apply scroll behavior on mobile
@@ -562,47 +453,92 @@ const HomePage = () => {
           {/* Mobile View - Location Below */}
           {isAuthenticated && user && (
             <div
-              className={`flex md:hidden items-start gap-1.5 ml-2 mr-2 transition-all duration-300 overflow-visible ${
-                showLocation ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+              className={`flex md:hidden flex-col gap-0.5 ml-2 transition-all duration-300 overflow-visible ${
+                showLocation ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
               }`}
             >
-              <svg
-                className="w-3 h-3 text-white flex-shrink-0 mt-0.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-              <span className="text-xs text-white font-medium flex-1 leading-tight" style={{ wordBreak: 'break-word', lineHeight: '1.4', display: 'block' }}>
-                {currentLocation &&
-                !currentLocation.includes("error") &&
-                !currentLocation.includes("timeout") &&
-                !currentLocation.includes("denied") &&
-                !currentLocation.includes("unavailable") &&
-                !currentLocation.includes("Loading") &&
-                !currentLocation.includes("Fetching") &&
-                !currentLocation.includes("Location not supported")
-                  ? currentLocation
-                  : locationPermission === "denied"
-                  ? "Location allow करें"
-                  : currentLocation?.includes("Loading") || currentLocation?.includes("Fetching")
-                  ? "Getting location..."
-                  : currentLocation?.includes("unavailable") || currentLocation?.includes("error")
-                  ? "Location unavailable"
-                  : "Getting location..."}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <svg
+                  className="w-3 h-3 text-white flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span 
+                  className="text-xs text-white font-medium flex-1" 
+                  style={{ wordBreak: 'break-word', lineHeight: '1.4', display: 'block' }}
+                >
+                  {(() => {
+                    const locationText = currentLocation &&
+                    !currentLocation.includes("error") &&
+                    !currentLocation.includes("timeout") &&
+                    !currentLocation.includes("denied") &&
+                    !currentLocation.includes("unavailable") &&
+                    !currentLocation.includes("Loading") &&
+                    !currentLocation.includes("Fetching") &&
+                    !currentLocation.includes("Location not supported")
+                      ? currentLocation
+                      : locationPermission === "denied"
+                      ? "Location allow करें"
+                      : currentLocation?.includes("Loading") || currentLocation?.includes("Fetching")
+                      ? "Getting location..."
+                      : currentLocation?.includes("unavailable") || currentLocation?.includes("error")
+                      ? "Location unavailable"
+                      : "Getting location...";
+                    
+                    // Only truncate if location is long and not expanded
+                    if (locationText && locationText.length > 40 && !expandLocation) {
+                      return locationText.substring(0, 40) + "...";
+                    }
+                    return locationText;
+                  })()}
+                </span>
+                {currentLocation && 
+                 !currentLocation.includes("error") &&
+                 !currentLocation.includes("timeout") &&
+                 !currentLocation.includes("denied") &&
+                 !currentLocation.includes("unavailable") &&
+                 !currentLocation.includes("Loading") &&
+                 !currentLocation.includes("Fetching") &&
+                 !currentLocation.includes("Location not supported") &&
+                 currentLocation.length > 40 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandLocation(!expandLocation);
+                    }}
+                    className="flex-shrink-0 text-white hover:opacity-80 transition-opacity"
+                    aria-label={expandLocation ? "Show less" : "Show more"}
+                  >
+                    <svg
+                      className={`w-3 h-3 transition-transform duration-200 ${expandLocation ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -622,9 +558,9 @@ const HomePage = () => {
                 Hello {user.name || user.email?.split("@")[0] || "User"}
               </span>
             )}
-            <div className="flex items-start gap-1.5 w-full">
+            <div className="flex items-center gap-1.5 w-full justify-center">
               <svg
-                className="w-3 h-3 lg:w-4 lg:h-4 text-white flex-shrink-0 mt-0.5"
+                className="w-3 h-3 lg:w-4 lg:h-4 text-white flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -642,24 +578,67 @@ const HomePage = () => {
                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span className="text-xs lg:text-sm text-white font-medium text-center flex-1 leading-tight" title={currentLocation} style={{ wordBreak: 'break-word', lineHeight: '1.4', display: 'block' }}>
-                {currentLocation &&
-                !currentLocation.includes("error") &&
-                !currentLocation.includes("timeout") &&
-                !currentLocation.includes("denied") &&
-                !currentLocation.includes("unavailable") &&
-                !currentLocation.includes("Loading") &&
-                !currentLocation.includes("Fetching") &&
-                !currentLocation.includes("Location not supported")
-                  ? currentLocation
-                  : locationPermission === "denied"
-                  ? "Location allow करें"
-                  : currentLocation?.includes("Loading") || currentLocation?.includes("Fetching")
-                  ? "Getting location..."
-                  : currentLocation?.includes("unavailable") || currentLocation?.includes("error")
-                  ? "Location unavailable"
-                  : "Getting location..."}
+              <span 
+                className="text-xs lg:text-sm text-white font-medium text-center flex-1" 
+                style={{ wordBreak: 'break-word', lineHeight: '1.4', display: 'block' }}
+              >
+                {(() => {
+                  const locationText = currentLocation &&
+                  !currentLocation.includes("error") &&
+                  !currentLocation.includes("timeout") &&
+                  !currentLocation.includes("denied") &&
+                  !currentLocation.includes("unavailable") &&
+                  !currentLocation.includes("Loading") &&
+                  !currentLocation.includes("Fetching") &&
+                  !currentLocation.includes("Location not supported")
+                    ? currentLocation
+                    : locationPermission === "denied"
+                    ? "Location allow करें"
+                    : currentLocation?.includes("Loading") || currentLocation?.includes("Fetching")
+                    ? "Getting location..."
+                    : currentLocation?.includes("unavailable") || currentLocation?.includes("error")
+                    ? "Location unavailable"
+                    : "Getting location...";
+                  
+                  // Only truncate if location is long and not expanded
+                  if (locationText && locationText.length > 50 && !expandLocation) {
+                    return locationText.substring(0, 50) + "...";
+                  }
+                  return locationText;
+                })()}
               </span>
+              {currentLocation && 
+               !currentLocation.includes("error") &&
+               !currentLocation.includes("timeout") &&
+               !currentLocation.includes("denied") &&
+               !currentLocation.includes("unavailable") &&
+               !currentLocation.includes("Loading") &&
+               !currentLocation.includes("Fetching") &&
+               !currentLocation.includes("Location not supported") &&
+               currentLocation.length > 50 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandLocation(!expandLocation);
+                  }}
+                  className="flex-shrink-0 text-white hover:opacity-80 transition-opacity"
+                  aria-label={expandLocation ? "Show less" : "Show more"}
+                >
+                  <svg
+                    className={`w-3 h-3 lg:w-4 lg:h-4 transition-transform duration-200 ${expandLocation ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
 
@@ -864,7 +843,6 @@ const HomePage = () => {
         </div>
       )}
 
-
       {/* Main Content Area - Scrollable with padding for fixed header and bottom navbar */}
       <main
         className="px-4 md:px-6 lg:px-8 space-y-6 max-w-full md:max-w-7xl md:mx-auto"
@@ -888,7 +866,7 @@ const HomePage = () => {
         }}
       >
         {/* Search Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 md:px-6 md:py-4 flex items-center gap-3 mt-12 md:mt-6 lg:mt-8 md:max-w-2xl md:mx-auto lg:max-w-3xl">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 md:px-6 md:py-4 flex items-center gap-3 mt-8 md:mt-6 lg:mt-8 md:max-w-2xl md:mx-auto lg:max-w-3xl">
           <svg
             className="w-5 h-5 text-gray-400"
             fill="none"
@@ -1008,6 +986,7 @@ const HomePage = () => {
         <div
           className="rounded-xl p-4 md:p-6 lg:p-8 flex items-center justify-between max-w-full overflow-hidden cursor-pointer hover:opacity-95 transition-opacity"
           style={{ backgroundColor: theme.colors.primary }}
+          onClick={() => navigate("/cars")}
         >
           <div className="flex items-center gap-3 md:gap-4 lg:gap-5">
             <div className="relative w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 bg-white/20 rounded-lg flex items-center justify-center">
@@ -1103,7 +1082,7 @@ const HomePage = () => {
                     e.stopPropagation();
                     navigate(`/cars/${vehicle.carId || vehicle.id}`);
                   }}
-                  className="absolute top-2 right-2 md:top-3 md:right-3 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all shadow-md hover:opacity-90 hover:scale-105 bg-white z-10"
+                  className="absolute top-2 right-2 md:top-3 md:right-3 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all shadow-md hover:opacity-90 hover:scale-105 bg-white z-30"
                   style={{
                     color: theme.colors.primary,
                   }}
@@ -1111,9 +1090,9 @@ const HomePage = () => {
                   View
                 </button>
 
-                {/* Car Image - Elevated with 3D effect */}
+                {/* Car Image - Elevated with 3D effect - Adjusted to not overlap with View button */}
                 <div
-                  className="relative -mt-8 mb-2 flex justify-center items-center overflow-hidden z-0"
+                  className="relative -mt-8 mb-2 flex justify-center items-center overflow-visible z-0"
                   style={{ height: "140px", width: "100%" }}
                 >
                   <div
@@ -1121,8 +1100,9 @@ const HomePage = () => {
                     style={{
                       transform: "translateZ(0)",
                       filter: "drop-shadow(0 15px 30px rgba(0,0,0,0.2))",
-                      width: "180px",
+                      width: "160px",
                       height: "140px",
+                      marginRight: "50px",
                     }}
                   >
                     <img
@@ -1133,7 +1113,7 @@ const HomePage = () => {
                         transform:
                           "perspective(1000px) rotateY(-8deg) rotateX(2deg)",
                         backfaceVisibility: "hidden",
-                        width: "180px",
+                        width: "160px",
                         height: "140px",
                         objectFit: "contain",
                       }}
@@ -1147,9 +1127,6 @@ const HomePage = () => {
                   <div className="flex items-start justify-between gap-1.5 md:gap-2 mb-1.5 md:mb-2">
                     {/* Left: Car Details */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs md:text-sm text-gray-500 mb-0.5 md:mb-1 line-clamp-1">
-                        {vehicle.dealership}
-                      </p>
                       <h4 className="text-sm md:text-base lg:text-lg font-semibold text-gray-900 line-clamp-1">
                         {vehicle.brand} {vehicle.model}
                       </h4>
@@ -1183,7 +1160,7 @@ const HomePage = () => {
         </div>
 
         {/* Top Cars Section */}
-        <div className="w-full overflow-visible">
+        <div className="w-full overflow-visible mt-6 md:mt-8">
           <div className="flex items-center justify-between mb-4 md:mb-6 lg:mb-8 px-0">
             <h3 className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900">
               Top Cars
@@ -1196,227 +1173,112 @@ const HomePage = () => {
               View all
             </button>
           </div>
-          <div className="flex gap-3 md:gap-4 lg:gap-6 overflow-x-auto -mx-4 px-4 scrollbar-hide md:overflow-x-visible md:mx-0 md:px-0">
+
+          <div className="flex gap-4 md:gap-6 overflow-x-auto -mx-4 pl-4 pr-4 scrollbar-hide md:overflow-x-visible md:mx-0 md:px-0">
             {topCarsLoading ? (
               // Loading skeleton
               Array.from({ length: 2 }).map((_, index) => (
                 <div
-                  key={`top-cars-skeleton-${index}`}
-                  className="shrink-0 w-[calc(50%-6px)] md:w-[calc(50%-12px)] lg:w-[calc(50%-16px)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-pulse"
+                  key={`top-car-skeleton-${index}`}
+                  className="shrink-0 w-64 md:w-72 bg-white rounded-2xl shadow-md overflow-hidden animate-pulse"
                 >
-                  <div className="relative -mt-8 mb-2 flex justify-center items-center" style={{ height: "140px" }}>
-                    <div className="w-32 h-24 bg-gray-200 rounded"></div>
-                  </div>
-                  <div className="px-2.5 md:px-4 pb-2.5 md:pb-4 pt-0">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-5 bg-gray-200 rounded w-24"></div>
+                  <div className="w-full h-40 md:h-44 bg-gray-200"></div>
+                  <div className="px-4 py-3">
+                    <div className="h-5 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-28 mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
                   </div>
                 </div>
               ))
             ) : topCars.length > 0 ? (
-              topCars.map((vehicle) => (
+              topCars.map((car) => (
                 <div
-                  key={vehicle.id}
-                  className="shrink-0 w-[calc(50%-6px)] md:w-[calc(50%-12px)] lg:w-[calc(50%-16px)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden relative cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                  style={{ zIndex: 1 }}
-                  onClick={() => navigate(`/cars/${vehicle.carId || vehicle.id}`)}
+                  key={car.id}
+                  className="shrink-0 w-52 md:w-72 bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200"
+                  onClick={() => navigate(`/cars/${car.carId || car.id}`)}
                 >
-                  {/* Heart Icon - Top Right */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // TODO: Implement favorite functionality
-                    }}
-                    className="absolute top-2 right-2 md:top-3 md:right-3 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"
-                    aria-label="Add to favorites"
-                  >
-                    <svg
-                      className="w-5 h-5 md:w-6 md:h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* Car Image - Elevated with 3D effect */}
-                  <div
-                    className="relative -mt-8 mb-2 flex justify-center items-center overflow-hidden z-0"
-                    style={{ height: "140px", width: "100%" }}
-                  >
-                    <div
-                      className="relative flex items-center justify-center"
-                      style={{
-                        transform: "translateZ(0)",
-                        filter: "drop-shadow(0 15px 30px rgba(0,0,0,0.2))",
-                        width: "180px",
-                        height: "140px",
-                      }}
-                    >
-                      <img
-                        src={vehicle.image}
-                        alt={`${vehicle.brand} ${vehicle.model}`}
-                        className="object-contain"
-                        style={{
-                          transform:
-                            "perspective(1000px) rotateY(-8deg) rotateX(2deg)",
-                          backfaceVisibility: "hidden",
-                          width: "180px",
-                          height: "140px",
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="px-2.5 md:px-4 pb-2.5 md:pb-4 pt-0">
-                    {/* Car Name */}
-                    <h4 className="text-sm md:text-base lg:text-lg font-semibold text-gray-900 mb-1 md:mb-2 line-clamp-1">
-                      {vehicle.brand} {vehicle.model}
-                    </h4>
-                    {/* Price Range */}
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xs md:text-sm text-gray-700 font-medium">
-                        Rs.{typeof vehicle.priceRange === 'string' ? vehicle.priceRange : vehicle.price}
+                  {/* Car Image Container */}
+                  <div className="relative w-full h-32 md:h-48 bg-white overflow-hidden">
+                    <img
+                      src={car.image}
+                      alt={`${car.brand} ${car.model}`}
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Rating - Top Right */}
+                    <div className="absolute top-2 right-2 md:top-3 md:right-3 z-10 flex items-center gap-0.5 md:gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg shadow-sm">
+                      <span className="text-xs md:text-base font-semibold text-gray-900">
+                        {car.rating > 0 ? car.rating.toFixed(1) : "5.0"}
                       </span>
-                      <span className="text-xs md:text-sm text-gray-500">/day*</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              // Empty state
-              <div className="w-full text-center py-8">
-                <p className="text-gray-500 text-sm md:text-base">No top cars available</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Recommended Cars For You Section */}
-        <div className="w-full overflow-visible">
-          <div className="flex items-center justify-between mb-4 md:mb-6 lg:mb-8 px-0">
-            <h3 className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900">
-              Recommended Cars For You
-            </h3>
-            <button
-              onClick={() => navigate("/cars")}
-              className="text-sm md:text-base lg:text-lg font-medium hover:underline shrink-0 transition-colors"
-              style={{ color: theme.colors.primary }}
-            >
-              View all
-            </button>
-          </div>
-          <div className="flex gap-3 md:gap-4 lg:gap-6 overflow-x-auto -mx-4 px-4 scrollbar-hide md:overflow-x-visible md:mx-0 md:px-0">
-            {recommendedCarsLoading ? (
-              // Loading skeleton
-              Array.from({ length: 2 }).map((_, index) => (
-                <div
-                  key={`recommended-skeleton-${index}`}
-                  className="shrink-0 w-[calc(50%-6px)] md:w-[calc(50%-12px)] lg:w-[calc(50%-16px)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-pulse"
-                >
-                  <div className="relative -mt-8 mb-2 flex justify-center items-center" style={{ height: "140px" }}>
-                    <div className="w-32 h-24 bg-gray-200 rounded"></div>
-                  </div>
-                  <div className="px-2.5 md:px-4 pb-2.5 md:pb-4 pt-0">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-5 bg-gray-200 rounded w-20"></div>
-                  </div>
-                </div>
-              ))
-            ) : recommendedCars.length > 0 ? (
-              recommendedCars.map((vehicle) => (
-                <div
-                  key={vehicle.id}
-                  className="shrink-0 w-[calc(50%-6px)] md:w-[calc(50%-12px)] lg:w-[calc(50%-16px)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden relative cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                  style={{ zIndex: 1 }}
-                  onClick={() => navigate(`/cars/${vehicle.carId || vehicle.id}`)}
-                >
-                  {/* Heart Icon - Top Right */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // TODO: Implement favorite functionality
-                    }}
-                    className="absolute top-2 right-2 md:top-3 md:right-3 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white transition-colors shadow-sm"
-                    aria-label="Add to favorites"
-                  >
-                    <svg
-                      className="w-5 h-5 md:w-6 md:h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* Car Image - Elevated with 3D effect */}
-                  <div
-                    className="relative -mt-8 mb-2 flex justify-center items-center overflow-hidden z-0"
-                    style={{ height: "140px", width: "100%" }}
-                  >
-                    <div
-                      className="relative flex items-center justify-center"
-                      style={{
-                        transform: "translateZ(0)",
-                        filter: "drop-shadow(0 15px 30px rgba(0,0,0,0.2))",
-                        width: "180px",
-                        height: "140px",
-                      }}
-                    >
-                      <img
-                        src={vehicle.image}
-                        alt={`${vehicle.brand} ${vehicle.model}`}
-                        className="object-contain"
-                        style={{
-                          transform:
-                            "perspective(1000px) rotateY(-8deg) rotateX(2deg)",
-                          backfaceVisibility: "hidden",
-                          width: "180px",
-                          height: "140px",
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="px-2.5 md:px-4 pb-2.5 md:pb-4 pt-0">
-                    {/* Car Name */}
-                    <h4 className="text-sm md:text-base lg:text-lg font-semibold text-gray-900 mb-1 md:mb-2 line-clamp-1">
-                      {vehicle.brand} {vehicle.model}
-                    </h4>
-                    {/* Price */}
-                    <div className="flex items-baseline gap-1">
-                      <span
-                        className="text-base md:text-lg lg:text-xl font-bold"
-                        style={{ color: theme.colors.primary }}
+                      <svg
+                        className="w-3 h-3 md:w-4 md:h-4 text-orange-500 fill-orange-500"
+                        viewBox="0 0 24 24"
                       >
-                        ₹{vehicle.price}
-                      </span>
-                      <span className="text-xs md:text-sm text-gray-500">/day</span>
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    </div>
+
+                    {/* Heart Icon - Top Left */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle favorite toggle if needed
+                      }}
+                      className="absolute top-2 left-2 md:top-3 md:left-3 z-10"
+                      aria-label="Add to favorites"
+                    >
+                      <svg
+                        className="w-5 h-5 md:w-6 md:h-6 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Car Details */}
+                  <div className="px-3 pt-1.5 pb-3 md:px-5 md:pt-3 md:pb-5">
+                    {/* Car Name */}
+                    <div className="mb-1.5 md:mb-2">
+                      <h4 className="text-sm md:text-lg font-bold text-gray-900 line-clamp-1">
+                        {car.brand} {car.model}
+                      </h4>
+                    </div>
+
+                    {/* Price and Rent Now Button */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-sm md:text-lg font-semibold text-gray-900">
+                          ₹{car.price}
+                        </span>
+                        <span className="text-xs md:text-sm text-gray-500 ml-1">/Day</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/rent-now/${car.carId || car.id}`);
+                        }}
+                        className="px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs md:text-base font-medium text-white transition-colors hover:opacity-90 shrink-0"
+                        style={{ backgroundColor: theme.colors.primary }}
+                      >
+                        Rent now
+                      </button>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              // Empty state
-              <div className="w-full text-center py-8">
-                <p className="text-gray-500 text-sm md:text-base">No recommended cars available</p>
+              <div className="w-full text-center py-6">
+                <p className="text-gray-500 text-sm md:text-base">
+                  No top cars available at the moment
+                </p>
               </div>
             )}
           </div>
