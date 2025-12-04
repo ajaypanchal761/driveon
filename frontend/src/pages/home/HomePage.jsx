@@ -852,11 +852,11 @@ const HomePage = () => {
           </svg>
         </div>
 
-        {/* Available Near You Section */}
+        {/* Browse Cars Section */}
         <div className="w-full overflow-visible">
           <div className="flex items-center justify-between mb-4 md:mb-6 lg:mb-8 px-0">
             <h3 className="text-lg md:text-2xl lg:text-3xl font-bold text-gray-900">
-              Available Near You
+              Browse Cars
             </h3>
             <button
               onClick={() => navigate("/cars")}
@@ -962,23 +962,24 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Website Sections - Desktop Only */}
-        <div className="hidden md:block">
-          {/* Features/Benefits Section */}
-          <section className="py-16 bg-white">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <div className="text-center mb-12">
-                <h2
-                  className="text-3xl lg:text-4xl font-bold mb-4"
-                  style={{ color: theme.colors.primary }}
-                >
-                  Why Choose DriveOn?
-                </h2>
-                <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-                  Experience seamless car rental with our trusted platform
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Banner Ad Section - Visible on all devices */}
+        <BannerAd />
+
+        {/* Why Choose DriveOn Section - Visible on all devices */}
+        <section className="py-8 md:py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+            <div className="text-center mb-8 md:mb-12">
+              <h2
+                className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4"
+                style={{ color: theme.colors.primary }}
+              >
+                Why Choose DriveOn?
+              </h2>
+              <p className="text-gray-600 text-sm md:text-base lg:text-lg max-w-2xl mx-auto px-2">
+                Experience seamless car rental with our trusted platform
+              </p>
+            </div>
+            <div className="flex flex-row md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6 lg:gap-8 overflow-x-auto md:overflow-x-visible scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                 {[
                   {
                     icon: (
@@ -1067,23 +1068,25 @@ const HomePage = () => {
                       "Earn points and discounts with our referral program",
                   },
                 ].map((feature, index) => (
-                  <div key={`feature-${index}`} className="text-center">
+                  <div key={`feature-${index}`} className={`text-center flex-shrink-0 w-24 md:w-auto ${feature.title === "Flexible Payment" ? "hidden md:block" : ""}`}>
                     <div
-                      className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
+                      className="inline-flex items-center justify-center w-10 h-10 md:w-16 md:h-16 rounded-full mb-2 md:mb-4"
                       style={{
                         backgroundColor: `${theme.colors.primary}15`,
                         color: theme.colors.primary,
                       }}
                     >
-                      {feature.icon}
+                      <div className="w-5 h-5 md:w-8 md:h-8">
+                        {feature.icon}
+                      </div>
                     </div>
                     <h3
-                      className="text-xl font-semibold mb-2"
+                      className="text-xs md:text-lg lg:text-xl font-semibold mb-1 md:mb-2"
                       style={{ color: theme.colors.textPrimary }}
                     >
                       {feature.title}
                     </h3>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-gray-600 text-xs md:text-sm hidden md:block">
                       {feature.description}
                     </p>
                   </div>
@@ -1092,9 +1095,8 @@ const HomePage = () => {
             </div>
           </section>
 
-          {/* Banner Ad Section */}
-          <BannerAd />
-
+        {/* Website Sections - Desktop Only */}
+        <div className="hidden md:block">
           {/* FAQ Section */}
           <section className="py-16 bg-white">
             <div className="max-w-4xl mx-auto px-6 lg:px-8">

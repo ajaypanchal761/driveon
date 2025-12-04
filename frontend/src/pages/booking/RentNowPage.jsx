@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
 import { carService } from '../../services/car.service';
+import { couponService } from '../../services/coupon.service';
 import toastUtils from '../../config/toast';
 
 /**
@@ -25,6 +26,9 @@ const RentNowPage = () => {
   const [paymentOption, setPaymentOption] = useState('advance'); // Only 'advance' option available
   const [specialRequests, setSpecialRequests] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   // Custom calendar modal state
@@ -152,7 +156,7 @@ const RentNowPage = () => {
 
   // Calculate dynamic price based on document.txt requirements
   const calculatePrice = () => {
-    if (!pickupDate || !dropDate || !car) return { basePrice: 0, totalDays: 0, totalPrice: 0, advancePayment: 0, remainingPayment: 0 };
+    if (!pickupDate || !dropDate || !car) return { basePrice: 0, totalDays: 0, totalPrice: 0, advancePayment: 0, remainingPayment: 0, discount: 0, finalPrice: 0 };
 
     const pickup = new Date(pickupDate);
     const drop = new Date(dropDate);
@@ -162,21 +166,20 @@ const RentNowPage = () => {
     const basePrice = car.price || 0;
     let totalPrice = basePrice * totalDays;
 
-    // Dynamic pricing based on document.txt:
-    // - Weekend multiplier
-    // - Holiday multiplier
-    // - Demand surge
+    // Apply coupon discount if available
+    const discount = couponDiscount || 0;
+    const finalPrice = Math.max(0, totalPrice - discount);
 
-    // No peak hour surcharge applied
-
-    // Advance payment (35%)
-    const advancePayment = Math.round(totalPrice * 0.35);
-    const remainingPayment = totalPrice - advancePayment;
+    // Advance payment (35%) calculated on final price after discount
+    const advancePayment = Math.round(finalPrice * 0.35);
+    const remainingPayment = finalPrice - advancePayment;
 
     return {
       basePrice,
       totalDays,
       totalPrice: Math.round(totalPrice),
+      discount: Math.round(discount),
+      finalPrice: Math.round(finalPrice),
       advancePayment,
       remainingPayment: Math.round(remainingPayment),
     };
@@ -317,13 +320,50 @@ const RentNowPage = () => {
     setIsTimePickerOpen(false);
   };
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       toastUtils.error('Please enter a coupon code');
       return;
     }
-    // Coupon calculation logic can be added later
-    toastUtils.success('Coupon applied');
+
+    if (!car || !car.price) {
+      toastUtils.error('Car information not available');
+      return;
+    }
+
+    try {
+      setIsValidatingCoupon(true);
+      
+      // Calculate total amount (base price per day * number of days)
+      // For now, we'll use a simple calculation - you may need to adjust based on your pricing logic
+      const pickupDateTime = new Date(`${pickupDate}T${pickupTime}`);
+      const dropDateTime = new Date(`${dropDate}T${dropTime}`);
+      const days = Math.ceil((dropDateTime - pickupDateTime) / (1000 * 60 * 60 * 24)) || 1;
+      const totalAmount = car.price * days;
+
+      const response = await couponService.validateCoupon({
+        code: couponCode.trim(),
+        amount: totalAmount,
+        carId: car._id || car.id,
+      });
+
+      if (response.success && response.data) {
+        setAppliedCoupon({
+          code: response.data.coupon.code,
+          discountType: response.data.coupon.discountType,
+          discountValue: response.data.coupon.discountValue,
+        });
+        setCouponDiscount(response.data.discount);
+        toastUtils.success(`Coupon "${response.data.coupon.code}" applied successfully!`);
+      }
+    } catch (error) {
+      console.error('Error validating coupon:', error);
+      toastUtils.error(error.response?.data?.message || 'Invalid coupon code');
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+    } finally {
+      setIsValidatingCoupon(false);
+    }
   };
 
   // Handle form submission
@@ -351,6 +391,8 @@ const RentNowPage = () => {
         dropTime,
         paymentOption,
         specialRequests,
+        couponCode: appliedCoupon?.code || null,
+        couponDiscount: couponDiscount || 0,
         priceDetails,
       },
     });
@@ -612,26 +654,72 @@ const RentNowPage = () => {
               <p className="text-xs text-gray-500 mb-3">
                 Have a promo code? Apply it here to get discount on your advance payment.
               </p>
+              {appliedCoupon && (
+                <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                  <p className="text-xs text-green-800">
+                    <span className="font-semibold">{appliedCoupon.code}</span> applied! 
+                    {couponDiscount > 0 && (
+                      <span> You'll save ₹{couponDiscount}</span>
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setCouponDiscount(0);
+                      setCouponCode('');
+                    }}
+                    className="ml-2 p-1 hover:bg-green-100 rounded-full transition-colors"
+                    aria-label="Remove coupon"
+                  >
+                    <svg
+                      className="w-4 h-4 text-green-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                 <input
                   type="text"
                   value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    // Reset applied coupon when user types
+                    if (appliedCoupon) {
+                      setAppliedCoupon(null);
+                      setCouponDiscount(0);
+                    }
+                  }}
                   placeholder="Enter coupon code"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-gray-50 border-2 text-sm focus:outline-none transition-all tracking-widest uppercase"
+                  disabled={!!appliedCoupon}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-gray-50 border-2 text-sm focus:outline-none transition-all tracking-widest uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    borderColor: theme.colors.borderDefault,
+                    borderColor: appliedCoupon ? theme.colors.primary : theme.colors.borderDefault,
                     color: theme.colors.textPrimary,
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = theme.colors.primary;
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
+                    if (!appliedCoupon) {
+                      e.target.style.borderColor = theme.colors.primary;
+                      e.target.style.backgroundColor = 'white';
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
+                    }
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = theme.colors.borderDefault;
-                    e.target.style.backgroundColor = '#f9fafb';
-                    e.target.style.boxShadow = 'none';
+                    if (!appliedCoupon) {
+                      e.target.style.borderColor = theme.colors.borderDefault;
+                      e.target.style.backgroundColor = '#f9fafb';
+                      e.target.style.boxShadow = 'none';
+                    }
                   }}
                 />
                 <button
@@ -702,11 +790,17 @@ const RentNowPage = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm" style={{ color: theme.colors.textSecondary }}>
                     <span>Base Price ({priceDetails.totalDays} {priceDetails.totalDays === 1 ? 'day' : 'days'})</span>
-                    <span className="font-semibold">₹{priceDetails.basePrice * priceDetails.totalDays}</span>
+                    <span className="font-semibold">₹{(priceDetails.basePrice * priceDetails.totalDays).toLocaleString('en-IN')}</span>
                   </div>
+                  {priceDetails.discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Coupon Discount</span>
+                      <span className="font-semibold">-₹{priceDetails.discount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold pt-3 border-t-2 text-lg" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
                     <span>Total Amount</span>
-                    <span>₹{priceDetails.totalPrice.toLocaleString('en-IN')}</span>
+                    <span>₹{priceDetails.finalPrice.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between font-semibold pt-3 border-t text-base" style={{ color: theme.colors.textPrimary, borderColor: theme.colors.borderLight }}>
                     <span>Advance Payment (35%)</span>
@@ -1023,7 +1117,7 @@ const RentNowPage = () => {
             <div className="flex flex-col">
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
-                  ₹{priceDetails.totalDays > 0 ? priceDetails.advancePayment.toLocaleString('en-IN') : car.price.toLocaleString('en-IN')}
+                  ₹{priceDetails.totalDays > 0 ? priceDetails.advancePayment.toLocaleString('en-IN') : (car?.price || 0).toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs text-gray-500">
                   {priceDetails.totalDays > 0 ? 'Advance Payment' : '/day'}

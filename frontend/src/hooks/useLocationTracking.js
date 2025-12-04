@@ -155,26 +155,34 @@ export const useLocationTracking = ({
           }
         },
         (err) => {
-          console.error('❌ Geolocation error:', err);
           let errorMessage = 'Location access denied';
           
           switch (err.code) {
             case err.PERMISSION_DENIED:
+              console.error('❌ Geolocation error: Permission denied');
               errorMessage = 'Location permission denied. Please enable location access.';
               break;
             case err.POSITION_UNAVAILABLE:
+              console.warn('⚠️ Geolocation: Position unavailable (may retry)');
               errorMessage = 'Location information unavailable.';
               break;
             case err.TIMEOUT:
-              errorMessage = 'Location request timed out.';
-              break;
+              // Timeout is common and expected, log as warning
+              console.warn('⏱️ Geolocation timeout (this is normal, will retry)');
+              // Don't set error for timeout - it will retry automatically
+              // Only set error if it keeps timing out
+              return; // Continue tracking, don't stop
             default:
+              console.error('❌ Geolocation error:', err);
               errorMessage = 'An unknown error occurred while getting location.';
               break;
           }
           
-          setError(errorMessage);
-          setIsTracking(false);
+          // Only set error and stop tracking for non-timeout errors
+          if (err.code !== err.TIMEOUT) {
+            setError(errorMessage);
+            setIsTracking(false);
+          }
         },
         geoOptions
       );

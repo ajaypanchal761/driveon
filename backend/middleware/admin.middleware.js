@@ -113,8 +113,9 @@ export const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    // Attach admin to request
+    // Attach admin to request (both req.user and req.admin for compatibility)
     req.user = admin;
+    req.admin = admin;
     next();
   } catch (error) {
     console.error('Admin authentication error:', error);

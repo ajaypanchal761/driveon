@@ -13,3 +13,4 @@ export { default as kycService } from "./kyc.service";
 export { default as pricingService } from "./pricing.service";
 export { adminService } from "./admin.service";
 export * as locationService from "./location.service";
+export { couponService } from "./coupon.service";

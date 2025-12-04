@@ -68,6 +68,10 @@ const ProfileDashboardPage = () => {
     navigate('/');
   };
 
+  // Calculate profile completion percentage from user data
+  const profileCompletePercentage = user?.profileComplete ?? 0;
+  const isProfileFullyComplete = profileCompletePercentage >= 100;
+
   // Menu options based on project requirements
   const menuOptions = [
     {
@@ -82,8 +86,8 @@ const ProfileDashboardPage = () => {
         />
       ),
       path: '/profile/complete',
-      badge: profileComplete ? '100%' : '0%',
-      badgeColor: profileComplete ? 'bg-green-500' : 'bg-red-500',
+      badge: `${profileCompletePercentage}%`,
+      badgeColor: isProfileFullyComplete ? 'bg-green-500' : profileCompletePercentage >= 50 ? 'bg-yellow-500' : 'bg-red-500',
     },
     {
       id: 'kyc',

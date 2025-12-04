@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
+import Coupon from '../models/Coupon.js';
 
 /**
  * @desc    Create new booking
@@ -15,6 +16,7 @@ export const createBooking = async (req, res) => {
       tripEnd,
       paymentOption,
       specialRequests,
+      couponCode,
     } = req.body;
 
     const userId = req.user._id;
@@ -200,6 +202,54 @@ export const createBooking = async (req, res) => {
     // Apply multipliers
     totalPrice = totalPrice * (1 + weekendMultiplier);
 
+    // Handle coupon discount if provided
+    let couponDiscount = 0;
+    let appliedCoupon = null;
+    if (couponCode) {
+      try {
+        const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+        if (coupon) {
+          // Get car details for coupon validation
+          const carType = car.carType;
+          
+          // Check if coupon can be applied
+          const canApply = coupon.canBeApplied(totalPrice, carId, userId, carType);
+          if (canApply.valid) {
+            // Calculate discount
+            couponDiscount = coupon.calculateDiscount(totalPrice);
+            appliedCoupon = coupon;
+            
+            // Apply discount to total price
+            totalPrice = Math.max(0, totalPrice - couponDiscount);
+            
+            console.log('✅ Coupon applied:', {
+              code: coupon.code,
+              discount: couponDiscount,
+              newTotal: totalPrice,
+            });
+          } else {
+            console.warn('⚠️ Coupon cannot be applied:', canApply.message);
+            return res.status(400).json({
+              success: false,
+              message: canApply.message,
+            });
+          }
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: 'Invalid coupon code',
+          });
+        }
+      } catch (couponError) {
+        console.error('❌ Coupon validation error:', couponError);
+        return res.status(400).json({
+          success: false,
+          message: 'Error validating coupon',
+          error: process.env.NODE_ENV === 'development' ? couponError.message : undefined,
+        });
+      }
+    }
+
     // Calculate advance payment (35% for advance option)
     const advancePayment = paymentOption === 'advance' ? Math.round(totalPrice * 0.35) : 0;
     const remainingPayment = totalPrice - advancePayment;
@@ -251,12 +301,14 @@ export const createBooking = async (req, res) => {
       totalDays,
       pricing: {
         basePrice,
-        totalPrice: Math.round(totalPrice),
+        totalPrice: Math.round(totalPrice + couponDiscount), // Original total before discount
         advancePayment,
         remainingPayment: Math.round(remainingPayment),
         weekendMultiplier,
         timeOfDayMultiplier: 0,
+        discount: Math.round(couponDiscount),
         finalPrice: Math.round(finalPrice),
+        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
       },
       paymentOption: paymentOption || 'full',
       paymentStatus: 'pending',
@@ -288,6 +340,12 @@ export const createBooking = async (req, res) => {
     try {
       await booking.save();
       console.log('✅ Booking saved successfully:', booking.bookingId);
+      
+      // Increment coupon usage count if coupon was applied
+      if (appliedCoupon) {
+        await appliedCoupon.incrementUsage();
+        console.log('✅ Coupon usage incremented:', appliedCoupon.code);
+      }
     } catch (saveError) {
       console.error('❌ Booking save error:', saveError);
       console.error('Save error name:', saveError.name);

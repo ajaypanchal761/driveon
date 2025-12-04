@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { theme } from '../../../theme/theme.constants';
 import Card from '../../../components/common/Card';
+import { couponService } from '../../../services/coupon.service';
+import { carService } from '../../../services/car.service';
+import toastUtils from '../../../config/toast';
 
 /**
  * Coupon Management Page
@@ -39,178 +42,92 @@ const CouponManagementPage = () => {
     validityEnd: '',
     usageLimit: '',
     usedCount: 0,
-    applicableTo: 'all', // all, car_type, car_id, user_id
-    carType: '',
-    carId: '',
+    applicableTo: 'car_id', // car_id, user_id
+    carIds: [], // Array of car IDs for multi-select
     userId: '',
     isActive: true,
     description: '',
   });
 
-  // Mock coupons data
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockCoupons = [
-        {
-          id: '1',
-          code: 'WELCOME20',
-          discountType: 'percentage',
-          discountValue: 20,
-          minAmount: 1000,
-          maxDiscount: 500,
-          validityStart: '2024-03-01',
-          validityEnd: '2024-03-31',
-          usageLimit: 100,
-          usedCount: 45,
-          applicableTo: 'all',
-          isActive: true,
-          description: 'Welcome discount for new users',
-          createdAt: '2024-02-25T10:00:00',
-        },
-        {
-          id: '2',
-          code: 'FLAT500',
-          discountType: 'fixed',
-          discountValue: 500,
-          minAmount: 2000,
-          validityStart: '2024-03-15',
-          validityEnd: '2024-04-15',
-          usageLimit: 50,
-          usedCount: 12,
-          applicableTo: 'all',
-          isActive: true,
-          description: 'Flat ₹500 off on bookings above ₹2000',
-          createdAt: '2024-03-10T10:00:00',
-        },
-        {
-          id: '3',
-          code: 'WEEKEND30',
-          discountType: 'percentage',
-          discountValue: 30,
-          minAmount: 1500,
-          maxDiscount: 1000,
-          validityStart: '2024-03-01',
-          validityEnd: '2024-03-31',
-          usageLimit: 200,
-          usedCount: 78,
-          applicableTo: 'all',
-          isActive: true,
-          description: '30% off on weekend bookings',
-          createdAt: '2024-02-28T10:00:00',
-        },
-        {
-          id: '4',
-          code: 'LUXURY15',
-          discountType: 'percentage',
-          discountValue: 15,
-          minAmount: 5000,
-          maxDiscount: 2000,
-          validityStart: '2024-03-10',
-          validityEnd: '2024-04-10',
-          usageLimit: 30,
-          usedCount: 8,
-          applicableTo: 'car_type',
-          carType: 'luxury',
-          isActive: true,
-          description: '15% off on luxury car bookings',
-          createdAt: '2024-03-05T10:00:00',
-        },
-        {
-          id: '5',
-          code: 'EXPIRED50',
-          discountType: 'percentage',
-          discountValue: 50,
-          minAmount: 1000,
-          validityStart: '2024-02-01',
-          validityEnd: '2024-02-29',
-          usageLimit: 100,
-          usedCount: 100,
-          applicableTo: 'all',
-          isActive: false,
-          description: 'Expired coupon',
-          createdAt: '2024-01-25T10:00:00',
-        },
-        {
-          id: '6',
-          code: 'FIRST100',
-          discountType: 'fixed',
-          discountValue: 100,
-          minAmount: 500,
-          validityStart: '2024-03-20',
-          validityEnd: '2024-04-20',
-          usageLimit: 100,
-          usedCount: 0,
-          applicableTo: 'all',
-          isActive: true,
-          description: '₹100 off for first-time users',
-          createdAt: '2024-03-18T10:00:00',
-        },
-      ];
-      setCoupons(mockCoupons);
-      setFilteredCoupons(mockCoupons);
-      setLoading(false);
-    }, 500);
-  }, []);
+  // Cars list for dropdown
+  const [cars, setCars] = useState([]);
+  const [loadingCars, setLoadingCars] = useState(false);
 
-  // Filter and search coupons
+  // Fetch coupons from API
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        setLoading(true);
+        const response = await couponService.getAllCoupons({
+          status: filters.status,
+          couponType: filters.couponType,
+          dateRange: filters.dateRange,
+          search: searchQuery,
+        });
+        
+        if (response.success && response.data?.coupons) {
+          setCoupons(response.data.coupons);
+        } else {
+          setCoupons([]);
+        }
+      } catch (error) {
+        console.error('Error fetching coupons:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to fetch coupons');
+        setCoupons([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCoupons();
+  }, [filters.status, filters.couponType, filters.dateRange]);
+
+  // Fetch cars when applicableTo is 'car_id'
+  useEffect(() => {
+    const fetchCars = async () => {
+      if (couponForm.applicableTo === 'car_id' && showCouponModal) {
+        try {
+          setLoadingCars(true);
+          const response = await carService.getCars({
+            page: 1,
+            limit: 1000, // Get all active cars
+            status: 'active',
+          });
+          
+          if (response.success && response.data?.cars) {
+            setCars(response.data.cars);
+          } else {
+            setCars([]);
+          }
+        } catch (error) {
+          console.error('Error fetching cars:', error);
+          toastUtils.error('Failed to fetch cars');
+          setCars([]);
+        } finally {
+          setLoadingCars(false);
+        }
+      }
+    };
+
+    fetchCars();
+  }, [couponForm.applicableTo, showCouponModal]);
+
+  // Filter and search coupons (client-side filtering for search)
   useEffect(() => {
     let filtered = [...coupons];
 
-    // Search filter
+    // Search filter (client-side for instant results)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (coupon) =>
           coupon.code.toLowerCase().includes(query) ||
-          coupon.description.toLowerCase().includes(query)
+          (coupon.description && coupon.description.toLowerCase().includes(query))
       );
     }
 
-    // Status filter
-    if (filters.status !== 'all') {
-      const now = new Date();
-      filtered = filtered.filter((coupon) => {
-        if (filters.status === 'active') {
-          return coupon.isActive && new Date(coupon.validityEnd) >= now;
-        }
-        if (filters.status === 'expired') {
-          return new Date(coupon.validityEnd) < now || !coupon.isActive;
-        }
-        if (filters.status === 'used') {
-          return coupon.usedCount >= coupon.usageLimit;
-        }
-        return true;
-      });
-    }
-
-    // Coupon type filter
-    if (filters.couponType !== 'all') {
-      filtered = filtered.filter((coupon) => coupon.discountType === filters.couponType);
-    }
-
-    // Date range filter
-    if (filters.dateRange !== 'all') {
-      const now = new Date();
-      filtered = filtered.filter((coupon) => {
-        const createdDate = new Date(coupon.createdAt);
-        switch (filters.dateRange) {
-          case 'today':
-            return createdDate.toDateString() === now.toDateString();
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return createdDate >= weekAgo;
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            return createdDate >= monthAgo;
-          default:
-            return true;
-        }
-      });
-    }
-
     setFilteredCoupons(filtered);
-  }, [coupons, searchQuery, filters]);
+  }, [coupons, searchQuery]);
 
   const handleCreateCoupon = () => {
     setCouponForm({
@@ -223,9 +140,8 @@ const CouponManagementPage = () => {
       validityEnd: '',
       usageLimit: '',
       usedCount: 0,
-      applicableTo: 'all',
-      carType: '',
-      carId: '',
+      applicableTo: 'car_id',
+      carIds: [],
       userId: '',
       isActive: true,
       description: '',
@@ -236,58 +152,147 @@ const CouponManagementPage = () => {
 
   const handleEditCoupon = (coupon) => {
     setSelectedCoupon(coupon);
+    // Format dates for input fields (YYYY-MM-DD)
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return date.toISOString().split('T')[0];
+    };
+    
+    // Handle carIds - convert single carId to array or use existing array
+    let carIds = [];
+    if (coupon.carIds && Array.isArray(coupon.carIds)) {
+      carIds = coupon.carIds.map(id => id._id || id);
+    } else if (coupon.carId) {
+      carIds = [coupon.carId._id || coupon.carId];
+    }
+    
     setCouponForm({
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
       minAmount: coupon.minAmount || '',
       maxDiscount: coupon.maxDiscount || '',
-      validityStart: coupon.validityStart,
-      validityEnd: coupon.validityEnd,
+      validityStart: formatDate(coupon.validityStart),
+      validityEnd: formatDate(coupon.validityEnd),
       usageLimit: coupon.usageLimit,
-      usedCount: coupon.usedCount,
-      applicableTo: coupon.applicableTo,
-      carType: coupon.carType || '',
-      carId: coupon.carId || '',
-      userId: coupon.userId || '',
-      isActive: coupon.isActive,
+      usedCount: coupon.usedCount || 0,
+      applicableTo: coupon.applicableTo || 'car_id',
+      carIds: carIds,
+      userId: coupon.userId?._id || coupon.userId || '',
+      isActive: coupon.isActive !== undefined ? coupon.isActive : true,
       description: coupon.description || '',
     });
     setShowCouponModal(true);
   };
 
-  const handleSaveCoupon = () => {
-    if (selectedCoupon) {
-      // Update existing coupon
-      setCoupons((prev) =>
-        prev.map((coupon) =>
-          coupon.id === selectedCoupon.id ? { ...coupon, ...couponForm } : coupon
-        )
-      );
-    } else {
-      // Create new coupon
-      const newCoupon = {
-        id: Date.now().toString(),
-        ...couponForm,
-        createdAt: new Date().toISOString(),
+  const handleSaveCoupon = async () => {
+    try {
+      // Validate required fields
+      if (!couponForm.code || !couponForm.discountValue || 
+          !couponForm.validityStart || !couponForm.validityEnd || !couponForm.usageLimit) {
+        toastUtils.error('Please fill all required fields');
+        return;
+      }
+
+      // Validate car selection if applicableTo is car_id
+      if (couponForm.applicableTo === 'car_id' && (!couponForm.carIds || couponForm.carIds.length === 0)) {
+        toastUtils.error('Please select at least one car');
+        return;
+      }
+
+      // Prepare data with proper types
+      const couponData = {
+        code: couponForm.code.trim(),
+        discountType: couponForm.discountType,
+        discountValue: parseFloat(couponForm.discountValue),
+        minAmount: couponForm.minAmount ? parseFloat(couponForm.minAmount) : 0,
+        maxDiscount: couponForm.maxDiscount ? parseFloat(couponForm.maxDiscount) : null,
+        validityStart: couponForm.validityStart,
+        validityEnd: couponForm.validityEnd,
+        usageLimit: parseInt(couponForm.usageLimit, 10),
+        applicableTo: couponForm.applicableTo,
+        isActive: couponForm.isActive,
+        description: couponForm.description || '',
       };
-      setCoupons((prev) => [...prev, newCoupon]);
+
+      // Add carIds or userId based on applicableTo
+      if (couponForm.applicableTo === 'car_id') {
+        couponData.carIds = couponForm.carIds;
+      } else if (couponForm.applicableTo === 'user_id') {
+        couponData.userId = couponForm.userId;
+      }
+
+      if (selectedCoupon) {
+        // Update existing coupon
+        const response = await couponService.updateCoupon(selectedCoupon._id || selectedCoupon.id, couponData);
+        if (response.success) {
+          toastUtils.success('Coupon updated successfully');
+          // Refresh coupons list
+          const refreshResponse = await couponService.getAllCoupons();
+          if (refreshResponse.success && refreshResponse.data?.coupons) {
+            setCoupons(refreshResponse.data.coupons);
+          }
+        }
+      } else {
+        // Create new coupon
+        const response = await couponService.createCoupon(couponData);
+        if (response.success) {
+          toastUtils.success('Coupon created successfully');
+          // Refresh coupons list
+          const refreshResponse = await couponService.getAllCoupons();
+          if (refreshResponse.success && refreshResponse.data?.coupons) {
+            setCoupons(refreshResponse.data.coupons);
+          }
+        }
+      }
+      setShowCouponModal(false);
+      setSelectedCoupon(null);
+    } catch (error) {
+      console.error('Error saving coupon:', error);
+      console.error('Error details:', {
+        message: error.response?.data?.message,
+        error: error.response?.data?.error,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      toastUtils.error(error.response?.data?.message || 'Failed to save coupon');
     }
-    setShowCouponModal(false);
-    setSelectedCoupon(null);
   };
 
-  const handleToggleCoupon = (couponId) => {
-    setCoupons((prev) =>
-      prev.map((coupon) =>
-        coupon.id === couponId ? { ...coupon, isActive: !coupon.isActive } : coupon
-      )
-    );
+  const handleToggleCoupon = async (couponId) => {
+    try {
+      const response = await couponService.toggleCouponStatus(couponId);
+      if (response.success) {
+        toastUtils.success(response.message || 'Coupon status updated');
+        // Refresh coupons list
+        const refreshResponse = await couponService.getAllCoupons();
+        if (refreshResponse.success && refreshResponse.data?.coupons) {
+          setCoupons(refreshResponse.data.coupons);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling coupon status:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to update coupon status');
+    }
   };
 
-  const handleDeleteCoupon = (couponId) => {
+  const handleDeleteCoupon = async (couponId) => {
     if (window.confirm('Are you sure you want to delete this coupon?')) {
-      setCoupons((prev) => prev.filter((coupon) => coupon.id !== couponId));
+      try {
+        const response = await couponService.deleteCoupon(couponId);
+        if (response.success) {
+          toastUtils.success('Coupon deleted successfully');
+          // Refresh coupons list
+          const refreshResponse = await couponService.getAllCoupons();
+          if (refreshResponse.success && refreshResponse.data?.coupons) {
+            setCoupons(refreshResponse.data.coupons);
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting coupon:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to delete coupon');
+      }
     }
   };
 
@@ -483,7 +488,7 @@ const CouponManagementPage = () => {
 
         <div className="space-y-4">
           {filteredCoupons.map((coupon) => (
-            <Card key={coupon.id} className="p-4 hover:shadow-lg transition-all">
+            <Card key={coupon._id || coupon.id} className="p-4 hover:shadow-lg transition-all">
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Coupon Info */}
                 <div className="flex-1">
@@ -543,13 +548,15 @@ const CouponManagementPage = () => {
                   {/* Applicable To */}
                   <div className="text-xs text-gray-600">
                     Applicable to:{' '}
-                    {coupon.applicableTo === 'all'
-                      ? 'All Users & Cars'
-                      : coupon.applicableTo === 'car_type'
-                      ? `Car Type: ${coupon.carType}`
-                      : coupon.applicableTo === 'car_id'
-                      ? `Car ID: ${coupon.carId}`
-                      : `User ID: ${coupon.userId}`}
+                    {coupon.applicableTo === 'car_id'
+                      ? `Cars: ${coupon.carIds && Array.isArray(coupon.carIds) 
+                          ? `${coupon.carIds.length} car(s) selected`
+                          : coupon.carId 
+                          ? '1 car'
+                          : 'N/A'}`
+                      : coupon.applicableTo === 'user_id'
+                      ? `User ID: ${coupon.userId?._id || coupon.userId || 'N/A'}`
+                      : 'N/A'}
                   </div>
                 </div>
 
@@ -569,7 +576,7 @@ const CouponManagementPage = () => {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleToggleCoupon(coupon.id)}
+                    onClick={() => handleToggleCoupon(coupon._id || coupon.id)}
                     className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       coupon.isActive
                         ? 'bg-gray-600 text-white hover:bg-gray-700'
@@ -579,7 +586,7 @@ const CouponManagementPage = () => {
                     {coupon.isActive ? 'Deactivate' : 'Activate'}
                   </button>
                   <button
-                    onClick={() => handleDeleteCoupon(coupon.id)}
+                    onClick={() => handleDeleteCoupon(coupon._id || coupon.id)}
                     className="w-full px-3 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                   >
                     Delete
@@ -607,6 +614,8 @@ const CouponManagementPage = () => {
             setSelectedCoupon(null);
           }}
           onSave={handleSaveCoupon}
+          cars={cars}
+          loadingCars={loadingCars}
         />
       )}
 
@@ -627,7 +636,7 @@ const CouponManagementPage = () => {
 /**
  * Coupon Modal Component
  */
-const CouponModal = ({ couponForm, setCouponForm, onClose, onSave }) => {
+const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], loadingCars = false }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -635,7 +644,9 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Create Coupon</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {couponForm.code ? 'Edit Coupon' : 'Create Coupon'}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -689,29 +700,6 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave }) => {
             />
           </div>
 
-          {couponForm.discountType === 'percentage' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Discount (Optional)</label>
-              <input
-                type="number"
-                value={couponForm.maxDiscount}
-                onChange={(e) => setCouponForm({ ...couponForm, maxDiscount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="e.g., 1000"
-              />
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Amount *</label>
-            <input
-              type="number"
-              value={couponForm.minAmount}
-              onChange={(e) => setCouponForm({ ...couponForm, minAmount: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="e.g., 1000"
-            />
-          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -752,40 +740,69 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave }) => {
               onChange={(e) => setCouponForm({ ...couponForm, applicableTo: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              <option value="all">All Users & Cars</option>
-              <option value="car_type">Car Type</option>
               <option value="car_id">Specific Car</option>
               <option value="user_id">Specific User</option>
             </select>
           </div>
 
-          {couponForm.applicableTo === 'car_type' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Car Type</label>
-              <select
-                value={couponForm.carType}
-                onChange={(e) => setCouponForm({ ...couponForm, carType: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Select Car Type</option>
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="hatchback">Hatchback</option>
-                <option value="luxury">Luxury</option>
-              </select>
-            </div>
-          )}
-
           {couponForm.applicableTo === 'car_id' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Car ID</label>
-              <input
-                type="text"
-                value={couponForm.carId}
-                onChange={(e) => setCouponForm({ ...couponForm, carId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="e.g., car123"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Cars *</label>
+              {loadingCars ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 mx-auto" style={{ borderColor: theme.colors.primary }}></div>
+                  <p className="text-xs text-gray-500 mt-2">Loading cars...</p>
+                </div>
+              ) : (
+                <div className="border border-gray-300 rounded-lg max-h-60 overflow-y-auto p-3">
+                  {cars.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">No cars available</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {cars.map((car) => {
+                        const carId = car._id || car.id;
+                        const isSelected = couponForm.carIds.includes(carId);
+                        return (
+                          <label
+                            key={carId}
+                            className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCouponForm({
+                                    ...couponForm,
+                                    carIds: [...couponForm.carIds, carId],
+                                  });
+                                } else {
+                                  setCouponForm({
+                                    ...couponForm,
+                                    carIds: couponForm.carIds.filter((id) => id !== carId),
+                                  });
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            />
+                            <span className="text-sm text-gray-700 flex-1">
+                              {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ₹{car.pricePerDay || car.price}/day
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+              {couponForm.carIds.length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {couponForm.carIds.length} car(s) selected
+                </p>
+              )}
             </div>
           )}
 
@@ -839,12 +856,32 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave }) => {
  * Usage Modal Component
  */
 const UsageModal = ({ coupon, onClose }) => {
-  // Mock usage data
-  const usageData = [
-    { userId: '1', userName: 'John Doe', bookingId: 'BK001', usedDate: '2024-03-15', discountApplied: 300 },
-    { userId: '2', userName: 'Jane Smith', bookingId: 'BK002', usedDate: '2024-03-16', discountApplied: 500 },
-    { userId: '5', userName: 'David Brown', bookingId: 'BK003', usedDate: '2024-03-17', discountApplied: 400 },
-  ];
+  const [usageData, setUsageData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [couponStats, setCouponStats] = useState(null);
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        setLoading(true);
+        const response = await couponService.getCouponUsage(coupon._id || coupon.id);
+        if (response.success && response.data) {
+          setUsageData(response.data.usage || []);
+          setCouponStats(response.data.coupon || null);
+        }
+      } catch (error) {
+        console.error('Error fetching coupon usage:', error);
+        toastUtils.error('Failed to fetch coupon usage');
+        setUsageData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (coupon) {
+      fetchUsage();
+    }
+  }, [coupon]);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -870,39 +907,50 @@ const UsageModal = ({ coupon, onClose }) => {
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Total Usage</p>
               <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
-                {coupon.usedCount}
+                {couponStats?.usedCount || coupon.usedCount || 0}
               </p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Usage Limit</p>
-              <p className="text-2xl font-bold text-gray-900">{coupon.usageLimit}</p>
+              <p className="text-2xl font-bold text-gray-900">{couponStats?.usageLimit || coupon.usageLimit || 0}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Remaining</p>
               <p className="text-2xl font-bold text-green-600">
-                {coupon.usageLimit - coupon.usedCount}
+                {(couponStats?.usageLimit || coupon.usageLimit || 0) - (couponStats?.usedCount || coupon.usedCount || 0)}
               </p>
             </div>
           </div>
 
           {/* Usage List */}
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage History</h3>
-          <div className="space-y-2">
-            {usageData.slice(0, coupon.usedCount).map((usage, index) => (
-              <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{usage.userName}</p>
-                    <p className="text-xs text-gray-500">Booking: {usage.bookingId}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900">₹{usage.discountApplied}</p>
-                    <p className="text-xs text-gray-500">{new Date(usage.usedDate).toLocaleDateString()}</p>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto mb-2" style={{ borderColor: theme.colors.primary }}></div>
+              <p className="text-gray-600">Loading usage data...</p>
+            </div>
+          ) : usageData.length > 0 ? (
+            <div className="space-y-2">
+              {usageData.map((usage, index) => (
+                <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{usage.userName || 'Unknown User'}</p>
+                      <p className="text-xs text-gray-500">Booking: {usage.bookingId}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">₹{usage.discountApplied || 0}</p>
+                      <p className="text-xs text-gray-500">{new Date(usage.usedDate).toLocaleDateString()}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No usage history found for this coupon</p>
+            </div>
+          )}
         </div>
 
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">

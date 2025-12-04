@@ -183,7 +183,14 @@ export const getCurrentPosition = (options = {}) => {
           POSITION_UNAVAILABLE: 2,
           TIMEOUT: 3
         };
-        console.error('❌ Geolocation error:', errorInfo);
+        
+        // Only log non-timeout errors as errors, timeout is expected in some cases
+        if (error.code === 3) {
+          // Timeout - this is common, log as warning instead of error
+          console.warn('⏱️ Geolocation timeout (retrying with fallback)...', errorInfo);
+        } else {
+          console.error('❌ Geolocation error:', errorInfo);
+        }
 
         // If timeout or position unavailable, retry with lower accuracy (network-based)
         if (error.code === 3 || error.code === 2) {
@@ -207,7 +214,12 @@ export const getCurrentPosition = (options = {}) => {
               resolve(position);
             },
             (fallbackError) => {
-              console.error('❌ Fallback geolocation also failed:', fallbackError);
+              // Only log fallback failure if it's not a timeout (timeouts are expected)
+              if (fallbackError.code !== 3) {
+                console.error('❌ Fallback geolocation also failed:', fallbackError);
+              } else {
+                console.warn('⏱️ Fallback geolocation timeout (location tracking may be unavailable)');
+              }
               // Ensure error has code property
               if (!fallbackError.code) {
                 fallbackError.code = 2; // POSITION_UNAVAILABLE

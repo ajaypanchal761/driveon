@@ -70,24 +70,27 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
           }
         }
       } catch (error) {
-        console.error('Location error:', error);
-        
         let errorMessage = 'Getting location...';
         let permission = 'prompt';
 
         if (error.code === 1) {
           // PERMISSION_DENIED
+          console.error('❌ Location error: Permission denied');
           errorMessage = 'Location permission denied';
           permission = 'denied';
         } else if (error.code === 2) {
           // POSITION_UNAVAILABLE
+          console.warn('⚠️ Location error: Position unavailable');
           errorMessage = 'Location unavailable';
           permission = 'denied';
         } else if (error.code === 3) {
-          // TIMEOUT
-          errorMessage = 'Location request timed out';
-          permission = 'prompt';
+          // TIMEOUT - This is common and expected, log as warning
+          console.warn('⏱️ Location timeout (this is normal, will retry)');
+          // Don't change the location message for timeout - keep "Getting location..."
+          // The watchPosition will continue trying
+          return; // Exit early, don't update state
         } else {
+          console.error('❌ Location error:', error);
           errorMessage = 'Location unavailable';
           permission = 'denied';
         }
@@ -136,10 +139,22 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
         }
       },
       (error) => {
-        console.error('Location watch error:', error);
+        // Handle different error types appropriately
         if (error.code === 1) {
+          // PERMISSION_DENIED
+          console.error('❌ Location watch error: Permission denied');
           setLocationPermission('denied');
           setCurrentLocation('Location permission denied');
+        } else if (error.code === 3) {
+          // TIMEOUT - This is common, log as warning and don't update state
+          console.warn('⏱️ Location watch timeout (will continue retrying)');
+          // Don't update state - keep trying
+        } else if (error.code === 2) {
+          // POSITION_UNAVAILABLE
+          console.warn('⚠️ Location watch error: Position unavailable');
+          // Don't update state - might recover
+        } else {
+          console.error('❌ Location watch error:', error);
         }
       },
       geoOptions

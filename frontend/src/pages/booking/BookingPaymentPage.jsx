@@ -81,19 +81,44 @@ const BookingPaymentPage = () => {
         }
 
         // Validate dates on frontend before sending
+        const pickupTime = bookingData.pickupTime || bookingData.tripStart?.time || '10:00';
+        const dropTime = bookingData.dropTime || bookingData.tripEnd?.time || '18:00';
+        
+        // Create date objects with time
         const startDateObj = new Date(pickupDate);
         const endDateObj = new Date(dropDate);
         
-        // If same date, check times
-        if (startDateObj.toDateString() === endDateObj.toDateString()) {
-          const pickupTime = bookingData.pickupTime || bookingData.tripStart?.time || '10:00';
-          const dropTime = bookingData.dropTime || bookingData.tripEnd?.time || '18:00';
-          
-          if (pickupTime >= dropTime) {
-            throw new Error('Drop time must be after pickup time when dates are the same');
-          }
-        } else if (endDateObj <= startDateObj) {
-          throw new Error('Drop date must be after pickup date');
+        // Parse and set time for start date
+        const startTimeParts = pickupTime.split(':');
+        if (startTimeParts.length >= 2) {
+          const hours = parseInt(startTimeParts[0], 10) || 0;
+          const minutes = parseInt(startTimeParts[1], 10) || 0;
+          startDateObj.setHours(hours, minutes, 0, 0);
+        } else {
+          startDateObj.setHours(0, 0, 0, 0);
+        }
+        
+        // Parse and set time for end date
+        const endTimeParts = dropTime.split(':');
+        if (endTimeParts.length >= 2) {
+          const hours = parseInt(endTimeParts[0], 10) || 0;
+          const minutes = parseInt(endTimeParts[1], 10) || 0;
+          endDateObj.setHours(hours, minutes, 0, 0);
+        } else {
+          endDateObj.setHours(23, 59, 59, 999);
+        }
+        
+        // Check if start date/time is in the past
+        const now = new Date();
+        now.setSeconds(0, 0); // Remove seconds for comparison
+        
+        if (startDateObj < now) {
+          throw new Error('Trip start date and time cannot be in the past. Please select a future date and time.');
+        }
+        
+        // Check if end date/time is after start date/time
+        if (endDateObj <= startDateObj) {
+          throw new Error('Trip end date and time must be after start date and time');
         }
 
         // Use default location if not provided

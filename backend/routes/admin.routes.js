@@ -47,6 +47,15 @@ import {
   getLatestLocations,
   getUserLocationHistory,
 } from '../controllers/location.controller.js';
+import {
+  createCoupon,
+  getAllCoupons,
+  getCouponById,
+  updateCoupon,
+  deleteCoupon,
+  toggleCouponStatus,
+  getCouponUsage,
+} from '../controllers/admin.coupon.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 
 const router = express.Router();
@@ -260,6 +269,38 @@ router.get('/locations/latest', authenticateAdmin, getLatestLocations);
 // Get User Location History - PROTECTED
 // Route: GET /api/admin/locations/user/:userId
 router.get('/locations/user/:userId', authenticateAdmin, getUserLocationHistory);
+
+// ============================================
+// COUPON MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Create Coupon - PROTECTED
+// Route: POST /api/admin/coupons
+router.post('/coupons', authenticateAdmin, createCoupon);
+
+// Get All Coupons - PROTECTED
+// Route: GET /api/admin/coupons
+router.get('/coupons', authenticateAdmin, getAllCoupons);
+
+// Get Coupon by ID - PROTECTED
+// Route: GET /api/admin/coupons/:id
+router.get('/coupons/:id', authenticateAdmin, getCouponById);
+
+// Update Coupon - PROTECTED
+// Route: PUT /api/admin/coupons/:id
+router.put('/coupons/:id', authenticateAdmin, updateCoupon);
+
+// Delete Coupon - PROTECTED
+// Route: DELETE /api/admin/coupons/:id
+router.delete('/coupons/:id', authenticateAdmin, deleteCoupon);
+
+// Toggle Coupon Status - PROTECTED
+// Route: PATCH /api/admin/coupons/:id/toggle
+router.patch('/coupons/:id/toggle', authenticateAdmin, toggleCouponStatus);
+
+// Get Coupon Usage Statistics - PROTECTED
+// Route: GET /api/admin/coupons/:id/usage
+router.get('/coupons/:id/usage', authenticateAdmin, getCouponUsage);
 
 export default router;
 

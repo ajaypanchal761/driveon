@@ -76,16 +76,16 @@ const BannerAd = () => {
   ];
 
   return (
-    <section className="py-16 bg-white relative overflow-hidden" data-aos="fade-up" data-aos-delay="100">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="text-center mb-12">
+    <section className="py-8 md:py-16 bg-white relative overflow-hidden" data-aos="fade-up" data-aos-delay="100">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+        <div className="text-center mb-8 md:mb-12">
           <h2
-            className="text-3xl lg:text-4xl font-bold mb-4"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4"
             style={{ color: theme.colors.primary }}
           >
             Our Trusted Partners
           </h2>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-sm md:text-base lg:text-lg px-2">
             We work with leading brands to provide you the best experience
           </p>
         </div>

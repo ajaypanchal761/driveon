@@ -8,6 +8,7 @@ import {
   acceptGuarantorRequest,
   rejectGuarantorRequest,
 } from '../controllers/user.guarantor.controller.js';
+import { validateCoupon } from '../controllers/admin.coupon.controller.js';
 
 const router = express.Router();
 
@@ -80,6 +81,14 @@ router.post('/user/guarantor-requests/:id/accept', acceptGuarantorRequest);
 // Reject Guarantor Request - PROTECTED
 // Route: POST /api/user/guarantor-requests/:id/reject
 router.post('/user/guarantor-requests/:id/reject', rejectGuarantorRequest);
+
+// ============================================
+// COUPON ROUTES - PROTECTED
+// ============================================
+
+// Validate Coupon - PROTECTED
+// Route: POST /api/coupons/validate
+router.post('/coupons/validate', validateCoupon);
 
 export default router;
 
