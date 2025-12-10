@@ -70,7 +70,7 @@ export const register = async (req, res) => {
 
     // Send OTP via SMS (will skip for test numbers)
     try {
-      const smsResult = await sendOTP(phone, otp);
+      const smsResult = await sendOTP(phone, otp, 'register');
       if (smsResult.isTest) {
         console.log(`🧪 Test mode: OTP ${otp} generated for ${phone} (SMS skipped)`);
       } else {
@@ -187,7 +187,7 @@ export const sendLoginOTP = async (req, res) => {
     // Send OTP via SMS (if phone) or Email (if email)
     try {
       if (phone) {
-        const smsResult = await sendOTP(phone, otp);
+        const smsResult = await sendOTP(phone, otp, 'login');
         if (smsResult.isTest) {
           console.log(`🧪 Test mode: Login OTP ${otp} generated for ${phone} (SMS skipped)`);
         } else {
@@ -400,7 +400,7 @@ export const resendOTP = async (req, res) => {
     // Send OTP via SMS
     try {
       if (phone) {
-        const smsResult = await sendOTP(phone, otp);
+        const smsResult = await sendOTP(phone, otp, purpose);
         if (smsResult.isTest) {
           console.log(`🧪 Test mode: OTP ${otp} resent for ${phone} (SMS skipped)`);
         } else {

@@ -340,7 +340,7 @@ const ModuleLoginPage = () => {
             </div>
           )}
 
-          {/* Remember Me and Forgot Password/Resend OTP */}
+          {/* Remember Me and Resend OTP */}
           <div className="flex items-center justify-between mb-6">
             <label className="flex items-center cursor-pointer">
               <input
@@ -354,7 +354,7 @@ const ModuleLoginPage = () => {
                 Remember me
               </span>
             </label>
-            {showOTP ? (
+            {showOTP && (
               <button
                 type="button"
                 onClick={handleResendOTP}
@@ -364,14 +364,6 @@ const ModuleLoginPage = () => {
               >
                 Resend OTP?
               </button>
-            ) : (
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium hover:underline"
-                style={{ color: colors.backgroundTertiary }}
-              >
-                Forgot password?
-              </Link>
             )}
           </div>
 
@@ -620,7 +612,7 @@ const ModuleLoginPage = () => {
               </div>
             )}
 
-            {/* Remember Me and Forgot Password/Resend OTP */}
+            {/* Remember Me and Resend OTP */}
             <div className="flex items-center justify-between mb-6">
               <label className="flex items-center cursor-pointer">
                 <input
@@ -634,7 +626,7 @@ const ModuleLoginPage = () => {
                   Remember me
                 </span>
               </label>
-              {showOTP ? (
+              {showOTP && (
                 <button
                   type="button"
                   onClick={handleResendOTP}
@@ -644,14 +636,6 @@ const ModuleLoginPage = () => {
                 >
                   Resend OTP?
                 </button>
-              ) : (
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium hover:underline"
-                  style={{ color: colors.backgroundTertiary }}
-                >
-                  Forgot password?
-                </Link>
               )}
             </div>
 

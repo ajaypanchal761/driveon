@@ -94,9 +94,10 @@ export const isOTPExpired = (expiresAt) => {
  * Send OTP via SMS using SMSIndia Hub
  * @param {string} phone - Phone number to send SMS to
  * @param {string} otp - OTP code to send
+ * @param {string} purpose - Purpose of OTP (register, login, reset_password) - optional
  * @returns {Promise<Object>} - Response object
  */
-export const sendOTP = async (phone, otp) => {
+export const sendOTP = async (phone, otp, purpose = 'register') => {
   try {
     // Skip SMS sending for test phone numbers
     if (isTestPhoneNumber(phone)) {
@@ -114,9 +115,9 @@ export const sendOTP = async (phone, otp) => {
       };
     }
     
-    console.log(`📱 Attempting to send OTP ${otp} to phone: ${phone}`);
+    console.log(`📱 Attempting to send OTP ${otp} to phone: ${phone} for ${purpose}`);
     
-    const result = await smsIndiaHubService.sendOTP(phone, otp);
+    const result = await smsIndiaHubService.sendOTP(phone, otp, purpose);
     
     console.log(`✅ SMS sent successfully via SMSIndia Hub:`, result);
     return result;

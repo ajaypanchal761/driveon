@@ -77,9 +77,10 @@ class SMSIndiaHubService {
    * Send OTP via SMS using SMSIndia Hub
    * @param {string} phone - Phone number to send SMS to
    * @param {string} otp - OTP code to send
+   * @param {string} purpose - Purpose of OTP (register, login, reset_password) - optional
    * @returns {Promise<Object>} - Response object
    */
-  async sendOTP(phone, otp) {
+  async sendOTP(phone, otp, purpose = 'register') {
     try {
       // Load credentials dynamically (with trim to remove whitespace)
       const apiKey = (this.apiKey || process.env.SMSINDIAHUB_API_KEY)?.trim();
@@ -114,11 +115,20 @@ class SMSIndiaHubService {
       // SMSIndia Hub requires DLT registered templates for transactional SMS
       // Check if custom message template is provided (must match registered DLT template exactly)
       const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
+      
+      // Determine purpose text for message
+      let purposeText = 'registration';
+      if (purpose === 'login') {
+        purposeText = 'login';
+      } else if (purpose === 'reset_password') {
+        purposeText = 'password reset';
+      }
+      
       // Use custom template if provided, otherwise use default format that matches registered template
       // Based on working template: "Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is {otp}"
       const message = customTemplate 
-        ? customTemplate.replace('{otp}', otp)
-        : `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
+        ? customTemplate.replace('{otp}', otp).replace('{purpose}', purposeText)
+        : `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for ${purposeText} is ${otp}`;
 
       // Check if template ID is provided (for DLT registered templates)
       const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
