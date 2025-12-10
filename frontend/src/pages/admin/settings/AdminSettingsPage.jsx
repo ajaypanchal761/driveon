@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { useAdminAuth } from '../../../context/AdminContext';
 import { adminService } from '../../../services/admin.service';
@@ -193,38 +193,47 @@ const AdminSettingsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
-          <p className="text-gray-600">Loading settings...</p>
+          <p style={{ color: colors.textSecondary }}>Loading settings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen"
+      style={{ backgroundColor: colors.backgroundPrimary }}
+    >
       <div className="max-w-5xl mx-auto px-4 pt-20 md:pt-6 pb-6 md:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <div className="flex items-center gap-3 md:gap-4 mb-2">
             <button
               onClick={() => navigate('/admin/profile')}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="p-2 rounded-lg transition-colors flex-shrink-0"
+              style={{ color: colors.textSecondary }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               aria-label="Go back to profile"
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold" style={{ color: theme.colors.primary }}>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold" style={{ color: colors.backgroundTertiary }}>
               System Settings
             </h1>
           </div>
-          <p className="text-sm md:text-base text-gray-600 ml-12 md:ml-14">Manage system configuration and preferences</p>
+          <p className="text-sm md:text-base ml-12 md:ml-14" style={{ color: colors.textSecondary }}>Manage system configuration and preferences</p>
         </div>
 
         {/* Success Message */}
@@ -249,46 +258,66 @@ const AdminSettingsPage = () => {
 
         {/* General Settings */}
         <Card className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">General Settings</h2>
+            <h2 className="text-xl font-semibold mb-6" style={{ color: colors.textPrimary }}>General Settings</h2>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Name</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Admin Name</label>
                 <input
                   type="text"
                   value={generalSettings.adminName}
                   onChange={(e) => setGeneralSettings({ ...generalSettings, adminName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                  style={{
+                    border: `1px solid ${colors.borderMedium}`,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary
+                  }}
                   placeholder="Enter admin name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">App Name</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>App Name</label>
                 <input
                   type="text"
                   value={generalSettings.appName}
                   onChange={(e) => setGeneralSettings({ ...generalSettings, appName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                  style={{
+                    border: `1px solid ${colors.borderMedium}`,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary
+                  }}
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Contact Email</label>
                   <input
                     type="email"
                     value={generalSettings.contactEmail}
                     onChange={(e) => setGeneralSettings({ ...generalSettings, contactEmail: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                    style={{
+                      border: `1px solid ${colors.borderMedium}`,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Contact Phone</label>
                   <input
                     type="tel"
                     value={generalSettings.contactPhone}
                     onChange={(e) => setGeneralSettings({ ...generalSettings, contactPhone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                    style={{
+                      border: `1px solid ${colors.borderMedium}`,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
                   />
                 </div>
               </div>
@@ -297,7 +326,14 @@ const AdminSettingsPage = () => {
                 <button
                   onClick={handleSaveGeneral}
                   disabled={saving}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                  onMouseEnter={(e) => {
+                    if (!saving) e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!saving) e.currentTarget.style.opacity = '1';
+                  }}
                 >
                   {saving ? (
                     <>
@@ -314,37 +350,52 @@ const AdminSettingsPage = () => {
 
         {/* Password Change Section */}
         <Card className="p-6 mt-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Change Password</h2>
+            <h2 className="text-xl font-semibold mb-6" style={{ color: colors.textPrimary }}>Change Password</h2>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Current Password</label>
                 <input
                   type="password"
                   value={passwordSettings.currentPassword}
                   onChange={(e) => setPasswordSettings({ ...passwordSettings, currentPassword: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                  style={{
+                    border: `1px solid ${colors.borderMedium}`,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary
+                  }}
                   placeholder="Enter current password"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>New Password</label>
                 <input
                   type="password"
                   value={passwordSettings.newPassword}
                   onChange={(e) => setPasswordSettings({ ...passwordSettings, newPassword: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                  style={{
+                    border: `1px solid ${colors.borderMedium}`,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary
+                  }}
                   placeholder="Enter new password"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Confirm New Password</label>
                 <input
                   type="password"
                   value={passwordSettings.confirmPassword}
                   onChange={(e) => setPasswordSettings({ ...passwordSettings, confirmPassword: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                  style={{
+                    border: `1px solid ${colors.borderMedium}`,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary
+                  }}
                   placeholder="Confirm new password"
                 />
               </div>
@@ -353,7 +404,14 @@ const AdminSettingsPage = () => {
                 <button
                   onClick={handleChangePassword}
                   disabled={changingPassword}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                  onMouseEnter={(e) => {
+                    if (!changingPassword) e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!changingPassword) e.currentTarget.style.opacity = '1';
+                  }}
                 >
                   {changingPassword ? (
                     <>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Referral Management Page
@@ -315,7 +316,7 @@ const ReferralManagementPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading referrals...</p>
         </div>
@@ -330,7 +331,7 @@ const ReferralManagementPage = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Referral Management
               </h1>
               <p className="text-sm md:text-base text-gray-600">Manage referral activities and points</p>
@@ -339,7 +340,7 @@ const ReferralManagementPage = () => {
               <button
                 onClick={handleExport}
                 className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-                style={{ backgroundColor: theme.colors.primary }}
+                style={{ backgroundColor: colors.backgroundTertiary }}
               >
                 Export Reports
               </button>
@@ -352,7 +353,7 @@ const ReferralManagementPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'list' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={viewMode === 'list' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   List
                 </button>
@@ -363,7 +364,7 @@ const ReferralManagementPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'statistics' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={viewMode === 'statistics' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Statistics
                 </button>
@@ -374,7 +375,7 @@ const ReferralManagementPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'top-referrers' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={viewMode === 'top-referrers' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Top Referrers
                 </button>
@@ -386,7 +387,7 @@ const ReferralManagementPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {statistics.totalReferrals}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Total Referrals</div>
@@ -400,7 +401,7 @@ const ReferralManagementPage = () => {
             <div className="text-xs md:text-sm text-gray-600">Pending</div>
           </Card>
           <Card className="p-4 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {statistics.totalPointsEarned}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Points Earned</div>
@@ -440,50 +441,43 @@ const ReferralManagementPage = () => {
               {/* Filters */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Status Filter */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={filters.status}
-                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                  >
-                    <option value="all">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
+                <AdminCustomSelect
+                  label="Status"
+                  value={filters.status}
+                  onChange={(value) => setFilters({ ...filters, status: value })}
+                  options={[
+                    { value: 'all', label: 'All' },
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'completed', label: 'Completed' },
+                  ]}
+                />
 
                 {/* Date Range Filter */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date Range</label>
-                  <select
-                    value={filters.dateRange}
-                    onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                  </select>
-                </div>
+                <AdminCustomSelect
+                  label="Date Range"
+                  value={filters.dateRange}
+                  onChange={(value) => setFilters({ ...filters, dateRange: value })}
+                  options={[
+                    { value: 'all', label: 'All Time' },
+                    { value: 'today', label: 'Today' },
+                    { value: 'week', label: 'This Week' },
+                    { value: 'month', label: 'This Month' },
+                  ]}
+                />
 
                 {/* Referrer Filter */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Referrer</label>
-                  <select
-                    value={filters.referrer}
-                    onChange={(e) => setFilters({ ...filters, referrer: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-                  >
-                    <option value="all">All Referrers</option>
-                    {referrers.map((referrer) => (
-                      <option key={referrer.id} value={referrer.id}>
-                        {referrer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <AdminCustomSelect
+                  label="Referrer"
+                  value={filters.referrer}
+                  onChange={(value) => setFilters({ ...filters, referrer: value })}
+                  options={[
+                    { value: 'all', label: 'All Referrers' },
+                    ...referrers.map((referrer) => ({
+                      value: referrer.id,
+                      label: referrer.name,
+                    })),
+                  ]}
+                />
               </div>
             </Card>
 
@@ -528,7 +522,7 @@ const ReferralManagementPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600">Points Earned</p>
-                          <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                          <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                             {referral.pointsEarned}
                           </p>
                         </div>
@@ -561,7 +555,7 @@ const ReferralManagementPage = () => {
                       <button
                         onClick={() => handleViewReferral(referral)}
                         className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                        style={{ backgroundColor: theme.colors.primary }}
+                        style={{ backgroundColor: colors.backgroundTertiary }}
                       >
                         View Details
                       </button>
@@ -570,7 +564,18 @@ const ReferralManagementPage = () => {
                           const points = prompt('Enter points to add (negative to subtract):');
                           if (points) handleAdjustPoints(referral.id, parseInt(points));
                         }}
-                        className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        className="w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                        style={{
+                          color: colors.textPrimary,
+                          backgroundColor: colors.backgroundLight,
+                          border: `1px solid ${colors.borderMedium}`,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = colors.backgroundIcon;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = colors.backgroundLight;
+                        }}
                       >
                         Adjust Points
                       </button>
@@ -597,7 +602,7 @@ const ReferralManagementPage = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Total Referrals</p>
-                  <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
+                  <p className="text-2xl font-bold" style={{ color: colors.backgroundTertiary }}>
                     {statistics.totalReferrals}
                   </p>
                 </div>
@@ -611,13 +616,13 @@ const ReferralManagementPage = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Active Referrers</p>
-                  <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
+                  <p className="text-2xl font-bold" style={{ color: colors.backgroundTertiary }}>
                     {statistics.activeReferrers}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Avg Referrals/User</p>
-                  <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
+                  <p className="text-2xl font-bold" style={{ color: colors.backgroundTertiary }}>
                     {statistics.activeReferrers > 0
                       ? (statistics.totalReferrals / statistics.activeReferrers).toFixed(1)
                       : 0}
@@ -632,7 +637,7 @@ const ReferralManagementPage = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-xs text-gray-600 mb-1">Total Points Earned</p>
-                  <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
+                  <p className="text-2xl font-bold" style={{ color: colors.backgroundTertiary }}>
                     {statistics.totalPointsEarned}
                   </p>
                 </div>
@@ -669,7 +674,7 @@ const ReferralManagementPage = () => {
                   {/* Rank */}
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     {index + 1}
                   </div>
@@ -691,7 +696,7 @@ const ReferralManagementPage = () => {
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Points Earned</p>
-                        <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                        <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                           {referrer.totalPointsEarned}
                         </p>
                       </div>
@@ -805,7 +810,7 @@ const ReferralDetailModal = ({ referral, onClose, onAdjustPoints }) => {
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-700">Points Earned</label>
-                <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                   {referral.pointsEarned}
                 </p>
               </div>
@@ -849,7 +854,18 @@ const ReferralDetailModal = ({ referral, onClose, onAdjustPoints }) => {
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            className="px-4 py-2 border rounded-lg transition-colors"
+            style={{
+              borderColor: colors.borderMedium,
+              color: colors.textPrimary,
+              backgroundColor: colors.backgroundSecondary,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = colors.backgroundLight;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
+            }}
           >
             Close
           </button>
@@ -861,7 +877,8 @@ const ReferralDetailModal = ({ referral, onClose, onAdjustPoints }) => {
                 onClose();
               }
             }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
+            style={{ backgroundColor: colors.backgroundTertiary }}
           >
             Adjust Points
           </button>

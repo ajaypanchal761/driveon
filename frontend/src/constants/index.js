@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE: '/user/profile',
     KYC_STATUS: '/user/kyc-status',
     UPLOAD_PHOTO: '/user/upload-photo',
+    CHANGE_PASSWORD: '/user/change-password',
   },
   ADMIN: {
     SIGNUP: '/admin/signup',

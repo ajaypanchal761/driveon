@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { couponService } from '../../../services/coupon.service';
 import { carService } from '../../../services/car.service';
 import toastUtils from '../../../config/toast';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Coupon Management Page
@@ -346,7 +347,7 @@ const CouponManagementPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading coupons...</p>
         </div>
@@ -361,7 +362,7 @@ const CouponManagementPage = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Coupon Management
               </h1>
               <p className="text-sm md:text-base text-gray-600">Create and manage discount coupons</p>
@@ -376,7 +377,7 @@ const CouponManagementPage = () => {
               <button
                 onClick={handleCreateCoupon}
                 className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-                style={{ backgroundColor: theme.colors.primary }}
+                style={{ backgroundColor: colors.backgroundTertiary }}
               >
                 Create Coupon
               </button>
@@ -387,7 +388,7 @@ const CouponManagementPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Total Coupons</div>
@@ -401,7 +402,7 @@ const CouponManagementPage = () => {
             <div className="text-xs md:text-sm text-gray-600">Expired</div>
           </Card>
           <Card className="p-4 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.totalUsage}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Total Usage</div>
@@ -434,48 +435,42 @@ const CouponManagementPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-                <option value="used">Used Up</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Status"
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'active', label: 'Active' },
+                { value: 'expired', label: 'Expired' },
+                { value: 'used', label: 'Used Up' },
+              ]}
+            />
 
             {/* Coupon Type Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Discount Type</label>
-              <select
-                value={filters.couponType}
-                onChange={(e) => setFilters({ ...filters, couponType: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Types</option>
-                <option value="percentage">Percentage</option>
-                <option value="fixed">Fixed Amount</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Discount Type"
+              value={filters.couponType}
+              onChange={(value) => setFilters({ ...filters, couponType: value })}
+              options={[
+                { value: 'all', label: 'All Types' },
+                { value: 'percentage', label: 'Percentage' },
+                { value: 'fixed', label: 'Fixed Amount' },
+              ]}
+            />
 
             {/* Date Range Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Created</label>
-              <select
-                value={filters.dateRange}
-                onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Created"
+              value={filters.dateRange}
+              onChange={(value) => setFilters({ ...filters, dateRange: value })}
+              options={[
+                { value: 'all', label: 'All Time' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+              ]}
+            />
           </div>
         </Card>
 
@@ -495,7 +490,7 @@ const CouponManagementPage = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1">
-                        <span className="font-mono text-lg" style={{ color: theme.colors.primary }}>
+                        <span className="font-mono text-lg" style={{ color: colors.backgroundTertiary }}>
                           {coupon.code}
                         </span>
                       </h3>
@@ -565,7 +560,7 @@ const CouponManagementPage = () => {
                   <button
                     onClick={() => handleViewUsage(coupon)}
                     className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     View Usage
                   </button>
@@ -678,15 +673,15 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Discount Type *</label>
-            <select
+            <AdminCustomSelect
+              label="Discount Type *"
               value={couponForm.discountType}
-              onChange={(e) => setCouponForm({ ...couponForm, discountType: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="percentage">Percentage</option>
-              <option value="fixed">Fixed Amount</option>
-            </select>
+              onChange={(value) => setCouponForm({ ...couponForm, discountType: value })}
+              options={[
+                { value: 'percentage', label: 'Percentage' },
+                { value: 'fixed', label: 'Fixed Amount' },
+              ]}
+            />
           </div>
 
           <div>
@@ -734,15 +729,15 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Applicable To *</label>
-            <select
+            <AdminCustomSelect
+              label="Applicable To *"
               value={couponForm.applicableTo}
-              onChange={(e) => setCouponForm({ ...couponForm, applicableTo: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="car_id">Specific Car</option>
-              <option value="user_id">Specific User</option>
-            </select>
+              onChange={(value) => setCouponForm({ ...couponForm, applicableTo: value })}
+              options={[
+                { value: 'car_id', label: 'Specific Car' },
+                { value: 'user_id', label: 'Specific User' },
+              ]}
+            />
           </div>
 
           {couponForm.applicableTo === 'car_id' && (
@@ -750,7 +745,7 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
               <label className="block text-sm font-medium text-gray-700 mb-2">Select Cars *</label>
               {loadingCars ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 mx-auto" style={{ borderColor: theme.colors.primary }}></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.backgroundTertiary }}></div>
                   <p className="text-xs text-gray-500 mt-2">Loading cars...</p>
                 </div>
               ) : (
@@ -906,7 +901,7 @@ const UsageModal = ({ coupon, onClose }) => {
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Total Usage</p>
-              <p className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
+              <p className="text-2xl font-bold" style={{ color: colors.backgroundTertiary }}>
                 {couponStats?.usedCount || coupon.usedCount || 0}
               </p>
             </div>
@@ -926,7 +921,7 @@ const UsageModal = ({ coupon, onClose }) => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Usage History</h3>
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto mb-2" style={{ borderColor: theme.colors.primary }}></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto mb-2" style={{ borderColor: colors.backgroundTertiary }}></div>
               <p className="text-gray-600">Loading usage data...</p>
             </div>
           ) : usageData.length > 0 ? (

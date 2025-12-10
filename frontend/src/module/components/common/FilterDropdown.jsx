@@ -1,0 +1,627 @@
+import { useState, useRef, useEffect } from 'react';
+import { colors } from '../../theme/colors';
+import CustomSelect from './CustomSelect';
+import CustomDatePicker from './CustomDatePicker';
+
+/**
+ * FilterDropdown Component
+ * Dropdown with all filter options based on document.txt specifications
+ * Includes: Brand, Model, Seats, Fuel Type, Transmission, Color, Price Range, Rating, Location, Availability, Features, Car Type
+ */
+const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
+  const dropdownRef = useRef(null);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    brand: '',
+    model: '',
+    seats: '',
+    fuelType: '',
+    transmission: '',
+    color: '',
+    priceRange: { min: '', max: '' },
+    rating: '',
+    location: '',
+    carType: '',
+    features: [],
+    availableFrom: '',
+    availableTo: '',
+  });
+
+  // Close dropdown when clicking outside (mobile only)
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Only close on mobile (when dropdown is visible)
+      const isMobile = window.innerWidth < 768;
+      if (isMobile && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  // Filter options based on document.txt
+  const brands = ['Tesla', 'Lamborghini', 'BMW', 'Ferrari', 'Toyota', 'Honda', 'Mercedes', 'Audi'];
+  const fuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid'];
+  const transmissions = ['Manual', 'Automatic', 'CVT'];
+  const colorsList = ['Black', 'White', 'Red', 'Blue', 'Silver', 'Gray', 'Other'];
+  const carTypes = ['SUV', 'Sedan', 'Hatchback', 'Coupe', 'Convertible', 'Wagon'];
+  const featuresList = ['GPS Navigation', 'Bluetooth', 'USB Charging', 'Air Conditioning', 'Sunroof', 'Leather Seats', 'Backup Camera', 'Parking Sensors'];
+  const seatOptions = ['2', '4', '5', '7', '8+'];
+  const ratingOptions = ['4.0+', '4.5+', '5.0'];
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handlePriceChange = (type, value) => {
+    setFilters(prev => ({
+      ...prev,
+      priceRange: {
+        ...prev.priceRange,
+        [type]: value
+      }
+    }));
+  };
+
+  const handleFeatureToggle = (feature) => {
+    setFilters(prev => ({
+      ...prev,
+      features: prev.features.includes(feature)
+        ? prev.features.filter(f => f !== feature)
+        : [...prev.features, feature]
+    }));
+  };
+
+  const handleApply = () => {
+    onApplyFilters(filters);
+    onClose();
+  };
+
+  const handleReset = () => {
+    setFilters({
+      brand: '',
+      model: '',
+      seats: '',
+      fuelType: '',
+      transmission: '',
+      color: '',
+      priceRange: { min: '', max: '' },
+      rating: '',
+      location: '',
+      carType: '',
+      features: [],
+      availableFrom: '',
+      availableTo: '',
+    });
+  };
+
+  // On mobile, only show if isOpen is true (dropdown)
+  // On desktop, always show as sidebar when isOpen is true
+  return (
+    <>
+      {/* Mobile Dropdown - Only show when isOpen is true */}
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className="filter-dropdown fixed top-24 left-4 right-4 z-[100] max-h-[75vh] overflow-y-auto rounded-2xl shadow-2xl md:hidden"
+          style={{
+            backgroundColor: colors.backgroundSecondary,
+            animation: 'slideDownFilter 0.3s ease-out',
+          }}
+        >
+          {renderFilterContent(false)}
+        </div>
+      )}
+
+      {/* Desktop Sidebar - Always visible when isOpen is true */}
+      {isOpen && (
+        <div
+          className="filter-dropdown hidden md:block md:fixed md:left-0 md:top-20 md:bottom-0 md:w-80 md:z-40 md:overflow-y-auto md:rounded-none md:shadow-lg md:border-r"
+          style={{
+            backgroundColor: colors.backgroundSecondary,
+            borderRightColor: colors.borderForm
+          }}
+        >
+          {renderFilterContent(true)}
+        </div>
+      )}
+
+      {/* Animation Styles and Theme Colors for Dropdowns/Calendar */}
+      <style>{`
+        @keyframes slideDownFilter {
+          from {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        
+        /* Style for select dropdowns - theme colors with proper scoping */
+        .filter-dropdown select {
+          background-color: ${colors.backgroundSecondary} !important;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+          background-repeat: no-repeat !important;
+          background-position: right 0.5rem center !important;
+          background-size: 1em 1em !important;
+          color: ${colors.textPrimary} !important;
+          border-color: ${colors.borderForm} !important;
+          -webkit-appearance: none !important;
+          -moz-appearance: none !important;
+          appearance: none !important;
+          padding-right: 2.5rem !important;
+        }
+        
+        .filter-dropdown select:focus {
+          outline: none !important;
+          border-color: ${colors.backgroundTertiary} !important;
+          box-shadow: 0 0 0 2px ${colors.shadowFocus} !important;
+        }
+        
+        .filter-dropdown select option {
+          background-color: ${colors.backgroundSecondary} !important;
+          color: ${colors.textPrimary} !important;
+          padding: 0.5rem !important;
+        }
+        
+        .filter-dropdown select option:hover,
+        .filter-dropdown select option:checked {
+          background-color: ${colors.backgroundTertiary} !important;
+          color: ${colors.backgroundSecondary} !important;
+        }
+        
+        /* Style for datetime-local inputs - theme colors */
+        .filter-dropdown input[type="datetime-local"] {
+          background-color: ${colors.backgroundSecondary} !important;
+          color: ${colors.textPrimary} !important;
+          border-color: ${colors.borderForm} !important;
+        }
+        
+        .filter-dropdown input[type="datetime-local"]:focus {
+          outline: none !important;
+          border-color: ${colors.backgroundTertiary} !important;
+          box-shadow: 0 0 0 2px ${colors.shadowFocus} !important;
+        }
+        
+        /* Calendar picker styling (webkit) - theme colors */
+        .filter-dropdown input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+          filter: none !important;
+          cursor: pointer !important;
+          opacity: 1 !important;
+          background-color: transparent !important;
+        }
+        
+        .filter-dropdown input[type="datetime-local"]::-webkit-datetime-edit {
+          color: ${colors.textPrimary} !important;
+        }
+        
+        .filter-dropdown input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+          color: ${colors.textPrimary} !important;
+        }
+        
+        .filter-dropdown input[type="datetime-local"]::-webkit-datetime-edit-text {
+          color: ${colors.textPrimary} !important;
+        }
+        
+        .filter-dropdown input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+        .filter-dropdown input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+        .filter-dropdown input[type="datetime-local"]::-webkit-datetime-edit-year-field {
+          color: ${colors.textPrimary} !important;
+        }
+        
+        /* Calendar picker styling (firefox) */
+        .filter-dropdown input[type="datetime-local"]::-moz-calendar-picker-indicator {
+          filter: none !important;
+          cursor: pointer !important;
+        }
+        
+        /* Number inputs styling */
+        .filter-dropdown input[type="number"] {
+          background-color: ${colors.backgroundSecondary} !important;
+          color: ${colors.textPrimary} !important;
+          border-color: ${colors.borderForm} !important;
+        }
+        
+        .filter-dropdown input[type="number"]:focus {
+          outline: none !important;
+          border-color: ${colors.backgroundTertiary} !important;
+          box-shadow: 0 0 0 2px ${colors.shadowFocus} !important;
+        }
+        
+        /* Text inputs styling */
+        .filter-dropdown input[type="text"] {
+          background-color: ${colors.backgroundSecondary} !important;
+          color: ${colors.textPrimary} !important;
+          border-color: ${colors.borderForm} !important;
+        }
+        
+        .filter-dropdown input[type="text"]:focus {
+          outline: none !important;
+          border-color: ${colors.backgroundTertiary} !important;
+          box-shadow: 0 0 0 2px ${colors.shadowFocus} !important;
+        }
+      `}</style>
+    </>
+  );
+
+  function renderFilterContent(isDesktop) {
+    return (
+      <>
+        {/* Header */}
+        <div 
+          className="sticky top-0 z-20 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between border-b"
+          style={{ 
+            backgroundColor: colors.backgroundSecondary,
+            borderColor: colors.borderForm
+          }}
+        >
+          <h3 className="text-base md:text-lg font-bold" style={{ color: colors.textPrimary }}>
+            Filters
+          </h3>
+          {/* Close button - Only show on mobile */}
+          {!isDesktop && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Close filters"
+            >
+              <svg
+                className="w-6 h-6 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-3 md:p-4 space-y-3 md:space-y-4">
+          {/* Brand */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Brand
+            </label>
+            <CustomSelect
+              value={filters.brand}
+              onChange={(value) => handleFilterChange('brand', value)}
+              options={[
+                { label: 'All Brands', value: '' },
+                ...brands.map(brand => ({ label: brand, value: brand }))
+              ]}
+              placeholder="All Brands"
+            />
+          </div>
+
+          {/* Model */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Model
+            </label>
+            <input
+              type="text"
+              value={filters.model}
+              onChange={(e) => handleFilterChange('model', e.target.value)}
+              placeholder="Enter model name"
+              className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
+              style={{ 
+                borderColor: colors.borderForm,
+                backgroundColor: colors.backgroundSecondary,
+                color: colors.textPrimary
+              }}
+            />
+          </div>
+
+          {/* Seats */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Seats
+            </label>
+            <CustomSelect
+              value={filters.seats}
+              onChange={(value) => handleFilterChange('seats', value)}
+              options={[
+                { label: 'Any', value: '' },
+                ...seatOptions.map(seats => ({ label: `${seats} Seats`, value: seats }))
+              ]}
+              placeholder="Any"
+            />
+          </div>
+
+          {/* Fuel Type */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Fuel Type
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {fuelTypes.map(fuel => (
+                <button
+                  key={fuel}
+                  onClick={() => handleFilterChange('fuelType', filters.fuelType === fuel ? '' : fuel)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.fuelType === fuel
+                      ? 'text-white'
+                      : 'border'
+                  }`}
+                  style={
+                    filters.fuelType === fuel
+                      ? { backgroundColor: colors.backgroundTertiary }
+                      : { 
+                          borderColor: colors.borderForm,
+                          color: colors.textPrimary,
+                          backgroundColor: colors.backgroundSecondary
+                        }
+                  }
+                >
+                  {fuel}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Transmission */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Transmission
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {transmissions.map(trans => (
+                <button
+                  key={trans}
+                  onClick={() => handleFilterChange('transmission', filters.transmission === trans ? '' : trans)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.transmission === trans
+                      ? 'text-white'
+                      : 'border'
+                  }`}
+                  style={
+                    filters.transmission === trans
+                      ? { backgroundColor: colors.backgroundTertiary }
+                      : { 
+                          borderColor: colors.borderForm,
+                          color: colors.textPrimary,
+                          backgroundColor: colors.backgroundSecondary
+                        }
+                  }
+                >
+                  {trans}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Color
+            </label>
+            <CustomSelect
+              value={filters.color}
+              onChange={(value) => handleFilterChange('color', value)}
+              options={[
+                { label: 'Any Color', value: '' },
+                ...colorsList.map(color => ({ label: color, value: color }))
+              ]}
+              placeholder="Any Color"
+            />
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Price Range (per day)
+            </label>
+            <div className="flex gap-1.5">
+              <input
+                type="number"
+                value={filters.priceRange.min}
+                onChange={(e) => handlePriceChange('min', e.target.value)}
+                placeholder="Min"
+                className="w-24 px-3 py-2 rounded-lg border text-sm"
+                style={{ 
+                  borderColor: colors.borderForm,
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.textPrimary
+                }}
+              />
+              <input
+                type="number"
+                value={filters.priceRange.max}
+                onChange={(e) => handlePriceChange('max', e.target.value)}
+                placeholder="Max"
+                className="w-24 px-3 py-2 rounded-lg border text-sm"
+                style={{ 
+                  borderColor: colors.borderForm,
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.textPrimary
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Rating */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Minimum Rating
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {ratingOptions.map(rating => (
+                <button
+                  key={rating}
+                  onClick={() => handleFilterChange('rating', filters.rating === rating ? '' : rating)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.rating === rating
+                      ? 'text-white'
+                      : 'border'
+                  }`}
+                  style={
+                    filters.rating === rating
+                      ? { backgroundColor: colors.backgroundTertiary }
+                      : { 
+                          borderColor: colors.borderForm,
+                          color: colors.textPrimary,
+                          backgroundColor: colors.backgroundSecondary
+                        }
+                  }
+                >
+                  {rating} ⭐
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Car Type */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Car Type
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {carTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => handleFilterChange('carType', filters.carType === type ? '' : type)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.carType === type
+                      ? 'text-white'
+                      : 'border'
+                  }`}
+                  style={
+                    filters.carType === type
+                      ? { backgroundColor: colors.backgroundTertiary }
+                      : { 
+                          borderColor: colors.borderForm,
+                          color: colors.textPrimary,
+                          backgroundColor: colors.backgroundSecondary
+                        }
+                  }
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Location
+            </label>
+            <input
+              type="text"
+              value={filters.location}
+              onChange={(e) => handleFilterChange('location', e.target.value)}
+              placeholder="Enter location"
+              className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
+              style={{ 
+                borderColor: colors.borderForm,
+                backgroundColor: colors.backgroundSecondary,
+                color: colors.textPrimary
+              }}
+            />
+          </div>
+
+          {/* Availability */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Availability
+            </label>
+            <div className="space-y-1.5">
+              <CustomDatePicker
+                value={filters.availableFrom}
+                onChange={(value) => handleFilterChange('availableFrom', value)}
+                placeholder="From Date & Time"
+              />
+              <CustomDatePicker
+                value={filters.availableTo}
+                onChange={(value) => handleFilterChange('availableTo', value)}
+                placeholder="To Date & Time"
+              />
+            </div>
+          </div>
+
+          {/* Features */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
+              Features
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {featuresList.map(feature => (
+                <button
+                  key={feature}
+                  onClick={() => handleFeatureToggle(feature)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filters.features.includes(feature)
+                      ? 'text-white'
+                      : 'border'
+                  }`}
+                  style={
+                    filters.features.includes(feature)
+                      ? { backgroundColor: colors.backgroundTertiary }
+                      : { 
+                          borderColor: colors.borderForm,
+                          color: colors.textPrimary,
+                          backgroundColor: colors.backgroundSecondary
+                        }
+                  }
+                >
+                  {feature}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div 
+          className="sticky bottom-0 px-3 md:px-4 py-2 md:py-3 flex gap-2 border-t"
+          style={{ 
+            backgroundColor: colors.backgroundSecondary,
+            borderColor: colors.borderForm
+          }}
+        >
+          <button
+            onClick={handleReset}
+            className="flex-1 px-3 py-2 rounded-lg font-medium text-xs border transition-colors"
+            style={{ 
+              borderColor: colors.borderForm,
+              color: colors.textPrimary,
+              backgroundColor: colors.backgroundSecondary
+            }}
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleApply}
+            className="flex-1 px-3 py-2 rounded-lg font-medium text-xs text-white transition-colors"
+            style={{ backgroundColor: colors.backgroundTertiary }}
+          >
+            Apply Filters
+          </button>
+        </div>
+      </>
+    );
+  }
+};
+
+export default FilterDropdown;
+

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 
 /**
  * Admin Sidebar Component
@@ -156,8 +156,11 @@ const AdminSidebar = () => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg"
-        style={{ color: theme.colors.primary }}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg"
+        style={{ 
+          color: colors.textPrimary,
+          backgroundColor: colors.backgroundSecondary
+        }}
         aria-label="Toggle menu"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,13 +178,17 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen w-64 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col overflow-hidden ${
+        className={`fixed top-0 left-0 h-screen w-64 shadow-lg z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col overflow-hidden ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{ backgroundColor: colors.backgroundSecondary }}
       >
         {/* Logo Section */}
-        <div className="h-16 flex items-center justify-center border-b border-gray-200 px-4 flex-shrink-0">
-          <h2 className="text-xl font-bold" style={{ color: theme.colors.primary }}>
+        <div 
+          className="h-16 flex items-center justify-center border-b px-4 flex-shrink-0"
+          style={{ borderBottomColor: colors.borderMedium }}
+        >
+          <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
             Admin Panel
           </h2>
         </div>
@@ -198,20 +205,36 @@ const AdminSidebar = () => {
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
                     active
                       ? 'text-white shadow-md'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      : ''
                   }`}
                   style={
                     active
                       ? {
-                          backgroundColor: theme.colors.primary,
+                          backgroundColor: colors.backgroundTertiary,
+                          color: colors.textWhite
                         }
-                      : {}
+                      : {
+                          color: colors.textPrimary
+                        }
                   }
+                  onMouseEnter={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.backgroundColor = colors.backgroundLight;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
                 >
-                  <span className={`${active ? 'text-white' : ''}`}>{item.icon}</span>
+                  <span style={{ color: active ? colors.textWhite : colors.textPrimary }}>{item.icon}</span>
                   <span className="flex-1 text-left font-medium">{item.title}</span>
                   {item.badge && (
-                    <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                    <span 
+                      className="text-white text-xs font-bold rounded-full px-2 py-0.5"
+                      style={{ backgroundColor: colors.accentRed }}
+                    >
                       {item.badge}
                     </span>
                   )}
@@ -222,8 +245,11 @@ const AdminSidebar = () => {
         </nav>
 
         {/* Footer Section */}
-        <div className="border-t border-gray-200 p-4 flex-shrink-0">
-          <div className="text-xs text-gray-500 text-center">
+        <div 
+          className="border-t p-4 flex-shrink-0"
+          style={{ borderTopColor: colors.borderMedium }}
+        >
+          <div className="text-xs text-center" style={{ color: colors.textSecondary }}>
             <p>DriveOn Admin</p>
             <p className="mt-1">Version 1.0</p>
           </div>

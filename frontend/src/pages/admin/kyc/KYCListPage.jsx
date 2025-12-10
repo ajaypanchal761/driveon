@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { theme } from "../../../theme/theme.constants";
+import { colors } from "../../../module/theme/colors";
 import Card from "../../../components/common/Card";
+import AdminCustomSelect from "../../../components/admin/common/AdminCustomSelect";
 
 /**
  * KYC List Page
@@ -365,7 +366,7 @@ const KYCListPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading KYC verifications...</p>
         </div>
@@ -382,11 +383,11 @@ const KYCListPage = () => {
             <div>
               <h1
                 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2"
-                style={{ color: theme.colors.primary }}
+                style={{ color: colors.textPrimary }}
               >
                 KYC Verification
               </h1>
-              <p className="text-sm md:text-base text-gray-600">
+              <p className="text-sm md:text-base" style={{ color: colors.textSecondary }}>
                 Review and verify user documents
               </p>
             </div>
@@ -416,29 +417,29 @@ const KYCListPage = () => {
           <Card className="p-3 text-center">
             <div
               className="text-xl md:text-2xl font-bold mb-1"
-              style={{ color: theme.colors.primary }}
+              style={{ color: colors.textPrimary }}
             >
               {stats.total}
             </div>
-            <div className="text-xs text-gray-600">Total KYC</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Total KYC</div>
           </Card>
           <Card className="p-3 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1 text-yellow-600">
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.warning }}>
               {stats.pending}
             </div>
-            <div className="text-xs text-gray-600">Pending</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Pending</div>
           </Card>
           <Card className="p-3 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1 text-green-600">
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.success }}>
               {stats.approved}
             </div>
-            <div className="text-xs text-gray-600">Approved</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Approved</div>
           </Card>
           <Card className="p-3 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1 text-red-600">
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.error }}>
               {stats.rejected}
             </div>
-            <div className="text-xs text-gray-600">Rejected</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Rejected</div>
           </Card>
         </div>
 
@@ -465,7 +466,12 @@ const KYCListPage = () => {
                 placeholder="Search by name, email, phone, or document number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2"
+                style={{
+                  border: `1px solid ${colors.borderMedium}`,
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.textPrimary
+                }}
               />
             </div>
           </div>
@@ -473,80 +479,56 @@ const KYCListPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={filters.status}
-                onChange={(e) =>
-                  setFilters({ ...filters, status: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Status"
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Pending', value: 'pending' },
+                { label: 'Approved', value: 'approved' },
+                { label: 'Rejected', value: 'rejected' },
+              ]}
+            />
 
             {/* Document Type Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Document Type
-              </label>
-              <select
-                value={filters.documentType}
-                onChange={(e) =>
-                  setFilters({ ...filters, documentType: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="aadhaar">Aadhaar</option>
-                <option value="pan">PAN</option>
-                <option value="driving_license">Driving License</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Document Type"
+              value={filters.documentType}
+              onChange={(value) => setFilters({ ...filters, documentType: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Aadhaar', value: 'aadhaar' },
+                { label: 'PAN', value: 'pan' },
+                { label: 'Driving License', value: 'driving_license' },
+              ]}
+            />
 
             {/* User Type Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                User Type
-              </label>
-              <select
-                value={filters.userType}
-                onChange={(e) =>
-                  setFilters({ ...filters, userType: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="regular">Regular</option>
-                <option value="guarantor">Guarantor</option>
-                <option value="owner">Owner</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="User Type"
+              value={filters.userType}
+              onChange={(value) => setFilters({ ...filters, userType: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Regular', value: 'regular' },
+                { label: 'Guarantor', value: 'guarantor' },
+                { label: 'Owner', value: 'owner' },
+              ]}
+            />
 
             {/* Submission Date Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Submitted
-              </label>
-              <select
-                value={filters.submissionDate}
-                onChange={(e) =>
-                  setFilters({ ...filters, submissionDate: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Submitted"
+              value={filters.submissionDate}
+              onChange={(value) => setFilters({ ...filters, submissionDate: value })}
+              options={[
+                { label: 'All Time', value: 'all' },
+                { label: 'Today', value: 'today' },
+                { label: 'This Week', value: 'week' },
+                { label: 'This Month', value: 'month' },
+              ]}
+            />
           </div>
         </Card>
 
@@ -590,13 +572,13 @@ const KYCListPage = () => {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">
+                      <h3 className="font-semibold mb-1" style={{ color: colors.textPrimary }}>
                         {kyc.userName}
                       </h3>
-                      <p className="text-xs text-gray-500 mb-1">
+                      <p className="text-xs mb-1" style={{ color: colors.textSecondary }}>
                         {kyc.userEmail}
                       </p>
-                      <p className="text-xs text-gray-500">{kyc.userPhone}</p>
+                      <p className="text-xs" style={{ color: colors.textSecondary }}>{kyc.userPhone}</p>
                     </div>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
@@ -609,15 +591,15 @@ const KYCListPage = () => {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-700">
+                      <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                         Document Type
                       </label>
-                      <p className="text-sm text-gray-900">
+                      <p className="text-sm" style={{ color: colors.textPrimary }}>
                         {getDocumentTypeName(kyc.documentType)}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-700">
+                      <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                         Document Number
                       </label>
                       <p className="text-sm text-gray-900 font-mono">
@@ -625,7 +607,7 @@ const KYCListPage = () => {
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-700">
+                      <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                         DigiLocker
                       </label>
                       <p
@@ -639,10 +621,10 @@ const KYCListPage = () => {
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-700">
+                      <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                         Submitted
                       </label>
-                      <p className="text-sm text-gray-900">
+                      <p className="text-sm" style={{ color: colors.textPrimary }}>
                         {new Date(kyc.submissionDate).toLocaleDateString()}
                       </p>
                     </div>
@@ -666,7 +648,7 @@ const KYCListPage = () => {
                 <button
                   onClick={() => handleViewKYC(kyc)}
                   className="px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                  style={{ backgroundColor: theme.colors.primary }}
+                  style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   View Details
                 </button>
@@ -702,7 +684,7 @@ const KYCListPage = () => {
 
         {filteredKYC.length === 0 && (
           <Card className="p-8 text-center">
-            <p className="text-gray-600">
+            <p style={{ color: colors.textSecondary }}>
               No KYC verifications found matching your filters.
             </p>
           </Card>
@@ -770,10 +752,10 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
         {/* Modal Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
               KYC Verification Details
             </h2>
-            <p className="text-sm text-gray-600">{kyc.userName}</p>
+            <p className="text-sm" style={{ color: colors.textSecondary }}>{kyc.userName}</p>
           </div>
           <button
             onClick={onClose}
@@ -799,30 +781,30 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
         <div className="p-6">
           {/* User Information */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
               User Information
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   Name
                 </label>
-                <p className="text-sm text-gray-900">{kyc.userName}</p>
+                <p className="text-sm" style={{ color: colors.textPrimary }}>{kyc.userName}</p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   Email
                 </label>
                 <p className="text-sm text-gray-900">{kyc.userEmail}</p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   Phone
                 </label>
                 <p className="text-sm text-gray-900">{kyc.userPhone}</p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   User Type
                 </label>
                 <p className="text-sm text-gray-900 capitalize">
@@ -834,12 +816,12 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
 
           {/* Document Information */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
               Document Information
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   Document Type
                 </label>
                 <p className="text-sm text-gray-900">
@@ -851,7 +833,7 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
                 </p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   Document Number
                 </label>
                 <p className="text-sm text-gray-900 font-mono">
@@ -859,7 +841,7 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
                 </p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   DigiLocker Status
                 </label>
                 <p
@@ -871,7 +853,7 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
                 </p>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700">
+                <label className="text-xs font-medium" style={{ color: colors.textPrimary }}>
                   Submission Date
                 </label>
                 <p className="text-sm text-gray-900">
@@ -883,7 +865,7 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
 
           {/* Document Image Preview */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>
               Document Image
             </h3>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">

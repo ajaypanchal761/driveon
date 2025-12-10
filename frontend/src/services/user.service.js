@@ -231,6 +231,42 @@ export const userService = {
       throw error;
     }
   },
+
+  /**
+   * Change user password
+   * @param {Object} data - Password data (currentPassword, newPassword)
+   * @returns {Promise}
+   */
+  changePassword: async (data) => {
+    if (MOCK_MODE) {
+      await mockDelay(800);
+      return {
+        success: true,
+        message: 'Password changed successfully',
+      };
+    }
+    
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.put(API_ENDPOINTS.USER.CHANGE_PASSWORD, data);
+      return response.data;
+    } catch (error) {
+      console.error('Change password error:', error);
+      
+      // Enhance error with user-friendly message
+      if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
+        const enhancedError = new Error(
+          error.message || 'Unable to connect to server. Please check your internet connection or try again later.'
+        );
+        enhancedError.code = error.code;
+        enhancedError.isNetworkError = true;
+        throw enhancedError;
+      }
+      
+      throw error;
+    }
+  },
 };
 
 export default userService;

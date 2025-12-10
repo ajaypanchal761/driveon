@@ -38,7 +38,7 @@ const Header = () => {
   return (
     <>
       {/* Mobile Header - Exactly like design */}
-      <header className="md:hidden bg-primary text-white pt-0">
+      <header className="md:hidden bg-primary text-white pt-0 sticky top-0 z-50">
         {/* Main Header */}
         <div className="px-4 py-4 flex items-center justify-between">
           {/* Hamburger Menu */}
@@ -167,7 +167,7 @@ const Header = () => {
       </header>
 
       {/* Desktop Header */}
-      <header className="hidden md:block bg-primary text-white shadow-md">
+      <header className="hidden md:block bg-primary text-white shadow-md sticky top-0 z-50">
         <div className="container-mobile">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}

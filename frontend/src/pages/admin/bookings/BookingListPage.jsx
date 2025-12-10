@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Format user ID to USER001 format
@@ -538,7 +539,7 @@ const BookingListPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading bookings...</p>
         </div>
@@ -554,7 +555,7 @@ const BookingListPage = () => {
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-            style={{ backgroundColor: theme.colors.primary }}
+            style={{ backgroundColor: colors.backgroundTertiary }}
           >
             Retry
           </button>
@@ -570,7 +571,7 @@ const BookingListPage = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Booking Management
               </h1>
               <p className="text-sm md:text-base text-gray-600">Manage all bookings and trips</p>
@@ -578,7 +579,7 @@ const BookingListPage = () => {
             <button
               onClick={handleExport}
               className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: theme.colors.primary }}
+              style={{ backgroundColor: colors.backgroundTertiary }}
             >
               Export Data
             </button>
@@ -588,7 +589,7 @@ const BookingListPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Total</div>
@@ -610,7 +611,7 @@ const BookingListPage = () => {
             <div className="text-xs md:text-sm text-gray-600">Completed</div>
           </Card>
           <Card className="p-4 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               ₹{(stats.totalRevenue / 1000).toFixed(0)}K
             </div>
             <div className="text-xs md:text-sm text-gray-600">Revenue</div>
@@ -643,85 +644,73 @@ const BookingListPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {/* Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Booking Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Booking Status"
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'confirmed', label: 'Confirmed' },
+                { value: 'active', label: 'Active' },
+                { value: 'completed', label: 'Completed' },
+                { value: 'cancelled', label: 'Cancelled' },
+              ]}
+            />
 
             {/* Payment Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Payment Status</label>
-              <select
-                value={filters.paymentStatus}
-                onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="refunded">Refunded</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Payment Status"
+              value={filters.paymentStatus}
+              onChange={(value) => setFilters({ ...filters, paymentStatus: value })}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'paid', label: 'Paid' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'refunded', label: 'Refunded' },
+              ]}
+            />
 
             {/* Date Range Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Date Range</label>
-              <select
-                value={filters.dateRange}
-                onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Date Range"
+              value={filters.dateRange}
+              onChange={(value) => setFilters({ ...filters, dateRange: value })}
+              options={[
+                { value: 'all', label: 'All Time' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+              ]}
+            />
 
             {/* Car Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Car</label>
-              <select
-                value={filters.car}
-                onChange={(e) => setFilters({ ...filters, car: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Cars</option>
-                {cars.map((car, index) => (
-                  <option key={car.id || `car-${index}`} value={car.id}>
-                    {car.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Car"
+              value={filters.car}
+              onChange={(value) => setFilters({ ...filters, car: value })}
+              options={[
+                { value: 'all', label: 'All Cars' },
+                ...cars.map((car, index) => ({
+                  value: car.id || `car-${index}`,
+                  label: car.name,
+                })),
+              ]}
+            />
 
             {/* User Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">User</label>
-              <select
-                value={filters.user}
-                onChange={(e) => setFilters({ ...filters, user: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Users</option>
-                {users.map((user, index) => (
-                  <option key={user.id || `user-${index}`} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="User"
+              value={filters.user}
+              onChange={(value) => setFilters({ ...filters, user: value })}
+              options={[
+                { value: 'all', label: 'All Users' },
+                ...users.map((user, index) => ({
+                  value: user.id || `user-${index}`,
+                  label: user.name,
+                })),
+              ]}
+            />
           </div>
         </Card>
 
@@ -800,7 +789,7 @@ const BookingListPage = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Amount</p>
-                      <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                      <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                         ₹{booking.totalAmount.toLocaleString()}
                       </p>
                       {booking.guarantorName && (
@@ -829,7 +818,7 @@ const BookingListPage = () => {
                   <button
                     onClick={() => handleViewBooking(booking)}
                     className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     View Details
                   </button>
@@ -1011,7 +1000,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                     ? 'border-b-2 text-purple-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
-                style={activeTab === tab ? { borderBottomColor: theme.colors.primary } : {}}
+                style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -1087,7 +1076,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                     <div className="border-t border-gray-300 pt-2 mt-2">
                       <div className="flex justify-between">
                         <span className="text-sm font-semibold text-gray-900">Total Amount</span>
-                        <span className="text-sm font-bold" style={{ color: theme.colors.primary }}>
+                        <span className="text-sm font-bold" style={{ color: colors.backgroundTertiary }}>
                           ₹{booking.totalAmount.toLocaleString()}
                         </span>
                       </div>
@@ -1147,16 +1136,16 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 
                 {/* Payment Status Dropdown */}
                 <div className="mb-6">
-                  <label className="text-xs font-medium text-gray-700 mb-2 block">Payment Status</label>
-                  <select
+                  <AdminCustomSelect
+                    label="Payment Status"
                     value={paymentStatus}
-                    onChange={(e) => handlePaymentStatusUpdate(e.target.value)}
-                    disabled={isUpdatingPayment}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                  </select>
+                    onChange={(value) => handlePaymentStatusUpdate(value)}
+                    options={[
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'paid', label: 'Paid' },
+                    ]}
+                    className={isUpdatingPayment ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
+                  />
                   {isUpdatingPayment && (
                     <p className="text-xs text-gray-500 mt-1">Updating...</p>
                   )}
@@ -1165,7 +1154,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-xs font-medium text-gray-700">Total Amount</label>
-                    <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                    <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                       ₹{booking.totalAmount.toLocaleString()}
                     </p>
                   </div>

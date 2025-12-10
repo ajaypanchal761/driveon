@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { theme } from "../../../theme/theme.constants";
+import { colors } from "../../../module/theme/colors";
 import { useAdminAuth } from "../../../context/AdminContext";
 
 /**
@@ -24,10 +24,16 @@ const AdminHeader = () => {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-white border-b border-gray-200 z-30 flex items-center justify-between pl-16 lg:pl-4 pr-3 md:pr-4 md:px-6 lg:px-8 overflow-hidden">
+    <header 
+      className="fixed top-0 right-0 left-0 lg:left-64 h-16 border-b z-30 flex items-center justify-between pl-16 lg:pl-4 pr-3 md:pr-4 md:px-6 lg:px-8 overflow-hidden"
+      style={{ 
+        backgroundColor: colors.backgroundSecondary,
+        borderBottomColor: colors.borderMedium
+      }}
+    >
       {/* Mobile: Left Side - Title/Logo (only on mobile) */}
       <div className="lg:hidden flex items-center min-w-0 flex-1">
-        <h1 className="text-base font-bold truncate" style={{ color: theme.colors.primary }}>
+        <h1 className="text-base font-bold truncate" style={{ color: colors.textPrimary }}>
           Admin Panel
         </h1>
       </div>
@@ -51,7 +57,12 @@ const AdminHeader = () => {
           <input
             type="text"
             placeholder="Search users, cars, bookings..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+            className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent text-sm"
+            style={{
+              border: `1px solid ${colors.borderMedium}`,
+              backgroundColor: colors.backgroundSecondary,
+              color: colors.textPrimary
+            }}
           />
         </div>
       </div>
@@ -60,14 +71,20 @@ const AdminHeader = () => {
       <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 flex-shrink-0">
         {/* Notifications Icon */}
         <button
-          className="relative p-1.5 md:p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors flex-shrink-0 touch-target"
+          className="relative p-1.5 md:p-2 rounded-lg transition-colors flex-shrink-0 touch-target"
+          style={{
+            color: colors.textSecondary
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           aria-label="Notifications"
         >
           <svg
-            className="w-5 h-5 md:w-6 md:h-6 text-gray-600"
+            className="w-5 h-5 md:w-6 md:h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: colors.textSecondary }}
           >
             <path
               strokeLinecap="round"
@@ -82,15 +99,25 @@ const AdminHeader = () => {
         {/* Logout Icon */}
         <button
           onClick={handleLogout}
-          className="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors flex-shrink-0 touch-target"
+          className="p-1.5 md:p-2 rounded-lg transition-colors flex-shrink-0 touch-target"
+          style={{ color: colors.textSecondary }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = colors.backgroundLight;
+            e.currentTarget.style.color = colors.error;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = colors.textSecondary;
+          }}
           aria-label="Logout"
           title="Logout"
         >
           <svg
-            className="w-5 h-5 md:w-6 md:h-6 text-gray-600 hover:text-red-600"
+            className="w-5 h-5 md:w-6 md:h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: 'inherit' }}
           >
             <path
               strokeLinecap="round"
@@ -110,7 +137,7 @@ const AdminHeader = () => {
           {/* Avatar */}
           <div
             className="w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-full flex items-center justify-center text-white text-xs md:text-sm font-semibold flex-shrink-0"
-            style={{ backgroundColor: theme.colors.primary }}
+            style={{ backgroundColor: colors.backgroundTertiary }}
           >
             {displayUser.avatar ? (
               <img
@@ -124,10 +151,10 @@ const AdminHeader = () => {
           </div>
           {/* Name - Hidden on mobile, shown on tablet+ */}
           <div className="hidden md:block text-left min-w-0">
-            <p className="text-xs md:text-sm font-medium text-gray-900 truncate">
+            <p className="text-xs md:text-sm font-medium truncate" style={{ color: colors.textPrimary }}>
               {displayUser.name}
             </p>
-            <p className="text-xs text-gray-500 truncate hidden lg:block">{displayUser.email}</p>
+            <p className="text-xs truncate hidden lg:block" style={{ color: colors.textSecondary }}>{displayUser.email}</p>
           </div>
         </button>
       </div>

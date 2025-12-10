@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { Button, Input } from '../../../components/common';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 // Form validation schema (same as AddCarPage)
 const carFormSchema = z.object({
@@ -56,6 +57,7 @@ const EditCarPage = () => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
     reset,
@@ -266,7 +268,7 @@ const EditCarPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading car details...</p>
         </div>
@@ -281,7 +283,7 @@ const EditCarPage = () => {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Edit Car
               </h1>
               <p className="text-sm text-gray-600">Update car details and images</p>
@@ -300,7 +302,7 @@ const EditCarPage = () => {
           <div className="space-y-6">
             {/* Basic Information */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Basic Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -340,51 +342,72 @@ const EditCarPage = () => {
 
             {/* Car Type & Specifications */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Car Type & Specifications
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Car Type *</label>
-                  <select
-                    {...register('carType')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="sedan">Sedan</option>
-                    <option value="suv">SUV</option>
-                    <option value="hatchback">Hatchback</option>
-                    <option value="luxury">Luxury</option>
-                    <option value="sports">Sports</option>
-                    <option value="compact">Compact</option>
-                    <option value="muv">MUV</option>
-                    <option value="coupe">Coupe</option>
-                  </select>
+                  <Controller
+                    name="carType"
+                    control={control}
+                    render={({ field }) => (
+                      <AdminCustomSelect
+                        label="Car Type *"
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={[
+                          { value: 'sedan', label: 'Sedan' },
+                          { value: 'suv', label: 'SUV' },
+                          { value: 'hatchback', label: 'Hatchback' },
+                          { value: 'luxury', label: 'Luxury' },
+                          { value: 'sports', label: 'Sports' },
+                          { value: 'compact', label: 'Compact' },
+                          { value: 'muv', label: 'MUV' },
+                          { value: 'coupe', label: 'Coupe' },
+                        ]}
+                      />
+                    )}
+                  />
                   {errors.carType && <p className="text-red-500 text-xs mt-1">{errors.carType.message}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fuel Type *</label>
-                  <select
-                    {...register('fuelType')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="petrol">Petrol</option>
-                    <option value="diesel">Diesel</option>
-                    <option value="electric">Electric</option>
-                    <option value="hybrid">Hybrid</option>
-                    <option value="cng">CNG</option>
-                  </select>
+                  <Controller
+                    name="fuelType"
+                    control={control}
+                    render={({ field }) => (
+                      <AdminCustomSelect
+                        label="Fuel Type *"
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={[
+                          { value: 'petrol', label: 'Petrol' },
+                          { value: 'diesel', label: 'Diesel' },
+                          { value: 'electric', label: 'Electric' },
+                          { value: 'hybrid', label: 'Hybrid' },
+                          { value: 'cng', label: 'CNG' },
+                        ]}
+                      />
+                    )}
+                  />
                   {errors.fuelType && <p className="text-red-500 text-xs mt-1">{errors.fuelType.message}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Transmission *</label>
-                  <select
-                    {...register('transmission')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="manual">Manual</option>
-                    <option value="automatic">Automatic</option>
-                    <option value="cvt">CVT</option>
-                  </select>
+                  <Controller
+                    name="transmission"
+                    control={control}
+                    render={({ field }) => (
+                      <AdminCustomSelect
+                        label="Transmission *"
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={[
+                          { value: 'manual', label: 'Manual' },
+                          { value: 'automatic', label: 'Automatic' },
+                          { value: 'cvt', label: 'CVT' },
+                        ]}
+                      />
+                    )}
+                  />
                   {errors.transmission && <p className="text-red-500 text-xs mt-1">{errors.transmission.message}</p>}
                 </div>
                 <Input
@@ -412,7 +435,7 @@ const EditCarPage = () => {
 
             {/* Pricing */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Pricing
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -449,7 +472,7 @@ const EditCarPage = () => {
 
             {/* Location */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Location
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -478,7 +501,7 @@ const EditCarPage = () => {
 
             {/* Features */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Features
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -489,7 +512,7 @@ const EditCarPage = () => {
                       checked={selectedFeatures.includes(feature)}
                       onChange={() => toggleFeature(feature)}
                       className="w-4 h-4 rounded border-gray-300"
-                      style={{ accentColor: theme.colors.primary }}
+                      style={{ accentColor: colors.backgroundTertiary }}
                     />
                     <span className="text-sm text-gray-700">{feature}</span>
                   </label>
@@ -499,7 +522,7 @@ const EditCarPage = () => {
 
             {/* Images */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Car Images
               </h2>
               
@@ -583,7 +606,7 @@ const EditCarPage = () => {
 
             {/* RC Document */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Documents
               </h2>
               
@@ -623,7 +646,7 @@ const EditCarPage = () => {
 
             {/* Additional Information */}
             <Card className="p-4 md:p-6">
-              <h2 className="text-lg font-semibold mb-4" style={{ color: theme.colors.primary }}>
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Additional Information
               </h2>
               <div className="space-y-4">
@@ -642,7 +665,7 @@ const EditCarPage = () => {
                     type="checkbox"
                     {...register('isAvailable')}
                     className="w-4 h-4 rounded border-gray-300"
-                    style={{ accentColor: theme.colors.primary }}
+                    style={{ accentColor: colors.backgroundTertiary }}
                   />
                   <label className="text-sm text-gray-700">Car is available for booking</label>
                 </div>

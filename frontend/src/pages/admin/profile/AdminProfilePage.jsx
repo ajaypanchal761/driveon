@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import { useAdminAuth } from '../../../context/AdminContext';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
@@ -119,7 +119,7 @@ const AdminProfilePage = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.backgroundTertiary }}></div>
           <p className="text-gray-600">Loading profile...</p>
         </div>
       </div>
@@ -152,7 +152,7 @@ const AdminProfilePage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className="text-2xl md:text-3xl font-bold" style={{ color: theme.colors.textPrimary }}>
+            <h1 className="text-2xl md:text-3xl font-bold" style={{ color: colors.textPrimary }}>
               Admin Profile
             </h1>
           </div>
@@ -163,12 +163,12 @@ const AdminProfilePage = () => {
         <Card className="mb-6">
           <div className="p-4 md:p-6">
             {/* Profile Header */}
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 mb-6 pb-6 border-b" style={{ borderColor: theme.colors.borderLight }}>
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 mb-6 pb-6 border-b" style={{ borderColor: colors.borderLight }}>
               {/* Avatar */}
               <div className="relative">
                 <div
                   className="w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center text-white text-3xl md:text-4xl font-bold shadow-lg"
-                  style={{ backgroundColor: theme.colors.primary }}
+                  style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   {displayUser.avatar ? (
                     <img
@@ -184,10 +184,10 @@ const AdminProfilePage = () => {
                   <button
                     onClick={() => setIsEditing(true)}
                     className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow border-2"
-                    style={{ borderColor: theme.colors.primary }}
+                    style={{ borderColor: colors.backgroundTertiary }}
                     title="Edit Profile"
                   >
-                    <svg className="w-4 h-4" style={{ color: theme.colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
@@ -196,14 +196,14 @@ const AdminProfilePage = () => {
 
               {/* Profile Info */}
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.textPrimary }}>
+                <h2 className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.textPrimary }}>
                   {profileData.name || displayUser.name}
                 </h2>
                 <p className="text-gray-600 mb-2">{profileData.email || displayUser.email}</p>
                 {profileData.role && (
                   <span
                     className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     {profileData.role}
                   </span>
@@ -215,7 +215,7 @@ const AdminProfilePage = () => {
             <div className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                   Full Name
                 </label>
                 {isEditing ? (
@@ -225,11 +225,11 @@ const AdminProfilePage = () => {
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
                     style={{
-                      borderColor: theme.colors.borderDefault,
-                      focusRingColor: theme.colors.primary,
+                      borderColor: colors.borderMedium,
+                      focusRingColor: colors.backgroundTertiary,
                     }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                    onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
+                    onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
                   />
                 ) : (
                   <p className="text-gray-900">{profileData.name || 'Not set'}</p>
@@ -238,7 +238,7 @@ const AdminProfilePage = () => {
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                   Email Address
                 </label>
                 <p className="text-gray-900">{profileData.email || 'Not set'}</p>
@@ -247,7 +247,7 @@ const AdminProfilePage = () => {
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                   Phone Number
                 </label>
                 {isEditing ? (
@@ -257,11 +257,11 @@ const AdminProfilePage = () => {
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
                     style={{
-                      borderColor: theme.colors.borderDefault,
-                      focusRingColor: theme.colors.primary,
+                      borderColor: colors.borderMedium,
+                      focusRingColor: colors.backgroundTertiary,
                     }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                    onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
+                    onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
                     placeholder="+91 98765 43210"
                   />
                 ) : (
@@ -271,7 +271,7 @@ const AdminProfilePage = () => {
 
               {/* Department */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                   Department
                 </label>
                 <p className="text-gray-900">{profileData.department || 'Not assigned'}</p>
@@ -279,7 +279,7 @@ const AdminProfilePage = () => {
 
               {/* Role */}
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                   Role
                 </label>
                 <p className="text-gray-900">{profileData.role || 'Admin'}</p>
@@ -288,7 +288,7 @@ const AdminProfilePage = () => {
               {/* Last Login */}
               {displayUser.lastLogin && (
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                     Last Login
                   </label>
                   <p className="text-gray-900">
@@ -303,7 +303,7 @@ const AdminProfilePage = () => {
               {/* Account Created */}
               {displayUser.createdAt && (
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                     Account Created
                   </label>
                   <p className="text-gray-900">
@@ -316,12 +316,12 @@ const AdminProfilePage = () => {
 
               {/* Action Buttons */}
               {isEditing && (
-                <div className="flex gap-3 pt-4 border-t" style={{ borderColor: theme.colors.borderLight }}>
+                <div className="flex gap-3 pt-4 border-t" style={{ borderColor: colors.borderLight }}>
                   <button
                     onClick={handleSave}
                     disabled={saving}
                     className="px-6 py-2 rounded-lg font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     {saving ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -329,7 +329,7 @@ const AdminProfilePage = () => {
                     onClick={handleCancel}
                     disabled={saving}
                     className="px-6 py-2 rounded-lg font-medium border-2 transition-colors disabled:opacity-50"
-                    style={{ borderColor: theme.colors.borderDefault, color: theme.colors.textPrimary }}
+                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
                   >
                     Cancel
                   </button>
@@ -343,14 +343,14 @@ const AdminProfilePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <div className="p-4">
-              <h3 className="font-semibold mb-3" style={{ color: theme.colors.textPrimary }}>
+              <h3 className="font-semibold mb-3" style={{ color: colors.textPrimary }}>
                 Account Settings
               </h3>
               <button
                 onClick={() => navigate('/admin/settings')}
                 className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-between"
               >
-                <span className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                <span className="text-sm" style={{ color: colors.textSecondary }}>
                   System Settings
                 </span>
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

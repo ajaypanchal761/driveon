@@ -6,10 +6,33 @@ import OwnerRoute from "../components/layout/OwnerRoute";
 import ProfileCompleteRoute from "../components/layout/ProfileCompleteRoute";
 import PageLayout from "../components/layout/PageLayout";
 import AdminLayout from "../components/admin/layout/AdminLayout";
+import ModuleLayout from "../module/components/layout/ModuleLayout";
 import { useAdminAuth } from "../context/AdminContext";
 
 // Lazy load pages for code splitting (better performance)
 const HomePage = lazy(() => import("../pages/home/HomePage"));
+// Module pages
+const ModuleHomePage = lazy(() => import("../module/pages/HomePage"));
+const ModuleSearchPage = lazy(() => import("../module/pages/SearchPage"));
+const ModuleCarDetailsPage = lazy(() => import("../module/pages/CarDetailsPage"));
+const ModuleCarReviewsPage = lazy(() => import("../module/pages/CarReviewsPage"));
+const ModuleProfilePage = lazy(() => import("../module/pages/ModuleProfilePage"));
+const ModuleCompleteProfilePage = lazy(() => import("../module/pages/ModuleCompleteProfilePage"));
+const ModuleEditProfilePage = lazy(() => import("../module/pages/ModuleEditProfilePage"));
+const ModuleChangePasswordPage = lazy(() => import("../module/pages/ModuleChangePasswordPage"));
+const ModuleKYCStatusPage = lazy(() => import("../module/pages/ModuleKYCStatusPage"));
+const ModuleGuarantorPage = lazy(() => import("../module/pages/ModuleGuarantorPage"));
+const ModuleReferralDashboardPage = lazy(() => import("../module/pages/ModuleReferralDashboardPage"));
+const ModuleSettingsPage = lazy(() => import("../module/pages/ModuleSettingsPage"));
+const ModuleSupportPage = lazy(() => import("../module/pages/ModuleSupportPage"));
+const ModuleLoginPage = lazy(() => import("../module/pages/LoginPage"));
+const ModuleRegisterPage = lazy(() => import("../module/pages/RegisterPage"));
+const ModuleBookingsPage = lazy(() => import("../module/pages/BookingsPage"));
+const ModuleBookNowPage = lazy(() => import("../module/pages/BookNowPage"));
+const ModuleWriteReviewPage = lazy(() => import("../module/pages/ModuleWriteReviewPage"));
+const ModuleFAQPage = lazy(() => import("../module/pages/FAQPage"));
+const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
+const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
 const VerifyOTPPage = lazy(() => import("../pages/auth/VerifyOTPPage"));
@@ -156,15 +179,101 @@ const AdminRedirectRoute = () => {
 
 // Create router configuration
 const router = createBrowserRouter([
+  // Module routes (without PageLayout wrapper - they have their own Header/BottomNavbar)
+  // Wrapped with ModuleLayout to ensure scroll to top on navigation
   {
-    path: "/",
+    element: <ModuleLayout />,
+    children: [
+      {
+        path: "/module-test",
+        element: <ModuleHomePage />,
+      },
+      {
+        path: "/module-term",
+        element: <ModuleTermsAndConditionsPage />,
+      },
+      {
+        path: "/module-search",
+        element: <ModuleSearchPage />,
+      },
+      {
+        path: "/car-details/:id",
+        element: <ModuleCarDetailsPage />,
+      },
+      {
+        path: "/car-details/:id/reviews",
+        element: <ModuleCarReviewsPage />,
+      },
+      {
+        path: "/module-profile",
+        element: <ModuleProfilePage />,
+      },
+      {
+        path: "/module-profile/complete",
+        element: <ModuleCompleteProfilePage />,
+      },
+      {
+        path: "/module-profile/edit",
+        element: <ModuleEditProfilePage />,
+      },
+      {
+        path: "/module-profile/change-password",
+        element: <ModuleChangePasswordPage />,
+      },
+      {
+        path: "/module-profile/kyc",
+        element: <ModuleKYCStatusPage />,
+      },
+      {
+        path: "/module-profile/guarantor",
+        element: <ModuleGuarantorPage />,
+      },
+      {
+        path: "/module-profile/referrals",
+        element: <ModuleReferralDashboardPage />,
+      },
+      {
+        path: "/module-profile/settings",
+        element: <ModuleSettingsPage />,
+      },
+      {
+        path: "/module-profile/support",
+        element: <ModuleSupportPage />,
+      },
+      {
+        path: "/module-login",
+        element: <ModuleLoginPage />,
+      },
+      {
+        path: "/module-register",
+        element: <ModuleRegisterPage />,
+      },
+      {
+        path: "/module-bookings",
+        element: <ModuleBookingsPage />,
+      },
+      {
+        path: "/module-write-review/:bookingId",
+        element: <ModuleWriteReviewPage />,
+      },
+      {
+        path: "/module-faq",
+        element: <ModuleFAQPage />,
+      },
+      {
+        path: "/module-privacy-policy",
+        element: <ModulePrivacyPolicyPage />,
+      },
+      {
+        path: "/book-now/:id",
+        element: <ModuleBookNowPage />,
+      },
+    ],
+  },
+  {
     element: <PageLayout />,
     children: [
-      // Public Routes
-      {
-        index: true,
-        element: <HomePage />,
-      },
+      // Public Routes (excluding home which is handled above)
       {
         path: "login",
         element: <LoginPage />,

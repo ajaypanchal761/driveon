@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { getProfile, updateProfile, uploadPhoto, getKYCStatus, updateLocation } from '../controllers/user.controller.js';
+import { getProfile, updateProfile, uploadPhoto, getKYCStatus, updateLocation, changePassword } from '../controllers/user.controller.js';
 import {
   getMyGuarantorRequests,
   getGuarantorRequestDetails,
@@ -18,6 +18,7 @@ router.use(authenticate);
 // User profile routes
 router.get('/user/profile', getProfile);
 router.put('/user/profile', updateProfile);
+router.put('/user/change-password', changePassword);
 
 // Upload photo route with multer middleware
 // Access multer instance from app.locals (set in server.js)

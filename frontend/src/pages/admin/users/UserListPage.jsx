@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Helper Functions - Shared between components
@@ -211,7 +212,7 @@ const UserListPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading users...</p>
         </div>
@@ -226,15 +227,15 @@ const UserListPage = () => {
         <div className="mb-4 md:mb-5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+              <h1 className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.textPrimary }}>
                 User Management
               </h1>
-              <p className="text-xs md:text-sm text-gray-600">Manage all users and their accounts</p>
+              <p className="text-xs md:text-sm" style={{ color: colors.textSecondary }}>Manage all users and their accounts</p>
             </div>
             <button
               onClick={handleExport}
               className="px-3 py-1.5 text-sm rounded-lg text-white font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: theme.colors.primary }}
+              style={{ backgroundColor: colors.backgroundTertiary }}
             >
               Export Data
             </button>
@@ -244,10 +245,10 @@ const UserListPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 max-w-4xl">
           <Card className="p-2 text-center">
-            <div className="text-lg md:text-xl font-bold mb-0.5" style={{ color: theme.colors.primary }}>
+            <div className="text-lg md:text-xl font-bold mb-0.5" style={{ color: colors.textPrimary }}>
               {stats.total}
             </div>
-            <div className="text-xs text-gray-600">Total Users</div>
+            <div className="text-xs" style={{ color: colors.textSecondary }}>Total Users</div>
           </Card>
           <Card className="p-2 text-center">
             <div className="text-lg md:text-xl font-bold mb-0.5 text-green-600">{stats.active}</div>
@@ -285,7 +286,12 @@ const UserListPage = () => {
                 placeholder="Search by name, email, or phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg focus:outline-none focus:ring-2"
+                style={{
+                  border: `1px solid ${colors.borderMedium}`,
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.textPrimary
+                }}
               />
             </div>
           </div>
@@ -293,79 +299,69 @@ const UserListPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {/* Account Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-0.5">Account Status</label>
-              <select
-                value={filters.accountStatus}
-                onChange={(e) => setFilters({ ...filters, accountStatus: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="banned">Banned</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Account Status"
+              value={filters.accountStatus}
+              onChange={(value) => setFilters({ ...filters, accountStatus: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Active', value: 'active' },
+                { label: 'Suspended', value: 'suspended' },
+                { label: 'Banned', value: 'banned' },
+              ]}
+            />
 
             {/* KYC Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-0.5">KYC Status</label>
-              <select
-                value={filters.kycStatus}
-                onChange={(e) => setFilters({ ...filters, kycStatus: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All</option>
-                <option value="verified">Verified</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="KYC Status"
+              value={filters.kycStatus}
+              onChange={(value) => setFilters({ ...filters, kycStatus: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Verified', value: 'verified' },
+                { label: 'Pending', value: 'pending' },
+                { label: 'Rejected', value: 'rejected' },
+              ]}
+            />
 
             {/* Profile Completion Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-0.5">Profile</label>
-              <select
-                value={filters.profileCompletion}
-                onChange={(e) => setFilters({ ...filters, profileCompletion: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All</option>
-                <option value="complete">Complete</option>
-                <option value="incomplete">Incomplete</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Profile"
+              value={filters.profileCompletion}
+              onChange={(value) => setFilters({ ...filters, profileCompletion: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Complete', value: 'complete' },
+                { label: 'Incomplete', value: 'incomplete' },
+              ]}
+            />
 
             {/* User Type Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-0.5">User Type</label>
-              <select
-                value={filters.userType}
-                onChange={(e) => setFilters({ ...filters, userType: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All</option>
-                <option value="regular">Regular</option>
-                <option value="guarantor">Guarantor</option>
-                <option value="owner">Owner</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="User Type"
+              value={filters.userType}
+              onChange={(value) => setFilters({ ...filters, userType: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Regular', value: 'regular' },
+                { label: 'Guarantor', value: 'guarantor' },
+                { label: 'Owner', value: 'owner' },
+              ]}
+            />
 
             {/* Registration Date Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-0.5">Registered</label>
-              <select
-                value={filters.registrationDate}
-                onChange={(e) => setFilters({ ...filters, registrationDate: e.target.value })}
-                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Registered"
+              value={filters.registrationDate}
+              onChange={(value) => setFilters({ ...filters, registrationDate: value })}
+              options={[
+                { label: 'All Time', value: 'all' },
+                { label: 'Today', value: 'today' },
+                { label: 'This Week', value: 'week' },
+                { label: 'This Month', value: 'month' },
+                { label: 'This Year', value: 'year' },
+              ]}
+            />
           </div>
         </Card>
 
@@ -393,7 +389,7 @@ const UserListPage = () => {
                 {/* Avatar */}
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-                  style={{ backgroundColor: theme.colors.primary }}
+                  style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   {user.profilePhoto ? (
                     <img src={user.profilePhoto} alt={user.name || 'User'} className="w-full h-full rounded-full object-cover" />
@@ -411,7 +407,10 @@ const UserListPage = () => {
               </div>
 
               {/* Quick Actions */}
-              <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
+              <div 
+                className="mt-3 pt-3 border-t flex gap-2"
+                style={{ borderTopColor: colors.borderMedium }}
+              >
                 {(user.accountStatus || 'active') === 'active' ? (
                   <button
                     onClick={(e) => {
@@ -448,7 +447,7 @@ const UserListPage = () => {
                     handleViewUser(user);
                   }}
                   className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                  style={{ backgroundColor: theme.colors.primary }}
+                  style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   View
                 </button>
@@ -459,7 +458,7 @@ const UserListPage = () => {
 
         {filteredUsers.length === 0 && (
           <Card className="p-4 text-center">
-            <p className="text-sm text-gray-600">No users found matching your filters.</p>
+            <p className="text-sm" style={{ color: colors.textSecondary }}>No users found matching your filters.</p>
           </Card>
         )}
       </div>
@@ -522,7 +521,7 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
                     ? 'border-b-2 text-purple-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
-                style={activeTab === tab ? { borderBottomColor: theme.colors.primary } : {}}
+                style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>

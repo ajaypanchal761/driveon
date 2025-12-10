@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Payment List Page
@@ -385,7 +386,7 @@ const PaymentListPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading payments...</p>
         </div>
@@ -400,7 +401,7 @@ const PaymentListPage = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Payment Management
               </h1>
               <p className="text-sm md:text-base text-gray-600">Manage all payment transactions</p>
@@ -408,7 +409,7 @@ const PaymentListPage = () => {
             <button
               onClick={handleExport}
               className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: theme.colors.primary }}
+              style={{ backgroundColor: colors.backgroundTertiary }}
             >
               Export Reports
             </button>
@@ -418,7 +419,7 @@ const PaymentListPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Total</div>
@@ -436,7 +437,7 @@ const PaymentListPage = () => {
             <div className="text-xs md:text-sm text-gray-600">Pending</div>
           </Card>
           <Card className="p-4 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               ₹{(stats.totalRevenue / 1000).toFixed(0)}K
             </div>
             <div className="text-xs md:text-sm text-gray-600">Revenue</div>
@@ -475,84 +476,72 @@ const PaymentListPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {/* Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Payment Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="success">Success</option>
-                <option value="failed">Failed</option>
-                <option value="pending">Pending</option>
-                <option value="refunded">Refunded</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Payment Status"
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'success', label: 'Success' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'refunded', label: 'Refunded' },
+              ]}
+            />
 
             {/* Payment Type Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Payment Type</label>
-              <select
-                value={filters.paymentType}
-                onChange={(e) => setFilters({ ...filters, paymentType: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Types</option>
-                <option value="full">Full Payment</option>
-                <option value="partial">Partial Payment</option>
-                <option value="security_deposit">Security Deposit</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Payment Type"
+              value={filters.paymentType}
+              onChange={(value) => setFilters({ ...filters, paymentType: value })}
+              options={[
+                { value: 'all', label: 'All Types' },
+                { value: 'full', label: 'Full Payment' },
+                { value: 'partial', label: 'Partial Payment' },
+                { value: 'security_deposit', label: 'Security Deposit' },
+              ]}
+            />
 
             {/* Date Range Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Date Range</label>
-              <select
-                value={filters.dateRange}
-                onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Date Range"
+              value={filters.dateRange}
+              onChange={(value) => setFilters({ ...filters, dateRange: value })}
+              options={[
+                { value: 'all', label: 'All Time' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+              ]}
+            />
 
             {/* User Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">User</label>
-              <select
-                value={filters.user}
-                onChange={(e) => setFilters({ ...filters, user: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Users</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="User"
+              value={filters.user}
+              onChange={(value) => setFilters({ ...filters, user: value })}
+              options={[
+                { value: 'all', label: 'All Users' },
+                ...users.map((user) => ({
+                  value: user.id,
+                  label: user.name,
+                })),
+              ]}
+            />
 
             {/* Booking Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Booking</label>
-              <select
-                value={filters.booking}
-                onChange={(e) => setFilters({ ...filters, booking: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Bookings</option>
-                {bookings.map((booking) => (
-                  <option key={booking.id} value={booking.id}>
-                    {booking.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Booking"
+              value={filters.booking}
+              onChange={(value) => setFilters({ ...filters, booking: value })}
+              options={[
+                { value: 'all', label: 'All Bookings' },
+                ...bookings.map((booking) => ({
+                  value: booking.id,
+                  label: booking.name,
+                })),
+              ]}
+            />
           </div>
         </Card>
 
@@ -594,7 +583,7 @@ const PaymentListPage = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                     <div>
                       <p className="text-xs text-gray-600">Amount</p>
-                      <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                      <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                         ₹{payment.amount.toLocaleString()}
                       </p>
                     </div>
@@ -634,7 +623,7 @@ const PaymentListPage = () => {
                   <button
                     onClick={() => handleViewPayment(payment)}
                     className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     View Details
                   </button>
@@ -739,7 +728,7 @@ const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceive
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-700">Amount</label>
-                <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                   ₹{payment.amount.toLocaleString()}
                 </p>
               </div>

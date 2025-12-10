@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
 import { Button } from '../../../components/common';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Car List Page
@@ -325,7 +326,7 @@ const CarListPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading cars...</p>
         </div>
@@ -340,7 +341,7 @@ const CarListPage = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Car Management
               </h1>
               <p className="text-sm md:text-base text-gray-600">Manage all car listings and approvals</p>
@@ -349,7 +350,7 @@ const CarListPage = () => {
               <button
                 onClick={() => navigate('/admin/cars/new')}
                 className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-                style={{ backgroundColor: theme.colors.primary }}
+                style={{ backgroundColor: colors.backgroundTertiary }}
               >
                 Add New Car
               </button>
@@ -362,7 +363,7 @@ const CarListPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'grid' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={viewMode === 'grid' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Grid
                 </button>
@@ -373,7 +374,7 @@ const CarListPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={viewMode === 'list' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={viewMode === 'list' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   List
                 </button>
@@ -385,7 +386,7 @@ const CarListPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 max-w-4xl">
           <Card className="p-3 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs text-gray-600">Total Cars</div>
@@ -434,99 +435,85 @@ const CarListPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             {/* Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Status"
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Active', value: 'active' },
+                { label: 'Inactive', value: 'inactive' },
+                { label: 'Pending', value: 'pending' },
+                { label: 'Suspended', value: 'suspended' },
+              ]}
+            />
 
             {/* Availability Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Availability</label>
-              <select
-                value={filters.availability}
-                onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="available">Available</option>
-                <option value="booked">Booked</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Availability"
+              value={filters.availability}
+              onChange={(value) => setFilters({ ...filters, availability: value })}
+              options={[
+                { label: 'All', value: 'all' },
+                { label: 'Available', value: 'available' },
+                { label: 'Booked', value: 'booked' },
+              ]}
+            />
 
             {/* Owner Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Owner</label>
-              <select
-                value={filters.owner}
-                onChange={(e) => setFilters({ ...filters, owner: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Owners</option>
-                {owners.map((owner, index) => (
-                  <option key={owner.id || `owner-${index}`} value={owner.id}>
-                    {owner.name || 'Unknown Owner'}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Owner"
+              value={filters.owner}
+              onChange={(value) => setFilters({ ...filters, owner: value })}
+              options={[
+                { label: 'All Owners', value: 'all' },
+                ...owners.map((owner, index) => ({
+                  label: owner.name || 'Unknown Owner',
+                  value: owner.id || `owner-${index}`
+                }))
+              ]}
+            />
 
             {/* Location Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Location</label>
-              <select
-                value={filters.location}
-                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Locations</option>
-                {locations.map((location, index) => (
-                  <option key={location || `location-${index}`} value={location}>
-                    {location || 'Unknown Location'}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Location"
+              value={filters.location}
+              onChange={(value) => setFilters({ ...filters, location: value })}
+              options={[
+                { label: 'All Locations', value: 'all' },
+                ...locations.map((location, index) => ({
+                  label: location || 'Unknown Location',
+                  value: location || `location-${index}`
+                }))
+              ]}
+            />
 
             {/* Car Type Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Car Type</label>
-              <select
-                value={filters.carType}
-                onChange={(e) => setFilters({ ...filters, carType: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Types</option>
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="hatchback">Hatchback</option>
-                <option value="luxury">Luxury</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Car Type"
+              value={filters.carType}
+              onChange={(value) => setFilters({ ...filters, carType: value })}
+              options={[
+                { label: 'All Types', value: 'all' },
+                { label: 'Sedan', value: 'sedan' },
+                { label: 'SUV', value: 'suv' },
+                { label: 'Hatchback', value: 'hatchback' },
+                { label: 'Luxury', value: 'luxury' },
+              ]}
+            />
 
             {/* Price Range Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Price Range</label>
-              <select
-                value={filters.priceRange}
-                onChange={(e) => setFilters({ ...filters, priceRange: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Prices</option>
-                <option value="0-1000">₹0 - ₹1,000</option>
-                <option value="1000-2000">₹1,000 - ₹2,000</option>
-                <option value="2000+">₹2,000+</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Price Range"
+              value={filters.priceRange}
+              onChange={(value) => setFilters({ ...filters, priceRange: value })}
+              options={[
+                { label: 'All Prices', value: 'all' },
+                { label: '₹0 - ₹1,000', value: '0-1000' },
+                { label: '₹1,000 - ₹2,000', value: '1000-2000' },
+                { label: '₹2,000+', value: '2000+' },
+              ]}
+            />
           </div>
         </Card>
 
@@ -585,7 +572,7 @@ const CarListPage = () => {
 
                   {/* Price and Stats */}
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold" style={{ color: theme.colors.primary }}>
+                    <span className="font-bold" style={{ color: colors.backgroundTertiary }}>
                       ₹{car.pricePerDay.toLocaleString()}/day
                     </span>
                     {car.rating > 0 && (
@@ -610,7 +597,7 @@ const CarListPage = () => {
                   <button
                     onClick={() => handleViewCar(car)}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     View
                   </button>
@@ -706,7 +693,7 @@ const CarListPage = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                       <div>
                         <p className="text-xs text-gray-600">Price/Day</p>
-                        <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                        <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                           ₹{car.pricePerDay.toLocaleString()}
                         </p>
                       </div>
@@ -739,7 +726,7 @@ const CarListPage = () => {
                     <button
                       onClick={() => handleViewCar(car)}
                       className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                      style={{ backgroundColor: theme.colors.primary }}
+                      style={{ backgroundColor: colors.backgroundTertiary }}
                     >
                       View Details
                     </button>
@@ -866,7 +853,7 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
                     ? 'border-b-2 text-purple-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
-                style={activeTab === tab ? { borderBottomColor: theme.colors.primary } : {}}
+                style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -939,7 +926,7 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700">Price/Day</label>
-                      <p className="text-sm font-semibold" style={{ color: theme.colors.primary }}>
+                      <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
                         ₹{car.pricePerDay.toLocaleString()}
                       </p>
                     </div>
@@ -1052,7 +1039,7 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
               onClose();
             }}
             className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-            style={{ backgroundColor: theme.colors.primary }}
+            style={{ backgroundColor: colors.backgroundTertiary }}
           >
             Edit
           </button>

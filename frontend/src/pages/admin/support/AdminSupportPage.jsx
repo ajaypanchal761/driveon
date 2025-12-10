@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import toastUtils from '../../../config/toast';
 import supportService from '../../../services/support.service';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * AdminSupportPage Component
@@ -224,7 +225,7 @@ const AdminSupportPage = () => {
       <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 md:py-4 pt-20 md:pt-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold" style={{ color: theme.colors.textPrimary }}>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold" style={{ color: colors.textPrimary }}>
               Support Tickets Management
             </h1>
             <p className="text-sm md:text-base text-gray-600 mt-1">
@@ -239,7 +240,7 @@ const AdminSupportPage = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
             <p className="text-xs md:text-sm text-gray-600 mb-1">Total</p>
-            <p className="text-xl md:text-2xl font-bold" style={{ color: theme.colors.textPrimary }}>
+            <p className="text-xl md:text-2xl font-bold" style={{ color: colors.textPrimary }}>
               {stats.total}
             </p>
           </div>
@@ -278,72 +279,47 @@ const AdminSupportPage = () => {
                   placeholder="Search by subject, token, user name, email..."
                   className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
                   style={{
-                    borderColor: theme.colors.borderDefault,
+                    borderColor: colors.borderMedium,
                   }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                  onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
+                  onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
                 />
               </div>
 
               {/* Status Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                  style={{
-                    borderColor: theme.colors.borderDefault,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                >
-                  <option value="all">All Status</option>
-                  {statusOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <AdminCustomSelect
+                label="Status"
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value)}
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  ...statusOptions.map(opt => ({ value: opt.value, label: opt.label }))
+                ]}
+              />
 
               {/* Category Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                  style={{
-                    borderColor: theme.colors.borderDefault,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
-              </div>
+              <AdminCustomSelect
+                label="Category"
+                value={categoryFilter}
+                onChange={(value) => setCategoryFilter(value)}
+                options={[
+                  { value: 'all', label: 'All Categories' },
+                  ...categories.map(cat => ({ value: cat.value, label: cat.label }))
+                ]}
+              />
 
               {/* Date Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <select
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
-                  style={{
-                    borderColor: theme.colors.borderDefault,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                  onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                >
-                  <option value="all">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="week">Last 7 Days</option>
-                  <option value="month">Last 30 Days</option>
-                </select>
-              </div>
+              <AdminCustomSelect
+                label="Date"
+                value={dateFilter}
+                onChange={(value) => setDateFilter(value)}
+                options={[
+                  { value: 'all', label: 'All Time' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'week', label: 'Last 7 Days' },
+                  { value: 'month', label: 'Last 30 Days' },
+                ]}
+              />
             </div>
           </div>
 
@@ -351,7 +327,7 @@ const AdminSupportPage = () => {
           <div className="space-y-4">
             {loading ? (
               <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 md:p-12 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: theme.colors.primary }}></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.backgroundTertiary }}></div>
                 <p className="text-gray-600">Loading tickets...</p>
               </div>
             ) : filteredTickets.length === 0 ? (
@@ -390,14 +366,14 @@ const AdminSupportPage = () => {
                   }`}
                   style={
                     selectedTicket?.id === ticket.id
-                      ? { borderColor: theme.colors.primary, ringColor: theme.colors.primary }
+                      ? { borderColor: colors.backgroundTertiary, ringColor: colors.backgroundTertiary }
                       : {}
                   }
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
-                        <h3 className="text-base md:text-lg font-semibold truncate" style={{ color: theme.colors.textPrimary }}>
+                        <h3 className="text-base md:text-lg font-semibold truncate" style={{ color: colors.textPrimary }}>
                           {ticket.subject}
                         </h3>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)} text-white flex-shrink-0`}>
@@ -405,7 +381,7 @@ const AdminSupportPage = () => {
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-gray-600 mb-2">
-                        <span className="font-mono font-medium" style={{ color: theme.colors.primary }}>
+                        <span className="font-mono font-medium" style={{ color: colors.backgroundTertiary }}>
                           {ticket.token}
                         </span>
                         <span>•</span>
@@ -444,7 +420,7 @@ const AdminSupportPage = () => {
           }}>
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-xl md:text-2xl font-bold" style={{ color: theme.colors.textPrimary }}>
+                <h2 className="text-xl md:text-2xl font-bold" style={{ color: colors.textPrimary }}>
                   Ticket Details
                 </h2>
                 <button
@@ -465,35 +441,24 @@ const AdminSupportPage = () => {
                 {/* Token */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <p className="text-sm text-gray-600 mb-1">Ticket Token</p>
-                  <p className="text-base font-mono font-bold" style={{ color: theme.colors.primary }}>
+                  <p className="text-base font-mono font-bold" style={{ color: colors.backgroundTertiary }}>
                     {selectedTicket.token}
                   </p>
                 </div>
 
                 {/* Status Update */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Update Status
-                  </label>
-                  <select
+                  <AdminCustomSelect
+                    label="Update Status"
                     value={selectedStatus || selectedTicket.status}
-                    onChange={(e) => {
-                      const newStatus = e.target.value;
+                    onChange={(value) => {
+                      const newStatus = value;
                       setSelectedStatus(newStatus);
                       handleUpdateStatus(selectedTicket.id, newStatus);
                     }}
-                    disabled={loading}
-                    className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      borderColor: theme.colors.borderDefault,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                  >
-                    {statusOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    options={statusOptions.map(opt => ({ value: opt.value, label: opt.label }))}
+                    className={loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
+                  />
                 </div>
 
                 {/* User Information */}
@@ -558,7 +523,7 @@ const AdminSupportPage = () => {
                       {selectedTicket.messages.map((msg, index) => (
                         <div key={index} className={`p-3 rounded-lg ${msg.sender === 'admin' ? 'bg-blue-50' : 'bg-gray-50'}`}>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold" style={{ color: theme.colors.primary }}>
+                            <span className="text-xs font-semibold" style={{ color: colors.backgroundTertiary }}>
                               {msg.senderName} ({msg.sender === 'admin' ? 'Admin' : 'User'})
                             </span>
                             <span className="text-xs text-gray-500">
@@ -582,15 +547,15 @@ const AdminSupportPage = () => {
                     placeholder="Type your response..."
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 mb-3 resize-none text-sm md:text-base"
                     style={{
-                      borderColor: theme.colors.borderDefault,
+                      borderColor: colors.borderMedium,
                     }}
-                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                    onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                    onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
+                    onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
                   />
                   <button
                     onClick={handleAddResponse}
                     className="w-full px-4 py-2.5 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity text-sm md:text-base"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     Send Response
                   </button>

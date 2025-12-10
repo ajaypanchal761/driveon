@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
+import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
  * Guarantor List Page
@@ -525,7 +526,7 @@ const GuarantorListPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading guarantors...</p>
         </div>
@@ -539,7 +540,7 @@ const GuarantorListPage = () => {
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
               Guarantor Management
             </h1>
             <p className="text-sm md:text-base text-gray-600">Manage guarantor relationships and verifications</p>
@@ -549,7 +550,7 @@ const GuarantorListPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 max-w-4xl">
           <Card className="p-3 text-center">
-            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs text-gray-600">Total Guarantors</div>
@@ -598,55 +599,48 @@ const GuarantorListPage = () => {
           {/* Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Verification Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Verification Status</label>
-              <select
-                value={filters.verificationStatus}
-                onChange={(e) => setFilters({ ...filters, verificationStatus: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="verified">Verified</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Verification Status"
+              value={filters.verificationStatus}
+              onChange={(value) => setFilters({ ...filters, verificationStatus: value })}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'verified', label: 'Verified' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'rejected', label: 'Rejected' },
+              ]}
+            />
 
             {/* Invitation Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Invitation Status</label>
-              <select
-                value={filters.invitationStatus}
-                onChange={(e) => setFilters({ ...filters, invitationStatus: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All</option>
-                <option value="sent">Sent</option>
-                <option value="accepted">Accepted</option>
-                <option value="pending">Pending</option>
-                <option value="expired">Expired</option>
-              </select>
-            </div>
+            <AdminCustomSelect
+              label="Invitation Status"
+              value={filters.invitationStatus}
+              onChange={(value) => setFilters({ ...filters, invitationStatus: value })}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'sent', label: 'Sent' },
+                { value: 'accepted', label: 'Accepted' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'expired', label: 'Expired' },
+              ]}
+            />
 
             {/* Linked User Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Linked User</label>
-              <select
-                value={filters.linkedUser}
-                onChange={(e) => setFilters({ ...filters, linkedUser: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
-              >
-                <option value="all">All Users</option>
-                {Array.from(new Set(guarantors.map((g) => g.linkedUserId))).map((userId) => {
+            <AdminCustomSelect
+              label="Linked User"
+              value={filters.linkedUser}
+              onChange={(value) => setFilters({ ...filters, linkedUser: value })}
+              options={[
+                { value: 'all', label: 'All Users' },
+                ...Array.from(new Set(guarantors.map((g) => g.linkedUserId))).map((userId) => {
                   const guarantor = guarantors.find((g) => g.linkedUserId === userId);
-                  return (
-                    <option key={userId} value={userId}>
-                      {guarantor?.linkedUserName}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+                  return {
+                    value: userId,
+                    label: guarantor?.linkedUserName || 'Unknown',
+                  };
+                }),
+              ]}
+            />
           </div>
         </Card>
 
@@ -670,7 +664,7 @@ const GuarantorListPage = () => {
                     {/* Avatar */}
                     <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
-                      style={{ backgroundColor: theme.colors.primary }}
+                      style={{ backgroundColor: colors.backgroundTertiary }}
                     >
                     {userGroup.avatar ? (
                       <img src={userGroup.avatar} alt={userGroup.linkedUserName} className="w-full h-full rounded-full object-cover" />
@@ -721,7 +715,7 @@ const GuarantorListPage = () => {
                            }
                          }}
                          className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-                         style={{ backgroundColor: theme.colors.primary }}
+                         style={{ backgroundColor: colors.backgroundTertiary }}
                        >
                          + Add Guarantor
                        </button>
@@ -800,7 +794,7 @@ const GuarantorListPage = () => {
                         <button
                           onClick={() => handleViewGuarantor(guarantor)}
                           className="w-full px-2 py-1.5 text-xs font-medium text-white rounded hover:opacity-90 transition-colors"
-                          style={{ backgroundColor: theme.colors.primary }}
+                          style={{ backgroundColor: colors.backgroundTertiary }}
                         >
                           View Details
                         </button>
@@ -899,7 +893,7 @@ const GuarantorListPage = () => {
               <button
                 onClick={handleSendGuarantorRequest}
                 className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                style={{ backgroundColor: theme.colors.primary }}
+                style={{ backgroundColor: colors.backgroundTertiary }}
                 disabled={isSendingRequest || !guarantorIdInput.trim()}
               >
                 {isSendingRequest ? 'Sending...' : 'Send Request'}
@@ -957,7 +951,7 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
                     ? 'border-b-2 text-purple-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
-                style={activeTab === tab ? { borderBottomColor: theme.colors.primary } : {}}
+                style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab === 'linkedUser' ? 'Linked User' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
-import { theme } from '../../../theme/theme.constants';
+import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import GoogleMap from '../../../components/common/GoogleMap';
 import { adminService } from '../../../services/admin.service';
@@ -320,7 +320,7 @@ const TrackingPage = () => {
         <div className="text-center">
           <div
             className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4"
-            style={{ borderColor: theme.colors.primary }}
+            style={{ borderColor: colors.backgroundTertiary }}
           ></div>
           <p className="text-gray-600">Loading location data...</p>
         </div>
@@ -336,7 +336,7 @@ const TrackingPage = () => {
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-            style={{ backgroundColor: theme.colors.primary }}
+            style={{ backgroundColor: colors.backgroundTertiary }}
           >
             Retry
           </button>
@@ -352,7 +352,7 @@ const TrackingPage = () => {
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2" style={{ color: colors.backgroundTertiary }}>
                 Location & Tracking
               </h1>
               <p className="text-sm md:text-base text-gray-600">
@@ -375,7 +375,7 @@ const TrackingPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={filterType === 'all' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={filterType === 'all' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   All
                 </button>
@@ -386,7 +386,7 @@ const TrackingPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={filterType === 'user' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={filterType === 'user' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Users
                 </button>
@@ -397,7 +397,7 @@ const TrackingPage = () => {
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
-                  style={filterType === 'guarantor' ? { backgroundColor: theme.colors.primary } : {}}
+                  style={filterType === 'guarantor' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Guarantors
                 </button>
@@ -409,7 +409,7 @@ const TrackingPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.colors.primary }}>
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Total Tracked</div>
@@ -448,7 +448,7 @@ const TrackingPage = () => {
                   onClick={handleSearchUser}
                   disabled={userLoading || !userId.trim()}
                   className="px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: theme.colors.primary }}
+                  style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   {userLoading ? 'Searching...' : 'Search'}
                 </button>
@@ -675,7 +675,7 @@ const TrackingPage = () => {
                       <button
                         onClick={() => handleMarkerClick(loc)}
                         className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                        style={{ backgroundColor: theme.colors.primary }}
+                        style={{ backgroundColor: colors.backgroundTertiary }}
                       >
                         View on Map
                       </button>

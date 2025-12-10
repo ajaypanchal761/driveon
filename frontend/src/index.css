@@ -210,3 +210,69 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* Admin Panel Dropdown/Select Styling - Global Theme Colors */
+.admin-panel select,
+body .admin-panel select,
+div.admin-panel select,
+main select,
+body main select {
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000000' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.5rem center !important;
+  background-size: 1em 1em !important;
+  color: #000000 !important;
+  border: 1px solid #e0e0e0 !important;
+  border-color: #e0e0e0 !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  padding-right: 2.5rem !important;
+}
+
+.admin-panel select:focus,
+body .admin-panel select:focus,
+main select:focus,
+body main select:focus {
+  outline: none !important;
+  border-color: #21292b !important;
+  box-shadow: 0 0 0 2px rgba(33, 41, 43, 0.1) !important;
+}
+
+.admin-panel select:hover,
+body .admin-panel select:hover,
+main select:hover,
+body main select:hover {
+  border-color: #d0d0d0 !important;
+}
+
+/* Option Styling - Browser native dropdown */
+.admin-panel select option,
+body .admin-panel select option,
+main select option,
+body main select option {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* Selected option in dropdown */
+.admin-panel select option:checked,
+body .admin-panel select option:checked,
+main select option:checked,
+body main select option:checked {
+  background-color: #21292b !important;
+  background: #21292b !important;
+  color: #ffffff !important;
+}
+
+/* Hover state for options */
+.admin-panel select option:hover,
+body .admin-panel select option:hover,
+main select option:hover,
+body main select option:hover {
+  background-color: #21292b !important;
+  background: #21292b !important;
+  color: #ffffff !important;
+}
