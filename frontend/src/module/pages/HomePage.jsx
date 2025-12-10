@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Keyboard, Mousewheel, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -11,6 +11,8 @@ import CarCard from "../components/common/CarCard";
 import BannerAd from "../../components/common/BannerAd";
 import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
+import { carService } from "../../services/car.service";
+import { commonService } from "../../services/common.service";
 
 // Import car images
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -49,6 +51,7 @@ import downloadRemoveBgPreview from "../../assets/download-removebg-preview.png"
  */
 const HomePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [headerHeight, setHeaderHeight] = useState(100); // Default height
 
@@ -60,6 +63,32 @@ const HomePage = () => {
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
+
+  // Cars state - fetched from API
+  const [bestCars, setBestCars] = useState([]);
+  const [nearbyCars, setNearbyCars] = useState([]);
+  const [carsLoading, setCarsLoading] = useState(true);
+
+  // Dynamic data states
+  const [brands, setBrands] = useState([]);
+  const [heroBanners, setHeroBanners] = useState([]);
+  const [faqs, setFaqs] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  
+  // Featured car for AVAILABLE section
+  const [featuredCar, setFeaturedCar] = useState(null);
+  
+  // Promotional banner data
+  const [promotionalBanner, setPromotionalBanner] = useState({
+    title: "20% Off Your First Ride!",
+    subtitle: "Experience Seamless Car Rentals.",
+  });
+  
+  // Banner overlay text
+  const [bannerOverlay, setBannerOverlay] = useState({
+    title: "Premium Luxury Experience",
+    subtitle: "Drive in style with our premium car collection",
+  });
 
   // Date picker states
   const [pickupDate, setPickupDate] = useState("");
@@ -75,6 +104,7 @@ const HomePage = () => {
   const [selectedHour, setSelectedHour] = useState(10);
   const [selectedMinute, setSelectedMinute] = useState(30);
   const [selectedPeriod, setSelectedPeriod] = useState('am');
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   // Calendar helper functions
   const openCalendar = (target) => {
@@ -166,7 +196,7 @@ const HomePage = () => {
     setIsTimePickerOpen(false);
   };
 
-  // Banner carousel data
+  // Banner carousel data - fallback
   const bannerSlides = [
     { id: 1, image: carImg1 },
     { id: 2, image: carImg4 },
@@ -174,120 +204,326 @@ const HomePage = () => {
     { id: 4, image: carImg6 },
   ];
 
-  // Banner images array (using car_banImg3 multiple times)
+  // Banner images array (using car_banImg3 multiple times) - fallback
   const bannerImages = [
     { id: 1, image: carBanImg3 },
     { id: 2, image: carBanImg3 },
     { id: 3, image: carBanImg3 },
   ];
 
-  // Hero banner slider configuration
-  const heroBanners = [
-    {
-      img: web_banImg2, // black Audi
-      gradient: "linear-gradient(135deg, #f8f8f8, #d0d4d7)",
-      title: "Easy Rentals,",
-      subtitle: "Anywhere You Go.",
-      cta: "Find Perfect Car To DriveOn",
-    },
-    {
-      img: web_banImg4, // white Tesla
-      gradient: "linear-gradient(135deg, #f8f8f8, #e4e7ea)",
-      title: "Premium Electric,",
-      subtitle: "Experience The Future.",
-      cta: "Drive Sustainable Luxury",
-    },
-    {
-      img: web_banImg3, // black Mercedes
-      gradient: "linear-gradient(135deg, #f8f8f8, #cfd4da)",
-      title: "Luxury Redefined,",
-      subtitle: "Style Meets Performance.",
-      cta: "Discover Premium Comfort",
-    },
-    {
-      img: web_banImg1, // silver Audi
-      gradient: "linear-gradient(135deg, #f8f8f8, #d9d9d9)",
-      title: "Easy Rentals,",
-      subtitle: "Anywhere You Go.",
-      cta: "Find Perfect Car To Drive",
-    },
-  ];
+  // Static hero car image - always use the Audi image (as requested)
+  const heroImage = web_banImg2;
 
-  // Swiper will handle auto-scroll with Autoplay module
+  // Brand logos map for dynamic brands
+  const brandLogos = {
+    Ferrari: logo4,
+    Lamborghini: logo5,
+    Nissan: logo11,
+    Audi: logo10,
+    Honda: logo8,
+    Kia: logo1,
+    Toyota: logo2,
+    Tesla: logo4,
+    BMW: logo11,
+  };
 
-  // Brand data - Using brand names from logos
-  const brands = [
-    { id: 1, logo: logo4, name: "Ferrari" },
-    { id: 2, logo: logo5, name: "Lamborghini" },
-    { id: 3, logo: logo11, name: "Nissan" },
-    { id: 4, logo: logo10, name: "Audi" },
-    { id: 5, logo: logo8, name: "Honda" },
-    { id: 6, logo: logo1, name: "Kia" },
-    { id: 7, logo: logo2, name: "Toyota" },
-  ];
+  // Fetch brands, hero banners, and FAQs from API
+  useEffect(() => {
+    const fetchDynamicData = async () => {
+      try {
+        setDataLoading(true);
 
-  // Best Cars data
-  const bestCars = [
-    {
-      id: 1,
-      name: "Ferrari-FF",
-      brand: "Ferrari",
-      model: "FF",
-      image: carImg1,
-      rating: "5.0",
-      location: "Washington DC",
-      seats: 4,
-      price: "Rs. 200",
-    },
-    {
-      id: 2,
-      name: "Tesla Model S",
-      brand: "Tesla",
-      model: "Model S",
-      image: carImg6, // Matching CarDetailsPage
-      rating: "5.0",
-      location: "Chicago, USA",
-      seats: 5,
-      price: "Rs. 100",
-    },
-  ];
+        // Fetch brands from API
+        try {
+          const brandsResponse = await carService.getTopBrands({ limit: 10 });
+          if (brandsResponse.success && brandsResponse.data?.brands) {
+            const apiBrands = brandsResponse.data.brands.map((brand, idx) => ({
+              id: brand.name || brand._id || idx,
+              name: brand.name || brand.brand,
+              logo: brandLogos[brand.name || brand.brand] || fallbackCarImages[idx % fallbackCarImages.length],
+            }));
+            setBrands(apiBrands);
+          } else {
+            // Fallback: Extract brands from cars if API fails
+            const carsResponse = await carService.getCars({ limit: 20 });
+            if (carsResponse.success && carsResponse.data?.cars) {
+              const uniqueBrands = Array.from(
+                new Set(carsResponse.data.cars.map(car => car.brand).filter(Boolean))
+              ).slice(0, 7);
+              const fallbackBrands = uniqueBrands.map((brandName, idx) => ({
+                id: brandName,
+                name: brandName,
+                logo: brandLogos[brandName] || fallbackCarImages[idx % fallbackCarImages.length],
+              }));
+              setBrands(fallbackBrands);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching brands:', error);
+          // Keep empty array on error
+        }
 
-  // Nearby cars data
-  const nearbyCars = [
-    {
-      id: 3,
-      name: "BMW 3 Series",
-      brand: "BMW",
-      model: "3 Series",
-      image: carImg8, // Matching CarDetailsPage
-      rating: "5.0",
-      location: "New York",
-      seats: 5,
-      price: "Rs. 150",
-    },
-    {
-      id: 4,
-      name: "Lamborghini Aventador",
-      brand: "Lamborghini",
-      model: "Aventador",
-      image: carImg4, // Matching CarDetailsPage
-      rating: "4.9",
-      location: "New York",
-      seats: 2,
-      price: "Rs. 250",
-    },
-    {
-      id: 5,
-      name: "BMW M2 GTS",
-      brand: "BMW",
-      model: "M2 GTS",
-      image: carImg5, // Matching CarDetailsPage
-      rating: "5.0",
-      location: "Los Angeles",
-      seats: 5,
-      price: "Rs. 150",
-    },
-  ];
+        // Fetch hero banners from API (only text data, image will remain static)
+        try {
+          const bannersResponse = await commonService.getHeroBanners();
+          if (bannersResponse.success && bannersResponse.data?.banners?.length > 0) {
+            // Use API banners but ignore img property - keep static Audi image
+            setHeroBanners(bannersResponse.data.banners.map(banner => ({
+              gradient: banner.gradient || "linear-gradient(135deg, #f8f8f8, #d0d4d7)",
+              title: banner.title || "Easy Rentals,",
+              subtitle: banner.subtitle || "Anywhere You Go.",
+              cta: banner.cta || "Find Perfect Car To DriveOn",
+              // img property ignored - using static heroImage instead
+            })));
+          } else {
+            // Fallback: Use static banners with static car image
+            setHeroBanners([
+              {
+                gradient: "linear-gradient(135deg, #f8f8f8, #d0d4d7)",
+                title: "Easy Rentals,",
+                subtitle: "Anywhere You Go.",
+                cta: "Find Perfect Car To DriveOn",
+              },
+              {
+                gradient: "linear-gradient(135deg, #f8f8f8, #e4e7ea)",
+                title: "Premium Electric,",
+                subtitle: "Experience The Future.",
+                cta: "Drive Sustainable Luxury",
+              },
+              {
+                gradient: "linear-gradient(135deg, #f8f8f8, #cfd4da)",
+                title: "Luxury Redefined,",
+                subtitle: "Style Meets Performance.",
+                cta: "Discover Premium Comfort",
+              },
+              {
+                gradient: "linear-gradient(135deg, #f8f8f8, #d9d9d9)",
+                title: "Easy Rentals,",
+                subtitle: "Anywhere You Go.",
+                cta: "Find Perfect Car To Drive",
+              },
+            ]);
+          }
+        } catch (error) {
+          console.error('Error fetching hero banners:', error);
+          // Fallback to static banners
+          setHeroBanners([
+            {
+              gradient: "linear-gradient(135deg, #f8f8f8, #d0d4d7)",
+              title: "Easy Rentals,",
+              subtitle: "Anywhere You Go.",
+              cta: "Find Perfect Car To DriveOn",
+            },
+          ]);
+        }
+
+        // Fetch FAQs from API
+        try {
+          const faqsResponse = await commonService.getFAQs();
+          if (faqsResponse.success && faqsResponse.data?.faqs?.length > 0) {
+            setFaqs(faqsResponse.data.faqs);
+          } else {
+            // Fallback: Use static FAQs
+            setFaqs([
+              {
+                question: "How do I complete my profile?",
+                answer: "To book a car, you need to complete 100% of your profile. This includes: Name, Email, Phone Number, Age, Gender, Address, Profile Photo, and KYC verification through DigiLocker. You must verify your Aadhaar, PAN, and Driving License documents via DigiLocker OAuth2 integration. Booking is not allowed until your profile is 100% complete.",
+              },
+              {
+                question: "What is KYC verification and how does it work?",
+                answer: "KYC (Know Your Customer) verification is done through DigiLocker integration. When you click 'Verify Documents', you'll be redirected to DigiLocker where you approve access. Our backend then fetches your verified Aadhaar, PAN, and Driving License documents. These verified document references are stored securely, and your KYC status is marked as verified. This ensures maximum security and trust for both renters and car owners.",
+              },
+              {
+                question: "Do I need a guarantor? How does the guarantor system work?",
+                answer: "Yes, you need to add a guarantor who must also complete registration and KYC verification. Here's how it works: You enter your guarantor's phone number or email. The guarantor receives an invite link, installs the app, completes registration and KYC verification. Once verified, the guarantor is linked to your account in the database. Booking is not allowed until your guarantor is verified. This adds an extra layer of security and trust.",
+              },
+              {
+                question: "What payment options are available?",
+                answer: "We offer flexible payment options to suit your needs. You can choose between Full Payment or 35% Advance Payment. Payments are processed securely through Razorpay and Stripe. If you choose the 35% advance option, the remaining amount is automatically debited. We also handle security deposit management seamlessly.",
+              },
+              {
+                question: "Is live GPS tracking mandatory?",
+                answer: "Yes, live GPS tracking is mandatory during active trips for safety and security. When your trip starts, GPS tracking is automatically enabled. The mobile app runs a background service that sends location data to the backend every 10 seconds. This provides real-time location updates for both renters and car owners. Location data is stored for 6 months for dispute resolution purposes.",
+              },
+              {
+                question: "How does the referral program work?",
+                answer: "Every user gets a unique referral code. When a new user signs up using your referral code, you earn points. When that new user completes their first trip, you get an extra reward. Your referral points are visible in your profile and can be used as discounts on your bookings. It's a great way to earn rewards while helping others discover DriveOn.",
+              },
+              {
+                question: "How does dynamic pricing work?",
+                answer: "Our pricing engine calculates prices dynamically based on several factors: date of booking (weekday/weekend), time of booking (peak hours), duration, seasonal surge, car demand, last available units, and festive days. The system includes weekend multipliers, holiday multipliers, time of day multipliers, peak demand surcharges, and duration-based pricing. This ensures fair and transparent pricing that adjusts to market conditions.",
+              },
+              {
+                question: "How do I book a car?",
+                answer: "First, ensure your profile is 100% complete and your guarantor is verified. Then browse and filter our car collection based on your preferences (brand, model, price, location, etc.). Select your preferred car and view detailed information. Choose your pickup and drop-off dates and times. The system will calculate the dynamic price. Select your payment option (Full or 35% advance) and complete the secure payment. Once payment is confirmed, your booking is complete. GPS tracking will automatically start when your trip begins.",
+              },
+            ]);
+          }
+        } catch (error) {
+          console.error('Error fetching FAQs:', error);
+          // Keep empty array on error - will show nothing
+        }
+
+        // Fetch featured car for AVAILABLE section
+        try {
+          const featuredResponse = await carService.getCars({ 
+            limit: 1, 
+            featured: true,
+            status: 'active',
+            isAvailable: true,
+          });
+          if (featuredResponse.success && featuredResponse.data?.cars?.length > 0) {
+            const car = featuredResponse.data.cars[0];
+            const transformedCar = transformCarData(car, 0);
+            setFeaturedCar(transformedCar);
+          } else {
+            // Fallback: Get first available car
+            const fallbackResponse = await carService.getCars({ 
+              limit: 1,
+              status: 'active',
+              isAvailable: true,
+            });
+            if (fallbackResponse.success && fallbackResponse.data?.cars?.length > 0) {
+              const car = fallbackResponse.data.cars[0];
+              const transformedCar = transformCarData(car, 0);
+              setFeaturedCar(transformedCar);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching featured car:', error);
+        }
+
+        // Fetch promotional banner content
+        try {
+          const promoResponse = await commonService.getPromotionalBanner();
+          if (promoResponse.success && promoResponse.data) {
+            setPromotionalBanner({
+              title: promoResponse.data.title || "20% Off Your First Ride!",
+              subtitle: promoResponse.data.subtitle || "Experience Seamless Car Rentals.",
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching promotional banner:', error);
+        }
+
+        // Fetch banner overlay text
+        try {
+          const overlayResponse = await commonService.getBannerOverlay();
+          if (overlayResponse.success && overlayResponse.data) {
+            setBannerOverlay({
+              title: overlayResponse.data.title || "Premium Luxury Experience",
+              subtitle: overlayResponse.data.subtitle || "Drive in style with our premium car collection",
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching banner overlay:', error);
+        }
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchDynamicData();
+  }, []);
+
+  // Auto-rotate hero banner using dynamic heroBanners
+  useEffect(() => {
+    if (!heroBanners.length) return;
+
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prevIndex) =>
+        prevIndex + 1 < heroBanners.length ? prevIndex + 1 : 0
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [heroBanners]);
+
+  // Fallback car images
+  const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
+
+  // Transform API car data to CarCard format
+  const transformCarData = (car, index = 0) => {
+    if (!car) return null;
+    
+    // Extract all images from images array (same as admin side)
+    let carImages = [];
+    let carImage = fallbackCarImages[index % fallbackCarImages.length];
+    
+    if (car.images && Array.isArray(car.images) && car.images.length > 0) {
+      // Extract all image URLs (same as admin side)
+      carImages = car.images
+        .map(img => {
+          if (typeof img === 'string') return img;
+          return img?.url || img?.path || null;
+        })
+        .filter(Boolean);
+      
+      // Remove duplicates
+      carImages = [...new Set(carImages)];
+      
+      // Find primary image first, otherwise use first image
+      const primaryImage = car.images.find(img => img.isPrimary);
+      carImage = primaryImage ? (primaryImage.url || primaryImage.path || primaryImage) : (carImages[0] || carImage);
+    } else if (car.primaryImage) {
+      carImage = car.primaryImage;
+      carImages = [car.primaryImage];
+    } else {
+      carImages = [carImage];
+    }
+    
+    // Return all images (same as admin side)
+    return {
+      id: car._id || car.id,
+      name: `${car.brand} ${car.model}`,
+      brand: car.brand,
+      model: car.model,
+      image: carImage,
+      images: carImages, // All images array (same as admin side)
+      rating: car.averageRating ? car.averageRating.toFixed(1) : "5.0",
+      location: car.location?.city || car.location?.address || "Location TBD",
+      seats: car.seatingCapacity || car.seats || 5,
+      price: car.pricePerDay || 0,
+      pricePerDay: car.pricePerDay || 0,
+    };
+  };
+
+  // Fetch latest cars from API
+  useEffect(() => {
+    const fetchLatestCars = async () => {
+      try {
+        setCarsLoading(true);
+        
+        // Fetch latest cars sorted by createdAt (descending)
+        const response = await carService.getCars({
+          limit: 5,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+          status: 'active',
+          isAvailable: true,
+        });
+
+        if (response.success && response.data?.cars) {
+          const cars = response.data.cars;
+          
+          // Best Cars - First 2 latest cars
+          const bestCarsData = cars.slice(0, 2).map((car, index) => transformCarData(car, index));
+          setBestCars(bestCarsData);
+          
+          // Nearby Cars - Next 3 cars
+          const nearbyCarsData = cars.slice(2, 5).map((car, index) => transformCarData(car, index + 2));
+          setNearbyCars(nearbyCarsData);
+        }
+      } catch (error) {
+        console.error('Error fetching latest cars:', error);
+        // Keep empty arrays on error - will show nothing instead of hardcoded data
+      } finally {
+        setCarsLoading(false);
+      }
+    };
+
+    fetchLatestCars();
+  }, []);
 
   return (
     <div
@@ -325,14 +561,14 @@ const HomePage = () => {
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -403,7 +639,8 @@ const HomePage = () => {
             position: "relative",
             paddingTop: "24px",
             paddingBottom: "24px",
-            background: heroBanners[0]?.gradient || colors.backgroundPrimary,
+            background:
+              heroBanners[currentHeroIndex]?.gradient || colors.backgroundPrimary,
             transition: "background 500ms ease",
           }}
         >
@@ -418,13 +655,16 @@ const HomePage = () => {
                   animation: "fadeInUp 1s ease-in-out",
                 }}
               >
-                {heroBanners[0]?.title ? (
+                {heroBanners[currentHeroIndex]?.title ? (
                   <>
                     <span style={{ color: "#21292b" }}>
-                      {heroBanners[0].title.split(" ")[0]}
+                      {heroBanners[currentHeroIndex].title.split(" ")[0]}
                     </span>{" "}
                     <span style={{ color: colors.textPrimary }}>
-                      {heroBanners[0].title.split(" ").slice(1).join(" ")}
+                      {heroBanners[currentHeroIndex].title
+                        .split(" ")
+                        .slice(1)
+                        .join(" ")}
                     </span>
                   </>
                 ) : (
@@ -437,7 +677,7 @@ const HomePage = () => {
                 )}
                 <br />
                 <span style={{ color: colors.textPrimary }}>
-                  {heroBanners[0]?.subtitle || "Anywhere You Go."}
+                  {heroBanners[currentHeroIndex]?.subtitle || "Anywhere You Go."}
                 </span>
               </h1>
 
@@ -452,7 +692,7 @@ const HomePage = () => {
                   className="text-base md:text-lg lg:text-xl xl:text-2xl font-medium"
                   style={{ color: colors.textPrimary }}
                 >
-                  {heroBanners[0]?.cta || "Find Perfect Car To Drive"}
+                  {heroBanners[currentHeroIndex]?.cta || heroBanners[0]?.cta || "Find Perfect Car To Drive"}
                 </span>
                 <svg
                   className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8"
@@ -477,15 +717,18 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* Right Side - Car Image */}
+            {/* Right Side - Car Image (Static Audi image as requested) */}
             <div className="flex-1 flex items-center justify-center h-full relative min-w-0">
               <img
-                src={heroBanners[0]?.img || web_banImg2}
-                alt="Car"
+                src={heroImage}
+                alt="Hero Car"
                 loading="eager"
                 style={{
                   width: "100%",
-                  height: "100%",
+                  maxWidth: "900px",
+                  height: "auto",
+                  maxHeight: "420px",
+                  marginBottom: "16px",
                   objectFit: "contain",
                   transformOrigin: "center bottom",
                   filter: "drop-shadow(0 10px 30px rgba(0, 0, 0, 0.1))",
@@ -752,16 +995,16 @@ const HomePage = () => {
               style={{ background: colors.backgroundDark }}
               onClick={() => navigate("/search")}
             >
-              {bannerSlides.map((slide, index) => (
-                <SwiperSlide key={slide.id} className="!w-full">
+              {(bestCars.length ? bestCars : bannerSlides).map((slide, index) => (
+                <SwiperSlide key={slide.id || index} className="!w-full">
                   <div className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56">
                     {/* Left Side - Text Content */}
                     <div className="flex-shrink-0 w-1/3 z-10">
                       <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
-                        20% Off Your First Ride!
+                        {promotionalBanner.title}
                       </h2>
                       <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
-                        Experience Seamless Car Rentals.
+                        {promotionalBanner.subtitle}
                       </p>
                       <button
                         onClick={(e) => {
@@ -778,7 +1021,7 @@ const HomePage = () => {
                     <div className="flex-1 flex items-center justify-end h-full relative">
                       <img
                         src={slide.image}
-                        alt={`Car ${slide.id}`}
+                        alt={`Car ${slide.id || index + 1}`}
                         className="h-full max-h-full w-auto object-contain"
                         style={{
                           maxWidth: "100%",
@@ -818,31 +1061,32 @@ const HomePage = () => {
           </div>
 
           {/* Brands Section - Hidden on web view */}
-          <div className="mb-6 md:mb-8 lg:mb-12 xl:mb-16 md:-mt-24 md:hidden">
-            <h2 className="text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl font-bold text-black mb-3 md:mb-4 lg:mb-5 xl:mb-6">
-              Brands
-            </h2>
-            <div className="relative overflow-hidden w-full">
-              <div className="flex gap-7 md:gap-8 lg:gap-12 xl:gap-16 brands-scroll">
-                {/* First set of brands */}
-                {brands.map((brand) => (
-                  <BrandCard
-                    key={brand.id}
-                    logo={brand.logo}
-                    name={brand.name}
-                  />
-                ))}
-                {/* Duplicate set for seamless loop */}
-                {brands.map((brand) => (
-                  <BrandCard
-                    key={`duplicate-${brand.id}`}
-                    logo={brand.logo}
-                    name={brand.name}
-                  />
-                ))}
+          {brands.length > 0 && (
+            <div className="mb-6 md:mb-8 lg:mb-12 xl:mb-16 md:-mt-24 md:hidden">
+              <h2 className="text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl font-bold text-black mb-3 md:mb-4 lg:mb-5 xl:mb-6">
+                Brands
+              </h2>
+              <div className="relative overflow-hidden w-full">
+                <div className="flex gap-7 md:gap-8 lg:gap-12 xl:gap-16 brands-scroll">
+                  {/* First set of brands */}
+                  {brands.map((brand) => (
+                    <BrandCard
+                      key={brand.id}
+                      logo={brand.logo}
+                      name={brand.name}
+                    />
+                  ))}
+                  {/* Duplicate set for seamless loop */}
+                  {brands.map((brand) => (
+                    <BrandCard
+                      key={`duplicate-${brand.id}`}
+                      logo={brand.logo}
+                      name={brand.name}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-            <style>{`
+              <style>{`
             .brands-scroll {
               animation: scrollBrands 30s linear infinite;
               display: flex;
@@ -896,7 +1140,8 @@ const HomePage = () => {
               }
             }
           `}</style>
-          </div>
+            </div>
+          )}
 
           {/* Best Cars Section */}
           <div className="relative">
@@ -961,7 +1206,7 @@ const HomePage = () => {
                 <div
                   className="relative rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer hover:opacity-95 transition-opacity"
                   style={{ backgroundColor: colors.backgroundSecondary }}
-                  onClick={() => navigate("/car-details/bmw-i7")}
+                  onClick={() => featuredCar && navigate(`/car-details/${featuredCar.id}`)}
                 >
                   {/* Banner Image Carousel */}
                   <Swiper
@@ -1021,10 +1266,10 @@ const HomePage = () => {
                           <div className="absolute inset-0 flex items-center justify-start px-4 md:px-6 lg:px-8 hidden">
                             <div className="z-10">
                               <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 md:mb-2">
-                                Premium Luxury Experience
+                                {bannerOverlay.title}
                               </h3>
                               <p className="text-xs md:text-sm lg:text-base text-white/90">
-                                Drive in style with our premium car collection
+                                {bannerOverlay.subtitle}
                               </p>
                             </div>
                           </div>
@@ -1040,27 +1285,29 @@ const HomePage = () => {
                 </div>
 
                 {/* Car Info Below Banner - Clickable */}
-                <div
-                  className="mt-3 cursor-pointer"
-                  onClick={() => navigate("/car-details/bmw-i7")}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xl font-bold text-black">BMW i7</h3>
-                    <div className="flex items-center gap-1">
-                      <svg
-                        className="w-5 h-5"
-                        fill={colors.accentOrange}
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                      <span className="text-base font-semibold text-black">
-                        5.0
-                      </span>
+                {featuredCar && (
+                  <div
+                    className="mt-3 cursor-pointer"
+                    onClick={() => navigate(`/car-details/${featuredCar.id}`)}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-xl font-bold text-black">{featuredCar.name || `${featuredCar.brand} ${featuredCar.model}`}</h3>
+                      <div className="flex items-center gap-1">
+                        <svg
+                          className="w-5 h-5"
+                          fill={colors.accentOrange}
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        <span className="text-base font-semibold text-black">
+                          {featuredCar.rating || "5.0"}
+                        </span>
+                      </div>
                     </div>
+                    <p className="text-sm text-gray-500">Rs. {featuredCar.price || featuredCar.pricePerDay || 800} / day</p>
                   </div>
-                  <p className="text-sm text-gray-500">Rs. 800 / day</p>
-                </div>
+                )}
               </div>
 
               {/* Nearby Section - Mobile Only */}
@@ -1801,113 +2048,77 @@ const HomePage = () => {
               Frequently Asked Questions
             </h2>
             <div className="space-y-4">
-              {[
-                {
-                  question: "How do I complete my profile?",
-                  answer:
-                    "To book a car, you need to complete 100% of your profile. This includes: Name, Email, Phone Number, Age, Gender, Address, Profile Photo, and KYC verification through DigiLocker. You must verify your Aadhaar, PAN, and Driving License documents via DigiLocker OAuth2 integration. Booking is not allowed until your profile is 100% complete.",
-                },
-                {
-                  question: "What is KYC verification and how does it work?",
-                  answer:
-                    "KYC (Know Your Customer) verification is done through DigiLocker integration. When you click 'Verify Documents', you'll be redirected to DigiLocker where you approve access. Our backend then fetches your verified Aadhaar, PAN, and Driving License documents. These verified document references are stored securely, and your KYC status is marked as verified. This ensures maximum security and trust for both renters and car owners.",
-                },
-                {
-                  question:
-                    "Do I need a guarantor? How does the guarantor system work?",
-                  answer:
-                    "Yes, you need to add a guarantor who must also complete registration and KYC verification. Here's how it works: You enter your guarantor's phone number or email. The guarantor receives an invite link, installs the app, completes registration and KYC verification. Once verified, the guarantor is linked to your account in the database. Booking is not allowed until your guarantor is verified. This adds an extra layer of security and trust.",
-                },
-                {
-                  question: "What payment options are available?",
-                  answer:
-                    "We offer flexible payment options to suit your needs. You can choose between Full Payment or 35% Advance Payment. Payments are processed securely through Razorpay and Stripe. If you choose the 35% advance option, the remaining amount is automatically debited. We also handle security deposit management seamlessly.",
-                },
-                {
-                  question: "Is live GPS tracking mandatory?",
-                  answer:
-                    "Yes, live GPS tracking is mandatory during active trips for safety and security. When your trip starts, GPS tracking is automatically enabled. The mobile app runs a background service that sends location data to the backend every 10 seconds. This provides real-time location updates for both renters and car owners. Location data is stored for 6 months for dispute resolution purposes.",
-                },
-                {
-                  question: "How does the referral program work?",
-                  answer:
-                    "Every user gets a unique referral code. When a new user signs up using your referral code, you earn points. When that new user completes their first trip, you get an extra reward. Your referral points are visible in your profile and can be used as discounts on your bookings. It's a great way to earn rewards while helping others discover DriveOn.",
-                },
-                {
-                  question: "How does dynamic pricing work?",
-                  answer:
-                    "Our pricing engine calculates prices dynamically based on several factors: date of booking (weekday/weekend), time of booking (peak hours), duration, seasonal surge, car demand, last available units, and festive days. The system includes weekend multipliers, holiday multipliers, time of day multipliers, peak demand surcharges, and duration-based pricing. This ensures fair and transparent pricing that adjusts to market conditions.",
-                },
-                {
-                  question: "How do I book a car?",
-                  answer:
-                    "First, ensure your profile is 100% complete and your guarantor is verified. Then browse and filter our car collection based on your preferences (brand, model, price, location, etc.). Select your preferred car and view detailed information. Choose your pickup and drop-off dates and times. The system will calculate the dynamic price. Select your payment option (Full or 35% advance) and complete the secure payment. Once payment is confirmed, your booking is complete. GPS tracking will automatically start when your trip begins.",
-                },
-              ].map((faq, index) => {
-                const isOpen = openFaqIndex === index;
-                return (
-                  <div
-                    key={index}
-                    className="rounded-xl overflow-hidden transition-all duration-200"
-                    style={{
-                      backgroundColor: colors.backgroundPrimary,
-                      border: `1px solid ${
-                        isOpen ? colors.textPrimary : colors.borderLight
-                      }`,
-                      boxShadow: isOpen
-                        ? `0 4px 6px ${colors.shadowLight}`
-                        : "none",
-                    }}
-                  >
-                    <button
-                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                      className="w-full flex items-center justify-between p-4 md:p-5 lg:p-6 text-left focus:outline-none transition-colors hover:opacity-90"
+              {faqs.length > 0 ? (
+                faqs.map((faq, index) => {
+                  const isOpen = openFaqIndex === index;
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-xl overflow-hidden transition-all duration-200"
                       style={{
-                        backgroundColor: isOpen
-                          ? colors.backgroundPrimary
-                          : "transparent",
+                        backgroundColor: colors.backgroundPrimary,
+                        border: `1px solid ${
+                          isOpen ? colors.textPrimary : colors.borderLight
+                        }`,
+                        boxShadow: isOpen
+                          ? `0 4px 6px ${colors.shadowLight}`
+                          : "none",
                       }}
                     >
-                      <h3
-                        className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold pr-4 flex-1"
-                        style={{ color: colors.textPrimary }}
+                      <button
+                        onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                        className="w-full flex items-center justify-between p-4 md:p-5 lg:p-6 text-left focus:outline-none transition-colors hover:opacity-90"
+                        style={{
+                          backgroundColor: isOpen
+                            ? colors.backgroundPrimary
+                            : "transparent",
+                        }}
                       >
-                        {faq.question}
-                      </h3>
-                      <svg
-                        className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex-shrink-0 transition-transform duration-300 ${
-                          isOpen ? "transform rotate-180" : ""
-                        }`}
-                        style={{ color: colors.textPrimary }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      <div className="px-4 md:px-5 lg:px-6 pb-4 md:pb-5 lg:pb-6 pt-0">
-                        <p
-                          className="text-xs md:text-sm lg:text-base leading-relaxed pt-2"
-                          style={{ color: colors.textSecondary }}
+                        <h3
+                          className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold pr-4 flex-1"
+                          style={{ color: colors.textPrimary }}
                         >
-                          {faq.answer}
-                        </p>
+                          {faq.question}
+                        </h3>
+                        <svg
+                          className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex-shrink-0 transition-transform duration-300 ${
+                            isOpen ? "transform rotate-180" : ""
+                          }`}
+                          style={{ color: colors.textPrimary }}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                          isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                        }`}
+                      >
+                        <div className="px-4 md:px-5 lg:px-6 pb-4 md:pb-5 lg:pb-6 pt-0">
+                          <p
+                            className="text-xs md:text-sm lg:text-base leading-relaxed pt-2"
+                            style={{ color: colors.textSecondary }}
+                          >
+                            {faq.answer}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <p style={{ color: colors.textSecondary }}>No FAQs available at the moment.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

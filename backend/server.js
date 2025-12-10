@@ -57,6 +57,7 @@ import supportRoutes from "./routes/support.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import locationRoutes from "./routes/location.routes.js";
+import commonRoutes from "./routes/common.routes.js";
 
 // Socket.IO Configuration
 const io = new Server(server, {
@@ -238,6 +239,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/cars", carRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/common", commonRoutes);
 app.use("/api", supportRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);

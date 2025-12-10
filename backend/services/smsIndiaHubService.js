@@ -78,8 +78,10 @@ class SMSIndiaHubService {
    * @param {string} phone - Phone number to send SMS to
    * @param {string} otp - OTP code to send
    * @param {string} purpose - Purpose of OTP (register, login, reset_password) - optional
+   * @param {string} purpose - Purpose of OTP (register, login, reset_password) - optional
    * @returns {Promise<Object>} - Response object
    */
+  async sendOTP(phone, otp, purpose = 'register') {
   async sendOTP(phone, otp, purpose = 'register') {
     try {
       // Load credentials dynamically (with trim to remove whitespace)
@@ -118,6 +120,35 @@ class SMSIndiaHubService {
       
       // Always use transactional SMS (gwid=2) like RentYatra
       const gatewayId = "2"; // 2 = transactional (same as RentYatra)
+      // SMSIndia Hub requires DLT registered templates for transactional SMS
+      // Check if custom message template is provided (must match registered DLT template exactly)
+      const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
+      
+      // Determine purpose text for message
+      let purposeText = 'registration';
+      if (purpose === 'login') {
+        purposeText = 'login';
+      } else if (purpose === 'reset_password') {
+        purposeText = 'password reset';
+      }
+      
+      // Use custom template if provided, otherwise use default format that matches registered template
+      // Based on working template: "Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is {otp}"
+      const message = customTemplate 
+        ? customTemplate.replace('{otp}', otp).replace('{purpose}', purposeText)
+        : `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for ${purposeText} is ${otp}`;
+
+      // Check if template ID is provided (for DLT registered templates)
+      const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
+      
+      // Check if promotional SMS is enabled (temporary workaround for template issues)
+      // ⚠️ WARNING: Promotional SMS is not recommended for OTP - use only for testing
+      const usePromotional = process.env.SMSINDIAHUB_USE_PROMOTIONAL === 'true';
+      const gatewayId = usePromotional ? "1" : "2"; // 1 = promotional, 2 = transactional
+      
+      if (usePromotional) {
+        console.warn("⚠️ Using promotional SMS mode - not recommended for production OTP!");
+      }
       
       // Build the API URL with query parameters (same format as RentYatra)
       const params = new URLSearchParams({

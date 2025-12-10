@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SearchHeader from '../components/layout/SearchHeader';
 import BottomNavbar from '../components/layout/BottomNavbar';
@@ -7,6 +7,7 @@ import BrandFilter from '../components/common/BrandFilter';
 import SearchCarCard from '../components/common/SearchCarCard';
 import { colors } from '../theme/colors';
 import { useAppSelector } from '../../hooks/redux';
+import { carService } from '../../services/car.service';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -29,107 +30,161 @@ const SearchPage = () => {
   const navigate = useNavigate();
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
-  // Brand data
-  const brands = [
-    { id: 1, logo: logo10, name: 'Ferrari' },
-    { id: 2, logo: logo4, name: 'Tesla' },
-    { id: 3, logo: logo11, name: 'BMW' },
-    { id: 4, logo: logo5, name: 'Lamborghini' },
-  ];
+  // Brand logos map for dynamic brands
+  const brandLogos = {
+    Ferrari: logo10,
+    Tesla: logo4,
+    BMW: logo11,
+    Lamborghini: logo5,
+  };
 
-  // Recommend For You cars with brandId - Matching CarDetailsPage
-  const allRecommendCars = [
-    {
-      id: 2, // Tesla Model S
-      name: 'Tesla Model S',
-      brand: 'Tesla',
-      model: 'Model S',
-      image: carImg6, // Matching CarDetailsPage
-      rating: '5.0',
-      location: 'Chicago, USA',
-      price: 'Rs. 100',
-      brandId: 2, // Tesla
-    },
-    {
-      id: 1, // Ferrari
-      name: 'Ferrari-FF',
-      brand: 'Ferrari',
-      model: 'FF',
-      image: carImg1, // Matching CarDetailsPage
-      rating: '5.0',
-      location: 'Washington DC',
-      price: 'Rs. 200',
-      brandId: 1, // Ferrari
-    },
-    {
-      id: 4, // Lamborghini
-      name: 'Lamborghini Aventador',
-      brand: 'Lamborghini',
-      model: 'Aventador',
-      image: carImg4, // Matching CarDetailsPage
-      rating: '4.9',
-      location: 'New York',
-      price: 'Rs. 250',
-      brandId: 4, // Lamborghini
-    },
-    {
-      id: 5, // BMW M2 GTS
-      name: 'BMW M2 GTS',
-      brand: 'BMW',
-      model: 'M2 GTS',
-      image: carImg5, // Matching CarDetailsPage
-      rating: '5.0',
-      location: 'Los Angeles',
-      price: 'Rs. 150',
-      brandId: 3, // BMW
-    },
-  ];
+  // Dynamic data state
+  const [brands, setBrands] = useState([]);
+  const [allRecommendCars, setAllRecommendCars] = useState([]);
+  const [allPopularCars, setAllPopularCars] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Popular Cars with brandId - Matching CarDetailsPage
-  const allPopularCars = [
-    {
-      id: 1, // Ferrari
-      name: 'Ferrari-FF',
-      brand: 'Ferrari',
-      model: 'FF',
-      image: carImg1, // Matching CarDetailsPage
-      rating: '5.0',
-      location: 'Washington DC',
-      price: 'Rs. 200',
-      brandId: 1, // Ferrari
-    },
-    {
-      id: 3, // BMW
-      name: 'BMW 3 Series',
-      brand: 'BMW',
-      model: '3 Series',
-      image: carImg8, // Matching CarDetailsPage
-      rating: '5.0',
-      location: 'New York',
-      price: 'Rs. 150',
-      brandId: 3, // BMW
-    },
-  ];
+  // Fallback images for cars when API images missing
+  const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
 
-  // Filter cars based on selected brand
-  const filteredRecommendCars = useMemo(() => {
-    if (selectedBrand === 'all') {
-      return allRecommendCars;
+  // Transform API car data to SearchCarCard format
+  const transformCarData = (car, index = 0) => {
+    let carImage = fallbackCarImages[index % fallbackCarImages.length];
+    let carImages = [];
+
+    if (car.images && car.images.length > 0) {
+      // Extract all image URLs (same as admin side)
+      carImages = car.images
+        .map(img => {
+          if (typeof img === 'string') return img;
+          return img?.url || img?.path || null;
+        })
+        .filter(Boolean);
+      
+      // Remove duplicates
+      carImages = [...new Set(carImages)];
+      
+      // Find primary image first, otherwise use first image
+      const primaryImage = car.images.find((img) => img.isPrimary);
+      carImage = primaryImage ? (primaryImage.url || primaryImage.path || primaryImage) : (carImages[0] || carImage);
+    } else {
+      carImages = [carImage];
     }
-    return allRecommendCars.filter(car => car.brandId === selectedBrand);
-  }, [selectedBrand]);
+
+    return {
+      id: car._id || car.id,
+      name: `${car.brand} ${car.model}`,
+      brand: car.brand,
+      model: car.model,
+      image: carImage,
+      images: carImages, // All images array (same as admin side)
+      rating: car.averageRating ? car.averageRating.toFixed(1) : '5.0',
+      location: car.location?.city || car.location?.address || 'Location',
+      price: `Rs. ${car.pricePerDay || 0}`,
+    };
+  };
+
+  // Fetch cars and brands from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch latest active cars
+        const carsResponse = await carService.getCars({
+          limit: 12,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+          status: 'active',
+          isAvailable: true,
+        });
+
+        let cars = [];
+        if (carsResponse.success && carsResponse.data?.cars) {
+          cars = carsResponse.data.cars;
+        }
+
+        const transformedCars = cars.map((car, index) => transformCarData(car, index));
+
+        // First 6 as "Recommend For You", next 4 as "Our Popular Cars"
+        setAllRecommendCars(transformedCars.slice(0, 6));
+        setAllPopularCars(transformedCars.slice(6, 10));
+
+        // Build dynamic brands list from available cars
+        const uniqueBrandNames = Array.from(
+          new Set(transformedCars.map((car) => car.brand).filter(Boolean))
+        );
+
+        const dynamicBrands = uniqueBrandNames.slice(0, 6).map((brandName, idx) => ({
+          id: brandName,
+          name: brandName,
+          logo: brandLogos[brandName] || fallbackCarImages[idx % fallbackCarImages.length],
+        }));
+
+        setBrands(dynamicBrands);
+      } catch (error) {
+        console.error('Error loading search data:', error);
+        // Keep empty lists on error - UI will simply show no cars
+      } finally {
+        setDataLoaded(true);
+      }
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle search
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+  };
+
+  // Filter cars based on selected brand and search query
+  const filteredRecommendCars = useMemo(() => {
+    let filtered = allRecommendCars;
+    
+    // Filter by brand
+    if (selectedBrand !== 'all') {
+      filtered = filtered.filter((car) => car.brand === selectedBrand);
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((car) => 
+        car.name?.toLowerCase().includes(query) ||
+        car.brand?.toLowerCase().includes(query) ||
+        car.model?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [selectedBrand, allRecommendCars, searchQuery]);
 
   const filteredPopularCars = useMemo(() => {
-    if (selectedBrand === 'all') {
-      return allPopularCars;
+    let filtered = allPopularCars;
+    
+    // Filter by brand
+    if (selectedBrand !== 'all') {
+      filtered = filtered.filter((car) => car.brand === selectedBrand);
     }
-    return allPopularCars.filter(car => car.brandId === selectedBrand);
-  }, [selectedBrand]);
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((car) => 
+        car.name?.toLowerCase().includes(query) ||
+        car.brand?.toLowerCase().includes(query) ||
+        car.model?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [selectedBrand, allPopularCars, searchQuery]);
 
   // Combine all filtered cars to check if any exist
   const allFilteredCars = useMemo(() => {
@@ -167,14 +222,14 @@ const SearchPage = () => {
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -267,7 +322,11 @@ const SearchPage = () => {
         {/* Search Bar - Centered on Desktop */}
         <div className="px-4 md:px-6 lg:px-8 pt-0.5 pb-0 md:pt-4 md:pb-2">
           <div className="md:max-w-3xl md:mx-auto">
-            <SearchBar onFilterToggle={setIsFilterOpen} />
+            <SearchBar 
+              onFilterToggle={setIsFilterOpen} 
+              onSearch={handleSearch}
+              searchQuery={searchQuery}
+            />
           </div>
         </div>
 
@@ -283,7 +342,7 @@ const SearchPage = () => {
         {/* Main Content - Responsive Layout */}
         <div className="px-4 md:px-6 lg:px-8 pb-24 md:pb-8">
           {/* Show "No cars found" message if no cars match the filter */}
-          {allFilteredCars.length === 0 ? (
+          {dataLoaded && allFilteredCars.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 md:py-20">
               <div className="text-center">
                 <svg 

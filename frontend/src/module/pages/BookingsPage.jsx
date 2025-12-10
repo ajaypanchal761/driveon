@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppSelector } from '../../hooks/redux';
 import { colors } from '../theme/colors';
 import SearchHeader from '../components/layout/SearchHeader';
 import BottomNavbar from '../components/layout/BottomNavbar';
 import BookingDetailsModal from '../components/common/BookingDetailsModal';
 import useInViewAnimation from '../hooks/useInViewAnimation';
+import { bookingService } from '../../services/booking.service';
+import { carService } from '../../services/car.service';
 
 // Import car images for mock data
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -206,6 +209,7 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
  */
 const BookingsPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, token } = useAppSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'active', 'completed', 'cancelled'
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -226,133 +230,259 @@ const BookingsPage = () => {
     'Other'
   ];
 
-  // Function to fetch bookings
+  // Function to fetch bookings from API
   const fetchBookings = async () => {
     setLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Check authentication
+    const authToken = token || localStorage.getItem('authToken');
+    console.log('🔐 Authentication check:', {
+      isAuthenticated,
+      hasToken: !!authToken,
+      tokenLength: authToken?.length,
+    });
     
-    // Mock bookings data
-    const mockBookings = [
-        {
-          id: '1',
-          bookingId: 'BK001',
-          car: {
-            id: '1',
-            brand: 'Ferrari',
-            model: 'FF',
-            image: carImg1,
-            seats: 4,
-            transmission: 'Automatic',
-            fuelType: 'Petrol',
-          },
-          status: 'confirmed',
-          tripStatus: 'not_started',
-          paymentStatus: 'partial',
-          pickupDate: '2024-01-15',
-          pickupTime: '10:00',
-          dropDate: '2024-01-18',
-          dropTime: '18:00',
-          totalPrice: 6000,
-          paidAmount: 2100,
-          remainingAmount: 3900,
-          isTrackingActive: false,
-          createdAt: '2024-01-10',
-        },
-        {
-          id: '2',
-          bookingId: 'BK002',
-          car: {
-            id: '2',
-            brand: 'Tesla',
-            model: 'Model S',
-            image: carImg2,
-            seats: 5,
-            transmission: 'Automatic',
-            fuelType: 'Electric',
-          },
-          status: 'active',
-          tripStatus: 'in_progress',
-          paymentStatus: 'paid',
-          pickupDate: '2024-01-12',
-          pickupTime: '09:00',
-          dropDate: '2024-01-14',
-          dropTime: '20:00',
-          totalPrice: 3000,
-          paidAmount: 3000,
-          remainingAmount: 0,
-          isTrackingActive: true,
-          createdAt: '2024-01-08',
-        },
-        {
-          id: '3',
-          bookingId: 'BK003',
-          car: {
-            id: '3',
-            brand: 'BMW',
-            model: 'Series 3',
-            image: carImg4,
-            seats: 5,
-            transmission: 'Automatic',
-            fuelType: 'Petrol',
-          },
-          status: 'completed',
-          tripStatus: 'completed',
-          paymentStatus: 'paid',
-          pickupDate: '2023-12-20',
-          pickupTime: '11:00',
-          dropDate: '2023-12-22',
-          dropTime: '19:00',
-          totalPrice: 4500,
-          paidAmount: 4500,
-          remainingAmount: 0,
-          isTrackingActive: false,
-          createdAt: '2023-12-15',
-        },
-        {
-          id: '4',
-          bookingId: 'BK004',
-          car: {
-            id: '4',
-            brand: 'Audi',
-            model: 'A4',
-            image: carImg4,
-            seats: 5,
-            transmission: 'Automatic',
-            fuelType: 'Diesel',
-          },
-          status: 'cancelled',
-          tripStatus: 'cancelled',
-          paymentStatus: 'refunded',
-          pickupDate: '2024-01-20',
-          pickupTime: '10:00',
-          dropDate: '2024-01-22',
-          dropTime: '18:00',
-          totalPrice: 5400,
-          paidAmount: 0,
-          remainingAmount: 0,
-          isTrackingActive: false,
-          createdAt: '2024-01-05',
-        },
-      ];
+    if (!authToken) {
+      console.warn('⚠️ No authentication token found, redirecting to login');
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      // Fetch bookings from API
+      const response = await bookingService.getBookings();
       
-      // Get bookings from localStorage
-      try {
-        const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
-        
-        // Merge local bookings with mock bookings (local bookings first)
-        const allBookings = [...localBookings, ...mockBookings];
-        
-        setBookings(allBookings);
-      } catch (error) {
-        console.error('Error reading bookings from localStorage:', error);
-        // If error, just use mock bookings
-        setBookings(mockBookings);
+      console.log('📥 Bookings API Response:', response);
+      console.log('📥 Response structure:', {
+        hasSuccess: 'success' in response,
+        success: response?.success,
+        hasData: 'data' in response,
+        hasBookings: 'bookings' in response,
+        dataBookings: response?.data?.bookings?.length,
+        directBookings: response?.bookings?.length,
+        pagination: response?.data?.pagination,
+      });
+      
+      // Check if response has bookings array - handle multiple response structures
+      let bookingsArray = [];
+      
+      if (response?.data?.bookings && Array.isArray(response.data.bookings)) {
+        bookingsArray = response.data.bookings;
+        console.log('✅ Found bookings in response.data.bookings:', bookingsArray.length);
+      } else if (response?.bookings && Array.isArray(response.bookings)) {
+        bookingsArray = response.bookings;
+        console.log('✅ Found bookings in response.bookings:', bookingsArray.length);
+      } else if (Array.isArray(response)) {
+        bookingsArray = response;
+        console.log('✅ Response is directly an array:', bookingsArray.length);
+      } else {
+        console.warn('⚠️ No bookings array found in response');
+        console.warn('Response keys:', Object.keys(response || {}));
       }
       
+      if (bookingsArray.length > 0) {
+        console.log(`Found ${bookingsArray.length} bookings from API`);
+        
+        // Transform API bookings to match component format
+        const transformedBookings = await Promise.all(
+          bookingsArray.map(async (booking) => {
+            // Handle car data - backend populates car with limited fields
+            let carData = booking.car;
+            const carId = booking.car?._id || booking.car?.id || booking.carId;
+            
+            // If car is populated but missing fields, or if we only have carId, fetch full car details
+            if (carId && (!carData || !carData.seatingCapacity || !carData.transmission)) {
+              try {
+                const carResponse = await carService.getCarDetails(carId);
+                if (carResponse.success && carResponse.data?.car) {
+                  const apiCar = carResponse.data.car;
+                  // Resolve primary image
+                  let carImage = carImg1;
+                  if (apiCar.images && apiCar.images.length > 0) {
+                    const primary = apiCar.images.find((img) => img.isPrimary);
+                    carImage = primary ? primary.url : (apiCar.images[0]?.url || carImage);
+                  } else if (apiCar.image) {
+                    carImage = typeof apiCar.image === 'string' ? apiCar.image : (apiCar.image?.url || carImg1);
+                  }
+                  
+                  carData = {
+                    id: apiCar._id || apiCar.id,
+                    brand: apiCar.brand || carData?.brand || '',
+                    model: apiCar.model || carData?.model || '',
+                    image: carImage,
+                    seats: apiCar.seatingCapacity || carData?.seatingCapacity || 4,
+                    transmission: apiCar.transmission || carData?.transmission || 'Automatic',
+                    fuelType: apiCar.fuelType || carData?.fuelType || 'Petrol',
+                  };
+                } else if (carData) {
+                  // Use populated car data from booking, but ensure all fields exist
+                  let carImage = carImg1;
+                  if (carData.images && carData.images.length > 0) {
+                    const primary = carData.images.find((img) => img.isPrimary);
+                    carImage = primary ? primary.url : (carData.images[0]?.url || carImage);
+                  } else if (carData.image) {
+                    carImage = typeof carData.image === 'string' ? carData.image : (carData.image?.url || carImg1);
+                  }
+                  
+                  carData = {
+                    id: carData._id || carData.id || carId,
+                    brand: carData.brand || '',
+                    model: carData.model || '',
+                    image: carImage,
+                    seats: carData.seatingCapacity || 4,
+                    transmission: carData.transmission || 'Automatic',
+                    fuelType: carData.fuelType || 'Petrol',
+                  };
+                }
+              } catch (error) {
+                console.error('Error fetching car details:', error);
+                // Use populated car data if available
+                if (carData) {
+                  let carImage = carImg1;
+                  if (carData.images && carData.images.length > 0) {
+                    carImage = carData.images[0]?.url || carImg1;
+                  }
+                  carData = {
+                    id: carData._id || carData.id || carId,
+                    brand: carData.brand || '',
+                    model: carData.model || '',
+                    image: carImage,
+                    seats: 4,
+                    transmission: 'Automatic',
+                    fuelType: 'Petrol',
+                  };
+                }
+              }
+            } else if (carData) {
+              // Car is populated, ensure all required fields exist
+              let carImage = carImg1;
+              if (carData.images && carData.images.length > 0) {
+                const primary = carData.images.find((img) => img.isPrimary);
+                carImage = primary ? primary.url : (carData.images[0]?.url || carImage);
+              } else if (carData.image) {
+                carImage = typeof carData.image === 'string' ? carData.image : (carData.image?.url || carImg1);
+              }
+              
+              carData = {
+                id: carData._id || carData.id || carId,
+                brand: carData.brand || '',
+                model: carData.model || '',
+                image: carImage,
+                seats: carData.seatingCapacity || 4,
+                transmission: carData.transmission || 'Automatic',
+                fuelType: carData.fuelType || 'Petrol',
+              };
+            }
+            
+            // Handle pricing - check both pricing object and direct fields
+            const totalPrice = booking.pricing?.totalPrice || booking.totalPrice || booking.amount || 0;
+            const paidAmount = booking.paidAmount || booking.advancePayment || 0;
+            const remainingAmount = booking.remainingAmount || (totalPrice - paidAmount);
+            
+            // Handle dates - tripStart.date and tripEnd.date are Date objects, need to convert to ISO string
+            let pickupDate = booking.tripStart?.date;
+            if (pickupDate) {
+              // If it's a Date object, convert to ISO string; if already string, use as is
+              pickupDate = pickupDate instanceof Date ? pickupDate.toISOString() : pickupDate;
+            } else {
+              pickupDate = booking.pickupDate || booking.startDate || booking.pickupDateTime;
+            }
+            
+            let dropDate = booking.tripEnd?.date;
+            if (dropDate) {
+              // If it's a Date object, convert to ISO string; if already string, use as is
+              dropDate = dropDate instanceof Date ? dropDate.toISOString() : dropDate;
+            } else {
+              dropDate = booking.dropDate || booking.endDate || booking.dropDateTime;
+            }
+            
+            // Handle times - tripStart.time and tripEnd.time are strings
+            const pickupTime = booking.tripStart?.time || booking.pickupTime || booking.startTime || '10:00';
+            const dropTime = booking.tripEnd?.time || booking.dropTime || booking.endTime || '18:00';
+            
+            return {
+              id: booking._id || booking.id,
+              bookingId: booking.bookingId || booking.bookingNumber || `BK${(booking._id || booking.id).toString().slice(-6)}`,
+              car: carData || {
+                id: carId || 'unknown',
+                brand: 'Unknown',
+                model: 'Car',
+                image: carImg1,
+                seats: 4,
+                transmission: 'Automatic',
+                fuelType: 'Petrol',
+              },
+              status: booking.status || 'pending',
+              tripStatus: booking.tripStatus || 'not_started',
+              paymentStatus: booking.paymentStatus || 'pending',
+              pickupDate: pickupDate,
+              pickupTime: pickupTime,
+              dropDate: dropDate,
+              dropTime: dropTime,
+              totalPrice: totalPrice,
+              paidAmount: paidAmount,
+              remainingAmount: remainingAmount,
+              isTrackingActive: booking.isTrackingActive || false,
+              createdAt: booking.createdAt || booking.bookingDate,
+            };
+          })
+        );
+        
+        console.log('✅ Transformed bookings:', transformedBookings);
+        console.log('✅ Transformed bookings count:', transformedBookings.length);
+        
+        // Also get bookings from localStorage (for local bookings created before API integration)
+        try {
+          const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
+          console.log('📦 Local bookings from storage:', localBookings.length);
+          // Merge local bookings with API bookings (local bookings first)
+          const finalBookings = [...localBookings, ...transformedBookings];
+          console.log('✅ Final bookings to set:', finalBookings.length);
+          setBookings(finalBookings);
+        } catch (error) {
+          console.error('❌ Error reading bookings from localStorage:', error);
+          console.log('✅ Setting only transformed bookings:', transformedBookings.length);
+          setBookings(transformedBookings);
+        }
+      } else {
+        console.log('⚠️ No bookings found in API response or empty array');
+        console.log('Response was:', {
+          success: response?.success,
+          message: response?.message,
+          data: response?.data,
+        });
+        // If API returns success but empty array, or API fails, try localStorage as fallback
+        try {
+          const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
+          console.log(`📦 Found ${localBookings.length} bookings in localStorage`);
+          setBookings(localBookings);
+        } catch (error) {
+          console.error('❌ Error reading bookings from localStorage:', error);
+          setBookings([]);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching bookings:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Full error:', error);
+      // Fallback to localStorage
+      try {
+        const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
+        console.log(`Fallback: Found ${localBookings.length} bookings in localStorage`);
+        setBookings(localBookings);
+      } catch (localError) {
+        console.error('Error reading bookings from localStorage:', localError);
+        setBookings([]);
+      }
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
   // Fetch bookings on component mount
   useEffect(() => {
@@ -429,6 +559,16 @@ const BookingsPage = () => {
     if (activeTab === 'cancelled') return booking.status === 'cancelled';
     return true;
   });
+
+  // Debug: Log filtered bookings when they change
+  useEffect(() => {
+    console.log('🔍 Filtering bookings:', {
+      activeTab,
+      totalBookings: bookings.length,
+      filteredCount: filteredBookings.length,
+      bookingsStatuses: bookings.map(b => ({ id: b.id, status: b.status })),
+    });
+  }, [bookings, activeTab, filteredBookings.length]);
 
   // Get status badge color
   const getStatusColor = (status) => {

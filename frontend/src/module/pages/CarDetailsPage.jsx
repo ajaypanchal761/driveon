@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Keyboard, Mousewheel } from 'swiper/modules';
 import { motion } from 'framer-motion';
@@ -9,6 +9,8 @@ import CarDetailsHeader from '../components/layout/CarDetailsHeader';
 import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
 import { useAppSelector } from '../../hooks/redux';
+import reviewService from '../../services/review.service';
+import carService from '../../services/car.service';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -87,6 +89,7 @@ const getCarFacingDirection = (imageUrl) => {
 const CarDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -95,7 +98,7 @@ const CarDetailsPage = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
-  // Mock car data - In real app, fetch from API based on id
+  // Mock car data - used only when no initial car is provided and API data isn't available
   // Structure matches document.txt requirements: Model, Brand, Seats, Transmission, Fuel Type, Color, Features, Rating, Reviews, Owner Details, Price
   const getCarData = () => {
     const cars = {
@@ -105,6 +108,7 @@ const CarDetailsPage = () => {
         model: 'FF',
         name: 'Ferrari-FF', // For display compatibility
         image: carImg1,
+        images: [carImg1],
         rating: 5.0,
         reviewsCount: 100,
         location: 'Washington DC',
@@ -167,6 +171,7 @@ const CarDetailsPage = () => {
         model: 'Model S',
         name: 'Tesla Model S',
         image: carImg6,
+        images: [carImg6],
         rating: 5.0,
         reviewsCount: 125,
         location: 'Chicago, USA',
@@ -229,6 +234,7 @@ const CarDetailsPage = () => {
         model: '3 Series',
         name: 'BMW 3 Series',
         image: carImg8,
+        images: [carImg8],
         rating: 5.0,
         reviewsCount: 125,
         location: 'New York',
@@ -291,6 +297,7 @@ const CarDetailsPage = () => {
         model: 'Aventador',
         name: 'Lamborghini Aventador',
         image: carImg4,
+        images: [carImg4],
         rating: 4.9,
         reviewsCount: 80,
         location: 'New York',
@@ -353,6 +360,7 @@ const CarDetailsPage = () => {
         model: 'M2 GTS',
         name: 'BMW M2 GTS',
         image: carImg5,
+        images: [carImg5],
         rating: 5.0,
         reviewsCount: 95,
         location: 'Los Angeles',
@@ -415,6 +423,7 @@ const CarDetailsPage = () => {
         model: 'i7',
         name: 'BMW i7',
         image: carBanImg3,
+        images: [carBanImg3],
         rating: 5.0,
         reviewsCount: 150,
         location: 'New York',
@@ -477,59 +486,276 @@ const CarDetailsPage = () => {
     return cars[id] || cars['1'];
   };
 
-  const baseCar = getCarData();
+  // Helper function to clean and normalize car images
+  // Returns all unique images from API (same as admin side)
+  const normalizeCarImages = (carData) => {
+    if (!carData) return null;
+    
+    let allImages = [];
+    let primaryImage = null;
+    
+    // Extract all images from images array (same as admin side)
+    if (carData.images && Array.isArray(carData.images) && carData.images.length > 0) {
+      // First, extract all image URLs with their primary status
+      const imageUrls = carData.images
+        .map(img => {
+          if (typeof img === 'string') return { url: img.trim(), isPrimary: false };
+          return {
+            url: (img?.url || img?.path || null)?.trim(),
+            isPrimary: img?.isPrimary || false
+          };
+        })
+        .filter(img => img.url); // Remove null/empty values
+      
+      // Remove duplicates based on URL
+      const uniqueImages = [];
+      const seenUrls = new Set();
+      for (const img of imageUrls) {
+        if (!seenUrls.has(img.url)) {
+          seenUrls.add(img.url);
+          uniqueImages.push(img);
+        }
+      }
+      
+      // Find primary image and put it first
+      const primaryImgObj = uniqueImages.find(img => img.isPrimary);
+      if (primaryImgObj) {
+        primaryImage = primaryImgObj.url;
+        // Put primary image first, then others
+        allImages = [
+          primaryImage,
+          ...uniqueImages.filter(img => !img.isPrimary).map(img => img.url)
+        ];
+      } else {
+        // No primary image, use all images in original order
+        allImages = uniqueImages.map(img => img.url);
+        primaryImage = allImages[0];
+      }
+    }
+    
+    // If no images from array, try carData.image
+    if (allImages.length === 0 && carData.image) {
+      const img = typeof carData.image === 'string' 
+        ? carData.image.trim() 
+        : (carData.image?.url || carData.image?.path || null)?.trim();
+      if (img) {
+        allImages = [img];
+        primaryImage = img;
+      }
+    }
+    
+    // Ensure we have at least one image
+    if (allImages.length === 0) {
+      allImages = [carImg1];
+      primaryImage = carImg1;
+    } else if (!primaryImage) {
+      primaryImage = allImages[0];
+    }
+    
+    return {
+      ...carData,
+      image: primaryImage,
+      images: allImages // All images array (same as admin side)
+    };
+  };
+
+  const initialCar = location.state?.car || null;
+  const baseCar = normalizeCarImages(initialCar) || getCarData();
   const [car, setCar] = useState(baseCar);
 
-  // Merge reviews from localStorage with car reviews
+  // Fetch car details from backend when a real car ID (Mongo ObjectId) is used
   useEffect(() => {
-    try {
-      const localReviews = JSON.parse(localStorage.getItem('localReviews') || '[]');
-      console.log('CarDetailsPage - All local reviews:', localReviews);
-      
-      // Normalize IDs for comparison (convert all to strings)
-      const carIdString = id.toString();
-      const baseCarIdString = baseCar.id.toString();
-      console.log('CarDetailsPage - Looking for carId:', carIdString, 'or', baseCarIdString);
-      
-      // Filter reviews for this car - compare as strings
-      const carReviews = localReviews.filter(review => {
-        if (!review.carId) {
-          console.log('Review missing carId:', review);
-          return false;
+    const fetchCarDetails = async () => {
+      if (!id) return;
+
+      // If we already have full car data from navigation state for this id,
+      // don't refetch from API to avoid image order changing (no shuffle)
+      if (initialCar && (initialCar._id === id || initialCar.id === id)) {
+        return;
+      }
+
+      // If it's not a Mongo ObjectId (e.g. demo IDs like "1", "bmw-i7"), keep using mock data
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        setCar(baseCar);
+        return;
+      }
+
+      try {
+        const response = await carService.getCarDetails(id);
+        if (response.success && response.data?.car) {
+          const apiCar = response.data.car;
+
+          // Extract all images from API (same as admin side)
+          let allImages = [];
+          let primaryImage = null;
+          
+          // Extract all images from images array (same as admin side)
+          if (apiCar.images && Array.isArray(apiCar.images) && apiCar.images.length > 0) {
+            // First, extract all image URLs
+            const imageUrls = apiCar.images
+              .map(img => {
+                if (typeof img === 'string') return { url: img.trim(), isPrimary: false };
+                return {
+                  url: (img?.url || img?.path || null)?.trim(),
+                  isPrimary: img?.isPrimary || false
+                };
+              })
+              .filter(img => img.url); // Remove null/empty values
+            
+            // Remove duplicates based on URL
+            const uniqueImages = [];
+            const seenUrls = new Set();
+            for (const img of imageUrls) {
+              if (!seenUrls.has(img.url)) {
+                seenUrls.add(img.url);
+                uniqueImages.push(img);
+              }
+            }
+            
+            // Find primary image
+            const primaryImgObj = uniqueImages.find(img => img.isPrimary);
+            if (primaryImgObj) {
+              primaryImage = primaryImgObj.url;
+              // Put primary image first, then others
+              allImages = [
+                primaryImage,
+                ...uniqueImages.filter(img => !img.isPrimary).map(img => img.url)
+              ];
+            } else {
+              // No primary image, use all images in original order
+              allImages = uniqueImages.map(img => img.url);
+              primaryImage = allImages[0];
+            }
+          }
+          
+          // If no images from array, try primaryImage field
+          if (allImages.length === 0 && apiCar.primaryImage) {
+            allImages = [apiCar.primaryImage];
+            primaryImage = apiCar.primaryImage;
+          }
+          
+          // Ensure we have at least one image
+          if (allImages.length === 0) {
+            allImages = [carImg1];
+            primaryImage = carImg1;
+          } else if (!primaryImage) {
+            primaryImage = allImages[0];
+          }
+
+          // Build car object purely from backend data (no mock merge)
+          // Use all images (same as admin side)
+          const normalizedCar = normalizeCarImages({
+            id: apiCar._id || apiCar.id,
+            brand: apiCar.brand || '',
+            model: apiCar.model || '',
+            name: `${apiCar.brand || ''} ${apiCar.model || ''}`.trim() || 'Car',
+            image: primaryImage,
+            images: allImages, // All images array (same as admin side)
+            rating: apiCar.averageRating || 0,
+            reviewsCount: apiCar.reviewsCount || 0,
+            location:
+              typeof apiCar.location === 'string'
+                ? apiCar.location
+                : apiCar.location?.city ||
+                  apiCar.location?.address ||
+                  '',
+            seats: apiCar.seatingCapacity || 4,
+            transmission:
+              apiCar.transmission === 'automatic'
+                ? 'Automatic'
+                : apiCar.transmission === 'manual'
+                ? 'Manual'
+                : apiCar.transmission === 'cvt'
+                ? 'CVT'
+                : 'Automatic',
+            fuelType:
+              apiCar.fuelType === 'petrol'
+                ? 'Petrol'
+                : apiCar.fuelType === 'diesel'
+                ? 'Diesel'
+                : apiCar.fuelType === 'electric'
+                ? 'Electric'
+                : apiCar.fuelType === 'hybrid'
+                ? 'Hybrid'
+                : 'Petrol',
+            year: apiCar.year,
+            pricePerDay: apiCar.pricePerDay || 0,
+            price: apiCar.pricePerDay || 0,
+            description: apiCar.description || '',
+          });
+          
+          // Preserve images from location.state to prevent shuffle
+          // If we have images from initial state, keep them and only update other fields
+          if (initialCar && initialCar.images && initialCar.images.length > 0) {
+            setCar(prevCar => ({
+              ...normalizedCar,
+              images: prevCar.images, // Keep original images order
+              image: prevCar.image || normalizedCar.image, // Keep original primary image
+            }));
+          } else {
+            setCar(normalizedCar);
+          }
+        } else {
+          setCar(baseCar);
         }
-        const reviewCarId = review.carId.toString();
-        const matches = reviewCarId === carIdString || reviewCarId === baseCarIdString;
-        if (matches) {
-          console.log('Found matching review:', review);
+      } catch (error) {
+        console.error('Error fetching car details:', error);
+        setCar(baseCar);
+      }
+    };
+
+    fetchCarDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Fetch reviews from API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        // Use car ID from params or car object
+        const carId = id || baseCar._id || baseCar.id;
+        if (!carId) {
+          return;
         }
-        return matches;
-      });
-      
-      console.log('CarDetailsPage - Filtered reviews for this car:', carReviews);
-      
-      // Convert local reviews to match car reviews structure
-      const formattedLocalReviews = carReviews.map(review => ({
-        name: review.name,
-        profilePic: review.profilePic || 'https://via.placeholder.com/40',
-        rating: review.rating,
-        comment: review.comment,
-      }));
-      
-      // Merge with existing reviews (local reviews first)
-      const mergedReviews = [...formattedLocalReviews, ...(baseCar.reviews || [])];
-      console.log('CarDetailsPage - Merged reviews:', mergedReviews);
-      
-      // Update car with merged reviews
-      setCar({
-        ...baseCar,
-        reviews: mergedReviews,
-        reviewsCount: mergedReviews.length,
-      });
-    } catch (error) {
-      console.error('Error loading reviews from localStorage:', error);
-      // If error, use base car data
-      setCar(baseCar);
-    }
+
+        // Check if carId is a valid MongoDB ObjectId (24 hex characters)
+        // If not, skip API call and keep existing data
+        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(carId);
+        if (!isValidObjectId) {
+          return;
+        }
+
+        const response = await reviewService.getCarReviews(carId, {
+          page: 1,
+          limit: 5, // Show only 5 reviews on car details page
+          sort: 'newest',
+        });
+
+        if (response.success && response.data) {
+          // Format reviews for display
+          const formattedReviews = response.data.reviews.map(review => ({
+            name: review.user?.name || 'Anonymous',
+            profilePic: review.user?.photo || 'https://via.placeholder.com/40',
+            rating: review.overallRating?.toFixed(1) || '0',
+            comment: review.comment,
+          }));
+
+          // Merge reviews into existing car state (don't reset to mock data)
+          setCar(prev => ({
+            ...prev,
+            reviews: formattedReviews,
+            reviewsCount: response.data.ratings?.totalReviews || prev.reviewsCount || 0,
+            averageRating: response.data.ratings?.averageOverallRating || prev.rating || 0,
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading reviews:', error);
+        // Keep existing car data on error
+      }
+    };
+
+    fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
   
@@ -561,29 +787,47 @@ const CarDetailsPage = () => {
     return specs.join(' · ');
   };
   
-  // Generate car images - use same image 2-3 times for both mobile and web
-  // For web view, we'll show multiple thumbnails
+  // Generate car images for gallery.
+  // Shows all images from API (same as admin side)
   const generateCarImages = () => {
-    const baseImage = car.image;
-    // Generate 4 images by duplicating the base image (like Zoomcar)
-    return [
-      baseImage,
-      baseImage,
-      baseImage,
-      baseImage
-    ];
+    if (!car) return [carImg1];
+    
+    // Return all images from car.images array (same as admin side)
+    if (car.images && Array.isArray(car.images) && car.images.length > 0) {
+      return car.images
+        .map(img => {
+          if (typeof img === 'string') return img.trim();
+          return (img?.url || img?.path || null)?.trim();
+        })
+        .filter(Boolean); // Remove null/empty values
+    }
+    
+    // Fallback to car.image if images array is empty
+    if (car.image) {
+      const img = typeof car.image === 'string' ? car.image : (car.image?.url || car.image?.path || null);
+      if (img) return [img];
+    }
+    
+    return [carImg1];
   };
   
   const carImages = generateCarImages();
+  
+  // Reset image index only when car ID changes (not when images array changes)
+  useEffect(() => {
+    if (carImages.length > 0) {
+      setCurrentImageIndex(0);
+    }
+  }, [car.id]); // Only reset when car ID changes, not when images array changes
   
   // Detect car facing direction
   const [facingDirection, setFacingDirection] = useState('right');
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
   
   useEffect(() => {
-    const direction = getCarFacingDirection(car.image);
+    const direction = getCarFacingDirection(car.image || carImages[0]);
     setFacingDirection(direction);
-  }, [car.image]);
+  }, [car.image, carImages]);
 
   // Booking form state
   const [pickupDate, setPickupDate] = useState('');
@@ -906,14 +1150,14 @@ const CarDetailsPage = () => {
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -1009,13 +1253,40 @@ const CarDetailsPage = () => {
           <div className="relative w-full">
             <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
               {/* Main Large Image with Navigation Arrows */}
-              <div className="relative w-full h-[500px] xl:h-[600px] flex items-center justify-center overflow-hidden">
-                <img
-                  src={carImages[currentImageIndex]}
-                  alt={`${car.name} - Main Image`}
-                  className="w-full h-full object-contain p-6 xl:p-10 transition-opacity duration-300"
-                  draggable={false}
-                />
+              <div className="relative w-full h-[500px] xl:h-[600px] flex items-center justify-center overflow-hidden bg-gray-50">
+                {carImages && carImages.length > 0 && carImages[currentImageIndex] ? (
+                  <img
+                    key={`main-image-${currentImageIndex}-${carImages[currentImageIndex]}`}
+                    src={carImages[currentImageIndex]}
+                    alt={`${car.name || getCarDisplayName()} - Main Image`}
+                    className="w-full h-full object-contain p-6 xl:p-10 transition-all duration-500 ease-in-out"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      position: 'relative',
+                      zIndex: 1
+                    }}
+                    draggable={false}
+                    onError={(e) => {
+                      console.error('Image failed to load:', carImages[currentImageIndex]);
+                      e.target.src = carImg1;
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <img
+                      src={carImg1}
+                      alt="Default Car"
+                      className="w-full h-full object-contain p-6 xl:p-10"
+                      draggable={false}
+                      style={{
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                    />
+                  </div>
+                )}
                 
                 {/* Navigation Arrow - Left */}
                 {carImages.length > 1 && (
@@ -1098,36 +1369,45 @@ const CarDetailsPage = () => {
               </div>
               
               {/* Thumbnail Row - Below Main Image */}
-              <div className="p-4 xl:p-6">
-                <div className="flex gap-2 xl:gap-3 overflow-x-auto scrollbar-hide pb-2">
-                  {carImages.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                        currentImageIndex === index 
-                          ? '' 
-                          : 'hover:opacity-80 opacity-70'
-                      }`}
-                      style={{
-                        backgroundColor: colors.backgroundPrimary,
-                        border: currentImageIndex === index ? `2px solid ${colors.backgroundTertiary}` : '2px solid transparent',
-                        width: '120px',
-                        height: '120px'
-                      }}
-                      onClick={() => setCurrentImageIndex(index)}
-                    >
-                      <div className="w-full h-full flex items-center justify-center p-2">
-                        <img
-                          src={image}
-                          alt={`${car.name} - Thumbnail ${index + 1}`}
-                          className="w-full h-full object-contain"
-                          draggable={false}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              {carImages.length > 1 && (
+                <div className="p-4 xl:p-6">
+                  <div className="flex gap-2 xl:gap-3 overflow-x-auto scrollbar-hide pb-2">
+                    {carImages.map((image, index) => {
+                      const imageKey = typeof image === 'string' ? image : (image?.url || image?.path || `img-${index}`);
+                      return (
+                        <div
+                          key={`thumbnail-${imageKey}-${index}`}
+                          className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                            currentImageIndex === index 
+                              ? '' 
+                              : 'hover:opacity-80 opacity-70'
+                          }`}
+                          style={{
+                            backgroundColor: colors.backgroundPrimary,
+                            border: currentImageIndex === index ? `2px solid ${colors.backgroundTertiary}` : '2px solid transparent',
+                            width: '120px',
+                            height: '120px'
+                          }}
+                          onClick={() => setCurrentImageIndex(index)}
+                        >
+                          <div className="w-full h-full flex items-center justify-center p-2 bg-white">
+                            <img
+                              src={image}
+                              alt={`${car.name || getCarDisplayName()} - Thumbnail ${index + 1}`}
+                              className="w-full h-full object-contain"
+                              draggable={false}
+                              onError={(e) => {
+                                console.error('Thumbnail failed to load:', image);
+                                e.target.src = carImg1;
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -1344,44 +1624,60 @@ const CarDetailsPage = () => {
               watchSlidesProgress={true}
               allowTouchMove={true}
             >
-              {carImages.map((image, index) => (
-                <SwiperSlide key={index} className="!w-full">
-                  <div 
-                    className="relative w-full h-[350px] flex items-center justify-center overflow-hidden"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    {index === 0 ? (
-                      <motion.img
-                        ref={imageRef}
-                        src={image}
-                        alt={`${car.name} - Image ${index + 1}`}
-                        className="w-full h-full object-contain p-4"
-                        draggable={false}
-                        initial={{ 
-                          x: facingDirection === 'left' ? 200 : -200, 
-                          opacity: 0 
-                        }}
-                        animate={isImageInView ? { 
-                          x: 0, 
-                          opacity: 1 
-                        } : { 
-                          x: facingDirection === 'left' ? 200 : -200, 
-                          opacity: 0 
-                        }}
-                        transition={{ 
-                          duration: 0.7, 
-                          ease: 'easeOut'
-                        }}
-                        key={`${car.id}-animated`}
-                      />
-                    ) : (
-                      <img
-                        src={image}
-                        alt={`${car.name} - Image ${index + 1}`}
-                        className="w-full h-full object-contain p-4"
-                        draggable={false}
-                      />
-                    )}
+              {carImages && carImages.length > 0 ? (
+                carImages.map((image, index) => (
+                  <SwiperSlide key={index} className="!w-full">
+                    <div 
+                      className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      {index === 0 ? (
+                        <motion.img
+                          ref={imageRef}
+                          src={image || carImg1}
+                          onError={(e) => {
+                            console.error('Mobile image failed to load:', image);
+                            e.target.src = carImg1;
+                          }}
+                          alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
+                          className="w-full h-full object-contain p-4"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                          }}
+                          draggable={false}
+                          initial={{ 
+                            x: facingDirection === 'left' ? 200 : -200, 
+                            opacity: 0 
+                          }}
+                          animate={{ 
+                            x: 0, 
+                            opacity: 1 
+                          }}
+                          transition={{ 
+                            duration: 0.7, 
+                            ease: 'easeOut'
+                          }}
+                          key={`${car.id || 'car'}-${index}-animated`}
+                        />
+                      ) : (
+                        <img
+                          src={image || carImg1}
+                          onError={(e) => {
+                            console.error('Mobile image failed to load:', image);
+                            e.target.src = carImg1;
+                          }}
+                          alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
+                          className="w-full h-full object-contain p-4"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                          }}
+                          draggable={false}
+                        />
+                      )}
                     
                     {/* Heart Icon - Top Left */}
                     <motion.button 
@@ -1417,11 +1713,65 @@ const CarDetailsPage = () => {
                     </motion.button>
                   </div>
                 </SwiperSlide>
-              ))}
+              ))
+            ) : (
+              <SwiperSlide className="!w-full">
+                  <div 
+                    className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <img
+                      src={carImg1}
+                      alt="Default Car"
+                      className="w-full h-full object-contain p-4"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                      }}
+                      draggable={false}
+                    />
+                    {/* Heart Icon - Top Left */}
+                    <motion.button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFavorite(!isFavorite);
+                        setIsAnimating(true);
+                        setTimeout(() => setIsAnimating(false), 300);
+                      }}
+                      className="absolute top-2 left-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: colors.overlayWhite }}
+                      animate={isAnimating ? {
+                        scale: [1, 1.3, 1],
+                      } : {}}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut"
+                      }}
+                    >
+                      <svg 
+                        className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                        fill={isFavorite ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                        />
+                      </svg>
+                    </motion.button>
+                  </div>
+                </SwiperSlide>
+              )}
             </Swiper>
 
             {/* Pagination Dots - Below Car Image */}
-            <div className="car-pagination-dots absolute bottom-8 left-0 right-0 flex justify-center items-center gap-2 z-10"></div>
+            {carImages && carImages.length > 1 && (
+              <div className="car-pagination-dots absolute bottom-8 left-0 right-0 flex justify-center items-center gap-2 z-10"></div>
+            )}
 
             {/* Custom Pagination Styles */}
             <style>{`
@@ -1466,13 +1816,34 @@ const CarDetailsPage = () => {
             <div className="hidden md:block lg:hidden w-full px-6">
               <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
                 {/* Main Large Image */}
-                <div className="relative w-full h-[500px] flex items-center justify-center overflow-hidden">
-                  <img
-                    src={carImages[currentImageIndex]}
-                    alt={`${car.name} - Main Image`}
-                    className="w-full h-full object-contain p-6 transition-opacity duration-300"
-                    draggable={false}
-                  />
+                <div className="relative w-full h-[500px] flex items-center justify-center overflow-hidden bg-gray-50">
+                  {carImages && carImages.length > 0 && carImages[currentImageIndex] ? (
+                    <img
+                      key={currentImageIndex}
+                      src={carImages[currentImageIndex]}
+                      alt={`${car.name || getCarDisplayName()} - Main Image`}
+                      className="w-full h-full object-contain p-6 transition-all duration-500 ease-in-out"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                      }}
+                      draggable={false}
+                      onError={(e) => {
+                        console.error('Tablet image failed to load:', carImages[currentImageIndex]);
+                        e.target.src = carImg1;
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <img
+                        src={carImg1}
+                        alt="Default Car"
+                        className="w-full h-full object-contain p-6"
+                        draggable={false}
+                      />
+                    </div>
+                  )}
                   
                   {/* Heart Icon - Top Left */}
                   <motion.button 
@@ -1508,34 +1879,43 @@ const CarDetailsPage = () => {
                 </div>
                 
                 {/* Thumbnail Grid - Below Main Image */}
-                <div className="p-4">
-                  <div className="grid grid-cols-3 gap-2">
-                    {carImages.map((image, index) => (
-                      <div
-                        key={index}
-                        className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                          currentImageIndex === index 
-                            ? 'scale-105 shadow-lg border-2' 
-                            : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
-                        }`}
-                        style={{
-                          backgroundColor: colors.backgroundPrimary,
-                          borderColor: currentImageIndex === index ? colors.backgroundTertiary : 'transparent'
-                        }}
-                        onClick={() => setCurrentImageIndex(index)}
-                      >
-                        <div className="aspect-square w-full flex items-center justify-center p-2">
-                          <img
-                            src={image}
-                            alt={`${car.name} - Thumbnail ${index + 1}`}
-                            className="w-full h-full object-contain"
-                            draggable={false}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                {carImages.length > 1 && (
+                  <div className="p-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {carImages.map((image, index) => {
+                        const imageKey = typeof image === 'string' ? image : (image?.url || image?.path || `img-${index}`);
+                        return (
+                          <div
+                            key={`tablet-thumbnail-${imageKey}-${index}`}
+                            className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                              currentImageIndex === index 
+                                ? 'scale-105 shadow-lg border-2' 
+                                : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
+                            }`}
+                            style={{
+                              backgroundColor: colors.backgroundPrimary,
+                              borderColor: currentImageIndex === index ? colors.backgroundTertiary : 'transparent'
+                            }}
+                            onClick={() => setCurrentImageIndex(index)}
+                          >
+                            <div className="aspect-square w-full flex items-center justify-center p-2">
+                              <img
+                                src={image}
+                                alt={`${car.name || getCarDisplayName()} - Thumbnail ${index + 1}`}
+                                className="w-full h-full object-contain"
+                                draggable={false}
+                                onError={(e) => {
+                                  console.error('Tablet thumbnail failed to load:', image);
+                                  e.target.src = carImg1;
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -1570,9 +1950,11 @@ const CarDetailsPage = () => {
               <p className="text-sm text-gray-600 mb-3">{car.description}</p>
               
               {/* Rating and Reviews - As per document.txt */}
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb  -3">
                 <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-black">{car.rating?.toFixed(1) || car.rating}</span>
+                  <span className="text-sm font-semibold text-black">
+                    {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
+                  </span>
                   <svg 
                     className="w-4 h-4" 
                     fill={colors.accentOrange} 
@@ -1581,7 +1963,7 @@ const CarDetailsPage = () => {
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
                 </div>
-                <span className="text-xs text-gray-500">({car.reviewsCount}+ Reviews)</span>
+                <span className="text-xs text-gray-500">({car?.reviewsCount || 0}+ Reviews)</span>
               </div>
 
             </div>
@@ -1631,7 +2013,7 @@ const CarDetailsPage = () => {
             {/* Reviews Section */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-bold text-black">Review ({car.reviewsCount})</h2>
+                <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
                 <button 
                   onClick={() => navigate(`/car-details/${car.id}/reviews`)}
                   className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
@@ -1642,30 +2024,34 @@ const CarDetailsPage = () => {
               
               {/* Reviews - Horizontal Scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-                {car.reviews.map((review, index) => (
-                  <div 
-                    key={index}
-                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-semibold text-black">{review.name}</span>
-                          <span className="text-xs font-semibold text-black">{review.rating}</span>
-                          <svg 
-                            className="w-3 h-3" 
-                            fill={colors.accentOrange} 
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
+                {car?.reviews && car.reviews.length > 0 ? (
+                  car.reviews.map((review, index) => (
+                    <div 
+                      key={index}
+                      className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-black">{review.name}</span>
+                            <span className="text-xs font-semibold text-black">{review.rating}</span>
+                            <svg 
+                              className="w-3 h-3" 
+                              fill={colors.accentOrange} 
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
                     </div>
-                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No reviews yet</div>
+                )}
               </div>
             </div>
           </div>
@@ -1705,8 +2091,10 @@ const CarDetailsPage = () => {
             
             {/* Rating and Reviews - As per document.txt */}
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center gap-1">
-                <span className="text-sm font-semibold text-black">{car.rating?.toFixed(1) || car.rating}</span>
+              <div className="flex flex items-center gap-1">
+                <span className="text-sm font-semibold text-black">
+                  {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
+                </span>
                 <svg 
                   className="w-4 h-4" 
                   fill={colors.accentOrange} 
@@ -1715,7 +2103,7 @@ const CarDetailsPage = () => {
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
               </div>
-              <span className="text-xs text-gray-500">({car.reviewsCount}+ Reviews)</span>
+              <span className="text-xs text-gray-500">({car?.reviewsCount || 0}+ Reviews)</span>
             </div>
 
           </div>
