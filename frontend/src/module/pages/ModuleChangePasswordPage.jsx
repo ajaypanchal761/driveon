@@ -94,7 +94,7 @@ const ModuleChangePasswordPage = () => {
         });
         
         toastUtils.success('Password changed successfully!');
-        navigate('/module-profile/settings');
+        navigate('/profile/settings');
       } else {
         throw new Error(response.message || 'Failed to change password');
       }
@@ -285,7 +285,7 @@ const ModuleChangePasswordPage = () => {
         <div className="flex gap-3 md:gap-4">
           <button
             type="button"
-            onClick={() => navigate('/module-profile/settings')}
+            onClick={() => navigate('/profile/settings')}
             className="flex-1 px-4 py-3 rounded-xl font-semibold text-base border-2 transition-all"
             style={{
               borderColor: colors.backgroundTertiary,

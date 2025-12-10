@@ -52,7 +52,7 @@ const ModuleProfilePage = () => {
     dispatch(logout());
     dispatch(clearUser());
     toastUtils.success('Logged out successfully');
-    navigate('/module-test');
+    navigate('/');
   };
 
   // Calculate profile completion percentage from user data
@@ -72,7 +72,7 @@ const ModuleProfilePage = () => {
           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
         />
       ),
-      path: '/module-profile/complete',
+      path: '/profile/complete',
     },
     {
       id: 'kyc',
@@ -85,7 +85,7 @@ const ModuleProfilePage = () => {
           d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
         />
       ),
-      path: '/module-profile/kyc',
+      path: '/profile/kyc',
     },
     {
       id: 'guarantor',
@@ -98,7 +98,7 @@ const ModuleProfilePage = () => {
           d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
         />
       ),
-      path: '/module-profile/guarantor',
+      path: '/profile/guarantor',
     },
     {
       id: 'referrals',
@@ -111,7 +111,7 @@ const ModuleProfilePage = () => {
           d="M12 4v16m8-8H4"
         />
       ),
-      path: '/module-profile/referrals',
+      path: '/profile/referrals',
     },
   ];
 
@@ -128,7 +128,7 @@ const ModuleProfilePage = () => {
           d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
         />
       ),
-      path: '/module-profile/settings',
+      path: '/profile/settings',
     },
     {
       id: 'languages',
@@ -154,7 +154,7 @@ const ModuleProfilePage = () => {
           d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
         />
       ),
-      path: '/module-profile/referrals',
+      path: '/profile/referrals',
     },
     {
       id: 'privacy',
@@ -216,7 +216,7 @@ const ModuleProfilePage = () => {
           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
         />
       ),
-      path: '/module-bookings',
+      path: '/bookings',
     },
     {
       id: 'settings',
@@ -229,7 +229,7 @@ const ModuleProfilePage = () => {
           d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
         />
       ),
-      path: '/module-profile/settings',
+      path: '/profile/settings',
     },
     {
       id: 'support',
@@ -242,7 +242,7 @@ const ModuleProfilePage = () => {
           d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       ),
-      path: '/module-profile/support',
+      path: '/profile/support',
     },
     {
       id: 'logout',
@@ -276,7 +276,7 @@ const ModuleProfilePage = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
             {/* Left - Logo */}
-            <Link to="/module-test" className="flex-shrink-0">
+            <Link to="/" className="flex-shrink-0">
               <img
                 src="/driveonlogo.png"
                 alt="DriveOn Logo"
@@ -287,7 +287,7 @@ const ModuleProfilePage = () => {
             {/* Center - Navigation Tabs */}
             <nav className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 xl:gap-10 h-full">
               <Link
-                to="/module-test"
+                to="/"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -308,7 +308,7 @@ const ModuleProfilePage = () => {
                 Contact
               </Link>
               <Link
-                to="/module-faq"
+                to="/faq"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -320,7 +320,7 @@ const ModuleProfilePage = () => {
             <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
               {isAuthenticated ? (
                 <Link
-                  to="/module-profile"
+                  to="/profile"
                   className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
                 >
                   {/* Circular profile icon with white border */}
@@ -342,7 +342,7 @@ const ModuleProfilePage = () => {
                 </Link>
               ) : (
                 <Link
-                  to="/module-login"
+                  to="/login"
                   className="px-3 md:px-4 lg:px-5 xl:px-6 py-1.5 md:py-2 lg:py-2.5 rounded-lg border text-xs md:text-sm lg:text-base font-medium transition-all hover:opacity-90"
                   style={{
                     borderColor: colors.borderMedium,

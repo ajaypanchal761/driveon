@@ -164,7 +164,7 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/module-write-review/${booking.id}`, { state: { booking } });
+                navigate(`/write-review/${booking.id}`, { state: { booking } });
               }}
               className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
               style={{ 

@@ -1,17 +1,11 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy } from "react";
-import ProtectedRoute from "../components/layout/ProtectedRoute";
 import AdminRoute from "../components/layout/AdminRoute";
-import OwnerRoute from "../components/layout/OwnerRoute";
-import ProfileCompleteRoute from "../components/layout/ProfileCompleteRoute";
-import PageLayout from "../components/layout/PageLayout";
 import AdminLayout from "../components/admin/layout/AdminLayout";
 import ModuleLayout from "../module/components/layout/ModuleLayout";
 import { useAdminAuth } from "../context/AdminContext";
 
-// Lazy load pages for code splitting (better performance)
-const HomePage = lazy(() => import("../pages/home/HomePage"));
-// Module pages
+// Module pages (new frontend)
 const ModuleHomePage = lazy(() => import("../module/pages/HomePage"));
 const ModuleSearchPage = lazy(() => import("../module/pages/SearchPage"));
 const ModuleCarDetailsPage = lazy(() => import("../module/pages/CarDetailsPage"));
@@ -33,63 +27,8 @@ const ModuleWriteReviewPage = lazy(() => import("../module/pages/ModuleWriteRevi
 const ModuleFAQPage = lazy(() => import("../module/pages/FAQPage"));
 const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
-const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
-const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
-const VerifyOTPPage = lazy(() => import("../pages/auth/VerifyOTPPage"));
-const CarListingPage = lazy(() => import("../pages/cars/CarListingPage"));
-const CarDetailsPage = lazy(() => import("../pages/cars/CarDetailsPage"));
-const CarReviewsPage = lazy(() => import("../pages/cars/CarReviewsPage"));
-const BookingFormPage = lazy(() => import("../pages/booking/BookingFormPage"));
-const RentNowPage = lazy(() => import("../pages/booking/RentNowPage"));
-const BookingDateTimePage = lazy(() =>
-  import("../pages/booking/BookingDateTimePage")
-);
-const BookingPaymentOptionPage = lazy(() =>
-  import("../pages/booking/BookingPaymentOptionPage")
-);
-const BookingGuarantorPage = lazy(() =>
-  import("../pages/booking/BookingGuarantorPage")
-);
-const BookingPaymentPage = lazy(() =>
-  import("../pages/booking/BookingPaymentPage")
-);
-const BookingConfirmationPage = lazy(() =>
-  import("../pages/booking/BookingConfirmationPage")
-);
-const ActiveBookingPage = lazy(() =>
-  import("../pages/booking/ActiveBookingPage")
-);
-const BookingHistoryPage = lazy(() =>
-  import("../pages/booking/BookingHistoryPage")
-);
-const CancelledBookingDetailsPage = lazy(() =>
-  import("../pages/booking/CancelledBookingDetailsPage")
-);
-const CompletedBookingDetailsPage = lazy(() =>
-  import("../pages/booking/CompletedBookingDetailsPage")
-);
-const ReviewFormPage = lazy(() => import("../pages/booking/ReviewFormPage"));
-const ProfileDashboardPage = lazy(() =>
-  import("../pages/profile/ProfileDashboardPage")
-);
-const ProfileCompletePage = lazy(() =>
-  import("../pages/profile/ProfileCompletePage")
-);
-const KYCStatusPage = lazy(() => import("../pages/profile/KYCStatusPage"));
-const GuarantorManagementPage = lazy(() =>
-  import("../pages/profile/GuarantorManagementPage")
-);
-const GuarantorHistoryPage = lazy(() =>
-  import("../pages/profile/GuarantorHistoryPage")
-);
-const GuarantorRequestsPage = lazy(() =>
-  import("../pages/profile/GuarantorRequestsPage")
-);
-const ReferralDashboardPage = lazy(() =>
-  import("../pages/profile/ReferralDashboardPage")
-);
-const SettingsPage = lazy(() => import("../pages/profile/SettingsPage"));
-const SupportPage = lazy(() => import("../pages/profile/SupportPage"));
+
+// Admin pages
 const AdminDashboardPage = lazy(() =>
   import("../pages/admin/AdminDashboardPage")
 );
@@ -138,19 +77,7 @@ const AdminSupportPage = lazy(() =>
 const AdminLoginPage = lazy(() =>
   import("../pages/admin/AdminLoginPage")
 );
-const OwnerDashboardPage = lazy(() =>
-  import("../pages/owner/OwnerDashboardPage")
-);
-const OwnerAddCarPage = lazy(() => import("../pages/owner/OwnerAddCarPage"));
-const OwnerEditCarPage = lazy(() => import("../pages/owner/OwnerEditCarPage"));
-const OwnerBookingsPage = lazy(() =>
-  import("../pages/owner/OwnerBookingsPage")
-);
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
-const TermsAndConditionsPage = lazy(() => import("../pages/TermsAndConditionsPage"));
-const PrivacyPolicyPage = lazy(() => import("../pages/PrivacyPolicyPage"));
-const PoliciesPage = lazy(() => import("../pages/PoliciesPage"));
-const AboutUsPage = lazy(() => import("../pages/AboutUsPage"));
 
 /**
  * AdminRedirectRoute Component
@@ -179,21 +106,24 @@ const AdminRedirectRoute = () => {
 
 // Create router configuration
 const router = createBrowserRouter([
-  // Module routes (without PageLayout wrapper - they have their own Header/BottomNavbar)
-  // Wrapped with ModuleLayout to ensure scroll to top on navigation
+  // Module routes (new frontend) - wrapped with ModuleLayout
   {
     element: <ModuleLayout />,
     children: [
       {
-        path: "/module-test",
+        path: "/",
         element: <ModuleHomePage />,
       },
       {
-        path: "/module-term",
-        element: <ModuleTermsAndConditionsPage />,
+        path: "/login",
+        element: <ModuleLoginPage />,
       },
       {
-        path: "/module-search",
+        path: "/register",
+        element: <ModuleRegisterPage />,
+      },
+      {
+        path: "/search",
         element: <ModuleSearchPage />,
       },
       {
@@ -205,407 +135,216 @@ const router = createBrowserRouter([
         element: <ModuleCarReviewsPage />,
       },
       {
-        path: "/module-profile",
-        element: <ModuleProfilePage />,
-      },
-      {
-        path: "/module-profile/complete",
-        element: <ModuleCompleteProfilePage />,
-      },
-      {
-        path: "/module-profile/edit",
-        element: <ModuleEditProfilePage />,
-      },
-      {
-        path: "/module-profile/change-password",
-        element: <ModuleChangePasswordPage />,
-      },
-      {
-        path: "/module-profile/kyc",
-        element: <ModuleKYCStatusPage />,
-      },
-      {
-        path: "/module-profile/guarantor",
-        element: <ModuleGuarantorPage />,
-      },
-      {
-        path: "/module-profile/referrals",
-        element: <ModuleReferralDashboardPage />,
-      },
-      {
-        path: "/module-profile/settings",
-        element: <ModuleSettingsPage />,
-      },
-      {
-        path: "/module-profile/support",
-        element: <ModuleSupportPage />,
-      },
-      {
-        path: "/module-login",
-        element: <ModuleLoginPage />,
-      },
-      {
-        path: "/module-register",
-        element: <ModuleRegisterPage />,
-      },
-      {
-        path: "/module-bookings",
-        element: <ModuleBookingsPage />,
-      },
-      {
-        path: "/module-write-review/:bookingId",
-        element: <ModuleWriteReviewPage />,
-      },
-      {
-        path: "/module-faq",
-        element: <ModuleFAQPage />,
-      },
-      {
-        path: "/module-privacy-policy",
-        element: <ModulePrivacyPolicyPage />,
-      },
-      {
         path: "/book-now/:id",
         element: <ModuleBookNowPage />,
       },
+      {
+        path: "/profile",
+        element: <ModuleProfilePage />,
+      },
+      {
+        path: "/profile/complete",
+        element: <ModuleCompleteProfilePage />,
+      },
+      {
+        path: "/profile/edit",
+        element: <ModuleEditProfilePage />,
+      },
+      {
+        path: "/profile/change-password",
+        element: <ModuleChangePasswordPage />,
+      },
+      {
+        path: "/profile/kyc",
+        element: <ModuleKYCStatusPage />,
+      },
+      {
+        path: "/profile/guarantor",
+        element: <ModuleGuarantorPage />,
+      },
+      {
+        path: "/profile/referrals",
+        element: <ModuleReferralDashboardPage />,
+      },
+      {
+        path: "/profile/settings",
+        element: <ModuleSettingsPage />,
+      },
+      {
+        path: "/profile/support",
+        element: <ModuleSupportPage />,
+      },
+      {
+        path: "/bookings",
+        element: <ModuleBookingsPage />,
+      },
+      {
+        path: "/write-review/:bookingId",
+        element: <ModuleWriteReviewPage />,
+      },
+      {
+        path: "/faq",
+        element: <ModuleFAQPage />,
+      },
+      {
+        path: "/privacy-policy",
+        element: <ModulePrivacyPolicyPage />,
+      },
+      {
+        path: "/terms",
+        element: <ModuleTermsAndConditionsPage />,
+      },
     ],
   },
+  // Admin Auth Routes (public - no authentication required)
   {
-    element: <PageLayout />,
+    path: "/admin/login",
+    element: <AdminLoginPage />,
+  },
+  // Admin root route - redirects based on authentication
+  {
+    path: "/admin",
+    element: <AdminRedirectRoute />,
+  },
+  // Admin Routes (require admin role and use AdminLayout)
+  {
+    element: <AdminRoute />,
     children: [
-      // Public Routes (excluding home which is handled above)
       {
-        path: "login",
-        element: <LoginPage />,
-      },
-      {
-        path: "register",
-        element: <RegisterPage />,
-      },
-      {
-        path: "verify-otp",
-        element: <VerifyOTPPage />,
-      },
-      {
-        path: "terms",
-        element: <TermsAndConditionsPage />,
-      },
-      {
-        path: "privacy",
-        element: <PoliciesPage />,
-      },
-      {
-        path: "policies",
-        element: <PoliciesPage />,
-      },
-      {
-        path: "about",
-        element: <AboutUsPage />,
-      },
-      // Admin Auth Routes (public - no authentication required)
-      {
-        path: "admin/login",
-        element: <AdminLoginPage />,
-      },
-      // Admin root route - redirects based on authentication
-      {
-        path: "admin",
-        element: <AdminRedirectRoute />,
-      },
-      // Admin Routes (require admin role and use AdminLayout)
-      {
-        element: <AdminRoute />,
+        element: <AdminLayout />,
         children: [
           {
-            element: <AdminLayout />,
-            children: [
-              {
-                path: "admin/dashboard",
-                element: <AdminDashboardPage />,
-              },
-              {
-                path: "admin/users",
-                element: <UserListPage />,
-              },
-              {
-                path: "admin/kyc",
-                element: <KYCListPage />,
-              },
-              {
-                path: "admin/kyc/pending",
-                element: <KYCListPage />,
-              },
-              {
-                path: "admin/kyc/approved",
-                element: <KYCListPage />,
-              },
-              {
-                path: "admin/kyc/rejected",
-                element: <KYCListPage />,
-              },
-              {
-                path: "admin/guarantors",
-                element: <GuarantorListPage />,
-              },
-              {
-                path: "admin/guarantors/pending",
-                element: <GuarantorListPage />,
-              },
-              {
-                path: "admin/cars",
-                element: <CarListPage />,
-              },
-              {
-                path: "admin/cars/new",
-                element: <AddCarPage />,
-              },
-              {
-                path: "admin/cars/:carId/edit",
-                element: <EditCarPage />,
-              },
-              {
-                path: "admin/cars/pending",
-                element: <CarListPage />,
-              },
-              {
-                path: "admin/bookings",
-                element: <BookingListPage />,
-              },
-              {
-                path: "admin/bookings/pending",
-                element: <BookingListPage />,
-              },
-              {
-                path: "admin/bookings/active",
-                element: <BookingListPage />,
-              },
-              {
-                path: "admin/payments",
-                element: <PaymentListPage />,
-              },
-              {
-                path: "admin/payments/pending",
-                element: <PaymentListPage />,
-              },
-              {
-                path: "admin/payments/failed",
-                element: <PaymentListPage />,
-              },
-              {
-                path: "admin/tracking",
-                element: <TrackingPage />,
-              },
-              {
-                path: "admin/tracking/active",
-                element: <TrackingPage />,
-              },
-              {
-                path: "admin/tracking/history",
-                element: <TrackingPage />,
-              },
-              {
-                path: "admin/referrals",
-                element: <ReferralManagementPage />,
-              },
-              {
-                path: "admin/referrals/statistics",
-                element: <ReferralManagementPage />,
-              },
-              {
-                path: "admin/referrals/top-referrers",
-                element: <ReferralManagementPage />,
-              },
-              {
-                path: "admin/coupons",
-                element: <CouponManagementPage />,
-              },
-              {
-                path: "admin/support",
-                element: <AdminSupportPage />,
-              },
-              {
-                path: "admin/settings",
-                element: <AdminSettingsPage />,
-              },
-              {
-                path: "admin/settings/notifications",
-                element: <AdminSettingsPage />,
-              },
-              {
-                path: "admin/settings/security",
-                element: <AdminSettingsPage />,
-              },
-              {
-                path: "admin/settings/features",
-                element: <AdminSettingsPage />,
-              },
-              {
-                path: "admin/profile",
-                element: <AdminProfilePage />,
-              },
-              // Other admin routes will be added here
-              // {
-              //   path: "admin/users",
-              //   element: <AdminUsersPage />,
-              // },
-              // {
-              //   path: "admin/kyc",
-              //   element: <AdminKYCPage />,
-              // },
-              // etc...
-            ],
+            path: "/admin/dashboard",
+            element: <AdminDashboardPage />,
+          },
+          {
+            path: "/admin/users",
+            element: <UserListPage />,
+          },
+          {
+            path: "/admin/kyc",
+            element: <KYCListPage />,
+          },
+          {
+            path: "/admin/kyc/pending",
+            element: <KYCListPage />,
+          },
+          {
+            path: "/admin/kyc/approved",
+            element: <KYCListPage />,
+          },
+          {
+            path: "/admin/kyc/rejected",
+            element: <KYCListPage />,
+          },
+          {
+            path: "/admin/guarantors",
+            element: <GuarantorListPage />,
+          },
+          {
+            path: "/admin/guarantors/pending",
+            element: <GuarantorListPage />,
+          },
+          {
+            path: "/admin/cars",
+            element: <CarListPage />,
+          },
+          {
+            path: "/admin/cars/new",
+            element: <AddCarPage />,
+          },
+          {
+            path: "/admin/cars/:carId/edit",
+            element: <EditCarPage />,
+          },
+          {
+            path: "/admin/cars/pending",
+            element: <CarListPage />,
+          },
+          {
+            path: "/admin/bookings",
+            element: <BookingListPage />,
+          },
+          {
+            path: "/admin/bookings/pending",
+            element: <BookingListPage />,
+          },
+          {
+            path: "/admin/bookings/active",
+            element: <BookingListPage />,
+          },
+          {
+            path: "/admin/payments",
+            element: <PaymentListPage />,
+          },
+          {
+            path: "/admin/payments/pending",
+            element: <PaymentListPage />,
+          },
+          {
+            path: "/admin/payments/failed",
+            element: <PaymentListPage />,
+          },
+          {
+            path: "/admin/tracking",
+            element: <TrackingPage />,
+          },
+          {
+            path: "/admin/tracking/active",
+            element: <TrackingPage />,
+          },
+          {
+            path: "/admin/tracking/history",
+            element: <TrackingPage />,
+          },
+          {
+            path: "/admin/referrals",
+            element: <ReferralManagementPage />,
+          },
+          {
+            path: "/admin/referrals/statistics",
+            element: <ReferralManagementPage />,
+          },
+          {
+            path: "/admin/referrals/top-referrers",
+            element: <ReferralManagementPage />,
+          },
+          {
+            path: "/admin/coupons",
+            element: <CouponManagementPage />,
+          },
+          {
+            path: "/admin/support",
+            element: <AdminSupportPage />,
+          },
+          {
+            path: "/admin/settings",
+            element: <AdminSettingsPage />,
+          },
+          {
+            path: "/admin/settings/notifications",
+            element: <AdminSettingsPage />,
+          },
+          {
+            path: "/admin/settings/security",
+            element: <AdminSettingsPage />,
+          },
+          {
+            path: "/admin/settings/features",
+            element: <AdminSettingsPage />,
+          },
+          {
+            path: "/admin/profile",
+            element: <AdminProfilePage />,
           },
         ],
-      },
-      {
-        path: "cars",
-        element: <CarListingPage />,
-      },
-      {
-        path: "cars/:id",
-        element: <CarDetailsPage />,
-      },
-      {
-        path: "cars/:id/reviews",
-        element: <CarReviewsPage />,
-      },
-      {
-        path: "rent-now/:carId",
-        element: <RentNowPage />,
-      },
-      {
-        path: "booking/:carId",
-        element: <BookingFormPage />,
-      },
-      {
-        path: "booking/:carId/payment",
-        element: <BookingPaymentPage />,
-      },
-
-      // Protected Routes (require authentication)
-      {
-        element: <ProtectedRoute />,
-        children: [
-          // Profile Routes
-          {
-            path: "profile",
-            element: <ProfileDashboardPage />,
-          },
-          {
-            path: "profile/complete",
-            element: <ProfileCompletePage />,
-          },
-          {
-            path: "profile/kyc",
-            element: <KYCStatusPage />,
-          },
-          {
-            path: "profile/guarantor",
-            element: <GuarantorManagementPage />,
-          },
-          {
-            path: "profile/guarantor/requests",
-            element: <GuarantorRequestsPage />,
-          },
-          {
-            path: "profile/guarantor/history",
-            element: <GuarantorHistoryPage />,
-          },
-          {
-            path: "profile/guarantor",
-            element: <GuarantorManagementPage />,
-          },
-          {
-            path: "profile/guarantor/history",
-            element: <GuarantorHistoryPage />,
-          },
-          {
-            path: "profile/referrals",
-            element: <ReferralDashboardPage />,
-          },
-          {
-            path: "profile/settings",
-            element: <SettingsPage />,
-          },
-          {
-            path: "profile/support",
-            element: <SupportPage />,
-          },
-          {
-            path: "bookings",
-            element: <BookingHistoryPage />,
-          },
-          {
-            path: "booking/:id/active",
-            element: <ActiveBookingPage />,
-          },
-          {
-            path: "booking/:id/cancelled",
-            element: <CancelledBookingDetailsPage />,
-          },
-          {
-            path: "booking/:id/completed",
-            element: <CompletedBookingDetailsPage />,
-          },
-
-          // Booking Routes (require profile completion)
-          {
-            element: <ProfileCompleteRoute />,
-            children: [
-              {
-                path: "booking/:carId/date-time",
-                element: <BookingDateTimePage />,
-              },
-              {
-                path: "booking/:carId/payment-option",
-                element: <BookingPaymentOptionPage />,
-              },
-              {
-                path: "booking/:carId/guarantor",
-                element: <BookingGuarantorPage />,
-              },
-              {
-                path: "booking/:id/confirm",
-                element: <BookingConfirmationPage />,
-              },
-            ],
-          },
-          {
-            path: "booking/:bookingId/review",
-            element: <ReviewFormPage />,
-          },
-
-          // Owner Routes (require owner role)
-          {
-            element: <OwnerRoute />,
-            children: [
-              {
-                path: "owner",
-                element: <OwnerDashboardPage />,
-              },
-              {
-                path: "owner/cars/new",
-                element: <OwnerAddCarPage />,
-              },
-              {
-                path: "owner/cars/:id/edit",
-                element: <OwnerEditCarPage />,
-              },
-              {
-                path: "owner/bookings",
-                element: <OwnerBookingsPage />,
-              },
-            ],
-          },
-        ],
-      },
-
-      // 404 Page
-      {
-        path: "*",
-        element: <NotFoundPage />,
       },
     ],
+  },
+  // 404 Page
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 

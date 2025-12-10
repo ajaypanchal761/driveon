@@ -888,7 +888,7 @@ const CarDetailsPage = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
             {/* Left - Logo */}
-            <Link to="/module-test" className="flex-shrink-0">
+            <Link to="/" className="flex-shrink-0">
               <img
                 src="/driveonlogo.png"
                 alt="DriveOn Logo"
@@ -899,7 +899,7 @@ const CarDetailsPage = () => {
             {/* Center - Navigation Tabs */}
             <nav className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 xl:gap-10 h-full">
               <Link
-                to="/module-test"
+                to="/"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -920,7 +920,7 @@ const CarDetailsPage = () => {
                 Contact
               </Link>
               <Link
-                to="/module-faq"
+                to="/faq"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -932,7 +932,7 @@ const CarDetailsPage = () => {
             <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
               {isAuthenticated ? (
                 <Link
-                  to="/module-profile"
+                  to="/profile"
                   className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
                 >
                   {/* Circular profile icon with white border */}
@@ -954,7 +954,7 @@ const CarDetailsPage = () => {
                 </Link>
               ) : (
                 <Link
-                  to="/module-login"
+                  to="/login"
                   className="px-3 md:px-4 lg:px-5 xl:px-6 py-1.5 md:py-2 lg:py-2.5 rounded-lg border text-xs md:text-sm lg:text-base font-medium transition-all hover:opacity-90"
                   style={{
                     borderColor: colors.borderMedium,

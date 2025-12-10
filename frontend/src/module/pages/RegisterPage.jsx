@@ -130,7 +130,7 @@ const ModuleRegisterPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Navigate to home page after successful registration
-      navigate('/module-test', { replace: true });
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Verify OTP Error:', error);
       setError('Invalid OTP. Please try again.');
@@ -597,7 +597,7 @@ const ModuleRegisterPage = () => {
             <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
               Already have an account?{' '}
               <Link
-                to="/module-login"
+                to="/login"
                 className="font-semibold hover:underline"
                 style={{ color: colors.backgroundTertiary }}
               >
@@ -1035,7 +1035,7 @@ const ModuleRegisterPage = () => {
               <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
                 Already have an account?{' '}
                 <Link
-                  to="/module-login"
+                  to="/login"
                   className="font-semibold hover:underline"
                   style={{ color: colors.backgroundTertiary }}
                 >

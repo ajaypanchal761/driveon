@@ -190,7 +190,7 @@ const Header = ({ onHeightChange }) => {
           {/* Top Row - Logo and Search Icon */}
           <div className="flex items-center justify-between mb-1 pt-1">
             {/* Left - Logo */}
-            <Link to="/module-test" className="flex-shrink-0">
+            <Link to="/" className="flex-shrink-0">
               <img
                 src="/driveonlogo.png"
                 alt="DriveOn Logo"

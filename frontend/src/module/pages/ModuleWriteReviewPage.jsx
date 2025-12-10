@@ -26,7 +26,7 @@ const ModuleWriteReviewPage = () => {
   // Redirect if no booking data
   useEffect(() => {
     if (!booking && !bookingId) {
-      navigate('/module-bookings', { replace: true });
+      navigate('/bookings', { replace: true });
     }
   }, [booking, bookingId, navigate]);
 
@@ -109,7 +109,7 @@ const ModuleWriteReviewPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       toastUtils.success('Review submitted successfully!');
-      navigate('/module-bookings', { replace: true });
+      navigate('/bookings', { replace: true });
     } catch (error) {
       console.error('Error submitting review:', error);
       toastUtils.error('Failed to submit review. Please try again.');

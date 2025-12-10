@@ -24,8 +24,8 @@ const Footer = () => {
       { label: 'Pricing', path: '/cars' },
     ],
     legal: [
-      { label: 'Terms & Conditions', path: '/module-term' },
-      { label: 'Privacy Policy', path: '/module-privacy-policy' },
+      { label: 'Terms & Conditions', path: '/terms' },
+      { label: 'Privacy Policy', path: '/privacy-policy' },
       { label: 'Cookie Policy', path: '/policies' },
       { label: 'KYC Policy', path: '/profile/kyc' },
     ],
@@ -157,13 +157,13 @@ const Footer = () => {
           </p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <Link
-              to="/module-term"
+              to="/terms"
               className="text-white/80 hover:text-white transition-colors text-sm"
             >
               Terms & Conditions
             </Link>
             <Link
-              to="/module-privacy-policy"
+              to="/privacy-policy"
               className="text-white/80 hover:text-white transition-colors text-sm"
             >
               Privacy Policy

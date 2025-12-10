@@ -375,7 +375,7 @@ const BookNowPage = () => {
       
       // Show success message and navigate to bookings page
       alert('Booking confirmed! Redirecting to bookings...');
-      navigate('/module-bookings');
+      navigate('/bookings');
     } catch (error) {
       console.error('Error saving booking to localStorage:', error);
       alert('Error saving booking. Please try again.');

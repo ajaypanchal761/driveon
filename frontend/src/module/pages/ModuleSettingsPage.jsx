@@ -32,7 +32,7 @@ const ModuleSettingsPage = () => {
     dispatch(logout());
     dispatch(clearUser());
     toastUtils.success('Logged out successfully');
-    navigate('/module-test');
+    navigate('/');
   };
 
   // Handle save settings
@@ -62,7 +62,7 @@ const ModuleSettingsPage = () => {
           id: 'edit-profile',
           label: 'Edit Profile',
           description: 'Update your personal information',
-          action: () => navigate('/module-profile/edit'),
+          action: () => navigate('/profile/edit'),
           icon: (
             <path
               strokeLinecap="round"
@@ -76,7 +76,7 @@ const ModuleSettingsPage = () => {
           id: 'change-password',
           label: 'Change Password',
           description: 'Update your account password',
-          action: () => navigate('/module-profile/change-password'),
+          action: () => navigate('/profile/change-password'),
           icon: (
             <path
               strokeLinecap="round"
@@ -146,7 +146,7 @@ const ModuleSettingsPage = () => {
           id: 'privacy-policy',
           label: 'Privacy Policy',
           description: 'View our privacy policy',
-          action: () => navigate('/module-privacy-policy'),
+          action: () => navigate('/privacy-policy'),
           icon: (
             <path
               strokeLinecap="round"
@@ -160,7 +160,7 @@ const ModuleSettingsPage = () => {
           id: 'terms',
           label: 'Terms & Conditions',
           description: 'View terms and conditions',
-          action: () => navigate('/module-term'),
+          action: () => navigate('/terms'),
           icon: (
             <path
               strokeLinecap="round"

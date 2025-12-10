@@ -8,27 +8,26 @@ import { colors } from '../../theme/colors';
 const BottomNavbar = () => {
   const location = useLocation();
   const isActive = (path) => {
-    if (path === '/module-test') {
-      return location.pathname === '/module-test';
+    if (path === '/') {
+      return location.pathname === '/';
     }
-    if (path === '/module-search') {
-      return location.pathname === '/module-search';
+    if (path === '/search') {
+      return location.pathname === '/search';
     }
-    if (path === '/module-profile') {
-      return location.pathname === '/module-profile';
-    
+    if (path === '/profile') {
+      return location.pathname.startsWith('/profile');
     }
-    if (path === '/module-bookings') {
-      return location.pathname === '/module-bookings';
+    if (path === '/bookings') {
+      return location.pathname === '/bookings';
     }
     return location.pathname === path;
   };
 
   const navItems = [
-    { path: '/module-test', icon: 'home', label: 'Home' },
-    { path: '/module-search', icon: 'search', label: 'Search' },
-    { path: '/module-bookings', icon: 'bookings', label: 'My Bookings' },
-    { path: '/module-profile', icon: 'profile', label: 'Profile' },
+    { path: '/', icon: 'home', label: 'Home' },
+    { path: '/search', icon: 'search', label: 'Search' },
+    { path: '/bookings', icon: 'bookings', label: 'My Bookings' },
+    { path: '/profile', icon: 'profile', label: 'Profile' },
   ];
 
   const getIcon = (iconName, active) => {

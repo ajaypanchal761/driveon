@@ -266,7 +266,7 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
             {/* Left - Logo */}
-            <Link to="/module-test" className="flex-shrink-0">
+            <Link to="/" className="flex-shrink-0">
               <img
                 src="/driveonlogo.png"
                 alt="DriveOn Logo"
@@ -277,7 +277,7 @@ const HomePage = () => {
             {/* Center - Navigation Tabs */}
             <nav className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 xl:gap-10 h-full">
               <Link
-                to="/module-test"
+                to="/"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -298,7 +298,7 @@ const HomePage = () => {
                 Contact
               </Link>
               <Link
-                to="/module-faq"
+                to="/faq"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -310,7 +310,7 @@ const HomePage = () => {
             <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
               {isAuthenticated ? (
                 <Link
-                  to="/module-profile"
+                  to="/profile"
                   className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
                 >
                   {/* Circular profile icon with white border */}
@@ -332,7 +332,7 @@ const HomePage = () => {
                 </Link>
               ) : (
                 <Link
-                  to="/module-login"
+                  to="/login"
                   className="px-3 md:px-4 lg:px-5 xl:px-6 py-1.5 md:py-2 lg:py-2.5 rounded-lg border text-xs md:text-sm lg:text-base font-medium transition-all hover:opacity-90"
                   style={{
                     borderColor: colors.borderMedium,
@@ -428,7 +428,7 @@ const HomePage = () => {
                   paddingTop: "24px",
                   paddingBottom: "24px",
                 }}
-                onClick={() => navigate("/module-search")}
+                onClick={() => navigate("/search")}
               >
                 {/* Content Container */}
                 <div className="max-w-7xl mx-auto relative flex-1 flex items-center w-full gap-4 md:gap-6 lg:gap-8 xl:gap-12 2xl:gap-16">
@@ -679,7 +679,7 @@ const HomePage = () => {
                             pickupDate,
                             dropoffDate,
                           });
-                          navigate("/module-search");
+                          navigate("/search");
                         }}
                         className="px-4 md:px-6 lg:px-8 py-2 md:py-2.5 lg:py-3 rounded-lg font-semibold text-xs md:text-sm lg:text-base transition-all hover:opacity-90 flex-shrink-0 w-full md:w-auto"
                         style={{
@@ -750,7 +750,7 @@ const HomePage = () => {
               loop={true}
               className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
               style={{ background: colors.backgroundDark }}
-              onClick={() => navigate("/module-search")}
+              onClick={() => navigate("/search")}
             >
               {bannerSlides.map((slide, index) => (
                 <SwiperSlide key={slide.id} className="!w-full">
@@ -766,7 +766,7 @@ const HomePage = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/module-search");
+                          navigate("/search");
                         }}
                         className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
                       >
@@ -916,7 +916,7 @@ const HomePage = () => {
                 </h2>
                 <button
                   className="text-sm text-gray-500 font-medium"
-                  onClick={() => navigate("/module-search")}
+                  onClick={() => navigate("/search")}
                 >
                   View All
                 </button>
@@ -1071,7 +1071,7 @@ const HomePage = () => {
                   </h2>
                   <button
                     className="text-sm text-gray-500 font-medium"
-                    onClick={() => navigate("/module-search")}
+                    onClick={() => navigate("/search")}
                   >
                     View All
                   </button>
@@ -1099,7 +1099,7 @@ const HomePage = () => {
                 </h2>
                 <button
                   className="text-xs md:text-sm lg:text-base xl:text-lg text-gray-500 font-medium hover:opacity-80 transition-opacity"
-                  onClick={() => navigate("/module-search")}
+                  onClick={() => navigate("/search")}
                 >
                   View All
                 </button>
@@ -1121,7 +1121,7 @@ const HomePage = () => {
                 </h2>
                 <button
                   className="text-xs md:text-sm lg:text-base xl:text-lg text-gray-500 font-medium hover:opacity-80 transition-opacity"
-                  onClick={() => navigate("/module-search")}
+                  onClick={() => navigate("/search")}
                 >
                   View All
                 </button>
@@ -1894,7 +1894,7 @@ const HomePage = () => {
                     <li key={link}>
                       {link === "FAQs" ? (
                         <Link
-                          to="/module-faq"
+                          to="/faq"
                           className="text-xs md:text-sm lg:text-base transition-colors hover:opacity-80"
                           style={{ color: colors.textSecondary }}
                         >
@@ -1902,7 +1902,7 @@ const HomePage = () => {
                         </Link>
                       ) : link === "Privacy Policy" ? (
                         <Link
-                          to="/module-privacy-policy"
+                          to="/privacy-policy"
                           className="text-xs md:text-sm lg:text-base transition-colors hover:opacity-80"
                           style={{ color: colors.textSecondary }}
                         >
@@ -1910,7 +1910,7 @@ const HomePage = () => {
                         </Link>
                       ) : link === "Terms & Conditions" ? (
                         <Link
-                          to="/module-term"
+                          to="/terms"
                           className="text-xs md:text-sm lg:text-base transition-colors hover:opacity-80"
                           style={{ color: colors.textSecondary }}
                         >

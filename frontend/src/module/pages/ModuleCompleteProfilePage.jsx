@@ -163,7 +163,7 @@ const ModuleCompleteProfilePage = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      navigate('/module-profile');
+      navigate('/profile');
     }
   };
 
@@ -174,7 +174,7 @@ const ModuleCompleteProfilePage = () => {
     setTimeout(() => {
       toastUtils.success('Profile completed successfully!');
       setIsSubmitting(false);
-      navigate('/module-profile');
+      navigate('/profile');
     }, 1000);
   };
 

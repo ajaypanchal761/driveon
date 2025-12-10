@@ -18,7 +18,7 @@ const ModuleLoginPage = () => {
   const [rememberMe, setRememberMe] = useState(true);
 
   // Get return URL from location state or default to module home
-  const from = location.state?.from?.pathname || '/module-test';
+  const from = location.state?.from?.pathname || '/';
 
   // Prevent body scroll when component mounts
   useEffect(() => {
@@ -366,7 +366,7 @@ const ModuleLoginPage = () => {
               </button>
             ) : (
               <Link
-                to="/module-forgot-password"
+                to="/forgot-password"
                 className="text-sm font-medium hover:underline"
                 style={{ color: colors.backgroundTertiary }}
               >
@@ -399,7 +399,7 @@ const ModuleLoginPage = () => {
             <p className="text-sm" style={{ color: '#21292b' }}>
               Don't have an account?{' '}
               <Link
-                to="/module-register"
+                to="/register"
                 className="font-semibold hover:underline"
                 style={{ color: colors.backgroundTertiary }}
               >
@@ -646,7 +646,7 @@ const ModuleLoginPage = () => {
                 </button>
               ) : (
                 <Link
-                  to="/module-forgot-password"
+                  to="/forgot-password"
                   className="text-sm font-medium hover:underline"
                   style={{ color: colors.backgroundTertiary }}
                 >
@@ -679,7 +679,7 @@ const ModuleLoginPage = () => {
               <p className="text-sm" style={{ color: '#21292b' }}>
                 Don't have an account?{' '}
                 <Link
-                  to="/module-register"
+                  to="/register"
                   className="font-semibold hover:underline"
                   style={{ color: colors.backgroundTertiary }}
                 >
