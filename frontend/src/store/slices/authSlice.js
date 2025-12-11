@@ -1,4 +1,24 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { authService } from '../../services/auth.service';
+
+/**
+ * Async thunk for logout - calls backend API
+ */
+export const logoutUser = createAsyncThunk(
+  'auth/logoutUser',
+  async (_, { rejectWithValue }) => {
+    try {
+      // Call backend logout API
+      await authService.logout();
+      return { success: true };
+    } catch (error) {
+      // Even if API call fails, we should still logout locally
+      console.error('Logout API error:', error);
+      // Return success to allow local logout
+      return { success: true };
+    }
+  }
+);
 
 /**
  * Auth Slice
@@ -47,7 +67,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
     },
 
-    // Logout action
+    // Logout action (synchronous - for immediate state clearing)
     logout: (state) => {
       state.isAuthenticated = false;
       state.token = null;
@@ -72,6 +92,41 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+  },
+  extraReducers: (builder) => {
+    // Handle async logout
+    builder
+      .addCase(logoutUser.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.token = null;
+        state.refreshToken = null;
+        state.userRole = null;
+        state.error = null;
+
+        // Clear localStorage
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('profileComplete');
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        state.isLoading = false;
+        // Even if API call fails, clear local state
+        state.isAuthenticated = false;
+        state.token = null;
+        state.refreshToken = null;
+        state.userRole = null;
+
+        // Clear localStorage
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('profileComplete');
+      });
   },
 });
 

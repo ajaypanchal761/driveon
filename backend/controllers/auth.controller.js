@@ -21,16 +21,36 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check if user already exists
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email format',
+      });
+    }
+
+    // Validate and normalize phone number (10 digits, must start with 6-9 for Indian mobile)
+    const cleanedPhone = phone.replace(/\D/g, ''); // Remove all non-digits
+    if (!cleanedPhone || cleanedPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanedPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number (starting with 6-9).',
+      });
+    }
+    
+    // Use cleaned phone number for all operations
+    const normalizedPhone = cleanedPhone;
+
+    // Check if user already exists (use normalized phone)
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ email }, { phone: normalizedPhone }],
     });
 
     if (existingUser) {
       let message = 'User already exists';
       const emailExists = existingUser.email === email;
-      const phoneExists = existingUser.phone === phone;
-      
+      const phoneExists = existingUser.phone === normalizedPhone;
       if (emailExists && phoneExists) {
         message = 'Email and phone number already registered';
       } else if (emailExists) {
@@ -54,13 +74,13 @@ export const register = async (req, res) => {
       }
     }
 
-    // Generate OTP (pass phone for test number detection)
-    const otp = generateOTP(phone).toString();
+    // Generate OTP (pass normalized phone for test number detection)
+    const otp = generateOTP(normalizedPhone).toString();
     const expiresAt = getOTPExpiry(10); // 10 minutes
 
     // Store OTP in database
     await OTP.create({
-      identifier: phone,
+      identifier: normalizedPhone,
       otp,
       type: 'phone',
       purpose: 'register',
@@ -69,28 +89,76 @@ export const register = async (req, res) => {
     });
 
     // Send OTP via SMS (will skip for test numbers)
+    let smsSent = false;
+    let smsErrorOccurred = false;
+    let smsErrorMessage = null;
+    
     try {
-      const smsResult = await sendOTP(phone, otp, 'register');
+      console.log(`\n📱 ===== Registration OTP Send Attempt =====`);
+      console.log(`📱 Phone: ${normalizedPhone}`);
+      console.log(`📱 OTP: ${otp}`);
+      console.log(`📱 Purpose: register`);
+      
+      const smsResult = await sendOTP(normalizedPhone, otp, 'register');
+      
       if (smsResult.isTest) {
-        console.log(`🧪 Test mode: OTP ${otp} generated for ${phone} (SMS skipped)`);
+        console.log(`🧪 Test mode: OTP ${otp} generated for ${normalizedPhone} (SMS skipped)`);
+        smsSent = true;
       } else {
-        console.log(`✅ OTP sent successfully to ${phone}`);
+        // Verify SMS was actually sent successfully
+        if (smsResult.success === false || smsResult.status === 'failed') {
+          smsErrorOccurred = true;
+          smsErrorMessage = smsResult.error || 'SMS sending failed - unknown error';
+          console.error(`❌ SMS Result indicates failure:`, smsResult);
+        } else {
+          smsSent = true;
+          console.log(`✅ OTP sent successfully to ${normalizedPhone} via SMSIndia Hub`);
+          console.log(`📱 SMS Details:`, {
+            messageId: smsResult.messageId,
+            status: smsResult.status,
+            provider: smsResult.provider,
+            jobId: smsResult.jobId,
+          });
+        }
       }
     } catch (smsError) {
-      console.error('❌ SMS sending failed:', smsError.message);
+      smsErrorOccurred = true;
+      smsErrorMessage = smsError.message;
+      console.error('\n❌ ===== SMS Sending Failed =====');
+      console.error('❌ SMS Error:', smsError.message);
+      console.error('❌ SMS Error Details:', {
+        phone: normalizedPhone,
+        otp: otp,
+        error: smsError.message,
+        stack: process.env.NODE_ENV === 'development' ? smsError.stack : undefined,
+      });
+      console.error('❌ =================================\n');
+    }
+    
+    // Check if SMS failed and handle accordingly
+    if (smsErrorOccurred || !smsSent) {
+      // Check if it's a test number (only allow failure for test numbers in development)
+      const isTestNumber = normalizedPhone && ['9993911855', '9685974247', '6268455485', '9755262071'].some(testNum => normalizedPhone.endsWith(testNum));
       
-      // In development, allow registration even if SMS fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`⚠️ SMS failed but allowing registration in development mode. OTP: ${otp}`);
+      if (isTestNumber && process.env.NODE_ENV === 'development') {
+        console.log(`⚠️ Test number - SMS failed but allowing registration in development mode. OTP: ${otp}`);
+        smsSent = true; // Mark as sent for test numbers
       } else {
-        // In production, return error if SMS fails
+        // For real numbers (like 7610416911), return error if SMS fails
+        console.error(`\n❌ SMS FAILED for real number: ${normalizedPhone}`);
+        console.error(`❌ This number should receive real SMS. Registration blocked.`);
+        console.error(`❌ Error: ${smsErrorMessage || 'Unknown error'}\n`);
+        
         return res.status(500).json({
           success: false,
-          message: 'Failed to send OTP. Please try again.',
-          error: 'SMS service unavailable',
+          message: 'Failed to send OTP. Please check your phone number and try again.',
+          error: process.env.NODE_ENV === 'development' ? (smsErrorMessage || 'SMS service unavailable') : 'SMS service unavailable',
+          phone: normalizedPhone,
         });
       }
     }
+    
+    console.log(`📱 ===== Registration OTP Send Complete =====\n`);
 
     // Create user (but not verified yet)
     // Save name if provided during registration (will be updated during profile completion)
@@ -99,7 +167,7 @@ export const register = async (req, res) => {
     
     const user = await User.create({
       email,
-      phone,
+      phone: normalizedPhone,
       name: userName,
       referredBy,
       isEmailVerified: false,
@@ -115,7 +183,7 @@ export const register = async (req, res) => {
       data: {
         email: user.email,
         phone: user.phone,
-        otpSent: true,
+        otpSent: smsSent,
       },
     });
   } catch (error) {
@@ -137,6 +205,9 @@ export const sendLoginOTP = async (req, res) => {
   try {
     const { emailOrPhone } = req.body;
 
+    console.log(`\n📱 ===== Login OTP Request =====`);
+    console.log(`📱 Input: ${emailOrPhone}`);
+
     if (!emailOrPhone) {
       return res.status(400).json({
         success: false,
@@ -146,20 +217,51 @@ export const sendLoginOTP = async (req, res) => {
 
     // Determine if it's email or phone
     const isEmail = emailOrPhone.includes('@');
-    const phone = isEmail ? null : emailOrPhone.replace(/\D/g, '');
+    let phone = isEmail ? null : emailOrPhone.replace(/\D/g, '');
     const email = isEmail ? emailOrPhone : null;
+    
+    console.log(`📱 Type: ${isEmail ? 'Email' : 'Phone'}`);
+    console.log(`📱 Phone: ${phone || 'N/A'}`);
+    console.log(`📱 Email: ${email || 'N/A'}`);
+    
+    // Validate and normalize phone number if provided (10 digits, must start with 6-9 for Indian mobile)
+    let normalizedPhone = phone;
+    if (phone) {
+      if (phone.length !== 10 || !/^[6-9]\d{9}$/.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number (starting with 6-9).',
+        });
+      }
+      normalizedPhone = phone; // Already cleaned, use as normalized
+    }
+    
+    // Validate email if provided
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format',
+        });
+      }
+    }
 
-    // Find user by email or phone
+    // Find user by email or phone (use normalized phone)
+    console.log(`🔍 Searching for user...`);
     const user = await User.findOne({
-      $or: [{ email: email || '' }, { phone: phone || '' }],
+      $or: [{ email: email || '' }, { phone: normalizedPhone || '' }],
     });
 
     if (!user) {
+      console.log(`❌ User not found`);
       return res.status(400).json({
         success: false,
         message: 'User not found. Please signup first.',
       });
     }
+
+    console.log(`✅ User found: ${user._id}`);
 
     // Check if user is active
     if (!user.isActive) {
@@ -169,48 +271,130 @@ export const sendLoginOTP = async (req, res) => {
       });
     }
 
-    // Generate OTP (pass phone for test number detection)
-    const otp = generateOTP(phone).toString();
+    // Generate OTP (pass normalized phone for test number detection)
+    console.log(`🔐 Generating OTP...`);
+    // Use normalizedPhone if available, otherwise null (for email login)
+    const otpValue = generateOTP(normalizedPhone || null);
+    const otp = otpValue.toString();
     const expiresAt = getOTPExpiry(10); // 10 minutes
+    
+    console.log(`🔐 OTP Generated: ${otp}`);
+    console.log(`🔐 Expires At: ${expiresAt}`);
+    console.log(`🔐 For: ${normalizedPhone ? `Phone ${normalizedPhone}` : `Email ${email}`}`);
 
-    // Store OTP in database
-    const identifier = phone || email;
-    await OTP.create({
-      identifier,
-      otp,
-      type: phone ? 'phone' : 'email',
-      purpose: 'login',
-      expiresAt,
-      isUsed: false,
-    });
+    // Store OTP in database (use normalized phone)
+    const identifier = normalizedPhone || email;
+    
+    // Validate identifier is not empty
+    if (!identifier || identifier.trim() === '') {
+      console.error(`❌ Invalid identifier: ${identifier}`);
+      throw new Error('Invalid identifier: phone or email is required');
+    }
+    
+    console.log(`💾 Storing OTP in database...`);
+    console.log(`💾 Identifier: ${identifier}`);
+    console.log(`💾 Type: ${normalizedPhone ? 'phone' : 'email'}`);
+    
+    try {
+      const otpRecord = await OTP.create({
+        identifier: identifier.trim(),
+        otp: otp.toString(),
+        type: normalizedPhone ? 'phone' : 'email',
+        purpose: 'login',
+        expiresAt,
+        isUsed: false,
+      });
+      console.log(`✅ OTP stored in database with ID: ${otpRecord._id}`);
+    } catch (dbError) {
+      console.error(`❌ Database error storing OTP:`, dbError);
+      console.error(`❌ Error details:`, {
+        message: dbError.message,
+        name: dbError.name,
+        code: dbError.code,
+        keyPattern: dbError.keyPattern,
+        keyValue: dbError.keyValue,
+      });
+      throw new Error(`Failed to store OTP: ${dbError.message}`);
+    }
 
     // Send OTP via SMS (if phone) or Email (if email)
+    // Use same approach as register - SMSIndia Hub service handles promotional SMS automatically
+    let smsSent = false;
+    let smsErrorOccurred = false;
+    let smsErrorMessage = null;
+    
     try {
-      if (phone) {
-        const smsResult = await sendOTP(phone, otp, 'login');
+      if (normalizedPhone) {
+        console.log(`\n📱 ===== Login OTP Send Attempt =====`);
+        console.log(`📱 Phone: ${normalizedPhone}`);
+        console.log(`📱 OTP: ${otp}`);
+        console.log(`📱 Purpose: login`);
+        
+        const smsResult = await sendOTP(normalizedPhone, otp, 'login');
+        
         if (smsResult.isTest) {
-          console.log(`🧪 Test mode: Login OTP ${otp} generated for ${phone} (SMS skipped)`);
+          console.log(`🧪 Test mode: Login OTP ${otp} generated for ${normalizedPhone} (SMS skipped)`);
+          smsSent = true;
         } else {
-          console.log(`✅ Login OTP sent successfully to ${phone}`);
+          // Verify SMS was actually sent successfully
+          if (smsResult.success === false || smsResult.status === 'failed') {
+            smsErrorOccurred = true;
+            smsErrorMessage = smsResult.error || 'SMS sending failed - unknown error';
+            console.error(`❌ SMS Result indicates failure:`, smsResult);
+          } else {
+            smsSent = true;
+            console.log(`✅ Login OTP sent successfully to ${normalizedPhone} via SMSIndia Hub`);
+            console.log(`📱 SMS Details:`, {
+              messageId: smsResult.messageId,
+              status: smsResult.status,
+              provider: smsResult.provider,
+              jobId: smsResult.jobId,
+            });
+          }
         }
       } else {
         // TODO: Implement email OTP sending
         console.log(`⚠️ Email OTP not implemented yet. OTP: ${otp}`);
+        smsSent = false; // Email OTP not sent
       }
     } catch (smsError) {
-      console.error('❌ SMS sending failed:', smsError.message);
+      smsErrorOccurred = true;
+      smsErrorMessage = smsError.message;
+      console.error('\n❌ ===== SMS Sending Failed =====');
+      console.error('❌ SMS Error:', smsError.message);
+      console.error('❌ SMS Error Details:', {
+        phone: normalizedPhone,
+        otp: otp,
+        error: smsError.message,
+        stack: process.env.NODE_ENV === 'development' ? smsError.stack : undefined,
+      });
+      console.error('❌ =================================\n');
+    }
+    
+    // Check if SMS failed and handle accordingly (same as register)
+    if (smsErrorOccurred || !smsSent) {
+      // Check if it's a test number (only allow failure for test numbers in development)
+      const isTestNumber = normalizedPhone && ['9993911855', '9685974247', '6268455485', '9755262071'].some(testNum => normalizedPhone.endsWith(testNum));
       
-      // In development, allow login even if SMS fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`⚠️ SMS failed but allowing login in development mode. OTP: ${otp}`);
+      if (isTestNumber && process.env.NODE_ENV === 'development') {
+        console.log(`⚠️ Test number - SMS failed but allowing login in development mode. OTP: ${otp}`);
+        smsSent = true; // Mark as sent for test numbers
       } else {
+        // For real numbers, return error if SMS fails (same as register)
+        console.error(`\n❌ SMS FAILED for real number: ${normalizedPhone}`);
+        console.error(`❌ This number should receive real SMS. Login blocked.`);
+        console.error(`❌ Error: ${smsErrorMessage || 'Unknown error'}\n`);
+        
         return res.status(500).json({
           success: false,
-          message: 'Failed to send OTP. Please try again.',
-          error: 'SMS service unavailable',
+          message: 'Failed to send OTP. Please check your phone number and try again.',
+          error: process.env.NODE_ENV === 'development' ? (smsErrorMessage || 'SMS service unavailable') : 'SMS service unavailable',
+          phone: normalizedPhone,
         });
       }
     }
+
+    console.log(`✅ ===== Login OTP Send Complete =====\n`);
 
     res.status(200).json({
       success: true,
@@ -218,16 +402,46 @@ export const sendLoginOTP = async (req, res) => {
       data: {
         phone: user.phone,
         email: user.email,
-        otpSent: true,
+        otpSent: smsSent,
       },
     });
   } catch (error) {
-    console.error('Send login OTP error:', error);
-    res.status(500).json({
+    console.error('\n❌ ===== Send Login OTP Error =====');
+    console.error('❌ Error Name:', error.name);
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Code:', error.code);
+    
+    // Log more details in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('❌ Full Error:', error);
+      console.error('❌ Stack Trace:', error.stack);
+      
+      // Check for specific error types
+      if (error.name === 'ValidationError') {
+        console.error('❌ Validation Errors:', error.errors);
+      }
+      if (error.name === 'MongoServerError') {
+        console.error('❌ MongoDB Error Code:', error.code);
+        console.error('❌ MongoDB Error Details:', error.keyPattern, error.keyValue);
+      }
+    }
+    console.error('❌ =================================\n');
+    
+    // Return detailed error in development, generic in production
+    const errorResponse = {
       success: false,
       message: 'Server error during login OTP send',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    };
+    
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+      errorResponse.errorType = error.name;
+      if (error.stack) {
+        errorResponse.stack = error.stack.split('\n').slice(0, 5).join('\n'); // First 5 lines of stack
+      }
+    }
+    
+    res.status(500).json(errorResponse);
   }
 };
 
@@ -247,11 +461,43 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
+    // Validate OTP format (6 digits)
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP format. OTP must be 6 digits.',
+      });
+    }
+
     if (!email && !phone) {
       return res.status(400).json({
         success: false,
         message: 'Email or phone number is required',
       });
+    }
+
+    // Validate and normalize phone number if provided
+    let normalizedPhone = phone;
+    if (phone) {
+      const cleanedPhone = phone.replace(/\D/g, '');
+      if (cleanedPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanedPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number (starting with 6-9).',
+        });
+      }
+      normalizedPhone = cleanedPhone;
+    }
+
+    // Validate email format if provided
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format',
+        });
+      }
     }
 
     // Find user
@@ -266,8 +512,8 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // Find OTP record
-    const identifier = phone || email;
+    // Find OTP record (use normalized phone)
+    const identifier = normalizedPhone || email;
     const otpRecord = await OTP.findOne({
       identifier,
       otp,
@@ -293,8 +539,8 @@ export const verifyOTP = async (req, res) => {
     otpRecord.isUsed = true;
     await otpRecord.save();
 
-    // Mark phone/email as verified
-    if (phone) {
+    // Mark phone/email as verified (use normalized phone)
+    if (normalizedPhone) {
       user.isPhoneVerified = true;
     }
     if (email) {
@@ -370,9 +616,33 @@ export const resendOTP = async (req, res) => {
       });
     }
 
-    // Find user
+    // Validate and normalize phone number if provided
+    let normalizedPhone = phone;
+    if (phone) {
+      const cleanedPhone = phone.replace(/\D/g, '');
+      if (cleanedPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanedPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number (starting with 6-9).',
+        });
+      }
+      normalizedPhone = cleanedPhone;
+    }
+
+    // Validate email if provided
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format',
+        });
+      }
+    }
+
+    // Find user (use normalized phone)
     const user = await User.findOne({
-      $or: [{ email: email || '' }, { phone: phone || '' }],
+      $or: [{ email: email || '' }, { phone: normalizedPhone || '' }],
     });
 
     if (!user) {
@@ -382,29 +652,38 @@ export const resendOTP = async (req, res) => {
       });
     }
 
-    // Generate new OTP (pass phone for test number detection)
-    const otp = generateOTP(phone).toString();
+    // Generate new OTP (pass normalized phone for test number detection)
+    const otp = generateOTP(normalizedPhone).toString();
     const expiresAt = getOTPExpiry(10); // 10 minutes
 
-    // Store OTP in database
-    const identifier = phone || email;
+    // Store OTP in database (use normalized phone)
+    const identifier = normalizedPhone || email;
     await OTP.create({
       identifier,
       otp,
-      type: phone ? 'phone' : 'email',
+      type: normalizedPhone ? 'phone' : 'email',
       purpose,
       expiresAt,
       isUsed: false,
     });
 
     // Send OTP via SMS
+    let smsSent = false;
     try {
-      if (phone) {
-        const smsResult = await sendOTP(phone, otp, purpose);
+      if (normalizedPhone) {
+        console.log(`📱 Attempting to resend OTP to phone: ${normalizedPhone}`);
+        const smsResult = await sendOTP(normalizedPhone, otp, purpose);
+        smsSent = true;
+        
         if (smsResult.isTest) {
-          console.log(`🧪 Test mode: OTP ${otp} resent for ${phone} (SMS skipped)`);
+          console.log(`🧪 Test mode: OTP ${otp} resent for ${normalizedPhone} (SMS skipped)`);
         } else {
-          console.log(`✅ OTP resent successfully to ${phone}`);
+          console.log(`✅ OTP resent successfully to ${normalizedPhone} via SMSIndia Hub`);
+          console.log(`📱 SMS Details:`, {
+            messageId: smsResult.messageId,
+            status: smsResult.status,
+            provider: smsResult.provider,
+          });
         }
       } else {
         // TODO: Implement email OTP sending
@@ -412,14 +691,25 @@ export const resendOTP = async (req, res) => {
       }
     } catch (smsError) {
       console.error('❌ SMS sending failed:', smsError.message);
+      console.error('❌ SMS Error Details:', {
+        phone: normalizedPhone,
+        otp: otp,
+        error: smsError.message,
+        stack: process.env.NODE_ENV === 'development' ? smsError.stack : undefined,
+      });
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`⚠️ SMS failed but allowing resend in development mode. OTP: ${otp}`);
+      // Always return error if SMS fails (even in development for real numbers)
+      // Only allow in development if it's a test number
+      const isTestNumber = normalizedPhone && ['9993911855', '9685974247', '6268455485', '9755262071'].some(testNum => normalizedPhone.endsWith(testNum));
+      
+      if (isTestNumber && process.env.NODE_ENV === 'development') {
+        console.log(`⚠️ Test number - SMS failed but allowing resend in development mode. OTP: ${otp}`);
       } else {
+        // Return error if SMS fails for real numbers
         return res.status(500).json({
           success: false,
-          message: 'Failed to send OTP. Please try again.',
-          error: 'SMS service unavailable',
+          message: 'Failed to send OTP. Please check your phone number and try again.',
+          error: process.env.NODE_ENV === 'development' ? smsError.message : 'SMS service unavailable',
         });
       }
     }

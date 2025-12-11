@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAppDispatch } from '../../hooks/redux';
+import { loginSuccess } from '../../store/slices/authSlice';
+import { setUser } from '../../store/slices/userSlice';
 import { colors } from '../theme/colors';
+import { authService } from '../../services';
+import toastUtils from '../../config/toast';
 
 /**
  * ModuleRegisterPage Component
@@ -10,6 +15,7 @@ import { colors } from '../theme/colors';
  */
 const ModuleRegisterPage = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -99,16 +105,39 @@ const ModuleRegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, you would call authService.register here
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Clean phone number (remove non-digits)
+      const cleanedPhone = phoneNumber.replace(/\D/g, '');
+      
+      // Call actual registration API
+      const response = await authService.register({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: cleanedPhone,
+        referralCode: referralCode.trim() || undefined,
+      });
+
+      console.log('Register Response:', response);
+      
+      // Show success message
+      toastUtils.success('OTP sent successfully! Please check your phone.');
       
       // Show OTP input field
       setShowOTP(true);
       setError('');
     } catch (error) {
       console.error('Register Error:', error);
-      setError('Failed to send OTP. Please try again.');
+      console.error('Error Response:', error.response);
+      console.error('Error Data:', error.response?.data);
+      
+      // Extract error message from various possible formats
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        error.message || 
+        'Failed to send OTP. Please try again.';
+      
+      setError(errorMessage);
+      toastUtils.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -126,14 +155,86 @@ const ModuleRegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, you would call authService.verifyOTP here
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Clean phone number (remove non-digits)
+      const cleanedPhone = phoneNumber.replace(/\D/g, '');
       
-      // Navigate to home page after successful registration
-      navigate('/', { replace: true });
+      // Call actual OTP verification API
+      const response = await authService.verifyOTP({
+        phone: cleanedPhone,
+        email: email.trim(),
+        otp: otp,
+      });
+
+      console.log('✅ Verify OTP Response:', response);
+      console.log('✅ Response structure:', {
+        hasData: !!response.data,
+        hasDataData: !!response.data?.data,
+        hasToken: !!response.data?.data?.token,
+        hasUser: !!response.data?.data?.user,
+      });
+      
+      // Backend returns: { success: true, data: { token, refreshToken, user: {...} } }
+      // Axios wraps: response.data = { success: true, data: { token, refreshToken, user: {...} } }
+      // authService.verifyOTP returns: response.data.data = { token, refreshToken, user: {...} }
+      // So response is already: { token, refreshToken, user: {...} } ✅
+      const token = response?.token;
+      const refreshToken = response?.refreshToken;
+      const userData = response?.user;
+      
+      console.log('📱 Extracted data:', { 
+        token: !!token, 
+        refreshToken: !!refreshToken, 
+        userData: !!userData,
+        tokenPreview: token ? token.substring(0, 20) + '...' : 'null',
+        userName: userData?.name,
+        userEmail: userData?.email,
+        userPhone: userData?.phone,
+      });
+      
+      // Update Redux store with auth tokens
+      if (token) {
+        console.log('🔐 Storing JWT token in Redux and localStorage');
+        dispatch(
+          loginSuccess({
+            token: token,
+            refreshToken: refreshToken,
+            userRole: userData?.role || 'user',
+          })
+        );
+        console.log('✅ Authentication state updated');
+      } else {
+        console.warn('⚠️ No token found in response');
+      }
+
+      // Update Redux store with user data if available
+      if (userData) {
+        console.log('👤 Storing user data in Redux:', userData);
+        dispatch(setUser(userData));
+        console.log('✅ User data stored in Redux');
+      } else {
+        console.warn('⚠️ No user data found in response');
+      }
+      
+      // Show success message
+      toastUtils.success('Registration successful! Welcome to DriveOn.');
+      
+      // Navigate to profile page after successful registration
+      console.log('🔄 Redirecting to profile page...');
+      navigate('/profile/complete', { replace: true });
     } catch (error) {
-      console.error('Verify OTP Error:', error);
-      setError('Invalid OTP. Please try again.');
+      console.error('❌ Verify OTP Error:', error);
+      console.error('❌ Error Response:', error.response);
+      console.error('❌ Error Data:', error.response?.data);
+      
+      // Extract error message
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        error.message || 
+        'Invalid OTP. Please try again.';
+      
+      setError(errorMessage);
+      toastUtils.error(errorMessage);
       setOtp('');
     } finally {
       setIsLoading(false);
@@ -143,11 +244,35 @@ const ModuleRegisterPage = () => {
   const handleResendOTP = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Clean phone number (remove non-digits)
+      const cleanedPhone = phoneNumber.replace(/\D/g, '');
+      
+      // Call actual resend OTP API
+      const response = await authService.resendOTP({
+        phone: cleanedPhone,
+        email: email.trim(),
+        purpose: 'register',
+      });
+
+      console.log('Resend OTP Response:', response);
+      
+      toastUtils.success('OTP resent successfully! Please check your phone.');
       setOtp('');
       setError('');
-      // OTP will be resent
     } catch (error) {
+      console.error('Resend OTP Error:', error);
+      console.error('Error Response:', error.response);
+      console.error('Error Data:', error.response?.data);
+      
+      // Extract error message
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        error.message || 
+        'Failed to resend OTP. Please try again.';
+      
+      setError(errorMessage);
+      toastUtils.error(errorMessage);
       setError('Failed to resend OTP. Please try again.');
     } finally {
       setIsLoading(false);

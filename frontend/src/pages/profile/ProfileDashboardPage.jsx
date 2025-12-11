@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../store/slices/authSlice';
 import { clearUser, updateUser } from '../../store/slices/userSlice';
 import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
@@ -45,7 +45,7 @@ const ProfileDashboardPage = () => {
       try {
         const response = await userService.getProfile();
         
-        // Extract user data from response
+        // Extract user data from response (handle different response formats)
         const userData = response.data?.user || response.data?.data?.user || response.user;
         
         if (userData) {
@@ -54,18 +54,32 @@ const ProfileDashboardPage = () => {
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
-        // Don't show error toast - just use Redux store data as fallback
+        // Show error toast only if it's not a network error
+        if (error.response?.status !== 401) {
+          toastUtils.error('Failed to load profile data');
+        }
       }
     };
 
     fetchUserProfile();
   }, [dispatch, isAuthenticated]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    dispatch(clearUser());
-    toastUtils.success('Logged out successfully');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      // Call async logout thunk that calls backend API
+      await dispatch(logoutUser()).unwrap();
+      // Clear user data
+      dispatch(clearUser());
+      toastUtils.success('Logged out successfully');
+      // Force redirect to login page using window.location for complete page reload
+      window.location.href = '/login';
+    } catch (error) {
+      // Even if logout fails, clear state and force redirect
+      dispatch(clearUser());
+      toastUtils.success('Logged out successfully');
+      // Force redirect to login page
+      window.location.href = '/login';
+    }
   };
 
   // Calculate profile completion percentage from user data
