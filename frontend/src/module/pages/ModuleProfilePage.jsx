@@ -363,31 +363,6 @@ const ModuleProfilePage = () => {
         <ProfileHeader />
       </div>
 
-      {/* Back Button - Below Header */}
-      <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
-        <div className="max-w-7xl mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            style={{ color: colors.backgroundTertiary }}
-          >
-            <svg
-              className="w-5 h-5 md:w-6 md:h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="text-base md:text-lg font-medium">Back</span>
-          </button>
-        </div>
-      </div>
 
       {/* Web Container - Centered with max-width */}
       <div className="max-w-5xl mx-auto">

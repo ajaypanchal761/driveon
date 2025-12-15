@@ -975,8 +975,8 @@ const CarDetailsPage = () => {
         <CarDetailsHeader />
       </div>
 
-      {/* Back Button - Below Header */}
-      <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
+      {/* Back Button - Below Header (desktop only) */}
+      <div className="hidden md:block w-full px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
         <div className="max-w-7xl mx-auto">
           <button
             onClick={() => navigate(-1)}
@@ -1320,12 +1320,12 @@ const CarDetailsPage = () => {
           </div>
         </div>
 
-        {/* Mobile/Tablet: Original Layout (unchanged) */}
+        {/* Mobile/Tablet: Original Layout (image directly on page, no white card) */}
         <div className="lg:hidden">
           {/* Car Images Section */}
           <div className="relative w-full mt-2 md:mt-4">
             {/* Mobile: Swipeable Carousel */}
-            <div className="md:hidden relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
+            <div className="md:hidden relative w-full">
             <Swiper
               modules={[Pagination, Keyboard, Mousewheel]}
               spaceBetween={0}

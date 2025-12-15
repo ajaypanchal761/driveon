@@ -27,6 +27,8 @@ const ModuleWriteReviewPage = lazy(() => import("../module/pages/ModuleWriteRevi
 const ModuleFAQPage = lazy(() => import("../module/pages/FAQPage"));
 const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
+const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
+const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
 
 // Admin pages
 const AdminDashboardPage = lazy(() =>
@@ -193,6 +195,14 @@ const router = createBrowserRouter([
       {
         path: "/terms",
         element: <ModuleTermsAndConditionsPage />,
+      },
+      {
+        path: "/module-test",
+        element: <ModuleTestPage />,
+      },
+      {
+        path: "/module-profile",
+        element: <ModuleNewProfilePage />,
       },
     ],
   },
