@@ -8,4 +8,10 @@ export default defineConfig({
     host: true, // Listen on all network interfaces
     port: 5173, // Default Vite port
   },
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+  },
 })

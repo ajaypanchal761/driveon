@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { logout } from '../../store/slices/authSlice';
-import { clearUser, updateUser } from '../../store/slices/userSlice';
+import { logoutUser } from '../../store/slices/authSlice';
+import { clearUser, updateUser, setUser } from '../../store/slices/userSlice';
 import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
 import ProfileHeader from '../components/layout/ProfileHeader';
@@ -24,35 +24,100 @@ const ModuleProfilePage = () => {
   );
   const { isAuthenticated } = useAppSelector((state) => state.auth);
 
-  // Fetch user profile data when component mounts
+  // State for image loading error (for main profile photo)
+  const [imageError, setImageError] = useState(false);
+  // State for header profile photo error
+  const [headerImageError, setHeaderImageError] = useState(false);
+
+  // Fetch user profile data when component mounts - ALWAYS fetch fresh data
   useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('⚠️ User not authenticated, skipping profile fetch');
+      return;
+    }
+    
     const fetchUserProfile = async () => {
-      if (!isAuthenticated) return;
-      
       try {
+        console.log('📱 ===== Fetching User Profile =====');
+        console.log('📱 Current user in Redux before fetch:', user);
+        
         const response = await userService.getProfile();
         
-        // Extract user data from response
-        const userData = response.data?.user || response.data?.data?.user || response.user;
+        console.log('📱 Raw API response:', response);
+        console.log('📱 Response type:', typeof response);
+        console.log('📱 Response keys:', response ? Object.keys(response) : 'null');
+        console.log('📱 Response.data:', response?.data);
+        console.log('📱 Response.data?.user:', response?.data?.user);
+        console.log('📱 Response.user:', response?.user);
+        
+        // Extract user data from response - handle various response formats
+        // Backend returns: { success: true, data: { user: {...} } }
+        // userService.getProfile() returns response.data which is: { success: true, data: { user: {...} } }
+        // So we need to access: response.data.user (not response.data.data.user)
+        const userData = response?.data?.user || response?.user || response?.data;
+        
+        console.log('📱 Extracted user data:', userData);
+        console.log('📱 User data type:', typeof userData);
+        console.log('📱 User data keys:', userData ? Object.keys(userData) : 'null');
         
         if (userData) {
-          // Update Redux store with fetched data
-          dispatch(updateUser(userData));
+          // Ensure we have the essential fields - preserve all existing fields
+          const normalizedUserData = {
+            ...userData,
+            name: userData.name || userData.fullName || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+          };
+          
+          console.log('📱 Normalized user data:', normalizedUserData);
+          console.log('📱 Normalized name:', normalizedUserData.name);
+          console.log('📱 Normalized phone:', normalizedUserData.phone);
+          console.log('📱 Normalized email:', normalizedUserData.email);
+          
+          // Always use setUser to ensure complete replacement
+          console.log('📱 Dispatching setUser with normalized data');
+          dispatch(setUser(normalizedUserData));
+          
+          console.log('✅ User data set in Redux');
+          
+          // Verify it was set
+          setTimeout(() => {
+            console.log('🔍 Verifying Redux state after setUser...');
+          }, 100);
+        } else {
+          console.warn('⚠️ No user data found in response:', response);
+          console.warn('⚠️ Response structure:', JSON.stringify(response, null, 2));
         }
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('❌ Error fetching user profile:', error);
+        console.error('❌ Error response:', error.response);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
         // Don't show error toast - just use Redux store data as fallback
       }
     };
 
+    // Always fetch, even if user exists in Redux (to get latest data)
     fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, isAuthenticated]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    dispatch(clearUser());
-    toastUtils.success('Logged out successfully');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      // Call async logout thunk that calls backend API
+      await dispatch(logoutUser()).unwrap();
+      // Clear user data
+      dispatch(clearUser());
+      toastUtils.success('Logged out successfully');
+      // Force redirect to login page using window.location for complete page reload
+      window.location.href = '/login';
+    } catch (error) {
+      // Even if logout fails, clear state and force redirect
+      dispatch(clearUser());
+      toastUtils.success('Logged out successfully');
+      // Force redirect to login page
+      window.location.href = '/login';
+    }
   };
 
   // Calculate profile completion percentage from user data
@@ -197,10 +262,95 @@ const ModuleProfilePage = () => {
     },
   ];
 
-  const userName = user?.name || 'User';
-  const userEmail = user?.email || user?.phone || 'user@example.com';
-  const userPhoto = user?.profilePhoto;
+  // Debug: Log user data
+  useEffect(() => {
+    console.log('👤 ===== User Data Debug =====');
+    console.log('👤 Current user data in Redux:', user);
+    console.log('👤 User is null?', user === null);
+    console.log('👤 User is undefined?', user === undefined);
+    console.log('👤 User name:', user?.name);
+    console.log('👤 User phone:', user?.phone);
+    console.log('👤 User email:', user?.email);
+    console.log('👤 ============================');
+  }, [user]);
+  
+  // Get user data with proper fallbacks - ensure we always have values
+  const userName = (user?.name || user?.fullName || '').trim() || 'User';
+  const userPhone = (user?.phone || '').trim();
+  const userEmail = (user?.email || '').trim() || 'N/A';
+  // Profile photo - check for valid URL (not empty string)
+  const userPhoto = user?.profilePhoto && user.profilePhoto.trim() !== '' ? user.profilePhoto : null;
   const username = user?.username || `@${userName.toLowerCase().replace(/\s+/g, '')}`;
+  
+  // Reset image error when user photo changes
+  useEffect(() => {
+    if (userPhoto) {
+      setImageError(false);
+    }
+    if (user?.profilePhoto) {
+      setHeaderImageError(false);
+    }
+  }, [userPhoto, user?.profilePhoto]);
+  
+  // Format phone number for display (add +91 prefix if it's a 10-digit number)
+  const formatPhoneNumber = (phone) => {
+    if (!phone || phone === '' || phone.trim() === '') {
+      console.log('📞 Phone is empty, returning N/A');
+      return 'N/A';
+    }
+    const cleaned = String(phone).replace(/\D/g, '');
+    console.log('📞 Formatting phone:', phone, '-> cleaned:', cleaned);
+    if (cleaned.length === 10) {
+      const formatted = `+91 ${cleaned}`;
+      console.log('📞 Formatted phone:', formatted);
+      return formatted;
+    }
+    // If phone exists but not 10 digits, return as is
+    if (cleaned.length > 0) {
+      console.log('📞 Phone length not 10, returning original:', phone);
+      return phone;
+    }
+    console.log('📞 Phone is invalid, returning N/A');
+    return 'N/A';
+  };
+  
+  // Format phone number - use direct user.phone first, then fallback
+  // Priority: user?.phone > userPhone > 'N/A'
+  const displayPhone = (() => {
+    const phoneToFormat = user?.phone || userPhone;
+    if (phoneToFormat) {
+      return formatPhoneNumber(phoneToFormat);
+    }
+    return 'N/A';
+  })();
+  
+  console.log('📞 ===== Phone Number Display Debug =====');
+  console.log('📞 User object:', user);
+  console.log('📞 user?.phone:', user?.phone);
+  console.log('📞 userPhone variable:', userPhone);
+  console.log('📞 displayPhone:', displayPhone);
+  console.log('📞 ======================================');
+  
+  // Log computed values for debugging
+  console.log('🔍 Computed values:', {
+    userName,
+    userPhone,
+    displayPhone,
+    userEmail,
+    hasUser: !!user,
+    userKeys: user ? Object.keys(user) : [],
+  });
+
+  // Debug display values - log whenever user or display values change
+  useEffect(() => {
+    console.log('📺 ===== Display Values =====');
+    console.log('📺 user object:', user);
+    console.log('📺 userName:', userName);
+    console.log('📺 userPhone:', userPhone);
+    console.log('📺 displayPhone:', displayPhone);
+    console.log('📺 userEmail:', userEmail);
+    console.log('📺 ==========================');
+  }, [user, userName, userPhone, displayPhone, userEmail]);
 
   // Combine all menu items in the order shown in the image
   const allMenuItems = [
@@ -325,10 +475,14 @@ const ModuleProfilePage = () => {
                 >
                   {/* Circular profile icon with white border */}
                   <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full border-2 border-white flex items-center justify-center overflow-hidden bg-gray-800">
-                    {user?.profilePhoto ? (
+                    {user?.profilePhoto && user.profilePhoto.trim() !== '' && !headerImageError ? (
                       <img
                         src={user.profilePhoto}
                         alt="Profile"
+                        onError={() => {
+                          console.log('🖼️ Header profile photo failed to load, showing default');
+                          setHeaderImageError(true);
+                        }}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
@@ -374,11 +528,19 @@ const ModuleProfilePage = () => {
         {/* Profile Picture - Centered */}
           <div className="flex flex-col items-center mb-3 md:mb-3 lg:mb-4">
           <div className="relative mb-1.5 md:mb-2">
-            {userPhoto ? (
+            {userPhoto && !imageError ? (
               <img
                 src={userPhoto}
                 alt={userName}
-                  className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
+                onError={() => {
+                  console.log('🖼️ Profile photo failed to load, showing default icon');
+                  setImageError(true);
+                }}
+                onLoad={() => {
+                  console.log('✅ Profile photo loaded successfully');
+                  setImageError(false);
+                }}
+                className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
                 style={{ borderColor: profileSectionBg }}
               />
             ) : (
@@ -403,15 +565,22 @@ const ModuleProfilePage = () => {
             )}
           </div>
           
-          {/* User Name */}
-            <h2 className="text-lg md:text-lg lg:text-xl font-bold text-black mb-0.5">
-            {userName}
+          {/* User Name - Direct from user object with fallbacks */}
+            <h2 className="text-lg md:text-lg lg:text-xl font-bold text-black mb-1">
+            {user?.name || user?.fullName || userName || 'User'}
           </h2>
           
-          {/* Email Display */}
-            <p className="text-xs md:text-xs lg:text-sm text-gray-600">
-            {userEmail}
+          {/* Phone Number Display - Direct from user object with formatting */}
+            <p className="text-xs md:text-xs lg:text-sm text-gray-600 mb-0.5">
+            {displayPhone}
           </p>
+          
+          {/* Email Display (if available) - Direct from user object */}
+          {(user?.email || (userEmail && userEmail !== 'N/A')) && (
+            <p className="text-xs md:text-xs lg:text-sm text-gray-500">
+              {user?.email || userEmail}
+            </p>
+          )}
         </div>
       </div>
 

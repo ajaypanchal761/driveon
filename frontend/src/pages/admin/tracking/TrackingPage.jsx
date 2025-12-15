@@ -5,7 +5,7 @@ import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import GoogleMap from '../../../components/common/GoogleMap';
 import { adminService } from '../../../services/admin.service';
-import { API_BASE_URL } from '../../../config/api';
+import { SOCKET_URL } from '../../../config/api';
 
 /**
  * Tracking Page
@@ -41,19 +41,8 @@ const TrackingPage = () => {
   // Google Maps API Key (should be in environment variable)
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-  // Get server URL from API_BASE_URL
-  const getServerUrl = () => {
-    const baseUrl = API_BASE_URL.replace('/api', '');
-    if (baseUrl.startsWith('http')) {
-      return baseUrl;
-    }
-    return window.location.origin;
-  };
-
   // Connect to Socket.IO for real-time updates
   useEffect(() => {
-    const serverUrl = getServerUrl();
-    
     // Get admin token from localStorage
     const adminToken = localStorage.getItem('adminToken');
     
@@ -63,7 +52,7 @@ const TrackingPage = () => {
       return;
     }
 
-    socketRef.current = io(serverUrl, {
+    socketRef.current = io(SOCKET_URL, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,

@@ -39,7 +39,19 @@ CLOUDINARY_API_SECRET=3KvMgaUJ6rdYXX-haDPkOfey8-c
 # ============================================
 # SMSIndia Hub Configuration
 # ============================================
-SMSINDIAHUB_API_KEY=j8oT8a4QSkuE8UbnoUHqDw
+SMSINDIAHUB_API_KEY=0hguU16b5066uvF4YXlW9Q
 SMSINDIAHUB_SENDER_ID=SMSHUB
+
+# IMPORTANT: Enable Promotional SMS to avoid DLT template errors
+# ⚠️ WARNING: Promotional SMS is not recommended for production OTP
+# For production, register DLT template and use SMSINDIAHUB_TEMPLATE_ID instead
+SMSINDIAHUB_USE_PROMOTIONAL=true
+
+# Optional: DLT Template Configuration (for production)
+# Register a DLT template in SMSIndia Hub dashboard and add the template ID here
+# SMSINDIAHUB_TEMPLATE_ID=your_template_id_here
+
+# Optional: Custom Message Template (must match registered DLT template exactly)
+# SMSINDIAHUB_MESSAGE_TEMPLATE=Your exact template text with {otp} placeholder
 ============================================
 

@@ -32,10 +32,36 @@ export const userService = {
     try {
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
+      
+      console.log('📡 userService.getProfile - Making API call to:', API_ENDPOINTS.USER.PROFILE);
       const response = await api.get(API_ENDPOINTS.USER.PROFILE);
+      
+      console.log('📡 userService.getProfile - Raw axios response:', response);
+      console.log('📡 userService.getProfile - response.status:', response.status);
+      console.log('📡 userService.getProfile - response.data:', response.data);
+      console.log('📡 userService.getProfile - response.data.success:', response.data?.success);
+      console.log('📡 userService.getProfile - response.data.data:', response.data?.data);
+      console.log('📡 userService.getProfile - response.data.data.user:', response.data?.data?.user);
+      
+      // Backend returns: { success: true, data: { user: {...} } }
+      // Axios wraps it in response.data, so response.data = { success: true, data: { user: {...} } }
+      // Return the full response.data so components can extract user data properly
+      if (!response.data) {
+        console.error('❌ userService.getProfile - No data in response');
+        throw new Error('No data received from server');
+      }
+      
+      if (!response.data.success) {
+        console.error('❌ userService.getProfile - API returned success: false');
+        console.error('❌ Error message:', response.data.message);
+        throw new Error(response.data.message || 'Failed to fetch profile');
+      }
+      
+      console.log('✅ userService.getProfile - Successfully received response');
       return response.data;
     } catch (error) {
       console.error('Get profile error:', error);
+      console.error('Get profile error response:', error.response);
       throw error;
     }
   },

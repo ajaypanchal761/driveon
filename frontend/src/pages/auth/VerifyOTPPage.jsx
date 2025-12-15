@@ -4,6 +4,7 @@ import OtpInput from 'react-otp-input';
 import { Button } from '../../components/common';
 import { useAppDispatch } from '../../hooks/redux';
 import { loginSuccess } from '../../store/slices/authSlice';
+import { setUser } from '../../store/slices/userSlice';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
@@ -77,14 +78,27 @@ const VerifyOTPPage = () => {
         otp: otp,
       });
 
-      // Update Redux store
-      dispatch(
-        loginSuccess({
-          token: response.token,
-          refreshToken: response.refreshToken,
-          userRole: response.user?.role || 'user',
-        })
-      );
+      // Extract data from response (handle different response formats)
+      const responseData = response.data || response;
+      const token = responseData.token || responseData.data?.token;
+      const refreshToken = responseData.refreshToken || responseData.data?.refreshToken;
+      const userData = responseData.user || responseData.data?.user || response.user;
+
+      // Update Redux store with auth tokens
+      if (token) {
+        dispatch(
+          loginSuccess({
+            token: token,
+            refreshToken: refreshToken,
+            userRole: userData?.role || 'user',
+          })
+        );
+      }
+
+      // Update Redux store with user data if available
+      if (userData) {
+        dispatch(setUser(userData));
+      }
 
       toastUtils.success('OTP verified successfully!');
       

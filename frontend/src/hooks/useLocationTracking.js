@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
-import { API_BASE_URL } from '../config/api.js';
+import { SOCKET_URL } from '../config/api.js';
 import { getAddressFromCoordinates } from '../services/location.service.js';
 
 /**
@@ -28,16 +28,6 @@ export const useLocationTracking = ({
   const lastGeocodeTimeRef = useRef(0);
   const addressRef = useRef('');
 
-  // Get server URL from API_BASE_URL (remove /api suffix for Socket.IO)
-  const getServerUrl = () => {
-    const baseUrl = API_BASE_URL.replace('/api', '');
-    // If it's a full URL, use it; otherwise construct it
-    if (baseUrl.startsWith('http')) {
-      return baseUrl;
-    }
-    return window.location.origin;
-  };
-
   const startTracking = () => {
     if (!userId) {
       setError('User ID is required');
@@ -51,8 +41,7 @@ export const useLocationTracking = ({
 
     try {
       // Connect to Socket.IO server
-      const serverUrl = getServerUrl();
-      socketRef.current = io(serverUrl, {
+      socketRef.current = io(SOCKET_URL, {
         transports: ['websocket'],
         reconnection: true,
         reconnectionDelay: 1000,

@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { colors } from '../theme/colors';
+import { authService } from '../../services';
+import toastUtils from '../../config/toast';
+import { useAppDispatch } from '../../hooks/redux';
+import { loginSuccess } from '../../store/slices/authSlice';
+import { setUser } from '../../store/slices/userSlice';
 
 /**
  * ModuleLoginPage Component
@@ -10,6 +15,7 @@ import { colors } from '../theme/colors';
 const ModuleLoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
@@ -59,16 +65,26 @@ const ModuleLoginPage = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, you would call authService.sendLoginOTP here
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Show OTP input field
-      setShowOTP(true);
-      setError('');
+      // Call backend API to send login OTP
+      const response = await authService.sendLoginOTP({
+        emailOrPhone: phoneNumber,
+      });
+
+      if (response.success) {
+        toastUtils.success('OTP sent successfully!');
+        setShowOTP(true);
+        setError('');
+      } else {
+        setError(response.message || 'Failed to send OTP. Please try again.');
+      }
     } catch (error) {
       console.error('Login Error:', error);
-      setError('Failed to send OTP. Please try again.');
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to send OTP. Please try again.';
+      setError(errorMessage);
+      toastUtils.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -86,14 +102,45 @@ const ModuleLoginPage = () => {
     setIsLoading(true);
 
     try {
-      // In a real app, you would call authService.verifyOTP here
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call backend API to verify OTP
+      const response = await authService.verifyOTP({
+        phone: phoneNumber.replace(/\D/g, ''),
+        otp: otp,
+      });
+
+      // Extract data from response
+      const token = response?.token;
+      const refreshToken = response?.refreshToken;
+      const userData = response?.user;
+
+      // Update Redux store with auth tokens
+      if (token) {
+        dispatch(
+          loginSuccess({
+            token: token,
+            refreshToken: refreshToken,
+            userRole: userData?.role || 'user',
+          })
+        );
+      }
+
+      // Update Redux store with user data if available
+      if (userData) {
+        dispatch(setUser(userData));
+      }
+
+      toastUtils.success('OTP verified successfully!');
       
       // Navigate to home page after successful login
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Verify OTP Error:', error);
-      setError('Invalid OTP. Please try again.');
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.message || 
+        'Invalid OTP. Please try again.';
+      setError(errorMessage);
+      toastUtils.error(errorMessage);
       setOtp('');
     } finally {
       setIsLoading(false);
@@ -103,12 +150,28 @@ const ModuleLoginPage = () => {
   const handleResendOTP = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setOtp('');
-      setError('');
-      // OTP will be resent
+      // Call backend API to resend OTP
+      const response = await authService.resendOTP({
+        phone: phoneNumber.replace(/\D/g, ''),
+        purpose: 'login',
+      });
+
+      if (response.success) {
+        toastUtils.success('OTP resent successfully!');
+        setOtp('');
+        setError('');
+      } else {
+        setError(response.message || 'Failed to resend OTP. Please try again.');
+        toastUtils.error(response.message || 'Failed to resend OTP. Please try again.');
+      }
     } catch (error) {
-      setError('Failed to resend OTP. Please try again.');
+      console.error('Resend OTP Error:', error);
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to resend OTP. Please try again.';
+      setError(errorMessage);
+      toastUtils.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -340,7 +403,7 @@ const ModuleLoginPage = () => {
             </div>
           )}
 
-          {/* Remember Me and Forgot Password/Resend OTP */}
+          {/* Remember Me and Resend OTP */}
           <div className="flex items-center justify-between mb-6">
             <label className="flex items-center cursor-pointer">
               <input
@@ -354,7 +417,7 @@ const ModuleLoginPage = () => {
                 Remember me
               </span>
             </label>
-            {showOTP ? (
+            {showOTP && (
               <button
                 type="button"
                 onClick={handleResendOTP}
@@ -364,14 +427,6 @@ const ModuleLoginPage = () => {
               >
                 Resend OTP?
               </button>
-            ) : (
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium hover:underline"
-                style={{ color: colors.backgroundTertiary }}
-              >
-                Forgot password?
-              </Link>
             )}
           </div>
 
@@ -620,7 +675,7 @@ const ModuleLoginPage = () => {
               </div>
             )}
 
-            {/* Remember Me and Forgot Password/Resend OTP */}
+            {/* Remember Me and Resend OTP */}
             <div className="flex items-center justify-between mb-6">
               <label className="flex items-center cursor-pointer">
                 <input
@@ -634,7 +689,7 @@ const ModuleLoginPage = () => {
                   Remember me
                 </span>
               </label>
-              {showOTP ? (
+              {showOTP && (
                 <button
                   type="button"
                   onClick={handleResendOTP}
@@ -644,14 +699,6 @@ const ModuleLoginPage = () => {
                 >
                   Resend OTP?
                 </button>
-              ) : (
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium hover:underline"
-                  style={{ color: colors.backgroundTertiary }}
-                >
-                  Forgot password?
-                </Link>
               )}
             </div>
 

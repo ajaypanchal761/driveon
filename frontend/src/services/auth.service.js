@@ -104,6 +104,15 @@ export const authService = {
       
       if (!isUserNotFound) {
         console.error('sendLoginOTP error:', error);
+        console.error('Error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
+        // Log detailed error in development
+        if (process.env.NODE_ENV === 'development' && error.response?.data?.error) {
+          console.error('Server error details:', error.response.data.error);
+          if (error.response.data.errorType) {
+            console.error('Error type:', error.response.data.errorType);
+          }
+        }
       }
       throw error;
     }

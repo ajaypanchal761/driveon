@@ -63,11 +63,18 @@ const HomePage = () => {
 
   // Date picker states
   const [pickupDate, setPickupDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
   const [dropoffDate, setDropoffDate] = useState("");
+  const [dropoffTime, setDropoffTime] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [calendarSelectedDate, setCalendarSelectedDate] = useState(null);
   const [calendarTarget, setCalendarTarget] = useState(null); // 'pickup' | 'dropoff'
+  const [timePickerTarget, setTimePickerTarget] = useState(null); // 'pickup' | 'dropoff'
+  const [selectedHour, setSelectedHour] = useState(10);
+  const [selectedMinute, setSelectedMinute] = useState(30);
+  const [selectedPeriod, setSelectedPeriod] = useState('am');
 
   // Calendar helper functions
   const openCalendar = (target) => {
@@ -104,14 +111,18 @@ const HomePage = () => {
 
   const handleDateSelect = (date) => {
     setCalendarSelectedDate(date);
-    const iso = date.toISOString().split("T")[0];
+    // Format date as YYYY-MM-DD using local timezone to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     if (calendarTarget === "pickup") {
-      setPickupDate(iso);
+      setPickupDate(dateStr);
       if (dropoffDate && new Date(dropoffDate) < date) {
         setDropoffDate("");
       }
     } else {
-      setDropoffDate(iso);
+      setDropoffDate(dateStr);
     }
     setIsCalendarOpen(false);
   };
@@ -123,6 +134,36 @@ const HomePage = () => {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
+  };
+
+  const formatTimeDisplay = (timeString) => {
+    if (!timeString) return "hh:mm";
+    return timeString;
+  };
+
+  const openTimePicker = (target) => {
+    setTimePickerTarget(target);
+    const currentTime = target === "pickup" ? pickupTime : dropoffTime;
+    if (currentTime) {
+      const [time, period] = currentTime.split(' ');
+      if (time) {
+        const [hour, minute] = time.split(':');
+        setSelectedHour(parseInt(hour) || 10);
+        setSelectedMinute(parseInt(minute) || 30);
+        setSelectedPeriod(period || 'am');
+      }
+    }
+    setIsTimePickerOpen(true);
+  };
+
+  const handleTimeSelect = () => {
+    const formattedTime = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')} ${selectedPeriod}`;
+    if (timePickerTarget === "pickup") {
+      setPickupTime(formattedTime);
+    } else if (timePickerTarget === "dropoff") {
+      setDropoffTime(formattedTime);
+    }
+    setIsTimePickerOpen(false);
   };
 
   // Banner carousel data
@@ -147,7 +188,7 @@ const HomePage = () => {
       gradient: "linear-gradient(135deg, #f8f8f8, #d0d4d7)",
       title: "Easy Rentals,",
       subtitle: "Anywhere You Go.",
-      cta: "Find Perfect Car To Drive",
+      cta: "Find Perfect Car To DriveOn",
     },
     {
       img: web_banImg4, // white Tesla
@@ -350,181 +391,117 @@ const HomePage = () => {
 
       {/* Web Hero Section - Only visible on web */}
       <div className="hidden md:block relative w-full">
-        {/* Hero Content Section - Dynamic gradient background with auto-scrolling */}
-        <Swiper
-          modules={[Pagination, Keyboard, Mousewheel, Autoplay]}
-          spaceBetween={0}
-          slidesPerView={1}
-          onSwiper={(swiper) => {
-            heroBannerSwiperRef.current = swiper;
-          }}
-          pagination={{
-            el: ".hero-banner-pagination",
-            clickable: true,
-          }}
-          autoplay={{
-            delay: 5000,
-            disableOnInteraction: false,
-          }}
-          keyboard={{ enabled: true }}
-          mousewheel={{ forceToAxis: true, sensitivity: 1 }}
-          speed={500}
-          loop={true}
-          className="hero-swiper w-full"
+        {/* Hero Content Section - Static single slide */}
+        <div
+          className="hero relative w-full px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 transition-all duration-500 ease-in-out"
           style={{
             minHeight: "100vh",
             height: "100vh",
-          }}
-          onSlideChange={(swiper) => {
-            // Update background gradient dynamically
-            const activeIndex = swiper.realIndex;
-            const swiperEl = swiper.el;
-            if (swiperEl) {
-              const slide = swiperEl.querySelector(".swiper-slide-active");
-              if (slide) {
-                const gradient =
-                  heroBanners[activeIndex]?.gradient ||
-                  colors.backgroundPrimary;
-                swiperEl.style.background = gradient;
-              }
-            }
-            // Update custom pagination dots
-            const paginationEl = document.querySelector(
-              ".hero-banner-pagination"
-            );
-            if (paginationEl) {
-              const bullets = paginationEl.querySelectorAll(
-                ".swiper-pagination-bullet"
-              );
-              bullets.forEach((bullet, idx) => {
-                if (idx === swiper.realIndex) {
-                  bullet.style.backgroundColor = "#21292b";
-                } else {
-                  bullet.style.backgroundColor = "rgba(0,0,0,0.15)";
-                }
-              });
-            }
-          }}
-          onInit={(swiper) => {
-            // Set initial background
-            const activeIndex = swiper.realIndex;
-            const gradient =
-              heroBanners[activeIndex]?.gradient || colors.backgroundPrimary;
-            swiper.el.style.background = gradient;
-            swiper.el.style.transition = "background 500ms ease";
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            position: "relative",
+            paddingTop: "24px",
+            paddingBottom: "24px",
+            background: heroBanners[0]?.gradient || colors.backgroundPrimary,
+            transition: "background 500ms ease",
           }}
         >
-          {heroBanners.map((banner, index) => (
-            <SwiperSlide key={index} className="!w-full">
-              <div
-                className="hero relative w-full px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 transition-all duration-500 ease-in-out cursor-pointer"
+          {/* Content Container */}
+          <div className="max-w-7xl mx-auto relative flex-1 flex items-center w-full gap-4 md:gap-6 lg:gap-8 xl:gap-12 2xl:gap-16">
+            {/* Left Side - Text Content */}
+            <div className="hero-content flex-1 z-10">
+              {/* Main Headline */}
+              <h1
+                className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-2 md:mb-3 lg:mb-4 leading-tight transition-all duration-1000 ease-in-out"
                 style={{
-                  minHeight: "100vh",
-                  height: "100vh",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  position: "relative",
-                  paddingTop: "24px",
-                  paddingBottom: "24px",
+                  animation: "fadeInUp 1s ease-in-out",
                 }}
-                onClick={() => navigate("/search")}
               >
-                {/* Content Container */}
-                <div className="max-w-7xl mx-auto relative flex-1 flex items-center w-full gap-4 md:gap-6 lg:gap-8 xl:gap-12 2xl:gap-16">
-                  {/* Left Side - Text Content */}
-                  <div className="hero-content flex-1 z-10">
-                    {/* Main Headline */}
-                    <h1
-                      className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-2 md:mb-3 lg:mb-4 leading-tight transition-all duration-1000 ease-in-out"
-                      style={{
-                        animation: "fadeInUp 1s ease-in-out",
-                      }}
-                    >
-                      {banner?.title ? (
-                        <>
-                          <span style={{ color: "#21292b" }}>
-                            {banner.title.split(" ")[0]}
-                          </span>{" "}
-                          <span style={{ color: colors.textPrimary }}>
-                            {banner.title.split(" ").slice(1).join(" ")}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span style={{ color: "#21292b" }}>Easy</span>{" "}
-                          <span style={{ color: colors.textPrimary }}>
-                            Rentals,
-                          </span>
-                        </>
-                      )}
-                      <br />
-                      <span style={{ color: colors.textPrimary }}>
-                        {banner?.subtitle || "Anywhere You Go."}
-                      </span>
-                    </h1>
+                {heroBanners[0]?.title ? (
+                  <>
+                    <span style={{ color: "#21292b" }}>
+                      {heroBanners[0].title.split(" ")[0]}
+                    </span>{" "}
+                    <span style={{ color: colors.textPrimary }}>
+                      {heroBanners[0].title.split(" ").slice(1).join(" ")}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ color: "#21292b" }}>Easy</span>{" "}
+                    <span style={{ color: colors.textPrimary }}>
+                      Rentals,
+                    </span>
+                  </>
+                )}
+                <br />
+                <span style={{ color: colors.textPrimary }}>
+                  {heroBanners[0]?.subtitle || "Anywhere You Go."}
+                </span>
+              </h1>
 
-                    {/* Call to Action */}
-                    <div
-                      className="flex items-center gap-2 md:gap-3 mt-3 md:mt-4 lg:mt-5 mb-4 md:mb-6 transition-all duration-1000 ease-in-out"
-                      style={{
-                        animation: "fadeInUp 1s ease-in-out",
-                      }}
-                    >
-                      <span
-                        className="text-base md:text-lg lg:text-xl xl:text-2xl font-medium"
-                        style={{ color: colors.textPrimary }}
-                      >
-                        {banner?.cta || "Find Perfect Car To Drive"}
-                      </span>
-                      <svg
-                        className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style={{ color: colors.textPrimary }}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M5 13h14M5 13l-1-4h16l-1 4M5 13v6a1 1 0 001 1h12a1 1 0 001-1v-6M9 9V7a2 2 0 012-2h2a2 2 0 012 2v2"
-                        />
-                        <circle cx="7" cy="17" r="1.5" fill="currentColor" />
-                        <circle cx="17" cy="17" r="1.5" fill="currentColor" />
-                      </svg>
-                      <div
-                        className="h-px flex-1"
-                        style={{ backgroundColor: colors.borderMedium }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Right Side - Car Image */}
-                  <div className="flex-1 flex items-center justify-center h-full relative min-w-0">
-                    <img
-                      src={banner.img}
-                      alt="Car"
-                      loading={index === 0 ? "eager" : "lazy"}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        transformOrigin: "center bottom",
-                        filter: "drop-shadow(0 10px 30px rgba(0, 0, 0, 0.1))",
-                        animation: "fadeInUp 1s ease-in-out",
-                      }}
-                      draggable={false}
-                    />
-                  </div>
-                </div>
-
-                {/* Search Bar Section - Positioned at bottom of hero section */}
-                <div
-                  className="w-full px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 pb-2 -mt-12"
-                  onClick={(e) => e.stopPropagation()}
+              {/* Call to Action */}
+              <div
+                className="flex items-center gap-2 md:gap-3 mt-3 md:mt-4 lg:mt-5 mb-4 md:mb-6 transition-all duration-1000 ease-in-out"
+                style={{
+                  animation: "fadeInUp 1s ease-in-out",
+                }}
+              >
+                <span
+                  className="text-base md:text-lg lg:text-xl xl:text-2xl font-medium"
+                  style={{ color: colors.textPrimary }}
                 >
-                  <div className="max-w-7xl mx-auto">
+                  {heroBanners[0]?.cta || "Find Perfect Car To Drive"}
+                </span>
+                <svg
+                  className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  style={{ color: colors.textPrimary }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M5 13h14M5 13l-1-4h16l-1 4M5 13v6a1 1 0 001 1h12a1 1 0 001-1v-6M9 9V7a2 2 0 012-2h2a2 2 0 012 2v2"
+                  />
+                  <circle cx="7" cy="17" r="1.5" fill="currentColor" />
+                  <circle cx="17" cy="17" r="1.5" fill="currentColor" />
+                </svg>
+                <div
+                  className="h-px flex-1"
+                  style={{ backgroundColor: colors.borderMedium }}
+                />
+              </div>
+            </div>
+
+            {/* Right Side - Car Image */}
+            <div className="flex-1 flex items-center justify-center h-full relative min-w-0">
+              <img
+                src={heroBanners[0]?.img || web_banImg2}
+                alt="Car"
+                loading="eager"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  transformOrigin: "center bottom",
+                  filter: "drop-shadow(0 10px 30px rgba(0, 0, 0, 0.1))",
+                  animation: "fadeInUp 1s ease-in-out",
+                }}
+                draggable={false}
+              />
+            </div>
+          </div>
+
+                 {/* Search Bar Section - Positioned at bottom of hero section */}
+                 <div
+                   className="w-full px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 pb-2 -mt-0"
+                   onClick={(e) => e.stopPropagation()}
+                 >
+                   <div className="max-w-7xl mx-auto mb-24">
                     {/* Search Form */}
                     <div
                       className="booking-card flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 lg:gap-4 bg-white rounded-xl p-3 md:p-4 lg:p-5 shadow-lg"
@@ -534,35 +511,13 @@ const HomePage = () => {
                         zIndex: 40,
                       }}
                     >
-                      {/* Pick-up Location */}
-                      <div className="flex-1">
-                        <label
-                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Pick-up Location
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Malta International Airport"
-                          className="w-full text-xs md:text-sm lg:text-base outline-none py-0.5 md:py-1"
-                          style={{ color: colors.textPrimary }}
-                        />
-                      </div>
-
-                      {/* Divider */}
-                      <div
-                        className="hidden md:block w-px h-10 md:h-12 lg:h-14"
-                        style={{ backgroundColor: colors.borderMedium }}
-                      />
-
-                      {/* Pick-up Date */}
+                      {/* Trip Start Date */}
                       <div className="flex-1 relative">
                         <label
                           className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
                           style={{ color: colors.textSecondary }}
                         >
-                          Pick-up Date
+                          Trip Start Date
                         </label>
                         <div className="flex items-center gap-1.5">
                           <button
@@ -575,7 +530,7 @@ const HomePage = () => {
                                 : colors.textTertiary,
                             }}
                           >
-                            {formatDateDisplay(pickupDate)}
+                            {pickupDate ? formatDateDisplay(pickupDate) : "dd-mm-yyyy"}
                           </button>
                           <svg
                             className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
@@ -592,19 +547,49 @@ const HomePage = () => {
                               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                           </svg>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div
+                        className="hidden md:block w-px h-10 md:h-12 lg:h-14"
+                        style={{ backgroundColor: colors.borderMedium }}
+                      />
+
+                      {/* Trip Start Time */}
+                      <div className="flex-1 relative">
+                        <label
+                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Trip Start Time
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openTimePicker("pickup")}
+                            className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
+                            style={{
+                              color: pickupTime
+                                ? colors.textPrimary
+                                : colors.textTertiary,
+                            }}
+                          >
+                            {pickupTime ? formatTimeDisplay(pickupTime) : "hh:mm"}
+                          </button>
                           <svg
                             className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
                             style={{ color: colors.textSecondary }}
-                            onClick={() => openCalendar("pickup")}
+                            onClick={() => openTimePicker("pickup")}
                           >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                             />
                           </svg>
                         </div>
@@ -616,13 +601,13 @@ const HomePage = () => {
                         style={{ backgroundColor: colors.borderMedium }}
                       />
 
-                      {/* Drop-off Date */}
+                      {/* Trip End Date */}
                       <div className="flex-1 relative">
                         <label
                           className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
                           style={{ color: colors.textSecondary }}
                         >
-                          Drop-off Date
+                          Trip End Date
                         </label>
                         <div className="flex items-center gap-1.5">
                           <button
@@ -635,7 +620,7 @@ const HomePage = () => {
                                 : colors.textTertiary,
                             }}
                           >
-                            {formatDateDisplay(dropoffDate)}
+                            {dropoffDate ? formatDateDisplay(dropoffDate) : "dd-mm-yyyy"}
                           </button>
                           <svg
                             className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
@@ -652,19 +637,49 @@ const HomePage = () => {
                               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                           </svg>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div
+                        className="hidden md:block w-px h-10 md:h-12 lg:h-14"
+                        style={{ backgroundColor: colors.borderMedium }}
+                      />
+
+                      {/* Trip End Time */}
+                      <div className="flex-1 relative">
+                        <label
+                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          Trip End Time
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openTimePicker("dropoff")}
+                            className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
+                            style={{
+                              color: dropoffTime
+                                ? colors.textPrimary
+                                : colors.textTertiary,
+                            }}
+                          >
+                            {dropoffTime ? formatTimeDisplay(dropoffTime) : "hh:mm"}
+                          </button>
                           <svg
                             className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
                             style={{ color: colors.textSecondary }}
-                            onClick={() => openCalendar("dropoff")}
+                            onClick={() => openTimePicker("dropoff")}
                           >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                             />
                           </svg>
                         </div>
@@ -693,21 +708,6 @@ const HomePage = () => {
                   </div>
                 </div>
               </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-
-        {/* Bottom-right dots navigation */}
-        <div
-          className="hero-banner-pagination absolute flex items-center"
-          style={{
-            gap: "6px",
-            right: "32px",
-            bottom: "60px",
-            zIndex: 30,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        ></div>
 
         {/* White Background Section Below Search Bar */}
         <div
@@ -1278,10 +1278,14 @@ const HomePage = () => {
             <div className="grid grid-cols-7 gap-1">
               {getCalendarDays().map((date, idx) => {
                 if (!date) return <div key={idx}></div>;
-                const dateStr = date.toISOString().split("T")[0];
-                const isSelected =
-                  calendarSelectedDate &&
-                  dateStr === calendarSelectedDate.toISOString().split("T")[0];
+                // Format date as YYYY-MM-DD using local timezone to avoid timezone issues
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                // Check if this date is selected based on the target (pickup or dropoff)
+                const currentSelectedDate = calendarTarget === "pickup" ? pickupDate : dropoffDate;
+                const isSelected = currentSelectedDate && dateStr === currentSelectedDate;
                 const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
                 const isCurrentMonth =
                   date.getMonth() === calendarMonth.getMonth();
@@ -1324,6 +1328,179 @@ const HomePage = () => {
                 );
               })}
             </div>
+          </div>
+        </>
+      )}
+
+      {/* Time Picker Popup */}
+      {isTimePickerOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[100] bg-black/40"
+            onClick={() => setIsTimePickerOpen(false)}
+          />
+
+          {/* Time Picker Modal */}
+          <div
+            className="fixed z-[110] rounded-xl shadow-2xl border p-4"
+            style={{
+              backgroundColor: colors.backgroundSecondary,
+              borderColor: colors.borderForm,
+              width: "280px",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3
+                className="text-sm font-semibold"
+                style={{ color: colors.textPrimary }}
+              >
+                Select Time
+              </h3>
+              <button
+                onClick={() => setIsTimePickerOpen(false)}
+                className="p-1 rounded hover:bg-gray-100"
+                style={{ color: colors.textPrimary }}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Time Selection */}
+            <div className="flex items-center justify-center gap-2 mb-4">
+              {/* Hour */}
+              <div className="flex flex-col items-center">
+                <label className="text-xs mb-1" style={{ color: colors.textSecondary }}>
+                  Hour
+                </label>
+                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
+                    <button
+                      key={hour}
+                      type="button"
+                      onClick={() => setSelectedHour(hour)}
+                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
+                        selectedHour === hour
+                          ? "text-white"
+                          : "hover:bg-gray-100"
+                      }`}
+                      style={{
+                        backgroundColor:
+                          selectedHour === hour
+                            ? colors.backgroundTertiary
+                            : "transparent",
+                        color:
+                          selectedHour === hour
+                            ? colors.backgroundSecondary
+                            : colors.textPrimary,
+                      }}
+                    >
+                      {hour}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <span className="text-2xl font-bold mt-6" style={{ color: colors.textPrimary }}>
+                :
+              </span>
+
+              {/* Minute */}
+              <div className="flex flex-col items-center">
+                <label className="text-xs mb-1" style={{ color: colors.textSecondary }}>
+                  Minute
+                </label>
+                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                  {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+                    <button
+                      key={minute}
+                      type="button"
+                      onClick={() => setSelectedMinute(minute)}
+                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
+                        selectedMinute === minute
+                          ? "text-white"
+                          : "hover:bg-gray-100"
+                      }`}
+                      style={{
+                        backgroundColor:
+                          selectedMinute === minute
+                            ? colors.backgroundTertiary
+                            : "transparent",
+                        color:
+                          selectedMinute === minute
+                            ? colors.backgroundSecondary
+                            : colors.textPrimary,
+                      }}
+                    >
+                      {String(minute).padStart(2, "0")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* AM/PM */}
+              <div className="flex flex-col items-center">
+                <label className="text-xs mb-1" style={{ color: colors.textSecondary }}>
+                  Period
+                </label>
+                <div className="flex flex-col gap-1">
+                  {["am", "pm"].map((period) => (
+                    <button
+                      key={period}
+                      type="button"
+                      onClick={() => setSelectedPeriod(period)}
+                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
+                        selectedPeriod === period
+                          ? "text-white"
+                          : "hover:bg-gray-100"
+                      }`}
+                      style={{
+                        backgroundColor:
+                          selectedPeriod === period
+                            ? colors.backgroundTertiary
+                            : "transparent",
+                        color:
+                          selectedPeriod === period
+                            ? colors.backgroundSecondary
+                            : colors.textPrimary,
+                      }}
+                    >
+                      {period.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Confirm Button */}
+            <button
+              type="button"
+              onClick={handleTimeSelect}
+              className="w-full py-2 rounded-lg font-semibold text-sm transition-all hover:opacity-90"
+              style={{
+                backgroundColor: colors.backgroundTertiary,
+                color: colors.textWhite,
+              }}
+            >
+              Confirm
+            </button>
           </div>
         </>
       )}

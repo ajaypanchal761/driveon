@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../store/slices/authSlice';
 import { clearUser } from '../../store/slices/userSlice';
 import { theme } from '../../theme/theme.constants';
 import toastUtils from '../../config/toast';
@@ -26,11 +26,22 @@ const SettingsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Handle logout
-  const handleLogout = () => {
-    dispatch(logout());
-    dispatch(clearUser());
-    toastUtils.success('Logged out successfully');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      // Call async logout thunk that calls backend API
+      await dispatch(logoutUser()).unwrap();
+      // Clear user data
+      dispatch(clearUser());
+      toastUtils.success('Logged out successfully');
+      // Force redirect to login page using window.location for complete page reload
+      window.location.href = '/login';
+    } catch (error) {
+      // Even if logout fails, clear state and force redirect
+      dispatch(clearUser());
+      toastUtils.success('Logged out successfully');
+      // Force redirect to login page
+      window.location.href = '/login';
+    }
   };
 
   // Handle save settings
