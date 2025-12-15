@@ -30,6 +30,9 @@ const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAnd
 const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
 const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
 
+// NewUI pages (new car booking platform)
+const NewUIHomePage = lazy(() => import("../module/newui/pages/HomePage"));
+
 // Admin pages
 const AdminDashboardPage = lazy(() =>
   import("../pages/admin/AdminDashboardPage")
@@ -205,6 +208,15 @@ const router = createBrowserRouter([
         element: <ModuleNewProfilePage />,
       },
     ],
+  },
+  // NewUI routes (new car booking platform) - separate from ModuleLayout
+  {
+    path: "/newui",
+    element: <NewUIHomePage />,
+  },
+  {
+    path: "/newui/home",
+    element: <NewUIHomePage />,
   },
   // Admin Auth Routes (public - no authentication required)
   {
