@@ -173,10 +173,11 @@ const ModuleTestPage = () => {
         {/* Date & time pill */}
         <button
           type="button"
-          className="w-full flex items-center justify-between rounded-full px-4 py-2 text-[11px]"
+          className="w-full flex items-center justify-between rounded-full px-4 py-2.5 text-[11px] shadow-sm"
           style={{
-            backgroundColor: colors.backgroundTertiary,
-            color: colors.textWhite,
+            backgroundColor: "#21292b",
+            color: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.12)",
           }}
           onClick={() => setIsCalendarOpen(true)}
         >
