@@ -16,6 +16,7 @@ import carImg4 from '../../assets/car_img4-removebg-preview.png';
 import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg8 from '../../assets/car_img8.png';
+import carBanImg1 from '../../assets/car_banImg1.jpg';
 import carBanImg3 from '../../assets/car_banImg3-removebg-preview.png';
 
 /**
@@ -481,6 +482,76 @@ const CarDetailsPage = () => {
             profilePic: 'https://via.placeholder.com/40',
             rating: '5.0',
             comment: 'Best luxury car rental experience. The electric drive is silent and powerful.'
+          }
+        ]
+      },
+      'audi-r8': {
+        id: 'audi-r8',
+        brand: 'Audi',
+        model: 'R8 Performance',
+        name: 'Audi R8 Performance',
+        image: carBanImg1,
+        rating: 5.0,
+        reviewsCount: 120,
+        location: 'Los Angeles, USA',
+        seats: 2,
+        transmission: 'Automatic',
+        fuelType: 'Petrol',
+        color: 'Silver',
+        carType: 'Sports',
+        year: 2023,
+        price: 800,
+        pricePerDay: 800,
+        description: 'Experience the ultimate in performance and luxury with the Audi R8 Performance. A supercar that combines breathtaking speed with everyday usability.',
+        owner: {
+          name: 'Audi Premium',
+          profilePic: 'https://via.placeholder.com/50',
+          verified: true,
+          rating: 5.0
+        },
+        host: {
+          name: 'Audi Premium',
+          profilePic: 'https://via.placeholder.com/50',
+          verified: true
+        },
+        features: [
+          'Air Conditioning',
+          'GPS Navigation',
+          'Bluetooth',
+          'USB Charging',
+          'Leather Seats',
+          'Sport Mode',
+          'Launch Control',
+          'Premium Sound System',
+          'Carbon Fiber Accents',
+          'Quattro All-Wheel Drive'
+        ],
+        featureIcons: [
+          { icon: 'seat', label: 'Capacity', value: '2 Seats' },
+          { icon: 'engine', label: 'Engine', value: '602 HP' },
+          { icon: 'speed', label: 'Max Speed', value: '330km/h' },
+          { icon: 'autopilot', label: 'Drive Mode', value: 'Performance' },
+          { icon: 'charge', label: 'Fuel Economy', value: '10 km/l' },
+          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
+        ],
+        reviews: [
+          {
+            name: 'Mr. Jack',
+            profilePic: 'https://via.placeholder.com/40',
+            rating: '5.0',
+            comment: 'The Audi R8 Performance is absolutely incredible. Fast, comfortable, and turns heads everywhere. Best rental experience ever!'
+          },
+          {
+            name: 'Robert',
+            profilePic: 'https://via.placeholder.com/40',
+            rating: '5.0',
+            comment: 'Amazing supercar! The performance is mind-blowing and the service was top-notch. Highly recommend!'
+          },
+          {
+            name: 'Sarah',
+            profilePic: 'https://via.placeholder.com/40',
+            rating: '5.0',
+            comment: 'Dream car experience! The R8 Performance exceeded all expectations. Smooth ride and incredible acceleration.'
           }
         ]
       }
@@ -2011,7 +2082,7 @@ const CarDetailsPage = () => {
                     answer: 'For subscription plans, there may be a daily kilometer limit. Additional kilometers beyond the limit are charged at a per-kilometer rate. The standard limit is usually 200-250 km per day, but this may vary by car and subscription plan. Unlimited kilometers are available for regular bookings.'
                   }
                 ].map((faq, index) => (
-                  <div
+                  <div 
                     key={index}
                     className="border-b"
                     style={{ borderColor: colors.borderMedium }}
@@ -2029,12 +2100,12 @@ const CarDetailsPage = () => {
                         }`}
                         fill="none" 
                         stroke="currentColor" 
-                        viewBox="0 0 24 24"
+                            viewBox="0 0 24 24"
                         style={{ color: colors.textSecondary }}
-                      >
+                          >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
+                          </svg>
+                        </div>
                     {openFaqIndex === index && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -2045,7 +2116,7 @@ const CarDetailsPage = () => {
                       >
                         <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
                           {faq.answer}
-                        </div>
+                      </div>
                       </motion.div>
                     )}
                   </div>
@@ -2465,7 +2536,7 @@ const CarDetailsPage = () => {
                   answer: 'For subscription plans, there may be a daily kilometer limit. Additional kilometers beyond the limit are charged at a per-kilometer rate. The standard limit is usually 200-250 km per day, but this may vary by car and subscription plan. Unlimited kilometers are available for regular bookings.'
                 }
               ].map((faq, index) => (
-                  <div
+                  <div 
                     key={index}
                     className="border-b"
                     style={{ borderColor: colors.borderMedium }}
@@ -2483,12 +2554,12 @@ const CarDetailsPage = () => {
                         }`}
                         fill="none" 
                         stroke="currentColor" 
-                        viewBox="0 0 24 24"
+                            viewBox="0 0 24 24"
                         style={{ color: colors.textSecondary }}
-                      >
+                          >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
+                          </svg>
+                        </div>
                     {openFaqIndex === index && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -2499,7 +2570,7 @@ const CarDetailsPage = () => {
                       >
                         <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
                           {faq.answer}
-                        </div>
+                      </div>
                       </motion.div>
                     )}
                   </div>

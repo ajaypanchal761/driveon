@@ -17,13 +17,15 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
   // Horizontal layout for Popular Cars section (matches second image)
   if (horizontal) {
     return (
-      <div 
-        className="w-full rounded-xl md:rounded-2xl overflow-hidden flex cursor-pointer hover:opacity-90 transition-opacity"
+      <motion.div 
+        className="w-full rounded-xl md:rounded-2xl overflow-hidden flex cursor-pointer"
         style={{ 
           backgroundColor: colors.backgroundSecondary, // White background on desktop
           border: `1px solid ${colors.borderSubtle}`
         }}
         onClick={() => navigate(`/car-details/${car.id}`)}
+        whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+        transition={{ duration: 0.3 }}
       >
         {/* Car Image - Left Side */}
         <div 
@@ -68,19 +70,22 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
             <span className="text-base md:text-lg lg:text-xl font-bold text-black">{car.price}/Day</span>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   // Vertical layout for Recommend For You section (default)
   return (
-    <div 
-      className="w-full rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity md:rounded-2xl"
+    <motion.div 
+      className="w-full rounded-xl overflow-hidden cursor-pointer md:rounded-2xl"
       style={{ 
         backgroundColor: colors.backgroundSecondary,
-        border: `1px solid ${colors.borderLight}`
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
       }}
       onClick={() => navigate(`/car-details/${car.id}`)}
+      whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+      transition={{ duration: 0.3 }}
     >
       {/* Car Image Container - Compact on mobile, larger on desktop */}
       <div 
@@ -195,7 +200,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

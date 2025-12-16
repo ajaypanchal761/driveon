@@ -137,10 +137,12 @@ const SearchPage = () => {
   }, [filteredRecommendCars, filteredPopularCars]);
 
   return (
-    <div 
-      className="min-h-screen w-full flex flex-col md:hidden"
-      style={{ backgroundColor: colors.backgroundTertiary }}
-    >
+    <>
+      {/* Mobile View - DO NOT MODIFY */}
+      <div 
+        className="min-h-screen w-full flex flex-col md:hidden"
+        style={{ backgroundColor: colors.backgroundTertiary }}
+      >
       {/* TOP COMPACT HEADER - matches module-test page */}
       <div
         className="px-4 pt-6 pb-4 space-y-2"
@@ -350,7 +352,11 @@ const SearchPage = () => {
 
               {/* Our Popular Cars Section */}
               {filteredPopularCars.length > 0 && (
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                >
                   <div className="flex items-center justify-between mb-3 md:mb-4 lg:mb-6">
                     <h2 className="text-base md:text-2xl lg:text-3xl font-bold text-black">
                       Our Popular Cars
@@ -360,16 +366,19 @@ const SearchPage = () => {
                   {/* Popular Cars - Horizontal scrollable on mobile, grid on desktop (wider cards) */}
                   <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-4 lg:gap-6 overflow-x-auto md:overflow-x-visible scrollbar-hide -mx-0">
                     {filteredPopularCars.map((car, index) => (
-                      <div 
+                      <motion.div 
                         key={car.id} 
                         className="min-w-[280px] md:min-w-0 flex-shrink-0" 
                         style={{ pointerEvents: 'auto' }}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4, delay: 0.6 + (index * 0.1) }}
                       >
                         <SearchCarCard car={car} horizontal={true} index={index} />
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
             </>
           )}
@@ -391,7 +400,200 @@ const SearchPage = () => {
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <BottomNavbar />
       </div>
-    </div>
+      </div>
+
+      {/* Web View - Only visible on desktop */}
+      <div 
+        className="hidden md:block min-h-screen w-full"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
+        {/* Web Header */}
+        <header
+          className="w-full sticky top-0 z-50"
+          style={{ backgroundColor: colors.brandBlack }}
+        >
+          <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
+            <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
+              {/* Left - Logo */}
+              <Link to="/" className="flex-shrink-0">
+                <img
+                  src="/driveonlogo.png"
+                  alt="DriveOn Logo"
+                  className="h-8 md:h-10 lg:h-12 xl:h-14 w-auto object-contain"
+                />
+              </Link>
+
+              {/* Center - Navigation Tabs */}
+              <nav className="hidden lg:flex items-center gap-6">
+                <Link
+                  to="/"
+                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                >
+                  Home
+                </Link>
+                <Link
+                  to="/search"
+                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                >
+                  Search
+                </Link>
+              </nav>
+
+              {/* Right - User Actions */}
+              <div className="flex items-center gap-4">
+                {isAuthenticated ? (
+                  <Link
+                    to="/profile"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center text-sm md:text-base font-semibold"
+                    style={{ color: colors.backgroundTertiary }}
+                  >
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="px-4 py-2 rounded-lg text-sm md:text-base font-medium text-white hover:opacity-80 transition-opacity"
+                    style={{ backgroundColor: colors.backgroundTertiary }}
+                  >
+                    Login
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Web Content */}
+        <div className="px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-6 md:py-8 lg:py-10">
+          <div className="max-w-7xl mx-auto">
+            {/* Search Bar Section - Web */}
+            <div className="mb-6 md:mb-8 lg:mb-10">
+              <div className="flex items-center gap-4 max-w-3xl mx-auto">
+                <div 
+                  className="rounded-xl px-4 py-3 flex items-center gap-3 flex-1"
+                  style={{ 
+                    backgroundColor: colors.backgroundSecondary,
+                    border: `1px solid ${colors.borderMedium}`
+                  }}
+                >
+                  <svg 
+                    className="w-5 h-5 text-gray-400" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search your dream car....."
+                    className="flex-1 text-base text-gray-700 placeholder-gray-400 outline-none bg-transparent"
+                  />
+                </div>
+                <button 
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className="px-6 py-3 rounded-xl text-base font-medium text-white hover:opacity-90 transition-opacity"
+                  style={{ 
+                    backgroundColor: colors.backgroundTertiary
+                  }}
+                >
+                  Filters
+                </button>
+              </div>
+            </div>
+
+            {/* Brand Filters - Web */}
+            <div className="mb-8 md:mb-10 lg:mb-12">
+              <BrandFilter 
+                brands={brands}
+                selectedBrand={selectedBrand}
+                onSelectBrand={setSelectedBrand}
+              />
+            </div>
+
+            {/* Main Content - Web */}
+            {allFilteredCars.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="text-center">
+                  <svg 
+                    className="w-24 h-24 mx-auto mb-4 text-gray-400" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                  </svg>
+                  <h3 className="text-2xl font-bold text-gray-700 mb-2">
+                    No Cars Found
+                  </h3>
+                  <p className="text-base text-gray-500">
+                    Sorry, we couldn't find any cars matching your selected filter.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Recommend For You Section - Web */}
+                {filteredRecommendCars.length > 0 && (
+                  <div className="mb-12 lg:mb-16">
+                    <div className="flex items-center justify-between mb-6 lg:mb-8">
+                      <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-black">
+                        Recommend For You
+                      </h2>
+                    </div>
+                    
+                    {/* Car Cards Grid - Web */}
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+                      {filteredRecommendCars.map((car, index) => (
+                        <SearchCarCard key={car.id} car={car} index={index} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Our Popular Cars Section - Web */}
+                {filteredPopularCars.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-6 lg:mb-8">
+                      <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-black">
+                        Our Popular Cars
+                      </h2>
+                    </div>
+                    
+                    {/* Popular Cars - Grid on web */}
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+                      {filteredPopularCars.map((car, index) => (
+                        <SearchCarCard key={car.id} car={car} index={index} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Dropdown for Web */}
+        <FilterDropdown
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          onApplyFilters={(filters) => {
+            console.log('Applied filters:', filters);
+            setIsFilterOpen(false);
+          }}
+        />
+      </div>
+    </>
   );
 };
 

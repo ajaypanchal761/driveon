@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
 import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 import FilterDropdown from "../components/common/FilterDropdown";
@@ -15,6 +19,10 @@ import carImg6 from "../../assets/car_img6-removebg-preview.png";
 import nearbyImg1 from "../../assets/car_img8.png";
 import nearbyImg2 from "../../assets/car_img4-removebg-preview.png";
 import nearbyImg3 from "../../assets/car_img5-removebg-preview.png";
+import bannerCar1 from "../../assets/car_img1-removebg-preview.png";
+import bannerCar2 from "../../assets/car_img4-removebg-preview.png";
+import bannerCar3 from "../../assets/car_img5-removebg-preview.png";
+import bannerCar4 from "../../assets/car_img6-removebg-preview.png";
 import logo1 from "../../assets/car_logo1_PNG1.png";
 import logo2 from "../../assets/car_logo2_PNG.png";
 import logo4 from "../../assets/car_logo4_PNG.png";
@@ -51,7 +59,7 @@ const ModuleTestPage = () => {
 
   const nearbyCars = [
     {
-      id: 1,
+      id: 3, // BMW 3 Series - matches CarDetailsPage
       name: "BMW 3 Series",
       rating: "5.0",
       location: "New York",
@@ -60,7 +68,7 @@ const ModuleTestPage = () => {
       image: nearbyImg1,
     },
     {
-      id: 2,
+      id: 4, // Lamborghini Aventador - matches CarDetailsPage
       name: "Lamborghini Aventador",
       rating: "4.9",
       location: "New York",
@@ -69,7 +77,7 @@ const ModuleTestPage = () => {
       image: nearbyImg2,
     },
     {
-      id: 3,
+      id: 5, // BMW M2 GTS - matches CarDetailsPage
       name: "BMW M2 GTS",
       rating: "5.0",
       location: "Los Angeles",
@@ -341,7 +349,7 @@ const ModuleTestPage = () => {
                   key={cat.id}
                   type="button"
                   className="flex-shrink-0 w-24"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate(`/category/${cat.label.toLowerCase()}`)}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 + (index * 0.05) }}
@@ -452,9 +460,10 @@ const ModuleTestPage = () => {
             transition={{ duration: 0.4, delay: 0.2 }}
           >
             <motion.div 
-              className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100"
+              className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
               whileHover={{ scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
               transition={{ duration: 0.3 }}
+              onClick={() => navigate("/car-details/audi-r8")}
             >
               <div className="w-full h-48 bg-gray-100 overflow-hidden">
                 <motion.img
@@ -493,6 +502,87 @@ const ModuleTestPage = () => {
             </motion.div>
           </motion.div>
 
+          {/* BANNER SECTION - Between Featured Car and Best Cars */}
+          <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
+            <Swiper
+              modules={[Pagination, Autoplay]}
+              spaceBetween={0}
+              slidesPerView={1}
+              autoplay={{
+                delay: 3000,
+                disableOnInteraction: false,
+              }}
+              pagination={{
+                clickable: true,
+                bulletClass: 'swiper-pagination-bullet-custom',
+                bulletActiveClass: 'swiper-pagination-bullet-active-custom',
+                el: '.mobile-banner-pagination',
+              }}
+              className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
+              style={{ background: 'rgb(41, 70, 87)' }}
+            >
+              {[
+                { image: bannerCar1, alt: 'Car 1' },
+                { image: bannerCar2, alt: 'Car 2' },
+                { image: bannerCar3, alt: 'Car 3' },
+                { image: bannerCar4, alt: 'Car 4' },
+              ].map((car, index) => (
+                <SwiperSlide key={index} className="!w-full">
+                  <div 
+                    className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
+                    onClick={() => navigate("/search")}
+                  >
+                    <div className="flex-shrink-0 w-1/3 z-10">
+                      <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
+                        20% Off Your First Ride!
+                      </h2>
+                      <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
+                        Experience Seamless Car Rentals.
+                      </p>
+                      <button 
+                        className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate("/search");
+                        }}
+                      >
+                        Discover More
+                      </button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-end h-full relative">
+                      <img
+                        alt={car.alt}
+                        className="h-full max-h-full w-auto object-contain"
+                        draggable="false"
+                        src={car.image}
+                        style={{ maxWidth: '100%', objectFit: 'contain', transform: 'translateX(15px)' }}
+                      />
+                    </div>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4"></div>
+            <style>{`
+              .swiper-pagination-bullet-custom {
+                width: 8px;
+                height: 8px;
+                background: rgba(0, 0, 0, 0.3);
+                opacity: 1;
+                margin: 0 4px;
+                transition: all 0.3s ease;
+                border-radius: 50%;
+                cursor: pointer;
+                display: inline-block;
+              }
+              .swiper-pagination-bullet-active-custom {
+                background: #000000;
+                width: 10px;
+                height: 10px;
+              }
+            `}</style>
+          </div>
+
           {/* BEST CARS GRID (above Nearby) */}
           <motion.div 
             className="mt-4 px-1"
@@ -509,6 +599,7 @@ const ModuleTestPage = () => {
                 className="text-sm text-gray-600 font-semibold"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/search")}
               >
                 View All
               </motion.button>
@@ -527,6 +618,7 @@ const ModuleTestPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.3 }}
                 whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                onClick={() => navigate("/car-details/1")}
               >
                 <div
                   className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
@@ -640,6 +732,7 @@ const ModuleTestPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.35 }}
                 whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                onClick={() => navigate("/car-details/2")}
               >
                 <div
                   className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
@@ -758,6 +851,7 @@ const ModuleTestPage = () => {
                 className="text-sm text-gray-600 font-semibold"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/search")}
               >
                 View All
               </motion.button>
@@ -779,6 +873,7 @@ const ModuleTestPage = () => {
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                     }}
                     whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                    onClick={() => navigate(`/car-details/${car.id}`)}
                   >
                     <div
                       className="relative w-full h-28 flex items-center justify-center rounded-t-xl overflow-hidden"

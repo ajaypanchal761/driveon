@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { lazy } from "react";
+import { lazy, useState, useEffect } from "react";
 import AdminRoute from "../components/layout/AdminRoute";
 import AdminLayout from "../components/admin/layout/AdminLayout";
 import ModuleLayout from "../module/components/layout/ModuleLayout";
@@ -29,6 +29,7 @@ const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicy
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
 const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
 const ModuleLocationPage = lazy(() => import("../module/pages/ModuleLocationPage"));
+const CategoryPage = lazy(() => import("../module/pages/CategoryPage"));
 const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
 const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
 
@@ -87,6 +88,36 @@ const AdminLoginPage = lazy(() =>
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 
 /**
+ * ModuleResponsiveHome Component
+ * - Mobile view: show ModuleTestPage (module-test UI)
+ * - Desktop / tablet view: show original ModuleHomePage
+ * All other routes and redirections remain unchanged.
+ */
+const ModuleResponsiveHome = () => {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth < 768; // Tailwind md breakpoint
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (isMobile) {
+    return <ModuleTestPage />;
+  }
+
+  return <ModuleHomePage />;
+};
+
+/**
  * AdminRedirectRoute Component
  * Handles /admin route - redirects to dashboard if authenticated, login if not
  */
@@ -119,7 +150,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <ModuleHomePage />,
+        element: <ModuleResponsiveHome />,
       },
       {
         path: "/login",
@@ -147,7 +178,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/profile",
-        element: <ModuleProfilePage />,
+        element: <ModuleProfile1Page />,
       },
       {
         path: "/profile/complete",
@@ -210,8 +241,8 @@ const router = createBrowserRouter([
         element: <ModuleLocationPage />,
       },
       {
-        path: "/module-profile",
-        element: <ModuleNewProfilePage />,
+        path: "/category/:categoryName",
+        element: <CategoryPage />,
       },
       {
         path: "/module-profile1",
