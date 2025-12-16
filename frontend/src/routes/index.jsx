@@ -28,6 +28,7 @@ const ModuleFAQPage = lazy(() => import("../module/pages/FAQPage"));
 const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
 const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
+const ModuleLocationPage = lazy(() => import("../module/pages/ModuleLocationPage"));
 const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
 const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
 
@@ -203,6 +204,10 @@ const router = createBrowserRouter([
       {
         path: "/module-test",
         element: <ModuleTestPage />,
+      },
+      {
+        path: "/module-location",
+        element: <ModuleLocationPage />,
       },
       {
         path: "/module-profile",
