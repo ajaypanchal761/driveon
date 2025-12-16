@@ -17,3 +17,4 @@ router.get('/faqs', getFAQs);
 export default router;
 
 
+
