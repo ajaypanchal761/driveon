@@ -163,6 +163,7 @@ const SearchPage = () => {
               backgroundColor: colors.backgroundTertiary,
               color: colors.textWhite,
             }}
+            onClick={() => navigate("/module-location")}
           >
             <span className="flex items-center gap-2 min-w-0">
               <span

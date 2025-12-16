@@ -691,6 +691,30 @@ const CarDetailsPage = () => {
   // Time picker modal state
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
+  // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
+  // Use noon (12:00) to avoid timezone shift issues
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      const day = parseInt(parts[2], 10);
+      // Create date at noon to avoid timezone shift issues
+      return new Date(year, month, day, 12, 0, 0);
+    }
+    return null;
+  };
+
+  // Helper: Convert Date object to date string (YYYY-MM-DD) in local timezone
+  const formatLocalDate = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Calculate dynamic price
   const calculatePrice = () => {
     if (!pickupDate || !dropDate || !car) {
@@ -705,8 +729,9 @@ const CarDetailsPage = () => {
       };
     }
 
-    const pickup = new Date(pickupDate);
-    const drop = new Date(dropDate);
+    // Parse dates in local timezone to avoid timezone shift
+    const pickup = parseLocalDate(pickupDate) || new Date();
+    const drop = parseLocalDate(dropDate) || new Date();
     const diffTime = Math.abs(drop - pickup);
     const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
@@ -740,10 +765,13 @@ const CarDetailsPage = () => {
 
   const priceDetails = calculatePrice();
 
-  // Get minimum date (today)
+  // Get minimum date (today) - using local timezone
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Combined date-time picker helpers
@@ -753,9 +781,11 @@ const CarDetailsPage = () => {
     const existingDate = target === 'pickup' ? pickupDate : dropDate;
     let baseDate;
     if (existingDate) {
-      baseDate = new Date(existingDate);
+      baseDate = parseLocalDate(existingDate);
+      if (!baseDate) baseDate = new Date();
     } else if (target === 'drop' && pickupDate) {
-      baseDate = new Date(pickupDate);
+      baseDate = parseLocalDate(pickupDate);
+      if (!baseDate) baseDate = new Date();
     } else {
       baseDate = new Date();
     }
@@ -784,6 +814,16 @@ const CarDetailsPage = () => {
 
   const formatDisplayDate = (dateStr) => {
     if (!dateStr) return 'Select Date';
+    // Parse date string directly to avoid timezone issues
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      const day = parseInt(parts[2], 10);
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${String(day).padStart(2, '0')} ${monthNames[month]} ${year}`;
+    }
+    // Fallback for other formats
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return dateStr;
     const day = d.getDate().toString().padStart(2, '0');
@@ -802,8 +842,10 @@ const CarDetailsPage = () => {
     for (let i = 0; i < firstDay; i += 1) {
       days.push(null);
     }
+    // Create dates at noon (12:00) to avoid timezone shift issues
+    // This ensures the date stays the same regardless of timezone
     for (let d = 1; d <= daysInMonth; d += 1) {
-      days.push(new Date(year, month, d));
+      days.push(new Date(year, month, d, 12, 0, 0));
     }
     return days;
   };
@@ -823,14 +865,19 @@ const CarDetailsPage = () => {
     }
     
     if (calendarSelectedDate) {
-      const iso = calendarSelectedDate.toISOString().split('T')[0];
+      // Use local date components instead of toISOString to avoid timezone shift
+      const dateStr = formatLocalDate(calendarSelectedDate);
       if (dateTimePickerTarget === 'pickup') {
-        setPickupDate(iso);
-        if (dropDate && new Date(dropDate) < calendarSelectedDate) {
-          setDropDate('');
+        setPickupDate(dateStr);
+        // Compare dates properly
+        if (dropDate) {
+          const dropDateObj = parseLocalDate(dropDate);
+          if (dropDateObj && dropDateObj < calendarSelectedDate) {
+            setDropDate('');
+          }
         }
       } else if (dateTimePickerTarget === 'drop') {
-        setDropDate(iso);
+        setDropDate(dateStr);
       }
     }
     
@@ -2673,17 +2720,46 @@ const CarDetailsPage = () => {
                   ))}
                   {getCalendarDays().map((date, idx) => {
                     if (!date) return <div key={idx}></div>;
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = calendarSelectedDate && dateStr === calendarSelectedDate.toISOString().split('T')[0];
-                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                    // Use local date components for comparison to avoid timezone issues
+                    const dateStr = formatLocalDate(date);
+                    const dateYear = date.getFullYear();
+                    const dateMonth = date.getMonth();
+                    const dateDay = date.getDate();
+                    
+                    // Check if selected using local date components
+                    let isSelected = false;
+                    if (calendarSelectedDate) {
+                      const selectedYear = calendarSelectedDate.getFullYear();
+                      const selectedMonth = calendarSelectedDate.getMonth();
+                      const selectedDay = calendarSelectedDate.getDate();
+                      isSelected = dateYear === selectedYear && 
+                                   dateMonth === selectedMonth && 
+                                   dateDay === selectedDay;
+                    }
+                    
+                    // Check if past date using local date components
+                    const today = new Date();
+                    const todayYear = today.getFullYear();
+                    const todayMonth = today.getMonth();
+                    const todayDay = today.getDate();
+                    const isPast = dateYear < todayYear || 
+                                  (dateYear === todayYear && dateMonth < todayMonth) ||
+                                  (dateYear === todayYear && dateMonth === todayMonth && dateDay < todayDay);
+                    
                     const isMinDate = dateStr === getMinDate();
-                    const isCurrentMonth = date.getMonth() === calendarMonth.getMonth();
+                    const isCurrentMonth = dateMonth === calendarMonth.getMonth();
                     
                     return (
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => !isPast && isCurrentMonth && setCalendarSelectedDate(date)}
+                        onClick={() => {
+                          if (!isPast && isCurrentMonth) {
+                            // Ensure date is at noon to avoid timezone issues
+                            const selectedDate = new Date(dateYear, dateMonth, dateDay, 12, 0, 0);
+                            setCalendarSelectedDate(selectedDate);
+                          }
+                        }}
                         disabled={isPast && !isMinDate}
                         className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
                           isSelected

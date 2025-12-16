@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -96,6 +96,18 @@ const ModuleTestPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("AM");
   const [activeFilter, setActiveFilter] = useState("$200–$1,000 / day");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const searchInputRef = useRef(null);
+  const [favoriteStates, setFavoriteStates] = useState({});
+  const [animatingStates, setAnimatingStates] = useState({});
+
+  // Auto focus input when search becomes active
+  useEffect(() => {
+    if (isSearchActive && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchActive]);
 
   const formatDateDisplay = (dateString) => {
     if (!dateString) return "";
@@ -188,55 +200,175 @@ const ModuleTestPage = () => {
           </button>
         </div>
 
-        {/* Date & time pill */}
-        <button
-          type="button"
-          className="w-full flex items-center justify-between rounded-full px-4 py-2.5 text-[11px] shadow-sm"
-          style={{
-            backgroundColor: "#21292b",
-            color: "#ffffff",
-            border: "1px solid rgba(255,255,255,0.12)",
-          }}
-          onClick={() => setIsCalendarOpen(true)}
+        {/* Search Bar */}
+        <motion.div
+          className="w-full"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         >
-          <span className="flex items-center gap-2 min-w-0">
-            <svg
-              className="w-4 h-4 text-gray-200"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {!isSearchActive ? (
+            <motion.button
+              type="button"
+              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
+              style={{
+                backgroundColor: "#21292b",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+              onClick={() => setIsSearchActive(true)}
+              whileHover={{ 
+                scale: 1.02,
+                borderColor: "rgba(255,255,255,0.2)",
+                transition: { duration: 0.2 }
+              }}
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              <motion.svg
+                className="w-4 h-4 text-gray-200 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 1
+                }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </motion.svg>
+              <span className="flex-1 text-left text-gray-300 truncate">
+                Search your dream car....
+              </span>
+              <motion.svg
+                className="w-3 h-3 text-gray-300 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                whileHover={{ x: 2 }}
+                transition={{ duration: 0.2 }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </motion.svg>
+            </motion.button>
+          ) : (
+            <motion.div
+              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
+              style={{
+                backgroundColor: "#21292b",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.svg
+                className="w-4 h-4 text-gray-200 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                initial={{ rotate: -90 }}
+                animate={{ rotate: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </motion.svg>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Search your dream car...."
+                className="flex-1 bg-transparent text-gray-300 placeholder-gray-400 outline-none text-[11px]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    navigate("/search");
+                  }
+                  if (e.key === "Escape") {
+                    setIsSearchActive(false);
+                    setSearchValue("");
+                  }
+                }}
               />
-            </svg>
-            <span className="truncate">
-              {pickupDate && dropoffDate
-                ? `${formatDateDisplay(
-                    pickupDate
-                  )}, ${formatTimeDisplay()} – ${formatDateDisplay(
-                    dropoffDate
-                  )}, ${formatTimeDisplay()}`
-                : `Sep 1, ${formatTimeDisplay()} – Sep 3, ${formatTimeDisplay()}`}
-            </span>
-          </span>
-          <svg
-            className="w-3 h-3 text-gray-300 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+              {searchValue && (
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    setSearchValue("");
+                    navigate("/search");
+                  }}
+                  className="flex-shrink-0"
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <svg
+                    className="w-4 h-4 text-gray-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </motion.button>
+              )}
+              <motion.button
+                type="button"
+                onClick={() => {
+                  setIsSearchActive(false);
+                  setSearchValue("");
+                }}
+                className="flex-shrink-0"
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+              >
+                <svg
+                  className="w-4 h-4 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </motion.button>
+            </motion.div>
+          )}
+        </motion.div>
       </div>
 
       {/* CONTENT */}
@@ -387,9 +519,13 @@ const ModuleTestPage = () => {
             <div className="relative overflow-hidden w-full">
               <div className="flex gap-7 brands-scroll">
                 {brands.concat(brands).map((brand, index) => (
-                  <div
+                  <motion.button
                     key={`${brand.id}-${index}`}
-                    className="flex flex-col items-center gap-1.5 shrink-0"
+                    type="button"
+                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
+                    onClick={() => navigate(`/brand/${brand.name}`)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <div
                       className="w-14 h-14 rounded-full flex items-center justify-center p-2.5"
@@ -404,7 +540,7 @@ const ModuleTestPage = () => {
                     <span className="text-xs text-gray-600 font-medium">
                       {brand.name}
                     </span>
-                  </div>
+                  </motion.button>
                 ))}
               </div>
             </div>
@@ -630,10 +766,28 @@ const ModuleTestPage = () => {
                     className="w-full h-full object-contain scale-125"
                     style={{ opacity: 1 }}
                   />
-                  <button className="absolute -top-1 left-1.5 md:left-2 z-10">
+                  <motion.button 
+                    className="absolute -top-1 left-1.5 md:left-2 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFavoriteStates(prev => ({ ...prev, ferrari: !prev.ferrari }));
+                      setAnimatingStates(prev => ({ ...prev, ferrari: true }));
+                      setTimeout(() => {
+                        setAnimatingStates(prev => ({ ...prev, ferrari: false }));
+                      }, 300);
+                    }}
+                    animate={animatingStates.ferrari ? {
+                      scale: [1, 1.3, 1],
+                    } : {}}
+                    transition={{
+                      duration: 0.3,
+                      ease: "easeOut"
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
                     <svg
-                      className="w-5 h-5 md:w-6 md:h-6 text-white"
-                      fill="none"
+                      className={`w-5 h-5 md:w-6 md:h-6 ${favoriteStates.ferrari ? 'text-red-500' : 'text-white'}`}
+                      fill={favoriteStates.ferrari ? 'currentColor' : 'none'}
                       stroke="currentColor"
                       strokeWidth={2}
                       viewBox="0 0 24 24"
@@ -644,7 +798,7 @@ const ModuleTestPage = () => {
                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                       />
                     </svg>
-                  </button>
+                  </motion.button>
                 </div>
                 <div className="p-2 md:p-3 lg:p-4">
                   <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
@@ -744,10 +898,28 @@ const ModuleTestPage = () => {
                     className="w-full h-full object-contain scale-125"
                     style={{ opacity: 1 }}
                   />
-                  <button className="absolute -top-1 left-1.5 md:left-2 z-10">
+                  <motion.button 
+                    className="absolute -top-1 left-1.5 md:left-2 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFavoriteStates(prev => ({ ...prev, tesla: !prev.tesla }));
+                      setAnimatingStates(prev => ({ ...prev, tesla: true }));
+                      setTimeout(() => {
+                        setAnimatingStates(prev => ({ ...prev, tesla: false }));
+                      }, 300);
+                    }}
+                    animate={animatingStates.tesla ? {
+                      scale: [1, 1.3, 1],
+                    } : {}}
+                    transition={{
+                      duration: 0.3,
+                      ease: "easeOut"
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                  >
                     <svg
-                      className="w-5 h-5 md:w-6 md:h-6 text-white"
-                      fill="none"
+                      className={`w-5 h-5 md:w-6 md:h-6 ${favoriteStates.tesla ? 'text-red-500' : 'text-white'}`}
+                      fill={favoriteStates.tesla ? 'currentColor' : 'none'}
                       stroke="currentColor"
                       strokeWidth={2}
                       viewBox="0 0 24 24"
@@ -755,11 +927,10 @@ const ModuleTestPage = () => {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeWidth={2}
                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                       />
                     </svg>
-                  </button>
+                  </motion.button>
                 </div>
                 <div className="p-2 md:p-3 lg:p-4">
                   <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
@@ -884,10 +1055,28 @@ const ModuleTestPage = () => {
                         alt={car.name}
                         className="w-full h-full object-contain scale-125"
                       />
-                      <button className="absolute -top-1 left-1.5 z-10">
+                      <motion.button 
+                        className="absolute -top-1 left-1.5 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFavoriteStates(prev => ({ ...prev, [car.id]: !prev[car.id] }));
+                          setAnimatingStates(prev => ({ ...prev, [car.id]: true }));
+                          setTimeout(() => {
+                            setAnimatingStates(prev => ({ ...prev, [car.id]: false }));
+                          }, 300);
+                        }}
+                        animate={animatingStates[car.id] ? {
+                          scale: [1, 1.3, 1],
+                        } : {}}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeOut"
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                      >
                         <svg
-                          className="w-5 h-5 text-white"
-                          fill="none"
+                          className={`w-5 h-5 ${favoriteStates[car.id] ? 'text-red-500' : 'text-white'}`}
+                          fill={favoriteStates[car.id] ? 'currentColor' : 'none'}
                           stroke="currentColor"
                           strokeWidth={2}
                           viewBox="0 0 24 24"
@@ -898,7 +1087,7 @@ const ModuleTestPage = () => {
                             d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                           />
                         </svg>
-                      </button>
+                      </motion.button>
                     </div>
                     <div className="p-2 md:p-3">
                       <h3 className="text-xs md:text-sm font-bold text-black mb-1">

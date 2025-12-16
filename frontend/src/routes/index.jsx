@@ -30,6 +30,7 @@ const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAnd
 const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
 const ModuleLocationPage = lazy(() => import("../module/pages/ModuleLocationPage"));
 const CategoryPage = lazy(() => import("../module/pages/CategoryPage"));
+const BrandPage = lazy(() => import("../module/pages/BrandPage"));
 const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
 const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
 
@@ -243,6 +244,10 @@ const router = createBrowserRouter([
       {
         path: "/category/:categoryName",
         element: <CategoryPage />,
+      },
+      {
+        path: "/brand/:brandName",
+        element: <BrandPage />,
       },
       {
         path: "/module-profile1",

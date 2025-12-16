@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
@@ -44,6 +44,41 @@ const recentLocations = [
 const ModuleLocationPage = () => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
+  const [fromLocation, setFromLocation] = useState("11th Garden Road, 31a");
+  const [destination, setDestination] = useState(null);
+  const [filteredLocations, setFilteredLocations] = useState(recentLocations);
+
+  // Filter locations based on search input
+  useEffect(() => {
+    if (searchValue.trim() === "") {
+      setFilteredLocations(recentLocations);
+    } else {
+      const filtered = recentLocations.filter(
+        (loc) =>
+          loc.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+          loc.sublabel.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setFilteredLocations(filtered);
+    }
+  }, [searchValue]);
+
+  const handleLocationSelect = (location) => {
+    setDestination(location);
+    setSearchValue("");
+    // Navigate back after a short delay to show selection
+    setTimeout(() => {
+      navigate(-1);
+    }, 300);
+  };
+
+  const handleSwapLocations = () => {
+    if (destination) {
+      const temp = fromLocation;
+      setFromLocation(destination.label);
+      setDestination(null);
+      // You could also set a new from location here if needed
+    }
+  };
 
   const renderIcon = (type) => {
     switch (type) {
@@ -154,17 +189,12 @@ const ModuleLocationPage = () => {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
+              d="M15 19l-7-7 7-7"
             />
           </svg>
         </button>
         <h1 className="text-base font-semibold text-gray-900">Your route</h1>
-        <button
-          type="button"
-          className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
-        >
-          <span className="text-xl leading-none font-light">+</span>
-        </button>
+        <div className="w-8 h-8" />
       </header>
 
       {/* Content - Directly on page, no card */}
@@ -172,9 +202,13 @@ const ModuleLocationPage = () => {
         {/* From / To inputs */}
         <div className="pt-2 space-y-3">
             {/* From */}
-            <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={handleSwapLocations}
+              className="w-full flex items-start gap-3 hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors"
+            >
               <div
-                className="mt-1 w-3 h-3 rounded-full border-2 flex items-center justify-center"
+                className="mt-1 w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                 style={{ borderColor: colors.backgroundTertiary }}
               >
                 <div
@@ -182,15 +216,15 @@ const ModuleLocationPage = () => {
                   style={{ backgroundColor: colors.backgroundTertiary }}
                 ></div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 text-left">
                 <p className="text-[11px] font-semibold text-gray-500 mb-0.5">
                   From
                 </p>
                 <p className="text-sm font-semibold text-gray-900">
-                  11th Garden Road, 31a
+                  {fromLocation}
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Separator line */}
             <div className="ml-4 pl-1 border-l border-dashed border-gray-200 h-4" />
@@ -272,18 +306,30 @@ const ModuleLocationPage = () => {
               </button>
             </div>
 
-            {/* Destination placeholder - Radio button style */}
+            {/* Destination - Show selected or placeholder */}
             <div className="flex items-start gap-3">
               <div className="mt-1.5">
-                <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  destination ? 'border-gray-400' : 'border-gray-300'
+                }`}>
+                  {destination ? (
+                    <div className="w-2 h-2 rounded-full bg-gray-600"></div>
+                  ) : (
+                    <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                  )}
                 </div>
               </div>
               <div className="flex-1">
                 <p className="text-[11px] font-semibold text-gray-500 mb-0.5">
                   Destination
                 </p>
-                <p className="text-sm text-gray-400">Choose destination</p>
+                {destination ? (
+                  <p className="text-sm font-semibold text-gray-900">
+                    {destination.label}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400">Choose destination</p>
+                )}
               </div>
             </div>
         </div>
@@ -293,33 +339,53 @@ const ModuleLocationPage = () => {
 
         {/* Recent / Saved locations list */}
         <div className="space-y-3">
-          {recentLocations.map((loc) => (
-            <button
-              key={loc.id}
-              type="button"
-              className="w-full flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-gray-50 active:bg-gray-100 text-left transition-colors"
-              onClick={() => {
-                // Handle location selection
-                console.log("Selected location:", loc);
-                navigate(-1);
-              }}
-            >
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: colors.backgroundTertiary }}
+          {filteredLocations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-500">No locations found</p>
+              <p className="text-xs text-gray-400 mt-1">Try a different search term</p>
+            </div>
+          ) : (
+            filteredLocations.map((loc) => (
+              <button
+                key={loc.id}
+                type="button"
+                className={`w-full flex items-center gap-3 rounded-2xl px-2 py-2.5 hover:bg-gray-50 active:bg-gray-100 text-left transition-colors ${
+                  destination?.id === loc.id ? 'bg-gray-50 border border-gray-200' : ''
+                }`}
+                onClick={() => handleLocationSelect(loc)}
               >
-                {renderIcon(loc.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">
-                  {loc.label}
-                </p>
-                <p className="text-[11px] text-gray-500 truncate">
-                  {loc.sublabel}
-                </p>
-              </div>
-            </button>
-          ))}
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                >
+                  {renderIcon(loc.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {loc.label}
+                  </p>
+                  <p className="text-[11px] text-gray-500 truncate">
+                    {loc.sublabel}
+                  </p>
+                </div>
+                {destination?.id === loc.id && (
+                  <svg
+                    className="w-5 h-5 text-green-600 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+              </button>
+            ))
+          )}
         </div>
       </main>
 
