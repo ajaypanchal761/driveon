@@ -62,31 +62,6 @@ const SearchBar = ({ onFilterToggle, onSearch, searchQuery = '' }) => {
   return (
     <>
       <div className="w-full px-4 my-2 md:my-4 flex items-center justify-center gap-2 md:gap-3">
-        {/* Back Arrow Button - Left side */}
-        <button
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center shrink-0 transition-all hover:opacity-80 md:shadow-md"
-          style={{
-            backgroundColor: colors.backgroundSecondary,
-            border: `1px solid ${colors.borderForm}`
-          }}
-          aria-label="Go back"
-        >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-
         {/* Search Bar - White with subtle border - Compact width on mobile, full width on desktop */}
         <div 
           className="rounded-lg md:rounded-xl px-3 md:px-5 lg:px-6 py-2 md:py-3 lg:py-3.5 flex items-center gap-2 md:gap-3 flex-1 max-w-[280px] md:max-w-none md:shadow-md"

@@ -1,8 +1,6 @@
-import { useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 
 const ProfileHeader = ({ title = 'Profile' }) => {
-  const navigate = useNavigate();
 
   return (
     <header 
@@ -68,37 +66,9 @@ const ProfileHeader = ({ title = 'Profile' }) => {
       </div>
 
       {/* Main Header Content */}
-      <div className="relative z-10 px-4 py-3 flex items-center justify-between">
-        {/* Back Arrow - Circular Button */}
-        <button 
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-          style={{ 
-            backgroundColor: colors.backgroundSecondary,
-            border: `1px solid ${colors.borderForm}`
-          }}
-        >
-          <svg 
-            className="w-5 h-5" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-            style={{ color: colors.backgroundTertiary }}
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M15 19l-7-7 7-7" 
-            />
-          </svg>
-        </button>
-
+      <div className="relative z-10 px-4 py-3 flex items-center justify-center">
         {/* Profile Title - Center */}
-        <h1 className="text-lg font-bold flex-1 text-center" style={{ color: colors.textWhite }}>{title}</h1>
-
-        {/* Spacer to balance the layout */}
-        <div className="w-10 h-10"></div>
+        <h1 className="text-lg font-bold text-center" style={{ color: colors.textWhite }}>{title}</h1>
       </div>
     </header>
   );

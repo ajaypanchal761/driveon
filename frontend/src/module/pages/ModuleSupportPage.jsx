@@ -8,6 +8,7 @@ import ProfileHeader from '../components/layout/ProfileHeader';
 import BottomNavbar from '../components/layout/BottomNavbar';
 import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
+import CustomSelect from '../components/common/CustomSelect';
 
 /**
  * ModuleSupportPage Component
@@ -385,24 +386,21 @@ const ModuleSupportPage = () => {
 
               {/* Category */}
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textSecondary }}>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: colors.textSecondary }}
+                >
                   Category
                 </label>
-                <select
+                <CustomSelect
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none transition-colors"
-                  style={{
-                    borderColor: '#e5e7eb',
-                    color: colors.textPrimary,
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = colors.textPrimary}
-                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-                >
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setCategory(val)}
+                  options={categories.map((cat) => ({
+                    label: cat.label,
+                    value: cat.value,
+                  }))}
+                  placeholder="Select category"
+                />
               </div>
 
               {/* Description */}

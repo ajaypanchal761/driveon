@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { lazy } from "react";
+import { lazy, useState, useEffect } from "react";
 import AdminRoute from "../components/layout/AdminRoute";
 import AdminLayout from "../components/admin/layout/AdminLayout";
 import ModuleLayout from "../module/components/layout/ModuleLayout";
@@ -51,6 +51,15 @@ const ModuleAboutPage = lazy(() => import("../module/pages/AboutPage"));
 const ModuleContactPage = lazy(() => import("../module/pages/ContactPage"));
 const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
+const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
+const ModuleLocationPage = lazy(() => import("../module/pages/ModuleLocationPage"));
+const CategoryPage = lazy(() => import("../module/pages/CategoryPage"));
+const BrandPage = lazy(() => import("../module/pages/BrandPage"));
+const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
+const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
+
+// NewUI pages (new car booking platform)
+const NewUIHomePage = lazy(() => import("../module/newui/pages/HomePage"));
 
 // Admin pages
 const AdminDashboardPage = lazy(() =>
@@ -104,6 +113,36 @@ const AdminLoginPage = lazy(() =>
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 
 /**
+ * ModuleResponsiveHome Component
+ * - Mobile view: show ModuleTestPage (module-test UI)
+ * - Desktop / tablet view: show original ModuleHomePage
+ * All other routes and redirections remain unchanged.
+ */
+const ModuleResponsiveHome = () => {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth < 768; // Tailwind md breakpoint
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (isMobile) {
+    return <ModuleTestPage />;
+  }
+
+  return <ModuleHomePage />;
+};
+
+/**
  * AdminRedirectRoute Component
  * Handles /admin route - redirects to dashboard if authenticated, login if not
  */
@@ -136,7 +175,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <ModuleHomePage />,
+        element: <ModuleResponsiveHome />,
       },
       {
         path: "/login",
@@ -165,7 +204,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/profile",
-        element: <ModuleProfilePage />,
+        element: <ModuleProfile1Page />,
       },
       {
         path: "/profile/complete",
@@ -227,7 +266,36 @@ const router = createBrowserRouter([
         path: "/terms",
         element: <ModuleTermsAndConditionsPage />,
       },
+      {
+        path: "/module-test",
+        element: <ModuleTestPage />,
+      },
+      {
+        path: "/module-location",
+        element: <ModuleLocationPage />,
+      },
+      {
+        path: "/category/:categoryName",
+        element: <CategoryPage />,
+      },
+      {
+        path: "/brand/:brandName",
+        element: <BrandPage />,
+      },
+      {
+        path: "/module-profile1",
+        element: <ModuleProfile1Page />,
+      },
     ],
+  },
+  // NewUI routes (new car booking platform) - separate from ModuleLayout
+  {
+    path: "/newui",
+    element: <NewUIHomePage />,
+  },
+  {
+    path: "/newui/home",
+    element: <NewUIHomePage />,
   },
   // Admin Auth Routes (public - no authentication required)
   {

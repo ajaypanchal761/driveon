@@ -64,6 +64,7 @@ const CarCard = ({ car, index = 0 }) => {
             duration: 0.3,
             ease: "easeOut"
           }}
+          whileTap={{ scale: 0.95 }}
         >
           <svg 
             className={`w-5 h-5 md:w-6 md:h-6 ${isFavorite ? 'text-red-500' : 'text-white'}`}

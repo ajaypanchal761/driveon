@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Keyboard, Mousewheel } from 'swiper/modules';
@@ -18,6 +18,7 @@ import carImg4 from '../../assets/car_img4-removebg-preview.png';
 import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg8 from '../../assets/car_img8.png';
+import carBanImg1 from '../../assets/car_banImg1.jpg';
 import carBanImg3 from '../../assets/car_banImg3-removebg-preview.png';
 
 /**
@@ -93,10 +94,21 @@ const CarDetailsPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [activeTab, setActiveTab] = useState('offers');
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
+
+  // Refs for section scrolling
+  const offersRef = useRef(null);
+  const reviewsRef = useRef(null);
+  const locationRef = useRef(null);
+  const featuresRef = useRef(null);
+  const cancellationRef = useRef(null);
+  const inclusionExclusionRef = useRef(null);
+  const faqsRef = useRef(null);
 
   // Mock car data - used only when no initial car is provided and API data isn't available
   // Structure matches document.txt requirements: Model, Brand, Seats, Transmission, Fuel Type, Color, Features, Rating, Reviews, Owner Details, Price
@@ -479,6 +491,76 @@ const CarDetailsPage = () => {
             profilePic: 'https://via.placeholder.com/40',
             rating: '5.0',
             comment: 'Best luxury car rental experience. The electric drive is silent and powerful.'
+          }
+        ]
+      },
+      'audi-r8': {
+        id: 'audi-r8',
+        brand: 'Audi',
+        model: 'R8 Performance',
+        name: 'Audi R8 Performance',
+        image: carBanImg1,
+        rating: 5.0,
+        reviewsCount: 120,
+        location: 'Los Angeles, USA',
+        seats: 2,
+        transmission: 'Automatic',
+        fuelType: 'Petrol',
+        color: 'Silver',
+        carType: 'Sports',
+        year: 2023,
+        price: 800,
+        pricePerDay: 800,
+        description: 'Experience the ultimate in performance and luxury with the Audi R8 Performance. A supercar that combines breathtaking speed with everyday usability.',
+        owner: {
+          name: 'Audi Premium',
+          profilePic: 'https://via.placeholder.com/50',
+          verified: true,
+          rating: 5.0
+        },
+        host: {
+          name: 'Audi Premium',
+          profilePic: 'https://via.placeholder.com/50',
+          verified: true
+        },
+        features: [
+          'Air Conditioning',
+          'GPS Navigation',
+          'Bluetooth',
+          'USB Charging',
+          'Leather Seats',
+          'Sport Mode',
+          'Launch Control',
+          'Premium Sound System',
+          'Carbon Fiber Accents',
+          'Quattro All-Wheel Drive'
+        ],
+        featureIcons: [
+          { icon: 'seat', label: 'Capacity', value: '2 Seats' },
+          { icon: 'engine', label: 'Engine', value: '602 HP' },
+          { icon: 'speed', label: 'Max Speed', value: '330km/h' },
+          { icon: 'autopilot', label: 'Drive Mode', value: 'Performance' },
+          { icon: 'charge', label: 'Fuel Economy', value: '10 km/l' },
+          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
+        ],
+        reviews: [
+          {
+            name: 'Mr. Jack',
+            profilePic: 'https://via.placeholder.com/40',
+            rating: '5.0',
+            comment: 'The Audi R8 Performance is absolutely incredible. Fast, comfortable, and turns heads everywhere. Best rental experience ever!'
+          },
+          {
+            name: 'Robert',
+            profilePic: 'https://via.placeholder.com/40',
+            rating: '5.0',
+            comment: 'Amazing supercar! The performance is mind-blowing and the service was top-notch. Highly recommend!'
+          },
+          {
+            name: 'Sarah',
+            profilePic: 'https://via.placeholder.com/40',
+            rating: '5.0',
+            comment: 'Dream car experience! The R8 Performance exceeded all expectations. Smooth ride and incredible acceleration.'
           }
         ]
       }
@@ -891,6 +973,30 @@ const CarDetailsPage = () => {
   // Time picker modal state
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
+  // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
+  // Use noon (12:00) to avoid timezone shift issues
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      const day = parseInt(parts[2], 10);
+      // Create date at noon to avoid timezone shift issues
+      return new Date(year, month, day, 12, 0, 0);
+    }
+    return null;
+  };
+
+  // Helper: Convert Date object to date string (YYYY-MM-DD) in local timezone
+  const formatLocalDate = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Calculate dynamic price
   const calculatePrice = () => {
     if (!pickupDate || !dropDate || !car) {
@@ -905,8 +1011,9 @@ const CarDetailsPage = () => {
       };
     }
 
-    const pickup = new Date(pickupDate);
-    const drop = new Date(dropDate);
+    // Parse dates in local timezone to avoid timezone shift
+    const pickup = parseLocalDate(pickupDate) || new Date();
+    const drop = parseLocalDate(dropDate) || new Date();
     const diffTime = Math.abs(drop - pickup);
     const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
@@ -940,10 +1047,13 @@ const CarDetailsPage = () => {
 
   const priceDetails = calculatePrice();
 
-  // Get minimum date (today)
+  // Get minimum date (today) - using local timezone
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Combined date-time picker helpers
@@ -953,9 +1063,11 @@ const CarDetailsPage = () => {
     const existingDate = target === 'pickup' ? pickupDate : dropDate;
     let baseDate;
     if (existingDate) {
-      baseDate = new Date(existingDate);
+      baseDate = parseLocalDate(existingDate);
+      if (!baseDate) baseDate = new Date();
     } else if (target === 'drop' && pickupDate) {
-      baseDate = new Date(pickupDate);
+      baseDate = parseLocalDate(pickupDate);
+      if (!baseDate) baseDate = new Date();
     } else {
       baseDate = new Date();
     }
@@ -984,6 +1096,16 @@ const CarDetailsPage = () => {
 
   const formatDisplayDate = (dateStr) => {
     if (!dateStr) return 'Select Date';
+    // Parse date string directly to avoid timezone issues
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      const day = parseInt(parts[2], 10);
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${String(day).padStart(2, '0')} ${monthNames[month]} ${year}`;
+    }
+    // Fallback for other formats
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return dateStr;
     const day = d.getDate().toString().padStart(2, '0');
@@ -1002,8 +1124,10 @@ const CarDetailsPage = () => {
     for (let i = 0; i < firstDay; i += 1) {
       days.push(null);
     }
+    // Create dates at noon (12:00) to avoid timezone shift issues
+    // This ensures the date stays the same regardless of timezone
     for (let d = 1; d <= daysInMonth; d += 1) {
-      days.push(new Date(year, month, d));
+      days.push(new Date(year, month, d, 12, 0, 0));
     }
     return days;
   };
@@ -1023,14 +1147,19 @@ const CarDetailsPage = () => {
     }
     
     if (calendarSelectedDate) {
-      const iso = calendarSelectedDate.toISOString().split('T')[0];
+      // Use local date components instead of toISOString to avoid timezone shift
+      const dateStr = formatLocalDate(calendarSelectedDate);
       if (dateTimePickerTarget === 'pickup') {
-        setPickupDate(iso);
-        if (dropDate && new Date(dropDate) < calendarSelectedDate) {
-          setDropDate('');
+        setPickupDate(dateStr);
+        // Compare dates properly
+        if (dropDate) {
+          const dropDateObj = parseLocalDate(dropDate);
+          if (dropDateObj && dropDateObj < calendarSelectedDate) {
+            setDropDate('');
+          }
         }
       } else if (dateTimePickerTarget === 'drop') {
-        setDropDate(iso);
+        setDropDate(dateStr);
       }
     }
     
@@ -1111,6 +1240,63 @@ const CarDetailsPage = () => {
   const handleNextImage = () => {
     setCurrentImageIndex((prev) => (prev === carImages.length - 1 ? 0 : prev + 1));
   };
+
+  // Handle tab click and scroll to section
+  const handleTabClick = (tabName) => {
+    setActiveTab(tabName);
+    const refs = {
+      offers: offersRef,
+      reviews: reviewsRef,
+      location: locationRef,
+      features: featuresRef,
+      cancellation: cancellationRef,
+      'inclusion-exclusion': inclusionExclusionRef,
+      faqs: faqsRef,
+    };
+    
+    const ref = refs[tabName];
+    if (ref && ref.current) {
+      const offset = 150; // Offset for sticky header
+      const elementPosition = ref.current.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Track active section on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const refs = [
+        { id: 'offers', ref: offersRef },
+        { id: 'reviews', ref: reviewsRef },
+        { id: 'location', ref: locationRef },
+        { id: 'features', ref: featuresRef },
+        { id: 'cancellation', ref: cancellationRef },
+        { id: 'inclusion-exclusion', ref: inclusionExclusionRef },
+        { id: 'faqs', ref: faqsRef },
+      ];
+
+      const scrollPosition = window.scrollY + 200; // Offset for header
+
+      for (let i = refs.length - 1; i >= 0; i--) {
+        const { id, ref } = refs[i];
+        if (ref && ref.current) {
+          const elementTop = ref.current.offsetTop;
+          if (scrollPosition >= elementTop) {
+            setActiveTab(id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Feature Icons
   const getFeatureIcon = (iconType) => {
@@ -1273,8 +1459,8 @@ const CarDetailsPage = () => {
         <CarDetailsHeader />
       </div>
 
-      {/* Back Button - Below Header */}
-      <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
+      {/* Back Button - Below Header (desktop only) */}
+      <div className="hidden md:block w-full px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
         <div className="max-w-7xl mx-auto">
           <button
             onClick={() => navigate(-1)}
@@ -1654,12 +1840,12 @@ const CarDetailsPage = () => {
           </div>
         </div>
 
-        {/* Mobile/Tablet: Original Layout (unchanged) */}
+        {/* Mobile/Tablet: Original Layout (image directly on page, no white card) */}
         <div className="lg:hidden">
           {/* Car Images Section */}
           <div className="relative w-full mt-2 md:mt-4">
             {/* Mobile: Swipeable Carousel */}
-            <div className="md:hidden relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
+            <div className="md:hidden relative w-full">
             <Swiper
               modules={[Pagination, Keyboard, Mousewheel]}
               spaceBetween={0}
@@ -2022,8 +2208,203 @@ const CarDetailsPage = () => {
 
             </div>
 
+            {/* Tab Navigation Bar */}
+            <div className="mb-6 border-b" style={{ borderColor: colors.borderMedium }}>
+              <div className="flex gap-4 md:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide -mx-0">
+                {[
+                  { id: 'offers', label: 'Offers' },
+                  { id: 'reviews', label: 'Reviews' },
+                  { id: 'location', label: 'Location' },
+                  { id: 'features', label: 'Features' },
+                  { id: 'cancellation', label: 'Cancellation' },
+                  { id: 'inclusion-exclusion', label: 'Inclusion/Exclusion' },
+                  { id: 'faqs', label: 'FAQs' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    className="flex-shrink-0 pb-3 px-1 text-sm md:text-base font-medium transition-all relative"
+                    style={{
+                      color: activeTab === tab.id ? colors.backgroundTertiary : colors.textSecondary,
+                    }}
+                  >
+                    {tab.label}
+                    {activeTab === tab.id && (
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: colors.backgroundTertiary }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Offers Section */}
+            <div ref={offersRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-xl font-bold text-black mb-4">Exclusive Offers</h2>
+              <div className="space-y-4">
+                <div 
+                  className="p-4 rounded-xl border-2 flex items-center justify-between"
+                  style={{ 
+                    backgroundColor: colors.backgroundPrimary,
+                    borderColor: colors.borderMedium
+                  }}
+                >
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl"
+                      style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
+                    >
+                      Z
+                    </div>
+                    <div>
+                      <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
+                        Get 50% OFF!
+                      </div>
+                      <div className="text-sm" style={{ color: colors.textSecondary }}>
+                        Check Availability Here &gt;
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className="px-6 py-2 rounded-lg text-white font-semibold text-sm"
+                    style={{ backgroundColor: colors.backgroundTertiary }}
+                  >
+                    APPLY
+                  </button>
+                </div>
+                <div 
+                  className="p-4 rounded-xl border-2"
+                  style={{ 
+                    backgroundColor: colors.backgroundPrimary,
+                    borderColor: colors.borderMedium
+                  }}
+                >
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    First Time User Discount
+                  </div>
+                  <div className="text-sm mb-3" style={{ color: colors.textSecondary }}>
+                    Get 20% off on your first booking. Use code: FIRST20
+                  </div>
+                  <button
+                    className="px-4 py-1.5 rounded-lg text-sm font-medium"
+                    style={{ 
+                      backgroundColor: colors.backgroundTertiary,
+                      color: colors.textWhite
+                    }}
+                  >
+                    Apply Code
+                  </button>
+                </div>
+                <div 
+                  className="p-4 rounded-xl border-2"
+                  style={{ 
+                    backgroundColor: colors.backgroundPrimary,
+                    borderColor: colors.borderMedium
+                  }}
+                >
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    Weekend Special
+                  </div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    Book for 3+ days and get 15% discount on weekends
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Reviews Section */}
+            <div ref={reviewsRef} className="mb-8 scroll-mt-24">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-black">Review ({car.reviewsCount})</h2>
+                <button 
+                  onClick={() => navigate(`/car-details/${car.id}/reviews`)}
+                  className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
+                >
+                  See All
+                </button>
+              </div>
+              
+              {/* Reviews - Horizontal Scroll */}
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
+                {car.reviews.map((review, index) => (
+                  <div 
+                    key={index}
+                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-semibold text-black">{review.name}</span>
+                          <span className="text-xs font-semibold text-black">{review.rating}</span>
+                          <svg 
+                            className="w-3 h-3" 
+                            fill={colors.accentOrange} 
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Location Section */}
+            <div ref={locationRef} className="mb-8 scroll-mt-24">
+              <div 
+                className="p-4 rounded-xl border-2"
+                style={{ 
+                  backgroundColor: colors.backgroundSecondary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
+                      Sector A, Sukhliya, Indore, Madhya
+                    </div>
+                    <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+                      Pradesh 452003, India
+                    </div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      4.8 Kms Away
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <div 
+                      className="w-20 h-20 rounded-lg flex items-center justify-center relative overflow-hidden"
+                      style={{ backgroundColor: colors.backgroundLight }}
+                    >
+                      {/* Map grid lines */}
+                      <svg className="w-full h-full absolute inset-0" viewBox="0 0 100 100" style={{ opacity: 0.3 }}>
+                        <line x1="0" y1="20" x2="100" y2="20" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="0" y1="40" x2="100" y2="40" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="0" y1="60" x2="100" y2="60" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="0" y1="80" x2="100" y2="80" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="20" y1="0" x2="20" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="40" y1="0" x2="40" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="60" y1="0" x2="60" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="80" y1="0" x2="80" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                      </svg>
+                      {/* Red location pin */}
+                      <svg className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#F44336" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Car Features - As per document.txt: Features Array */}
-            <div className="mb-6">
+            <div ref={featuresRef} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-3">Car features</h2>
               
               {/* Feature Icons Grid (if featureIcons exist) */}
@@ -2065,14 +2446,14 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Reviews Section */}
-            <div className="mb-6">
+            <div ref={reviewsRef} className="mb-6 scroll-mt-24">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
                 <button 
                   onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`)}
                   className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
                 >
-                  See All
+                  VIEW MORE &gt;
                 </button>
               </div>
               
@@ -2106,6 +2487,168 @@ const CarDetailsPage = () => {
                 ) : (
                   <div className="text-sm text-gray-500">No reviews yet</div>
                 )}
+              </div>
+            </div>
+
+            {/* Cancellation Section */}
+            <div ref={cancellationRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-xl font-bold text-black mb-4">Cancellation Policy</h2>
+              <div 
+                className="p-4 rounded-xl border-2"
+                style={{ 
+                  backgroundColor: colors.backgroundPrimary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      Free Cancellation
+                    </div>
+                    <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                      Cancel up to 24 hours before pickup time for a full refund.
+                    </div>
+                  </div>
+                  <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      Partial Refund
+                    </div>
+                    <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                      Cancel between 12-24 hours before pickup: 50% refund
+                    </div>
+                  </div>
+                  <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      No Refund
+                    </div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Cancellations made less than 12 hours before pickup are not eligible for refund.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Inclusion/Exclusion Section */}
+            <div ref={inclusionExclusionRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>Inclusion/Exclusions</h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Fuel</div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Fuel not included. Guest should return the car with the same fuel level as at start.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Toll/Fastag</div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Toll/Fastag charges not included. Check with host for Fastag recharge.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Trip Protection</div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Trip Protection excludes: Off-road use, driving under influence, over-speeding, illegal use, restricted zones.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQs Section */}
+            <div ref={faqsRef} className="mb-8 scroll-mt-24">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
+                <button 
+                  className="text-sm font-medium hover:opacity-80 transition-opacity"
+                  style={{ color: colors.textSecondary }}
+                >
+                  VIEW MORE &gt;
+                </button>
+              </div>
+              <div className="space-y-0">
+                {[
+                  {
+                    question: 'Who pays for the Fuel and FASTag?',
+                    answer: 'The guest is responsible for fuel costs. You will receive the car with a full tank and should return it with the same fuel level. FASTag charges are also the responsibility of the guest. Please check with the host for Fastag recharge if needed.'
+                  },
+                  {
+                    question: 'Can I modify or extend my trip after booking creation?',
+                    answer: 'Yes, you can modify or extend your trip. Please contact our support team or the car owner at least 24 hours before your scheduled pickup time. Modifications are subject to availability and may result in price adjustments.'
+                  },
+                  {
+                    question: 'How do I cancel my booking?',
+                    answer: 'You can cancel your booking through the app or by contacting support. Free cancellation is available up to 24 hours before pickup for a full refund. Cancellations made 12-24 hours before pickup receive a 50% refund. Cancellations made less than 12 hours before pickup are not eligible for refund.'
+                  },
+                  {
+                    question: 'What is refundable security deposit and why do I pay it?',
+                    answer: 'The security deposit is a refundable amount held to cover any potential damages, traffic violations, or additional charges during your rental period. It is fully refundable after the trip completion, provided there are no damages or violations. The deposit amount varies based on the car type and is typically returned within 5-7 business days after trip completion.'
+                  },
+                  {
+                    question: 'What is the policy around Limited Kms in Subscription?',
+                    answer: 'For subscription plans, there may be a daily kilometer limit. Additional kilometers beyond the limit are charged at a per-kilometer rate. The standard limit is usually 200-250 km per day, but this may vary by car and subscription plan. Unlimited kilometers are available for regular bookings.'
+                  }
+                ].map((faq, index) => (
+                  <div 
+                    key={index}
+                    className="border-b"
+                    style={{ borderColor: colors.borderMedium }}
+                  >
+                    <div
+                      onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                      className="py-4 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      <div className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
+                        {faq.question}
+                      </div>
+                      <svg 
+                        className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${
+                          openFaqIndex === index ? 'transform rotate-180' : ''
+                        }`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                    {openFaqIndex === index && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
+                          {faq.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -2162,9 +2705,207 @@ const CarDetailsPage = () => {
 
           </div>
 
+          {/* Tab Navigation Bar - Mobile */}
+          <div className="mb-6 border-b" style={{ borderColor: colors.borderMedium }}>
+            <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide -mx-0">
+              {[
+                { id: 'offers', label: 'Offers' },
+                { id: 'reviews', label: 'Reviews' },
+                { id: 'location', label: 'Location' },
+                { id: 'features', label: 'Features' },
+                { id: 'cancellation', label: 'Cancellation' },
+                { id: 'inclusion-exclusion', label: 'Inclusion/Exclusion' },
+                { id: 'faqs', label: 'FAQs' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id)}
+                  className="flex-shrink-0 pb-3 px-1 text-xs md:text-sm font-medium transition-all relative"
+                  style={{
+                    color: activeTab === tab.id ? colors.backgroundTertiary : colors.textSecondary,
+                  }}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ backgroundColor: colors.backgroundTertiary }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Offers Section - Mobile */}
+          <div ref={offersRef} className="mb-8 scroll-mt-24">
+            <h2 className="text-lg md:text-xl font-bold text-black mb-4">Exclusive Offers</h2>
+            <div className="space-y-4">
+              <div 
+                className="p-4 rounded-xl border-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                style={{ 
+                  backgroundColor: colors.backgroundPrimary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <div className="flex items-center gap-4">
+                  <div 
+                    className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl flex-shrink-0"
+                    style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
+                  >
+                    Z
+                  </div>
+                  <div>
+                    <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
+                      Get 50% OFF!
+                    </div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Check Availability Here &gt;
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="px-6 py-2 rounded-lg text-white font-semibold text-sm w-full md:w-auto"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                >
+                  APPLY
+                </button>
+              </div>
+              <div 
+                className="p-4 rounded-xl border-2"
+                style={{ 
+                  backgroundColor: colors.backgroundPrimary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                  First Time User Discount
+                </div>
+                <div className="text-sm mb-3" style={{ color: colors.textSecondary }}>
+                  Get 20% off on your first booking. Use code: FIRST20
+                </div>
+                <button
+                  className="px-4 py-1.5 rounded-lg text-sm font-medium"
+                  style={{ 
+                    backgroundColor: colors.backgroundTertiary,
+                    color: colors.textWhite
+                  }}
+                >
+                  Apply Code
+                </button>
+              </div>
+              <div 
+                className="p-4 rounded-xl border-2"
+                style={{ 
+                  backgroundColor: colors.backgroundPrimary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                  Weekend Special
+                </div>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>
+                  Book for 3+ days and get 15% discount on weekends
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Reviews Section - Mobile */}
+          <div ref={reviewsRef} className="mb-8 scroll-mt-24">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-black">Review ({car.reviewsCount})</h2>
+              <button 
+                onClick={() => navigate(`/car-details/${car.id}/reviews`)}
+                className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
+              >
+                See All
+              </button>
+            </div>
+            
+            {/* Reviews - Horizontal Scroll */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
+              {car.reviews && car.reviews.length > 0 ? (
+                car.reviews.map((review, index) => (
+                  <div 
+                    key={index}
+                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-semibold text-black">{review.name}</span>
+                          <span className="text-xs font-semibold text-black">{review.rating}</span>
+                          <svg 
+                            className="w-3 h-3" 
+                            fill={colors.accentOrange} 
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500">No reviews yet</div>
+              )}
+            </div>
+          </div>
+
+          {/* Location Section - Mobile */}
+          <div ref={locationRef} className="mb-8 scroll-mt-24">
+            <div 
+              className="p-4 rounded-xl border-2"
+              style={{ 
+                backgroundColor: colors.backgroundSecondary,
+                borderColor: colors.borderMedium
+              }}
+            >
+              <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
+                    Sector A, Sukhliya, Indore, Madhya
+                  </div>
+                  <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+                    Pradesh 452003, India
+                  </div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    4.8 Kms Away
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <div 
+                    className="w-20 h-20 rounded-lg flex items-center justify-center relative overflow-hidden"
+                    style={{ backgroundColor: colors.backgroundLight }}
+                  >
+                    {/* Map grid lines */}
+                    <svg className="w-full h-full absolute inset-0" viewBox="0 0 100 100" style={{ opacity: 0.3 }}>
+                      <line x1="0" y1="20" x2="100" y2="20" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="0" y1="40" x2="100" y2="40" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="0" y1="60" x2="100" y2="60" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="0" y1="80" x2="100" y2="80" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="20" y1="0" x2="20" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="40" y1="0" x2="40" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="60" y1="0" x2="60" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                      <line x1="80" y1="0" x2="80" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                    </svg>
+                    {/* Red location pin */}
+                    <svg className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#F44336" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Car Features - As per document.txt: Features Array */}
-          <div className="mb-6">
+          <div ref={featuresRef} className="mb-8 scroll-mt-24">
             <h2 className="text-lg md:text-xl font-bold text-black mb-3">Car features</h2>
             
             {/* Feature Icons Grid (if featureIcons exist) */}
@@ -2205,21 +2946,21 @@ const CarDetailsPage = () => {
             )}
           </div>
 
-          {/* Reviews Section - As per document.txt: Reviews */}
-          <div className="mb-6">
+          {/* Reviews Section - Mobile - As per document.txt: Reviews */}
+          <div ref={reviewsRef} className="mb-6 scroll-mt-24">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
               <button 
-                onClick={() => navigate(`/car-details/${car.id}/reviews`)}
+                onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`)}
                 className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
               >
-                See All
+                VIEW MORE &gt;
               </button>
             </div>
             
             {/* Reviews - Horizontal Scroll */}
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {car.reviews && car.reviews.length > 0 ? (
+              {car?.reviews && car.reviews.length > 0 ? (
                 car.reviews.map((review, index) => (
                   <div 
                     key={index}
@@ -2247,6 +2988,168 @@ const CarDetailsPage = () => {
               ) : (
                 <div className="text-sm text-gray-500">No reviews yet</div>
               )}
+            </div>
+          </div>
+
+          {/* Cancellation Section - Mobile */}
+          <div ref={cancellationRef} className="mb-8 scroll-mt-24">
+            <h2 className="text-lg md:text-xl font-bold text-black mb-4">Cancellation Policy</h2>
+            <div 
+              className="p-4 rounded-xl border-2"
+              style={{ 
+                backgroundColor: colors.backgroundPrimary,
+                borderColor: colors.borderMedium
+              }}
+            >
+              <div className="space-y-4">
+                <div>
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    Free Cancellation
+                  </div>
+                  <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                    Cancel up to 24 hours before pickup time for a full refund.
+                  </div>
+                </div>
+                <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    Partial Refund
+                  </div>
+                  <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                    Cancel between 12-24 hours before pickup: 50% refund
+                  </div>
+                </div>
+                <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    No Refund
+                  </div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    Cancellations made less than 12 hours before pickup are not eligible for refund.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Inclusion/Exclusion Section - Mobile */}
+          <div ref={inclusionExclusionRef} className="mb-8 scroll-mt-24">
+            <h2 className="text-lg md:text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>Inclusion/Exclusions</h2>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Fuel</div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    Fuel not included. Guest should return the car with the same fuel level as at start.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Toll/Fastag</div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    Toll/Fastag charges not included. Check with host for Fastag recharge.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Trip Protection</div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    Trip Protection excludes: Off-road use, driving under influence, over-speeding, illegal use, restricted zones.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FAQs Section - Mobile */}
+          <div ref={faqsRef} className="mb-8 scroll-mt-24">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
+              <button 
+                className="text-sm font-medium hover:opacity-80 transition-opacity"
+                style={{ color: colors.textSecondary }}
+              >
+                VIEW MORE &gt;
+              </button>
+            </div>
+            <div className="space-y-0">
+              {[
+                {
+                  question: 'Who pays for the Fuel and FASTag?',
+                  answer: 'The guest is responsible for fuel costs. You will receive the car with a full tank and should return it with the same fuel level. FASTag charges are also the responsibility of the guest. Please check with the host for Fastag recharge if needed.'
+                },
+                {
+                  question: 'Can I modify or extend my trip after booking creation?',
+                  answer: 'Yes, you can modify or extend your trip. Please contact our support team or the car owner at least 24 hours before your scheduled pickup time. Modifications are subject to availability and may result in price adjustments.'
+                },
+                {
+                  question: 'How do I cancel my booking?',
+                  answer: 'You can cancel your booking through the app or by contacting support. Free cancellation is available up to 24 hours before pickup for a full refund. Cancellations made 12-24 hours before pickup receive a 50% refund. Cancellations made less than 12 hours before pickup are not eligible for refund.'
+                },
+                {
+                  question: 'What is refundable security deposit and why do I pay it?',
+                  answer: 'The security deposit is a refundable amount held to cover any potential damages, traffic violations, or additional charges during your rental period. It is fully refundable after the trip completion, provided there are no damages or violations. The deposit amount varies based on the car type and is typically returned within 5-7 business days after trip completion.'
+                },
+                {
+                  question: 'What is the policy around Limited Kms in Subscription?',
+                  answer: 'For subscription plans, there may be a daily kilometer limit. Additional kilometers beyond the limit are charged at a per-kilometer rate. The standard limit is usually 200-250 km per day, but this may vary by car and subscription plan. Unlimited kilometers are available for regular bookings.'
+                }
+              ].map((faq, index) => (
+                  <div 
+                    key={index}
+                    className="border-b"
+                    style={{ borderColor: colors.borderMedium }}
+                  >
+                    <div
+                      onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                      className="py-4 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      <div className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
+                        {faq.question}
+                      </div>
+                      <svg 
+                        className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${
+                          openFaqIndex === index ? 'transform rotate-180' : ''
+                        }`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                    {openFaqIndex === index && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
+                          {faq.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         </div>
@@ -2345,17 +3248,46 @@ const CarDetailsPage = () => {
                   ))}
                   {getCalendarDays().map((date, idx) => {
                     if (!date) return <div key={idx}></div>;
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = calendarSelectedDate && dateStr === calendarSelectedDate.toISOString().split('T')[0];
-                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                    // Use local date components for comparison to avoid timezone issues
+                    const dateStr = formatLocalDate(date);
+                    const dateYear = date.getFullYear();
+                    const dateMonth = date.getMonth();
+                    const dateDay = date.getDate();
+                    
+                    // Check if selected using local date components
+                    let isSelected = false;
+                    if (calendarSelectedDate) {
+                      const selectedYear = calendarSelectedDate.getFullYear();
+                      const selectedMonth = calendarSelectedDate.getMonth();
+                      const selectedDay = calendarSelectedDate.getDate();
+                      isSelected = dateYear === selectedYear && 
+                                   dateMonth === selectedMonth && 
+                                   dateDay === selectedDay;
+                    }
+                    
+                    // Check if past date using local date components
+                    const today = new Date();
+                    const todayYear = today.getFullYear();
+                    const todayMonth = today.getMonth();
+                    const todayDay = today.getDate();
+                    const isPast = dateYear < todayYear || 
+                                  (dateYear === todayYear && dateMonth < todayMonth) ||
+                                  (dateYear === todayYear && dateMonth === todayMonth && dateDay < todayDay);
+                    
                     const isMinDate = dateStr === getMinDate();
-                    const isCurrentMonth = date.getMonth() === calendarMonth.getMonth();
+                    const isCurrentMonth = dateMonth === calendarMonth.getMonth();
                     
                     return (
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => !isPast && isCurrentMonth && setCalendarSelectedDate(date)}
+                        onClick={() => {
+                          if (!isPast && isCurrentMonth) {
+                            // Ensure date is at noon to avoid timezone issues
+                            const selectedDate = new Date(dateYear, dateMonth, dateDay, 12, 0, 0);
+                            setCalendarSelectedDate(selectedDate);
+                          }
+                        }}
                         disabled={isPast && !isMinDate}
                         className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
                           isSelected

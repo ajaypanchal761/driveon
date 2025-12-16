@@ -17,13 +17,15 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
   // Horizontal layout for Popular Cars section (matches second image)
   if (horizontal) {
     return (
-      <div 
-        className="w-full rounded-xl md:rounded-2xl overflow-hidden flex cursor-pointer hover:opacity-90 transition-opacity"
+      <motion.div 
+        className="w-full rounded-xl md:rounded-2xl overflow-hidden flex cursor-pointer"
         style={{ 
           backgroundColor: colors.backgroundSecondary, // White background on desktop
           border: `1px solid ${colors.borderSubtle}`
         }}
         onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
+        whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+        transition={{ duration: 0.3 }}
       >
         {/* Car Image - Left Side */}
         <div 
@@ -48,19 +50,19 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
 
         {/* Car Details - Right Side */}
         <div className="flex-1 flex flex-col justify-center px-4 md:px-6 lg:px-8 py-3 md:py-4 lg:py-5">
-          {/* Car Name */}
-          <h3 className="text-base md:text-xl lg:text-2xl font-bold text-black mb-2 md:mb-3 line-clamp-1">{car.name}</h3>
-          
-          {/* Rating */}
-          <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
-            <span className="text-sm md:text-base lg:text-lg text-gray-600">{car.rating}</span>
-            <svg 
-              className="w-4 h-4 md:w-5 md:h-5" 
-              fill={colors.accentOrange} 
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
+          {/* Car Name and Rating in same row */}
+          <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+            <h3 className="text-base md:text-xl lg:text-2xl font-bold text-black line-clamp-1 flex-1">{car.name}</h3>
+            <div className="flex items-center gap-1 md:gap-1.5 flex-shrink-0">
+              <span className="text-sm md:text-base lg:text-lg text-gray-600">{car.rating}</span>
+              <svg 
+                className="w-4 h-4 md:w-5 md:h-5" 
+                fill={colors.accentOrange} 
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
           </div>
 
           {/* Price */}
@@ -68,19 +70,22 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
             <span className="text-base md:text-lg lg:text-xl font-bold text-black">{car.price}/Day</span>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   // Vertical layout for Recommend For You section (default)
   return (
-    <div 
-      className="w-full rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity md:rounded-2xl"
+    <motion.div 
+      className="w-full rounded-xl overflow-hidden cursor-pointer md:rounded-2xl"
       style={{ 
         backgroundColor: colors.backgroundSecondary,
-        border: `1px solid ${colors.borderLight}`
+        border: `1px solid ${colors.borderLight}`,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
       }}
       onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
+      whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+      transition={{ duration: 0.3 }}
     >
       {/* Car Image Container - Compact on mobile, larger on desktop */}
       <div 
@@ -136,19 +141,19 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
 
       {/* Car Details - Compact on mobile, more spacious on desktop */}
       <div className="p-2 md:p-4 lg:p-5">
-        {/* Car Name */}
-        <h3 className="text-xs md:text-lg lg:text-xl font-bold text-black mb-1 md:mb-2 lg:mb-3 line-clamp-1">{car.name}</h3>
-        
-        {/* Rating */}
-        <div className="flex items-center gap-1 md:gap-1.5 mb-1 md:mb-2">
-          <span className="text-xs md:text-sm lg:text-base font-semibold text-black">{car.rating}</span>
-          <svg 
-            className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5" 
-            fill={colors.accentOrange} 
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
+        {/* Car Name and Rating in same row */}
+        <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2 lg:mb-3">
+          <h3 className="text-xs md:text-lg lg:text-xl font-bold text-black line-clamp-1 flex-1">{car.name}</h3>
+          <div className="flex items-center gap-1 md:gap-1.5 flex-shrink-0">
+            <span className="text-xs md:text-sm lg:text-base font-semibold text-black">{car.rating}</span>
+            <svg 
+              className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5" 
+              fill={colors.accentOrange} 
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </div>
         </div>
 
         {/* Location */}
@@ -195,7 +200,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
