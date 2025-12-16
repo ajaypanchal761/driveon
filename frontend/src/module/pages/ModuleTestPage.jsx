@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 import FilterDropdown from "../components/common/FilterDropdown";
@@ -119,63 +120,64 @@ const ModuleTestPage = () => {
         className="px-4 pt-6 pb-4 space-y-2"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
-        <div className="flex justify-start mb-1.5">
+        {/* Logo and Location in same row */}
+        <div className="flex items-center justify-between gap-3 mb-1.5">
           <img
             alt="DriveOn Logo"
             src="/driveonlogo.png"
             className="h-9 w-auto object-contain"
           />
-        </div>
-        {/* Location pill */}
-        <button
-          type="button"
-          className="w-full flex items-center justify-between rounded-full px-4 py-1.5 text-[11px]"
-          style={{
-            backgroundColor: colors.backgroundTertiary,
-            color: colors.textWhite,
-          }}
-        >
-          <span className="flex items-center gap-2 min-w-0">
-            <span
-              className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px]"
-              style={{ backgroundColor: colors.backgroundTertiary }}
-            >
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0L6.343 16.657A8 8 0 1117.657 16.657z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </span>
-            <span className="truncate">Los Angeles, California, U.S.</span>
-          </span>
-          <svg
-            className="w-3 h-3 text-gray-300 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          {/* Location pill */}
+          <button
+            type="button"
+            className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
+            style={{
+              backgroundColor: colors.backgroundTertiary,
+              color: colors.textWhite,
+            }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
+            <span className="flex items-center gap-2 min-w-0">
+              <span
+                className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px]"
+                style={{ backgroundColor: colors.backgroundTertiary }}
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0L6.343 16.657A8 8 0 1117.657 16.657z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </span>
+              <span className="truncate">Los Angeles, California, U.S.</span>
+            </span>
+            <svg
+              className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        </div>
 
         {/* Date & time pill */}
         <button
@@ -234,13 +236,18 @@ const ModuleTestPage = () => {
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* Floating white card container like reference */}
-        <div className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4">
+        <motion.div 
+          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
           {/* FILTER PILLS ROW */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             {/* All filters pill */}
-            <button
+            <motion.button
               type="button"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0 border"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold flex-shrink-0 border shadow-sm"
               style={{
                 borderColor: "#e5e7eb",
                 backgroundColor:
@@ -256,6 +263,8 @@ const ModuleTestPage = () => {
                 setActiveFilter("All filters");
                 setIsFilterOpen(true);
               }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <span>All filters</span>
               <svg
@@ -271,10 +280,10 @@ const ModuleTestPage = () => {
                   d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6L15 13.25V19a1 1 0 01-.553.894l-4 2A1 1 0 019 21v-7.75L3.2 4.6A1 1 0 013 4z"
                 />
               </svg>
-            </button>
+            </motion.button>
 
             {/* Price pill */}
-            <button
+            <motion.button
               type="button"
               className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0"
               style={{
@@ -289,12 +298,14 @@ const ModuleTestPage = () => {
                 border: "1px solid #e5e7eb",
               }}
               onClick={() => setActiveFilter("$200–$1,000 / day")}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               $200–$1,000 / day
-            </button>
+            </motion.button>
 
             {["Brand", "Body", "More"].map((label) => (
-              <button
+              <motion.button
                 key={label}
                 type="button"
                 className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0 border"
@@ -308,45 +319,62 @@ const ModuleTestPage = () => {
                     activeFilter === label ? "#ffffff" : colors.textSecondary,
                 }}
                 onClick={() => setActiveFilter(label)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 {label}
-              </button>
+              </motion.button>
             ))}
           </div>
 
           {/* CATEGORY IMAGE CARDS */}
-          <div className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-sm border border-gray-100">
+          <motion.div 
+            className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-lg border border-gray-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
             <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-              {categories.map((cat) => (
-                <button
+              {categories.map((cat, index) => (
+                <motion.button
                   key={cat.id}
                   type="button"
                   className="flex-shrink-0 w-24"
                   onClick={() => navigate("/")}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.2 + (index * 0.05) }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <div className="w-24 h-20 rounded-xl overflow-hidden mb-2 bg-gray-100">
+                  <div className="w-24 h-20 rounded-xl overflow-hidden mb-2 bg-gray-100 shadow-md">
                     <img
                       src={cat.image}
                       alt={cat.label}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                     />
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="text-xs font-semibold text-gray-900">
+                    <span className="text-xs font-bold text-gray-900">
                       {cat.label}
                     </span>
-                    <span className="text-[10px] text-gray-500">
-                      {cat.count}
+                    <span className="text-[10px] text-gray-500 font-medium">
+                      {cat.count} cars
                     </span>
                   </div>
-                </button>
+                </motion.button>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* TOP BRANDS SECTION (between categories and meta row) */}
-          <div className="mb-4">
-            <h2 className="text-sm font-bold text-black mb-3">Brands</h2>
+          <motion.div 
+            className="mb-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+          >
+            <h2 className="text-base font-bold text-black mb-4">Top Brands</h2>
             <div className="relative overflow-hidden w-full">
               <div className="flex gap-7 brands-scroll">
                 {brands.concat(brands).map((brand, index) => (
@@ -389,7 +417,7 @@ const ModuleTestPage = () => {
                 animation-play-state: paused;
               }
             `}</style>
-          </div>
+          </motion.div>
 
           {/* META ROW */}
           <div className="flex items-center justify-between mt-1 px-1">
@@ -416,26 +444,37 @@ const ModuleTestPage = () => {
           </div>
 
           {/* FEATURED CAR CARD */}
-          <div className="px-1">
-            <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
-              <div className="w-full h-48 bg-gray-100">
-                <img
+          <motion.div 
+            className="px-1"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <motion.div 
+              className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100"
+              whileHover={{ scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                <motion.img
                   src={carImg1}
                   alt="Audi R8 Performance"
                   className="w-full h-full object-cover"
+                  whileHover={{ scale: 1.1 }}
+                  transition={{ duration: 0.4 }}
                 />
               </div>
               <div className="px-4 pt-3 pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900">
+                    <h3 className="text-sm font-bold text-gray-900">
                       Audi R8 Performance
                     </h3>
-                    <p className="mt-1 text-xs text-gray-500">$800 / day</p>
+                    <p className="mt-1 text-xs font-semibold text-gray-700">$800 / day</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <span
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-white"
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
                       style={{ backgroundColor: colors.backgroundTertiary }}
                     >
                       <svg
@@ -450,31 +489,43 @@ const ModuleTestPage = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* BEST CARS GRID (above Nearby) */}
-          <div className="mt-4 px-1">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black">
+          <motion.div 
+            className="mt-4 px-1"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.25 }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-black">
                 Best Cars
               </h2>
-              <button
+              <motion.button
                 type="button"
-                className="text-sm text-gray-500 font-medium"
+                className="text-sm text-gray-600 font-semibold"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 View All
-              </button>
+              </motion.button>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
               {/* Ferrari-FF card */}
-              <div
+              <motion.div
                 className="w-full rounded-xl overflow-hidden cursor-pointer"
                 style={{
                   backgroundColor: "#ffffff",
-                  border: "1px solid #d0d0d0",
+                  border: "1px solid #e5e7eb",
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
               >
                 <div
                   className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
@@ -574,15 +625,20 @@ const ModuleTestPage = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Tesla Model S card */}
-              <div
+              <motion.div
                 className="w-full rounded-xl overflow-hidden cursor-pointer"
                 style={{
                   backgroundColor: "#ffffff",
-                  border: "1px solid #d0d0d0",
+                  border: "1px solid #e5e7eb",
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+                whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
               >
                 <div
                   className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
@@ -683,30 +739,45 @@ const ModuleTestPage = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* NEARBY CARS SECTION (horizontal cards) */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-black">Nearby</h2>
-              <button
+          <motion.div 
+            className="mt-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-black">Nearby Cars</h2>
+              <motion.button
                 type="button"
-                className="text-sm text-gray-500 font-medium"
+                className="text-sm text-gray-600 font-semibold"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 View All
-              </button>
+              </motion.button>
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {nearbyCars.map((car) => (
-                <div key={car.id} className="min-w-[280px] flex-shrink-0">
-                  <div
+              {nearbyCars.map((car, index) => (
+                <motion.div 
+                  key={car.id} 
+                  className="min-w-[280px] flex-shrink-0"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.4 + (index * 0.1) }}
+                >
+                  <motion.div
                     className="w-full rounded-xl overflow-hidden cursor-pointer"
                     style={{
                       backgroundColor: "#ffffff",
-                      border: "1px solid #d0d0d0",
+                      border: "1px solid #e5e7eb",
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
                     }}
+                    whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
                   >
                     <div
                       className="relative w-full h-28 flex items-center justify-center rounded-t-xl overflow-hidden"
@@ -805,12 +876,12 @@ const ModuleTestPage = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               ))}
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </main>
 
       {/* BOTTOM NAVIGATION (reuse existing) */}
