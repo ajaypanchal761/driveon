@@ -21,7 +21,7 @@ const CarCard = ({ car, index = 0 }) => {
         backgroundColor: colors.backgroundSecondary,
         border: `1px solid ${colors.borderLight}`
       }}
-      onClick={() => navigate(`/car-details/${car.id}`)}
+      onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
     >
       {/* Car Image Container */}
       <div 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CarDetailsHeader from '../components/layout/CarDetailsHeader';
 import { colors } from '../theme/colors';
 import { motion } from 'framer-motion';
@@ -12,6 +12,19 @@ import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg8 from '../../assets/car_img8.png';
 
 /**
+ * Helper function to extract numeric price from price string or number
+ */
+const extractPrice = (price) => {
+  if (typeof price === 'number') return price;
+  if (typeof price === 'string') {
+    // Extract number from strings like "Rs. 200" or "200" or "Rs.200"
+    const match = price.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  }
+  return 0;
+};
+
+/**
  * BookNowPage Component
  * Premium booking page for car rental
  * Based on document.txt requirements with premium UI design
@@ -19,9 +32,31 @@ import carImg8 from '../../assets/car_img8.png';
 const BookNowPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
-  // Mock car data - In real app, fetch from API
+  // Get car data from navigation state or use mock data as fallback
   const getCarData = () => {
+    // First, try to get car from navigation state (when coming from search or car details)
+    if (location.state?.car) {
+      const stateCar = location.state.car;
+      return {
+        id: stateCar.id || stateCar._id || id,
+        name: stateCar.name || `${stateCar.brand || ''} ${stateCar.model || ''}`.trim(),
+        brand: stateCar.brand,
+        model: stateCar.model,
+        image: stateCar.image || stateCar.images?.[0] || carImg1,
+        images: stateCar.images || [stateCar.image || carImg1],
+        price: extractPrice(stateCar.price || stateCar.pricePerDay || 0),
+        pricePerDay: extractPrice(stateCar.pricePerDay || stateCar.price || 0),
+        seats: stateCar.seats || 4,
+        transmission: stateCar.transmission || 'Automatic',
+        fuelType: stateCar.fuelType || 'Petrol',
+        rating: stateCar.rating || stateCar.averageRating || 5.0,
+        location: stateCar.location || 'Location',
+      };
+    }
+    
+    // Fallback to mock data if no state car
     const cars = {
       '1': {
         id: 1,
@@ -130,12 +165,14 @@ const BookNowPage = () => {
       };
     }
 
-    const pickup = new Date(pickupDate);
-    const drop = new Date(dropDate);
+    // Use local date parsing to avoid timezone issues
+    const pickup = formatDateString(pickupDate) || new Date();
+    const drop = formatDateString(dropDate) || new Date();
     const diffTime = Math.abs(drop - pickup);
     const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
-    const basePrice = car.price || 0;
+    // Extract numeric price (handles both number and string formats)
+    const basePrice = extractPrice(car.price || car.pricePerDay || 0);
     let totalPrice = basePrice * totalDays;
 
     // Apply dynamic pricing multipliers (from document.txt)
@@ -166,23 +203,26 @@ const BookNowPage = () => {
 
   const priceDetails = calculatePrice();
 
-  // Get minimum date (today)
+  // Get minimum date (today) - format as YYYY-MM-DD using local date
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Combined date-time picker helpers
   const openDateTimePicker = (target) => {
     setDateTimePickerTarget(target);
     
-    // Set date
+    // Set date - use local date parsing to avoid timezone issues
     const existingDate = target === 'pickup' ? pickupDate : dropDate;
     let baseDate;
     if (existingDate) {
-      baseDate = new Date(existingDate);
+      baseDate = formatDateString(existingDate) || new Date();
     } else if (target === 'drop' && pickupDate) {
-      baseDate = new Date(pickupDate);
+      baseDate = formatDateString(pickupDate) || new Date();
     } else {
       baseDate = new Date();
     }
@@ -210,10 +250,24 @@ const BookNowPage = () => {
     setIsDateTimePickerOpen(true);
   };
 
+  // Helper function to format date string (YYYY-MM-DD) to local date string
+  const formatDateString = (dateStr) => {
+    if (!dateStr) return null;
+    // If it's already in YYYY-MM-DD format, parse it as local date
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    // Otherwise, try to parse as Date
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+
   const formatDisplayDate = (dateStr) => {
     if (!dateStr) return 'Select Date';
-    const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return dateStr;
+    const d = formatDateString(dateStr);
+    if (!d) return dateStr;
     const day = d.getDate().toString().padStart(2, '0');
     const month = d.toLocaleString('default', { month: 'short' });
     const year = d.getFullYear();
@@ -251,16 +305,24 @@ const BookNowPage = () => {
       return;
     }
     
-    // Save date
+    // Save date - format as YYYY-MM-DD using local date components to avoid timezone issues
     if (calendarSelectedDate) {
-      const iso = calendarSelectedDate.toISOString().split('T')[0];
+      const year = calendarSelectedDate.getFullYear();
+      const month = (calendarSelectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = calendarSelectedDate.getDate().toString().padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       if (dateTimePickerTarget === 'pickup') {
-        setPickupDate(iso);
-        if (dropDate && new Date(dropDate) < calendarSelectedDate) {
-          setDropDate('');
+        setPickupDate(dateStr);
+        // Compare dates properly using local date components
+        if (dropDate) {
+          const dropDateObj = formatDateString(dropDate);
+          if (dropDateObj && dropDateObj < calendarSelectedDate) {
+            setDropDate('');
+          }
         }
       } else if (dateTimePickerTarget === 'drop') {
-        setDropDate(iso);
+        setDropDate(dateStr);
       }
     }
     
@@ -418,7 +480,7 @@ const BookNowPage = () => {
               <h3 className="font-bold text-base mb-0.5" style={{ color: colors.textPrimary }}>{car.name}</h3>
               <div className="flex items-baseline gap-1 mb-1.5">
                 <span className="text-lg font-bold" style={{ color: colors.textPrimary }}>
-                  Rs. {car.price}
+                  Rs. {extractPrice(car.price || car.pricePerDay || 0)}
                 </span>
                 <span className="text-xs" style={{ color: colors.textSecondary }}>/day</span>
               </div>
@@ -743,9 +805,30 @@ const BookNowPage = () => {
                   ))}
                   {getCalendarDays().map((date, idx) => {
                     if (!date) return <div key={idx}></div>;
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = calendarSelectedDate && dateStr === calendarSelectedDate.toISOString().split('T')[0];
-                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                    // Format date as YYYY-MM-DD using local date components
+                    const dateYear = date.getFullYear();
+                    const dateMonth = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const dateDay = date.getDate().toString().padStart(2, '0');
+                    const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
+                    
+                    // Compare selected date using local date components
+                    let isSelected = false;
+                    if (calendarSelectedDate) {
+                      const selectedYear = calendarSelectedDate.getFullYear();
+                      const selectedMonth = (calendarSelectedDate.getMonth() + 1).toString().padStart(2, '0');
+                      const selectedDay = calendarSelectedDate.getDate().toString().padStart(2, '0');
+                      const selectedStr = `${selectedYear}-${selectedMonth}-${selectedDay}`;
+                      isSelected = dateStr === selectedStr;
+                    }
+                    
+                    // Compare with today using local date
+                    const today = new Date();
+                    const todayYear = today.getFullYear();
+                    const todayMonth = today.getMonth();
+                    const todayDay = today.getDate();
+                    const todayDate = new Date(todayYear, todayMonth, todayDay);
+                    const dateOnly = new Date(dateYear, date.getMonth(), dateDay);
+                    const isPast = dateOnly < todayDate;
                     const isMinDate = dateStr === getMinDate();
                     const isCurrentMonth = date.getMonth() === calendarMonth.getMonth();
                     

@@ -1192,103 +1192,123 @@ const HomePage = () => {
               </div>
 
               {/* Banner Section - Between Best Cars and Nearby - Mobile Only */}
-              <div className="mb-3">
-                {/* Header Above Banner */}
-                <div className="flex items-center justify-between mb-3 md:mb-4">
-                  <div className="flex items-baseline gap-2">
-                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black">
-                      AVAILABLE
-                    </h2>
+              {featuredCar && (
+                <div className="mb-3">
+                  {/* Header Above Banner */}
+                  <div className="flex items-center justify-between mb-3 md:mb-4">
+                    <div className="flex items-baseline gap-2">
+                      <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black">
+                        AVAILABLE
+                      </h2>
+                    </div>
                   </div>
-                </div>
 
-                {/* Banner Card - Clickable */}
-                <div
-                  className="relative rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer hover:opacity-95 transition-opacity"
-                  style={{ backgroundColor: colors.backgroundSecondary }}
-                  onClick={() => featuredCar && navigate(`/car-details/${featuredCar.id}`)}
-                >
-                  {/* Banner Image Carousel */}
-                  <Swiper
-                    modules={[Pagination, Keyboard, Mousewheel, Autoplay]}
-                    spaceBetween={0}
-                    slidesPerView={1}
-                    onSwiper={(swiper) => {
-                      bannerCarouselSwiperRef.current = swiper;
-                    }}
-                    pagination={{
-                      el: ".banner-carousel-pagination",
-                      clickable: true,
-                      renderBullet: (index, className) => {
-                        return `<span class="${className}" style="width: 8px; height: 1.5px; background: rgba(255,255,255,0.5); border-radius: 2px; margin: 0 2px; display: inline-block; transition: all 0.3s;"></span>`;
-                      },
-                    }}
-                    autoplay={{
-                      delay: 3000,
-                      disableOnInteraction: false,
-                    }}
-                    keyboard={{ enabled: true }}
-                    mousewheel={{ forceToAxis: true, sensitivity: 1 }}
-                    speed={500}
-                    loop={true}
-                    className="w-full h-40 md:h-44 lg:h-48"
-                    onSlideChange={(swiper) => {
-                      // Update custom pagination dots
-                      const paginationEl = document.querySelector(
-                        ".banner-carousel-pagination"
-                      );
-                      if (paginationEl) {
-                        const bullets = paginationEl.querySelectorAll(
-                          ".swiper-pagination-bullet"
-                        );
-                        bullets.forEach((bullet, idx) => {
-                          if (idx === swiper.realIndex) {
-                            bullet.style.width = "24px";
-                            bullet.style.background = "white";
-                          } else {
-                            bullet.style.width = "8px";
-                            bullet.style.background = "rgba(255,255,255,0.5)";
-                          }
-                        });
-                      }
-                    }}
+                  {/* Banner Card - Clickable */}
+                  <div
+                    className="relative rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer hover:opacity-95 transition-opacity"
+                    style={{ backgroundColor: colors.backgroundSecondary }}
+                    onClick={() => navigate(`/car-details/${featuredCar.id}`, { state: { car: featuredCar } })}
                   >
-                    {bannerImages.map((banner, index) => (
-                      <SwiperSlide key={banner.id} className="!w-full">
-                        <div className="min-w-full h-full relative">
-                          <img
-                            src={banner.image}
-                            alt={`Banner ${index + 1}`}
-                            className="w-full h-full object-cover"
-                            draggable={false}
-                          />
-                          {/* Text Overlay */}
-                          <div className="absolute inset-0 flex items-center justify-start px-4 md:px-6 lg:px-8 hidden">
-                            <div className="z-10">
-                              <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 md:mb-2">
-                                {bannerOverlay.title}
-                              </h3>
-                              <p className="text-xs md:text-sm lg:text-base text-white/90">
-                                {bannerOverlay.subtitle}
-                              </p>
-                            </div>
-                          </div>
-                          {/* Gradient Overlay for better text readability */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
-                        </div>
-                      </SwiperSlide>
-                    ))}
-                  </Swiper>
+                    {/* Banner Image Carousel - Use featuredCar images */}
+                    {featuredCar.images && featuredCar.images.length > 0 ? (
+                      <Swiper
+                        modules={[Pagination, Keyboard, Mousewheel, Autoplay]}
+                        spaceBetween={0}
+                        slidesPerView={1}
+                        onSwiper={(swiper) => {
+                          bannerCarouselSwiperRef.current = swiper;
+                        }}
+                        pagination={{
+                          el: ".banner-carousel-pagination",
+                          clickable: true,
+                          renderBullet: (index, className) => {
+                            return `<span class="${className}" style="width: 8px; height: 1.5px; background: rgba(255,255,255,0.5); border-radius: 2px; margin: 0 2px; display: inline-block; transition: all 0.3s;"></span>`;
+                          },
+                        }}
+                        autoplay={{
+                          delay: 3000,
+                          disableOnInteraction: false,
+                        }}
+                        keyboard={{ enabled: true }}
+                        mousewheel={{ forceToAxis: true, sensitivity: 1 }}
+                        speed={500}
+                        loop={featuredCar.images.length > 1}
+                        className="w-full h-40 md:h-44 lg:h-48"
+                        onSlideChange={(swiper) => {
+                          // Update custom pagination dots
+                          const paginationEl = document.querySelector(
+                            ".banner-carousel-pagination"
+                          );
+                          if (paginationEl) {
+                            const bullets = paginationEl.querySelectorAll(
+                              ".swiper-pagination-bullet"
+                            );
+                            bullets.forEach((bullet, idx) => {
+                              if (idx === swiper.realIndex) {
+                                bullet.style.width = "24px";
+                                bullet.style.background = "white";
+                              } else {
+                                bullet.style.width = "8px";
+                                bullet.style.background = "rgba(255,255,255,0.5)";
+                              }
+                            });
+                          }
+                        }}
+                      >
+                        {featuredCar.images.map((image, index) => {
+                          const imageUrl = typeof image === 'string' ? image : (image?.url || image?.path || image);
+                          return (
+                            <SwiperSlide key={`featured-${index}`} className="!w-full">
+                              <div className="min-w-full h-full relative">
+                                <img
+                                  src={imageUrl}
+                                  alt={`${featuredCar.name} - Image ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                  draggable={false}
+                                />
+                                {/* Text Overlay */}
+                                <div className="absolute inset-0 flex items-center justify-start px-4 md:px-6 lg:px-8 hidden">
+                                  <div className="z-10">
+                                    <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 md:mb-2">
+                                      {bannerOverlay.title}
+                                    </h3>
+                                    <p className="text-xs md:text-sm lg:text-base text-white/90">
+                                      {bannerOverlay.subtitle}
+                                    </p>
+                                  </div>
+                                </div>
+                                {/* Gradient Overlay for better text readability */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
+                              </div>
+                            </SwiperSlide>
+                          );
+                        })}
+                      </Swiper>
+                    ) : (
+                      // Fallback: Single image if no images array
+                      <div className="w-full h-40 md:h-44 lg:h-48 relative">
+                        <img
+                          src={featuredCar.image}
+                          alt={featuredCar.name}
+                          className="w-full h-full object-cover"
+                          draggable={false}
+                        />
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
+                      </div>
+                    )}
 
-                  {/* Long Dots Indicator */}
-                  <div className="banner-carousel-pagination absolute bottom-3 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20"></div>
-                </div>
+                    {/* Long Dots Indicator - Only show if multiple images */}
+                    {featuredCar.images && featuredCar.images.length > 1 && (
+                      <div className="banner-carousel-pagination absolute bottom-3 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20"></div>
+                    )}
+                  </div>
 
                 {/* Car Info Below Banner - Clickable */}
                 {featuredCar && (
                   <div
                     className="mt-3 cursor-pointer"
-                    onClick={() => navigate(`/car-details/${featuredCar.id}`)}
+                    onClick={() => navigate(`/car-details/${featuredCar.id}`, { state: { car: featuredCar } })}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="text-xl font-bold text-black">{featuredCar.name || `${featuredCar.brand} ${featuredCar.model}`}</h3>
@@ -1308,7 +1328,8 @@ const HomePage = () => {
                     <p className="text-sm text-gray-500">Rs. {featuredCar.price || featuredCar.pricePerDay || 800} / day</p>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
 
               {/* Nearby Section - Mobile Only */}
               <div className="mt-2">

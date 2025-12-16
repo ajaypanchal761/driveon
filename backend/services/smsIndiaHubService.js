@@ -78,10 +78,8 @@ class SMSIndiaHubService {
    * @param {string} phone - Phone number to send SMS to
    * @param {string} otp - OTP code to send
    * @param {string} purpose - Purpose of OTP (register, login, reset_password) - optional
-   * @param {string} purpose - Purpose of OTP (register, login, reset_password) - optional
    * @returns {Promise<Object>} - Response object
    */
-  async sendOTP(phone, otp, purpose = 'register') {
   async sendOTP(phone, otp, purpose = 'register') {
     try {
       // Load credentials dynamically (with trim to remove whitespace)
@@ -114,40 +112,44 @@ class SMSIndiaHubService {
         );
       }
 
-      // Use the verified message template from SMSIndia Hub (EXACT same format as RentYatra)
-      // RentYatra uses fixed "registration" text regardless of purpose - this works!
-      const message = `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
-      
-      // Always use transactional SMS (gwid=2) like RentYatra
-      const gatewayId = "2"; // 2 = transactional (same as RentYatra)
       // SMSIndia Hub requires DLT registered templates for transactional SMS
+      // The message text MUST match the registered DLT template EXACTLY
       // Check if custom message template is provided (must match registered DLT template exactly)
       const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
       
-      // Determine purpose text for message
-      let purposeText = 'registration';
-      if (purpose === 'login') {
-        purposeText = 'login';
-      } else if (purpose === 'reset_password') {
-        purposeText = 'password reset';
-      }
-      
-      // Use custom template if provided, otherwise use default format that matches registered template
-      // Based on working template: "Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is {otp}"
-      const message = customTemplate 
-        ? customTemplate.replace('{otp}', otp).replace('{purpose}', purposeText)
-        : `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for ${purposeText} is ${otp}`;
-
       // Check if template ID is provided (for DLT registered templates)
       const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
       
       // Check if promotional SMS is enabled (temporary workaround for template issues)
       // ⚠️ WARNING: Promotional SMS is not recommended for OTP - use only for testing
       const usePromotional = process.env.SMSINDIAHUB_USE_PROMOTIONAL === 'true';
+      // Always use transactional SMS (gwid=2) like RentYatra, unless promotional is explicitly enabled
       const gatewayId = usePromotional ? "1" : "2"; // 1 = promotional, 2 = transactional
       
       if (usePromotional) {
         console.warn("⚠️ Using promotional SMS mode - not recommended for production OTP!");
+      }
+      
+      // For transactional SMS (DLT), message must match registered template EXACTLY
+      // Use fixed template text that matches DLT registration, regardless of purpose
+      // Based on working template: "Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is {otp}"
+      let message;
+      if (customTemplate) {
+        // Use custom template with OTP replacement only (don't change purpose text for DLT)
+        message = customTemplate.replace('{otp}', otp);
+      } else if (usePromotional) {
+        // For promotional SMS, we can use dynamic purpose text
+        let purposeText = 'registration';
+        if (purpose === 'login') {
+          purposeText = 'login';
+        } else if (purpose === 'reset_password') {
+          purposeText = 'password reset';
+        }
+        message = `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for ${purposeText} is ${otp}`;
+      } else {
+        // For transactional SMS, use fixed template text that matches DLT registration
+        // IMPORTANT: This must match the registered DLT template exactly
+        message = `Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
       }
       
       // Build the API URL with query parameters (same format as RentYatra)
@@ -160,6 +162,11 @@ class SMSIndiaHubService {
         dc: "0", // Delivery confirmation (0 = no confirmation)
         gwid: gatewayId, // Gateway ID (2 = transactional, same as RentYatra)
       });
+      
+      // Add template ID if provided (required for some DLT templates)
+      if (templateId) {
+        params.append('templateid', templateId);
+      }
 
       const apiUrl = `${this.baseUrl}?${params.toString()}`;
 

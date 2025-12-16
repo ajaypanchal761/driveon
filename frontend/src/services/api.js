@@ -307,6 +307,13 @@ api.interceptors.response.use(
           console.warn('No refresh token available, logging out user');
           store.dispatch(logout());
           
+          // Don't redirect if auth is still initializing
+          const authState = store.getState().auth;
+          if (authState.isInitializing) {
+            console.log('Auth still initializing, skipping redirect');
+            return Promise.reject(error);
+          }
+          
           // Only redirect to login if we're on a protected route
           const currentPath = window.location.pathname;
           const publicRoutes = ['/', '/login', '/register', '/search', '/faq', '/about', '/contact', '/privacy-policy', '/terms'];
@@ -327,6 +334,13 @@ api.interceptors.response.use(
         // Refresh failed, logout user
         console.error('Token refresh error:', refreshError);
         store.dispatch(logout());
+        
+        // Don't redirect if auth is still initializing
+        const authState = store.getState().auth;
+        if (authState.isInitializing) {
+          console.log('Auth still initializing, skipping redirect');
+          return Promise.reject(refreshError);
+        }
         
         // Only redirect to login if we're on a protected route
         const currentPath = window.location.pathname;

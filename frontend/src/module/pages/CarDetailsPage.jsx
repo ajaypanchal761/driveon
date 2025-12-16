@@ -559,9 +559,37 @@ const CarDetailsPage = () => {
     };
   };
 
+  // Helper function to extract numeric price from price string or number
+  const extractPrice = (price) => {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') {
+      // Extract number from strings like "Rs. 200" or "200" or "Rs.200"
+      const match = price.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    }
+    return 0;
+  };
+
+  // Normalize car data from location state to ensure pricePerDay is set
+  const normalizeCarFromState = (carData) => {
+    if (!carData) return null;
+    const normalized = normalizeCarImages(carData);
+    // Ensure pricePerDay is set from price if it's missing
+    if (!normalized.pricePerDay && normalized.price) {
+      normalized.pricePerDay = extractPrice(normalized.price);
+    }
+    // Also ensure price is numeric
+    if (typeof normalized.price === 'string') {
+      normalized.price = extractPrice(normalized.price);
+    }
+    return normalized;
+  };
+
   const initialCar = location.state?.car || null;
-  const baseCar = normalizeCarImages(initialCar) || getCarData();
-  const [car, setCar] = useState(baseCar);
+  const normalizedInitialCar = initialCar ? normalizeCarFromState(initialCar) : null;
+  const baseCar = normalizedInitialCar || normalizeCarImages(getCarData());
+  const [car, setCar] = useState(normalizedInitialCar);
+  const [isLoading, setIsLoading] = useState(!initialCar);
 
   // Fetch car details from backend when a real car ID (Mongo ObjectId) is used
   useEffect(() => {
@@ -570,7 +598,9 @@ const CarDetailsPage = () => {
 
       // If we already have full car data from navigation state for this id,
       // don't refetch from API to avoid image order changing (no shuffle)
-      if (initialCar && (initialCar._id === id || initialCar.id === id)) {
+      if (normalizedInitialCar && (normalizedInitialCar._id === id || normalizedInitialCar.id === id)) {
+        setCar(normalizedInitialCar);
+        setIsLoading(false);
         return;
       }
 
@@ -578,9 +608,11 @@ const CarDetailsPage = () => {
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
       if (!isValidObjectId) {
         setCar(baseCar);
+        setIsLoading(false);
         return;
       }
 
+      setIsLoading(true);
       try {
         const response = await carService.getCarDetails(id);
         if (response.success && response.data?.car) {
@@ -702,6 +734,8 @@ const CarDetailsPage = () => {
       } catch (error) {
         console.error('Error fetching car details:', error);
         setCar(baseCar);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -714,7 +748,7 @@ const CarDetailsPage = () => {
     const fetchReviews = async () => {
       try {
         // Use car ID from params or car object
-        const carId = id || baseCar._id || baseCar.id;
+        const carId = id || car?._id || car?.id || baseCar?._id || baseCar?.id;
         if (!carId) {
           return;
         }
@@ -742,12 +776,15 @@ const CarDetailsPage = () => {
           }));
 
           // Merge reviews into existing car state (don't reset to mock data)
-          setCar(prev => ({
-            ...prev,
-            reviews: formattedReviews,
-            reviewsCount: response.data.ratings?.totalReviews || prev.reviewsCount || 0,
-            averageRating: response.data.ratings?.averageOverallRating || prev.rating || 0,
-          }));
+          setCar(prev => {
+            if (!prev) return prev; // Don't update if car is null
+            return {
+              ...prev,
+              reviews: formattedReviews,
+              reviewsCount: response.data.ratings?.totalReviews || prev.reviewsCount || 0,
+              averageRating: response.data.ratings?.averageOverallRating || prev.rating || 0,
+            };
+          });
         }
       } catch (error) {
         console.error('Error loading reviews:', error);
@@ -818,16 +855,17 @@ const CarDetailsPage = () => {
     if (carImages.length > 0) {
       setCurrentImageIndex(0);
     }
-  }, [car.id]); // Only reset when car ID changes, not when images array changes
+  }, [car?.id || car?._id || id]); // Only reset when car ID changes, not when images array changes
   
   // Detect car facing direction
   const [facingDirection, setFacingDirection] = useState('right');
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
   
   useEffect(() => {
+    if (!car) return;
     const direction = getCarFacingDirection(car.image || carImages[0]);
     setFacingDirection(direction);
-  }, [car.image, carImages]);
+  }, [car?.image, carImages]);
 
   // Booking form state
   const [pickupDate, setPickupDate] = useState('');
@@ -1048,7 +1086,8 @@ const CarDetailsPage = () => {
     }
 
     // Navigate to payment page
-    navigate(`/book-now/${car.id}`, { 
+    if (!car || (!car.id && !car._id)) return;
+    navigate(`/book-now/${car.id || car._id}`, { 
       state: { 
         car, 
         pickupDate, 
@@ -1118,6 +1157,21 @@ const CarDetailsPage = () => {
         return null;
     }
   };
+
+  // Show loading state if car data is not available yet
+  if (isLoading || !car) {
+    return (
+      <div 
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.primary }}></div>
+          <p className="text-gray-600">Loading car details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -1659,7 +1713,7 @@ const CarDetailsPage = () => {
                             duration: 0.7, 
                             ease: 'easeOut'
                           }}
-                          key={`${car.id || 'car'}-${index}-animated`}
+                          key={`${car?.id || car?._id || 'car'}-${index}-animated`}
                         />
                       ) : (
                         <img
@@ -2015,7 +2069,7 @@ const CarDetailsPage = () => {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
                 <button 
-                  onClick={() => navigate(`/car-details/${car.id}/reviews`)}
+                  onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`)}
                   className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
                 >
                   See All
@@ -2154,7 +2208,7 @@ const CarDetailsPage = () => {
           {/* Reviews Section - As per document.txt: Reviews */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-black">Review ({car.reviewsCount})</h2>
+              <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
               <button 
                 onClick={() => navigate(`/car-details/${car.id}/reviews`)}
                 className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
@@ -2203,7 +2257,7 @@ const CarDetailsPage = () => {
           <div className="px-4 md:px-6 py-3 md:py-0 md:mt-6" style={{ backgroundColor: colors.backgroundSecondary }}>
             <div className="max-w-7xl mx-auto">
               <button
-                onClick={() => navigate(`/book-now/${car.id}`)}
+                onClick={() => navigate(`/book-now/${car?.id || car?._id || id}`)}
                 className="w-full md:w-auto md:min-w-[300px] md:mx-auto md:block py-4 flex items-center justify-center text-white font-semibold"
                 style={{ backgroundColor: colors.backgroundTertiary, borderRadius: '16px' }}
               >

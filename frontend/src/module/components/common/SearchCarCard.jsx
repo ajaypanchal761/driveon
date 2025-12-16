@@ -23,7 +23,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
           backgroundColor: colors.backgroundSecondary, // White background on desktop
           border: `1px solid ${colors.borderSubtle}`
         }}
-        onClick={() => navigate(`/car-details/${car.id}`)}
+        onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
       >
         {/* Car Image - Left Side */}
         <div 
@@ -80,7 +80,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
         backgroundColor: colors.backgroundSecondary,
         border: `1px solid ${colors.borderLight}`
       }}
-      onClick={() => navigate(`/car-details/${car.id}`)}
+      onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
     >
       {/* Car Image Container - Compact on mobile, larger on desktop */}
       <div 
@@ -186,7 +186,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/car-details/${car.id}`);
+              navigate(`/car-details/${car.id}`, { state: { car } });
             }}
             className="px-3 py-1.5 md:px-4 md:py-2 lg:px-5 lg:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-sm lg:text-base font-semibold text-white"
             style={{ backgroundColor: colors.backgroundTertiary }}

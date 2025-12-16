@@ -785,8 +785,44 @@ export const getUserById = async (req, res) => {
     const trimmedId = userId.trim();
     let user = null;
 
-    // 0. If ID is in formatted form (e.g. USER001), try to resolve it
-    if (/^USER\d{3}$/i.test(trimmedId)) {
+    // 0. Handle "user-XXXX" format (e.g., "user-6555" or "user-a071")
+    // This format uses the last 4 hex characters of the MongoDB ObjectId
+    // Extract the 4-character suffix and search for users whose ObjectId ends with it
+    if (/^user-?[0-9a-fA-F]{1,4}$/i.test(trimmedId)) {
+      try {
+        const match = trimmedId.match(/^user-?([0-9a-fA-F]+)$/i);
+        if (match) {
+          const suffix = match[1].toLowerCase();
+          
+          // If suffix is less than 4 characters, pad it (though typically it should be 4)
+          // If more than 4, take last 4
+          const searchSuffix = suffix.length > 4 
+            ? suffix.slice(-4) 
+            : suffix.padStart(4, '0');
+          
+          console.log(`🔍 Searching for user with ObjectId ending in: ${searchSuffix} from input: ${trimmedId}`);
+          
+          // Search for users whose ObjectId ends with the extracted suffix
+          // MongoDB ObjectId is 24 hex characters, so we search by the last 4
+          const allUsers = await User.find().select('-password -__v');
+          user = allUsers.find((u) => {
+            const userId = u._id.toString().toLowerCase();
+            return userId.endsWith(searchSuffix);
+          }) || null;
+          
+          if (user) {
+            console.log(`✅ Found user with ObjectId ending in: ${searchSuffix}`);
+          } else {
+            console.log(`❌ No user found with ObjectId ending in: ${searchSuffix}`);
+          }
+        }
+      } catch (formattedError) {
+        console.log('Formatted USER ID search failed:', formattedError.message);
+      }
+    }
+
+    // 0.5. If ID is in formatted form (e.g. USER001), try to resolve it
+    if (!user && /^USER\d{3}$/i.test(trimmedId)) {
       try {
         const allUsers = await User.find().select('-password -__v');
         const upperId = trimmedId.toUpperCase();

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import SearchHeader from '../components/layout/SearchHeader';
 import BottomNavbar from '../components/layout/BottomNavbar';
 import SearchBar from '../components/common/SearchBar';
@@ -28,9 +28,10 @@ import logo11 from '../../assets/car_logo11_PNG.png';
  */
 const SearchPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
