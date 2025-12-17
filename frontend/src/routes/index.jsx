@@ -119,6 +119,35 @@ const ModuleResponsiveHome = () => {
 };
 
 /**
+ * ModuleResponsiveProfile Component
+ * - Mobile view: show ModuleProfile1Page (unchanged mobile design)
+ * - Desktop / tablet view: show ModuleProfilePage (previous web design)
+ */
+const ModuleResponsiveProfile = () => {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth < 768; // Tailwind md breakpoint
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  if (isMobile) {
+    return <ModuleProfile1Page />;
+  }
+
+  return <ModuleProfilePage />;
+};
+
+/**
  * AdminRedirectRoute Component
  * Handles /admin route - redirects to dashboard if authenticated, login if not
  */
@@ -179,7 +208,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/profile",
-        element: <ModuleProfile1Page />,
+        element: <ModuleResponsiveProfile />,
       },
       {
         path: "/profile/complete",

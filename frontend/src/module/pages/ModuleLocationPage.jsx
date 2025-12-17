@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 
 /**
@@ -388,11 +387,6 @@ const ModuleLocationPage = () => {
           )}
         </div>
       </main>
-
-      {/* Bottom navbar to keep module navigation consistent */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <BottomNavbar />
-      </div>
     </div>
   );
 };

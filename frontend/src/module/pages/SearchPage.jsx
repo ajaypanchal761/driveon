@@ -274,7 +274,8 @@ const SearchPage = () => {
       >
         {/* Floating white card container */}
         <motion.div 
-          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
+          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-44 space-y-4"
+          style={{ minHeight: '100vh' }} // ensure full height on mobile even with little content
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -408,7 +409,7 @@ const SearchPage = () => {
         className="hidden md:block min-h-screen w-full"
         style={{ backgroundColor: colors.backgroundPrimary }}
       >
-        {/* Web Header */}
+        {/* Web Header - match Home page */}
         <header
           className="w-full sticky top-0 z-50"
           style={{ backgroundColor: colors.brandBlack }}
@@ -425,36 +426,67 @@ const SearchPage = () => {
               </Link>
 
               {/* Center - Navigation Tabs */}
-              <nav className="hidden lg:flex items-center gap-6">
+              <nav className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 xl:gap-10 h-full">
                 <Link
                   to="/"
-                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                  style={{ color: colors.textWhite }}
                 >
                   Home
                 </Link>
                 <Link
-                  to="/search"
-                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                  to="#"
+                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                  style={{ color: colors.textWhite }}
                 >
-                  Search
+                  About
+                </Link>
+                <Link
+                  to="#"
+                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                  style={{ color: colors.textWhite }}
+                >
+                  Contact
+                </Link>
+                <Link
+                  to="/faq"
+                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                  style={{ color: colors.textWhite }}
+                >
+                  FAQs
                 </Link>
               </nav>
 
-              {/* Right - User Actions */}
-              <div className="flex items-center gap-4">
+              {/* Right - Login/Signup and Profile Icon */}
+              <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
                 {isAuthenticated ? (
                   <Link
                     to="/profile"
-                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center text-sm md:text-base font-semibold"
-                    style={{ color: colors.backgroundTertiary }}
+                    className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
                   >
-                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full border-2 border-white flex items-center justify-center overflow-hidden bg-gray-800">
+                      {user?.profilePhoto && user.profilePhoto.trim() !== '' ? (
+                        <img
+                          src={user.profilePhoto}
+                          alt="Profile"
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white text-sm md:text-base font-semibold">
+                          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 ) : (
                   <Link
                     to="/login"
-                    className="px-4 py-2 rounded-lg text-sm md:text-base font-medium text-white hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: colors.backgroundTertiary }}
+                    className="px-3 md:px-4 lg:px-5 xl:px-6 py-1.5 md:py-2 lg:py-2.5 rounded-lg border text-xs md:text-sm lg:text-base font-medium transition-all hover:opacity-90"
+                    style={{
+                      borderColor: colors.borderMedium,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary,
+                    }}
                   >
                     Login
                   </Link>

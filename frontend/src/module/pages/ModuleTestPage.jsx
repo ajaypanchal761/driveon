@@ -182,7 +182,9 @@ const ModuleTestPage = () => {
                   />
                 </svg>
               </span>
-              <span className="truncate">Los Angeles, California, U.S.</span>
+              <span className="text-[10px] leading-tight whitespace-normal break-words max-w-[160px] text-left">
+                Los Angeles, California, U.S.
+              </span>
             </span>
             <svg
               className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
