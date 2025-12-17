@@ -17,6 +17,21 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
   const [apiKeyError, setApiKeyError] = useState(null);
   const watchIdRef = useRef(null);
   const isFetchingRef = useRef(false);
+  const lastKnownLocationRef = useRef(null); // Store last known location
+  const lastKnownAddressRef = useRef(null); // Store last known address
+
+  // Calculate distance between two coordinates using Haversine formula (in meters)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in meters
+  };
 
   useEffect(() => {
     if (!enabled) {
@@ -47,6 +62,9 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
         });
 
         const { latitude, longitude } = position.coords;
+        
+        // Store initial location
+        lastKnownLocationRef.current = { lat: latitude, lng: longitude };
         setCoordinates({ lat: latitude, lng: longitude });
         setLocationPermission('granted');
 
@@ -54,10 +72,13 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
         const address = await getAddressFromCoordinates(latitude, longitude);
         
         if (address) {
+          lastKnownAddressRef.current = address;
           setCurrentLocation(address);
         } else {
           // If address fetch fails, show coordinates
-          setCurrentLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          const coordString = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          lastKnownAddressRef.current = coordString;
+          setCurrentLocation(coordString);
         }
 
         // Update user location on backend if authenticated
@@ -105,16 +126,50 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
     // Initial fetch
     fetchLocation();
 
-    // Watch for location updates (every 30 seconds)
+    // Watch for location updates - only update when user moves significantly
+    // Update location only when user moves more than 50 meters
     const geoOptions = {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 30000, // Update every 30 seconds
+      enableHighAccuracy: true, // Use GPS for better accuracy
+      timeout: 15000, // 15 seconds timeout
+      maximumAge: 60000, // Accept cached location up to 60 seconds old
     };
+
+    // Throttle location updates to avoid frequent changes
+    let lastUpdateTime = 0;
+    const THROTTLE_INTERVAL = 60000; // 60 seconds minimum between updates
+    const MIN_DISTANCE_METERS = 50; // Only update if user moved at least 50 meters
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
+        const now = Date.now();
         const { latitude, longitude } = position.coords;
+        
+        // Check if we have a last known location
+        if (lastKnownLocationRef.current) {
+          // Calculate distance from last known location
+          const distance = calculateDistance(
+            lastKnownLocationRef.current.lat,
+            lastKnownLocationRef.current.lng,
+            latitude,
+            longitude
+          );
+          
+          // Only update if user moved significantly (more than MIN_DISTANCE_METERS)
+          if (distance < MIN_DISTANCE_METERS) {
+            // User hasn't moved enough, don't update location
+            return; // Skip this update
+          }
+        }
+        
+        // Throttle updates - only update if enough time has passed
+        if (now - lastUpdateTime < THROTTLE_INTERVAL && lastUpdateTime !== 0) {
+          return; // Skip this update
+        }
+        
+        lastUpdateTime = now;
+        
+        // Update coordinates
+        lastKnownLocationRef.current = { lat: latitude, lng: longitude };
         setCoordinates({ lat: latitude, lng: longitude });
         setLocationPermission('granted');
 
@@ -122,8 +177,12 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
         const address = await getAddressFromCoordinates(latitude, longitude);
         
         if (address) {
-          setCurrentLocation(address);
-        } else if (coordinates) {
+          // Only update if address is different from last known address
+          if (address !== lastKnownAddressRef.current) {
+            lastKnownAddressRef.current = address;
+            setCurrentLocation(address);
+          }
+        } else if (lastKnownAddressRef.current) {
           // Keep previous address if geocoding fails
           // Don't update to coordinates to avoid flickering
         }

@@ -3,6 +3,25 @@
  * Handles banners, FAQs, and other common content
  */
 
+import axios from 'axios';
+import dotenv from 'dotenv';
+
+// Load environment variables (in case they're not loaded)
+dotenv.config();
+
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+// Log API key status on module load (only in development)
+if (process.env.NODE_ENV === 'development') {
+  if (GOOGLE_MAPS_API_KEY) {
+    console.log(`✅ Google Maps API key loaded: ${GOOGLE_MAPS_API_KEY.substring(0, 8)}...`);
+  } else {
+    console.warn('⚠️ Google Maps API key NOT found in environment variables');
+    console.warn('   Please add GOOGLE_MAPS_API_KEY to your backend/.env file');
+    console.warn('   Example: GOOGLE_MAPS_API_KEY=your_api_key_here');
+  }
+}
+
 /**
  * @desc    Get Hero Banners
  * @route   GET /api/common/banners/hero
@@ -158,6 +177,145 @@ export const getBannerOverlay = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Search places using Google Places API (Proxy to avoid CORS)
+ * @route   GET /api/common/places/search
+ * @access  Public
+ */
+export const searchPlaces = async (req, res) => {
+  try {
+    console.log('🔍 Search places request received:', { query: req.query.query, lat: req.query.lat, lng: req.query.lng });
+    
+    const { query, lat, lng } = req.query;
+
+    if (!query || query.trim() === '') {
+      console.log('❌ Empty query');
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required',
+      });
+    }
+
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.error('❌ Google Maps API key not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'Google Maps API key not configured',
+      });
+    }
+
+    // Build Google Places API URL
+    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
+    
+    // Add location bias if coordinates provided
+    if (lat && lng) {
+      url += `&location=${lat},${lng}&radius=50000`;
+    }
+
+    console.log('🌐 Calling Google Places API...');
+
+    // Fetch from Google Places API using axios
+    let data;
+    try {
+      const response = await axios.get(url);
+      data = response.data;
+      console.log('✅ Google Places API response status:', data.status);
+    } catch (error) {
+      console.error('❌ Google Places API error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        hasResponse: !!error.response,
+        hasRequest: !!error.request,
+      });
+      
+      if (error.response) {
+        // API returned error response
+        return res.status(error.response.status || 500).json({
+          success: false,
+          message: 'Error fetching places from Google API',
+          error: error.response.data?.error_message || error.message,
+          status: error.response.status,
+        });
+      } else if (error.request) {
+        // Request made but no response
+        return res.status(500).json({
+          success: false,
+          message: 'No response from Google Places API',
+          error: 'Network error or timeout',
+        });
+      } else {
+        // Error setting up request
+        return res.status(500).json({
+          success: false,
+          message: 'Error setting up request to Google Places API',
+          error: error.message,
+        });
+      }
+    }
+
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      // Format results
+      const places = data.results.slice(0, 10).map((place) => {
+        // Handle geometry.location - it might be an object with lat/lng or methods
+        let location = null;
+        if (place.geometry && place.geometry.location) {
+          const loc = place.geometry.location;
+          // Google Places API returns location as object with lat() and lng() methods or direct properties
+          if (typeof loc.lat === 'function') {
+            location = { lat: loc.lat(), lng: loc.lng() };
+          } else {
+            location = { lat: loc.lat, lng: loc.lng };
+          }
+        }
+
+        return {
+          place_id: place.place_id,
+          name: place.name,
+          formatted_address: place.formatted_address,
+          vicinity: place.vicinity,
+          types: place.types || [],
+          geometry: location ? { location } : null,
+          rating: place.rating,
+          user_ratings_total: place.user_ratings_total,
+        };
+      });
+
+      res.json({
+        success: true,
+        data: {
+          places,
+        },
+      });
+    } else if (data.status === 'ZERO_RESULTS') {
+      res.json({
+        success: true,
+        data: {
+          places: [],
+        },
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: data.error_message || 'Places search failed',
+        status: data.status,
+      });
+    }
+  } catch (error) {
+    console.error('❌ Search places error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error searching places',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
 
 
 

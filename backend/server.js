@@ -299,6 +299,18 @@ server.listen(PORT, () => {
     console.warn(`⚠️ JWT_SECRET not configured or using default value`);
   }
 
+  // Verify Google Maps API configuration
+  const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
+  if (googleMapsApiKey) {
+    console.log(
+      `✅ Google Maps API configured (API Key: ${googleMapsApiKey.substring(0, 8)}...)`
+    );
+  } else {
+    console.warn(`⚠️ Google Maps API not configured:`);
+    console.warn(`   GOOGLE_MAPS_API_KEY: ✗ Missing`);
+    console.warn(`   Please add GOOGLE_MAPS_API_KEY to your backend .env file`);
+  }
+
   // Verify SMSIndia Hub configuration
   const smsApiKey = process.env.SMSINDIAHUB_API_KEY?.trim();
   const smsSenderId = process.env.SMSINDIAHUB_SENDER_ID?.trim();

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import CarDetailsHeader from '../components/layout/CarDetailsHeader';
 import { colors } from '../theme/colors';
 import { useAppSelector } from '../../hooks/redux';
@@ -22,13 +22,29 @@ import carImg8 from '../../assets/car_img8.png';
 const CarReviewsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
-  // Initial fallback car data - used only until real API data loads
-  const [car, setCar] = useState({
+  // Get initial car from navigation state if available
+  const initialCar = location.state?.car || null;
+  
+  // Initial car data - use from state if available, otherwise fallback
+  const getInitialCarData = () => {
+    if (initialCar) {
+      return {
+        id: initialCar.id || initialCar._id || id,
+        brand: initialCar.brand || '',
+        model: initialCar.model || '',
+        name: initialCar.name || `${initialCar.brand || ''} ${initialCar.model || ''}`.trim() || '',
+        image: initialCar.image || initialCar.images?.[0] || carImg1,
+        rating: initialCar.rating || initialCar.averageRating || 0,
+        reviewsCount: initialCar.reviewsCount || 0,
+      };
+    }
+    return {
     id,
     brand: '',
     model: '',
@@ -36,13 +52,23 @@ const CarReviewsPage = () => {
     image: carImg1,
     rating: 0,
     reviewsCount: 0,
-  });
-  const [carLoading, setCarLoading] = useState(true);
+    };
+  };
 
-  // Fetch actual car data from API
+  const [car, setCar] = useState(getInitialCarData());
+  // Only show loader if we don't have initial car from state
+  const [carLoading, setCarLoading] = useState(!initialCar);
+
+  // Fetch actual car data from API (only if we don't have initial car from state)
   useEffect(() => {
     const fetchCar = async () => {
       if (!id) {
+        setCarLoading(false);
+        return;
+      }
+
+      // If we have initial car from navigation state, don't fetch from API
+      if (initialCar) {
         setCarLoading(false);
         return;
       }

@@ -50,7 +50,7 @@ const ModuleLayout = () => {
           userId={user._id || user.id}
           userType={user.role === 'guarantor' ? 'guarantor' : 'user'}
           autoStart={true}
-          hidden={false}
+          hidden={true}
         />
       )}
     </>

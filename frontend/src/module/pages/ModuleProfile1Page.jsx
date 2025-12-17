@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppSelector, useAppDispatch } from "../../hooks/redux";
 import { logoutUser } from "../../store/slices/authSlice";
@@ -76,11 +76,22 @@ const ModuleProfile1Page = () => {
   // Get user data with fallbacks
   const userName = (user?.name || user?.fullName || "").trim() || "User";
   const userPhone = (user?.phone || "").trim();
+  const userEmail = (user?.email || "").trim();
   const userPhoto =
     user?.profilePhoto && user.profilePhoto.trim() !== ""
       ? user.profilePhoto
       : null;
-  const userId = user?._id || user?.id || userPhone || "N/A";
+  
+  // Format user ID as "user-XXXX" where XXXX is last 4 characters of ObjectId
+  const getFormattedUserId = () => {
+    const id = user?._id || user?.id;
+    if (!id) return "N/A";
+    const idString = id.toString();
+    // Extract last 4 characters
+    const lastFour = idString.slice(-4);
+    return `user-${lastFour}`;
+  };
+  const formattedUserId = getFormattedUserId();
 
   // Get first letter of name for avatar
   const getInitial = (name) => {
@@ -172,12 +183,87 @@ const ModuleProfile1Page = () => {
 
   return (
     <div
-      className="min-h-screen w-full relative pb-20 md:hidden"
+      className="min-h-screen w-full relative pb-20 md:pb-0"
       style={{ backgroundColor: colors.backgroundPrimary || "#f8f8f8" }}
     >
-      {/* Header with Close Button */}
+      {/* Web Header - Only visible on desktop */}
+      <header
+        className="hidden md:block w-full sticky top-0 z-50"
+        style={{ backgroundColor: colors.brandBlack || "#21292b" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
+          <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
+            {/* Left - Logo */}
+            <Link to="/" className="flex-shrink-0">
+              <img
+                src="/driveonlogo.png"
+                alt="DriveOn Logo"
+                className="h-8 md:h-10 lg:h-12 xl:h-14 w-auto object-contain"
+              />
+            </Link>
+
+            {/* Center - Navigation Tabs */}
+            <nav className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 xl:gap-10 h-full">
+              <Link
+                to="/"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite || "#ffffff" }}
+              >
+                Home
+              </Link>
+              <Link
+                to="/about"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite || "#ffffff" }}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite || "#ffffff" }}
+              >
+                Contact
+              </Link>
+              <Link
+                to="/faq"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite || "#ffffff" }}
+              >
+                FAQs
+              </Link>
+            </nav>
+
+            {/* Right - Profile Icon */}
+            <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+              {isAuthenticated && (
+                <Link
+                  to="/profile"
+                  className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
+                >
+                  <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full border-2 border-white flex items-center justify-center overflow-hidden bg-gray-800">
+                    {userPhoto && !imageError ? (
+                      <img
+                        src={userPhoto}
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full flex items-center justify-center text-white font-bold">
+                        {getInitial(userName)}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Header with Close Button */}
       <motion.div
-        className="sticky top-0 z-10 px-4 pt-4 pb-3 flex items-center justify-between"
+        className="md:hidden sticky top-0 z-10 px-4 pt-4 pb-3 flex items-center justify-between"
         style={{ backgroundColor: colors.backgroundPrimary || "#f8f8f8" }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -221,8 +307,8 @@ const ModuleProfile1Page = () => {
         </motion.button>
       </motion.div>
 
-      {/* Main content - compact spacing for mobile */}
-      <div className="px-4 pb-4 space-y-2">
+      {/* Main content - compact spacing for mobile, centered on desktop */}
+      <div className="px-4 md:px-6 lg:px-8  pb-4 md:pb-6 space-y-2 md:space-y-4 max-w-4xl mx-auto">
         {/* Profile Summary Card */}
         <motion.div
           className="bg-white rounded-2xl p-3 shadow-sm"
@@ -285,12 +371,49 @@ const ModuleProfile1Page = () => {
                 >
                   {userName}
                 </h2>
-                <p
-                  className="text-xs"
-                  style={{ color: colors.textSecondary || "#666666" }}
-                >
-                  {userId}
-                </p>
+                {userEmail && (
+                  <p
+                    className="text-xs mb-0"
+                    style={{ color: colors.textSecondary || "#666666" }}
+                  >
+                    {userEmail}
+                  </p>
+                )}
+                <div className="flex items-center gap-1.5 mb-0">
+                  <p
+                    className="text-xs"
+                    style={{ color: colors.textSecondary || "#666666" }}
+                  >
+                    {formattedUserId}
+                  </p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(formattedUserId);
+                        toastUtils.success('User ID copied to clipboard!');
+                      } catch (err) {
+                        console.error('Failed to copy:', err);
+                        toastUtils.error('Failed to copy User ID');
+                      }
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                    title="Copy User ID"
+                  >
+                    <svg
+                      className="w-3.5 h-3.5 text-gray-500 hover:text-gray-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
