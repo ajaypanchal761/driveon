@@ -19,6 +19,7 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
   const isFetchingRef = useRef(false);
   const lastKnownLocationRef = useRef(null); // Store last known location
   const lastKnownAddressRef = useRef(null); // Store last known address
+  const MAX_ALLOWED_ACCURACY_METERS = 200; // Ignore noisy GPS jumps to keep UI stable
 
   // Calculate distance between two coordinates using Haversine formula (in meters)
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -46,13 +47,35 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
       return;
     }
 
+    // Load cached location to avoid flicker and keep address stable on errors
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('driveon_last_location');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.address) {
+            lastKnownAddressRef.current = parsed.address;
+            setCurrentLocation(parsed.address);
+          }
+          if (parsed?.lat && parsed?.lng) {
+            lastKnownLocationRef.current = { lat: parsed.lat, lng: parsed.lng };
+            setCoordinates({ lat: parsed.lat, lng: parsed.lng });
+          }
+        }
+      } catch (err) {
+        // ignore cache errors
+      }
+    }
+
     // Function to fetch location and address
     const fetchLocation = async () => {
       if (isFetchingRef.current) return;
       isFetchingRef.current = true;
 
       try {
-        setCurrentLocation('Getting location...');
+        if (!lastKnownAddressRef.current) {
+          setCurrentLocation('Getting location...');
+        }
         
         // Get current position
         const position = await getCurrentPosition({
@@ -61,7 +84,21 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
           maximumAge: 60000,
         });
 
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
+
+        // Ignore very low-accuracy readings to avoid flickering address when user is stationary
+        if (
+          accuracy &&
+          accuracy > MAX_ALLOWED_ACCURACY_METERS &&
+          lastKnownAddressRef.current
+        ) {
+          console.warn(
+            `Ignoring low-accuracy location (${Math.round(
+              accuracy
+            )}m). Keeping last shown address.`
+          );
+          return;
+        }
         
         // Store initial location
         lastKnownLocationRef.current = { lat: latitude, lng: longitude };
@@ -74,6 +111,12 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
         if (address) {
           lastKnownAddressRef.current = address;
           setCurrentLocation(address);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(
+              'driveon_last_location',
+              JSON.stringify({ address, lat: latitude, lng: longitude, timestamp: Date.now() })
+            );
+          }
         } else {
           // If address fetch fails, show coordinates
           const coordString = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
@@ -116,7 +159,7 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
           permission = 'denied';
         }
 
-        setCurrentLocation(errorMessage);
+        setCurrentLocation(lastKnownAddressRef.current || errorMessage);
         setLocationPermission(permission);
       } finally {
         isFetchingRef.current = false;
@@ -136,13 +179,22 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
 
     // Throttle location updates to avoid frequent changes
     let lastUpdateTime = 0;
-    const THROTTLE_INTERVAL = 60000; // 60 seconds minimum between updates
-    const MIN_DISTANCE_METERS = 50; // Only update if user moved at least 50 meters
+    const THROTTLE_INTERVAL = 300000; // 5 minutes minimum between updates
+    const MIN_DISTANCE_METERS = 500; // Only update if user moved at least 500 meters
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
         const now = Date.now();
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
+
+        // Ignore noisy readings to prevent random address changes when the user isn't moving
+        if (
+          accuracy &&
+          accuracy > MAX_ALLOWED_ACCURACY_METERS &&
+          lastKnownAddressRef.current
+        ) {
+          return;
+        }
         
         // Check if we have a last known location
         if (lastKnownLocationRef.current) {
@@ -181,6 +233,12 @@ export const useLocation = (enabled = true, isAuthenticated = false, userId = nu
           if (address !== lastKnownAddressRef.current) {
             lastKnownAddressRef.current = address;
             setCurrentLocation(address);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(
+                'driveon_last_location',
+                JSON.stringify({ address, lat: latitude, lng: longitude, timestamp: Date.now() })
+              );
+            }
           }
         } else if (lastKnownAddressRef.current) {
           // Keep previous address if geocoding fails

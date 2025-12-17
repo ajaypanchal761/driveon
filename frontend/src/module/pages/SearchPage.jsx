@@ -13,8 +13,6 @@ import { useLocation } from '../../hooks/useLocation';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
-import carImg2 from '../../assets/car_banImg2.jpg';
-import carImg3 from '../../assets/car_banImg3.jpg';
 import carImg4 from '../../assets/car_img4-removebg-preview.png';
 import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
@@ -124,6 +122,43 @@ const SearchPage = () => {
     availableTo: '',
   });
 
+  // Track if filters should auto-open (e.g., when coming from home pills)
+  const [shouldOpenFilters, setShouldOpenFilters] = useState(false);
+
+  // Sync state when query params change (e.g., from home pills)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    if (q !== searchQuery) {
+      setSearchQuery(q);
+    }
+
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    if (minPrice || maxPrice) {
+      setAppliedFilters((prev) => ({
+        ...prev,
+        priceRange: {
+          min: minPrice || '',
+          max: maxPrice || '',
+        },
+      }));
+      setShouldOpenFilters(true);
+    }
+
+    const filterParam = searchParams.get('filter');
+    if (filterParam) {
+      setShouldOpenFilters(true);
+    }
+  }, [searchParams, searchQuery]);
+
+  // Open filters when requested by URL params
+  useEffect(() => {
+    if (shouldOpenFilters) {
+      setIsFilterOpen(true);
+      setShouldOpenFilters(false);
+    }
+  }, [shouldOpenFilters]);
+
   // Filter options extracted from cars data
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
@@ -139,6 +174,17 @@ const SearchPage = () => {
 
   // Fallback images for cars when API images missing
   const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
+
+  // Helper: case-insensitive partial match for multi-word queries
+  const matchesQuery = (car, query) => {
+    const trimmed = (query || '').trim().toLowerCase();
+    if (!trimmed) return true;
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    const haystack = `${car.name || ''} ${car.brand || ''} ${car.model || ''}`.toLowerCase();
+    return tokens.every((token) => haystack.includes(token));
+  };
+
+  const norm = (val) => (val || '').toString().toLowerCase().trim();
 
   // Transform API car data to SearchCarCard format
   const transformCarData = (car, index = 0) => {
@@ -481,22 +527,34 @@ const SearchPage = () => {
   const filteredRecommendCars = useMemo(() => {
     let filtered = allRecommendCars;
     
-    // Filter by brand (from brand filter buttons)
+    // Filter by brand (from brand filter buttons) - case-insensitive
     if (selectedBrand !== 'all') {
-      filtered = filtered.filter((car) => car.brand === selectedBrand);
+      const target = norm(selectedBrand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by brand from FilterDropdown
     if (appliedFilters.brand) {
-      filtered = filtered.filter((car) => car.brand === appliedFilters.brand);
+      const target = norm(appliedFilters.brand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by model from FilterDropdown
     if (appliedFilters.model) {
-      const modelQuery = appliedFilters.model.toLowerCase().trim();
+      const modelQuery = norm(appliedFilters.model);
       filtered = filtered.filter((car) => 
-        car.model?.toLowerCase().includes(modelQuery) ||
-        car.name?.toLowerCase().includes(modelQuery)
+        norm(car.model).includes(modelQuery) ||
+        norm(car.name).includes(modelQuery)
       );
     }
     
@@ -562,14 +620,9 @@ const SearchPage = () => {
       });
     }
     
-    // Filter by search query
+    // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((car) => 
-        car.name?.toLowerCase().includes(query) ||
-        car.brand?.toLowerCase().includes(query) ||
-        car.model?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((car) => matchesQuery(car, searchQuery));
     }
     
     return filtered;
@@ -578,22 +631,34 @@ const SearchPage = () => {
   const filteredPopularCars = useMemo(() => {
     let filtered = allPopularCars;
     
-    // Filter by brand (from brand filter buttons)
+    // Filter by brand (from brand filter buttons) - case-insensitive
     if (selectedBrand !== 'all') {
-      filtered = filtered.filter((car) => car.brand === selectedBrand);
+      const target = norm(selectedBrand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by brand from FilterDropdown
     if (appliedFilters.brand) {
-      filtered = filtered.filter((car) => car.brand === appliedFilters.brand);
+      const target = norm(appliedFilters.brand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by model from FilterDropdown
     if (appliedFilters.model) {
-      const modelQuery = appliedFilters.model.toLowerCase().trim();
+      const modelQuery = norm(appliedFilters.model);
       filtered = filtered.filter((car) => 
-        car.model?.toLowerCase().includes(modelQuery) ||
-        car.name?.toLowerCase().includes(modelQuery)
+        norm(car.model).includes(modelQuery) ||
+        norm(car.name).includes(modelQuery)
       );
     }
     
@@ -659,14 +724,9 @@ const SearchPage = () => {
       });
     }
     
-    // Filter by search query
+    // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((car) => 
-        car.name?.toLowerCase().includes(query) ||
-        car.brand?.toLowerCase().includes(query) ||
-        car.model?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((car) => matchesQuery(car, searchQuery));
     }
     
     return filtered;
@@ -676,59 +736,6 @@ const SearchPage = () => {
   const allFilteredCars = useMemo(() => {
     return [...filteredRecommendCars, ...filteredPopularCars];
   }, [filteredRecommendCars, filteredPopularCars]);
-
-  // Calculate dynamic price ranges from car data
-  const priceRanges = useMemo(() => {
-    const prices = [...allRecommendCars, ...allPopularCars]
-      .map(car => car.pricePerDay || 0)
-      .filter(price => price > 0);
-    
-    if (prices.length === 0) return [];
-    
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    
-    // Create price range options - show up to 3 ranges dynamically
-    const ranges = [];
-    if (maxPrice > 0) {
-      const range1 = Math.floor(minPrice);
-      const range2 = Math.floor((minPrice + maxPrice) / 3);
-      const range3 = Math.floor((minPrice + maxPrice) / 2);
-      const range4 = Math.floor(maxPrice);
-      
-      // Create meaningful price ranges
-      if (range2 > range1) {
-        ranges.push({ label: `Rs. ${range1}-${range2} / day`, min: range1, max: range2 });
-      }
-      if (range3 > range2) {
-        ranges.push({ label: `Rs. ${range2}-${range3} / day`, min: range2, max: range3 });
-      }
-      if (range4 > range3) {
-        ranges.push({ label: `Rs. ${range3}-${range4} / day`, min: range3, max: range4 });
-      }
-      
-      // If no ranges created, create a single range
-      if (ranges.length === 0) {
-        ranges.push({ label: `Rs. ${range1}-${range4} / day`, min: range1, max: range4 });
-      }
-    }
-    
-    return ranges.slice(0, 3); // Show up to 3 price ranges dynamically
-  }, [allRecommendCars, allPopularCars]);
-
-  // Category images map
-  const categoryImages = {
-    Sports: carImg1,
-    Electric: carImg2,
-    SUV: carImg4,
-    Sedan: carImg5,
-    Hatchback: carImg6,
-    Coupe: carImg8,
-    Luxury: carImg1,
-    MUV: carImg2,
-    'Legends': carImg3,
-    'Classic': carImg4,
-  };
 
   return (
     <>
@@ -893,203 +900,6 @@ const SearchPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          {/* FILTER PILLS ROW */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
-            {/* All filters pill */}
-            <motion.button
-              type="button"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold flex-shrink-0 border shadow-sm"
-              style={{
-                borderColor: "#e5e7eb",
-                backgroundColor: isFilterOpen
-                  ? colors.backgroundTertiary
-                  : colors.backgroundSecondary,
-                color: isFilterOpen
-                  ? "#ffffff"
-                  : colors.textPrimary,
-              }}
-              onClick={() => setIsFilterOpen(true)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span>All filters</span>
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6L15 13.25V19a1 1 0 01-.553.894l-4 2A1 1 0 019 21v-7.75L3.2 4.6A1 1 0 013 4z"
-                />
-              </svg>
-            </motion.button>
-
-            {/* Dynamic Price Range Pills */}
-            {priceRanges.map((range, index) => (
-              <motion.button
-                key={`price-${index}`}
-                type="button"
-                className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0"
-                style={{
-                  backgroundColor: appliedFilters.priceRange.min === String(range.min) && appliedFilters.priceRange.max === String(range.max)
-                    ? colors.backgroundTertiary
-                    : colors.backgroundSecondary,
-                  color: appliedFilters.priceRange.min === String(range.min) && appliedFilters.priceRange.max === String(range.max)
-                    ? "#ffffff"
-                    : colors.textSecondary,
-                  border: "1px solid #e5e7eb",
-                }}
-                onClick={() => {
-                  setAppliedFilters(prev => ({
-                    ...prev,
-                    priceRange: prev.priceRange.min === String(range.min) && prev.priceRange.max === String(range.max)
-                      ? { min: '', max: '' }
-                      : { min: String(range.min), max: String(range.max) }
-                  }));
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {range.label}
-              </motion.button>
-            ))}
-
-            {/* Brand Filter Pill - Dynamic with selected brand name */}
-            {brands.length > 0 && (
-              <motion.button
-                type="button"
-                className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0 border"
-                style={{
-                  borderColor: "#e5e7eb",
-                  backgroundColor: (selectedBrand !== 'all' || appliedFilters.brand)
-                    ? colors.backgroundTertiary
-                    : colors.backgroundSecondary,
-                  color: (selectedBrand !== 'all' || appliedFilters.brand) ? "#ffffff" : colors.textSecondary,
-                }}
-                onClick={() => {
-                  if (selectedBrand === 'all' && !appliedFilters.brand) {
-                    setIsFilterOpen(true);
-                  } else {
-                    setSelectedBrand('all');
-                    setAppliedFilters(prev => ({ ...prev, brand: '' }));
-                  }
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : 'Brand')}
-              </motion.button>
-            )}
-
-            {/* Body/Car Type Filter Pill - Dynamic with selected car type */}
-            {filterOptions.carTypes.length > 0 && (
-              <motion.button
-                type="button"
-                className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0 border"
-                style={{
-                  borderColor: "#e5e7eb",
-                  backgroundColor: appliedFilters.carType
-                    ? colors.backgroundTertiary
-                    : colors.backgroundSecondary,
-                  color: appliedFilters.carType ? "#ffffff" : colors.textSecondary,
-                }}
-                onClick={() => {
-                  if (!appliedFilters.carType) {
-                    setIsFilterOpen(true);
-                  } else {
-                    setAppliedFilters(prev => ({ ...prev, carType: '' }));
-                  }
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {appliedFilters.carType || 'Body'}
-              </motion.button>
-            )}
-
-            {/* More Filter Pill */}
-            <motion.button
-              type="button"
-              className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0 border"
-              style={{
-                borderColor: "#e5e7eb",
-                backgroundColor: Object.values(appliedFilters).some(v => 
-                  (typeof v === 'string' && v) || 
-                  (typeof v === 'object' && v && (v.min || v.max || (Array.isArray(v) && v.length > 0)))
-                ) && !isFilterOpen
-                  ? colors.backgroundTertiary
-                  : colors.backgroundSecondary,
-                color: Object.values(appliedFilters).some(v => 
-                  (typeof v === 'string' && v) || 
-                  (typeof v === 'object' && v && (v.min || v.max || (Array.isArray(v) && v.length > 0)))
-                ) && !isFilterOpen ? "#ffffff" : colors.textSecondary,
-              }}
-              onClick={() => setIsFilterOpen(true)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              More
-            </motion.button>
-          </div>
-
-          {/* CATEGORY IMAGE CARDS - Dynamic */}
-          {filterOptions.carTypes.length > 0 && (
-            <motion.div 
-              className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-lg border border-gray-100"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-            >
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-                {filterOptions.carTypes.slice(0, 5).map((carType, index) => {
-                  // Count cars for this type
-                  const typeCount = [...allRecommendCars, ...allPopularCars].filter(car => 
-                    (car.carType || '').toLowerCase() === carType.toLowerCase()
-                  ).length;
-                  
-                  return (
-                    <motion.button
-                      key={carType}
-                      type="button"
-                      className="flex-shrink-0 w-24"
-                      onClick={() => {
-                        setAppliedFilters(prev => ({
-                          ...prev,
-                          carType: prev.carType === carType ? '' : carType
-                        }));
-                      }}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.2 + (index * 0.05) }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <div className="w-24 h-20 rounded-xl overflow-hidden mb-2 bg-gray-100 shadow-md">
-                        <img
-                          src={categoryImages[carType] || carImg1}
-                          alt={carType}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                        />
-                      </div>
-                      <div className="flex flex-col items-start">
-                        <span className="text-xs font-bold text-gray-900">
-                          {carType}
-                        </span>
-                        <span className="text-[10px] text-gray-500 font-medium">
-                          {typeCount} cars
-                        </span>
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
           {/* Brand Filters */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1254,10 +1064,22 @@ const SearchPage = () => {
                   Home
                 </Link>
                 <Link
-                  to="/search"
+                  to="/about"
                   className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
                 >
-                  Search
+                  About
+                </Link>
+                <Link
+                  to="/contact"
+                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                >
+                  Contact
+                </Link>
+                <Link
+                  to="/faq"
+                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                >
+                  FAQs
                 </Link>
               </nav>
 

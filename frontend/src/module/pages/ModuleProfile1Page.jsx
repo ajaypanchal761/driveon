@@ -364,22 +364,22 @@ const ModuleProfile1Page = () => {
                 </motion.div>
               )}
 
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <h2
-                  className="text-base font-bold mb-0.5"
+                  className="text-base font-bold leading-tight"
                   style={{ color: colors.textPrimary || "#000000" }}
                 >
                   {userName}
                 </h2>
                 {userEmail && (
                   <p
-                    className="text-xs mb-0"
+                    className="text-xs leading-tight"
                     style={{ color: colors.textSecondary || "#666666" }}
                   >
                     {userEmail}
                   </p>
                 )}
-                <div className="flex items-center gap-1.5 mb-0">
+                <div className="flex items-center gap-0 leading-tight">
                   <p
                     className="text-xs"
                     style={{ color: colors.textSecondary || "#666666" }}
