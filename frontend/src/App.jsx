@@ -6,6 +6,7 @@ import { queryClient } from './config/reactQuery';
 import { AdminProvider } from './context/AdminContext';
 import router from './routes';
 import Toaster from './components/common/Toaster';
+import AuthInitializer from './components/auth/AuthInitializer';
 import './App.css';
 
 /**
@@ -17,6 +18,7 @@ function App() {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
+          <AuthInitializer />
           <RouterProvider router={router} />
           <Toaster />
         </AdminProvider>

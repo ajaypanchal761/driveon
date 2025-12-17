@@ -10,10 +10,10 @@ import { theme } from '../../theme/theme.constants';
  */
 const ProtectedRoute = () => {
   const location = useLocation();
-  const { isAuthenticated, isLoading } = useSelector((state) => state.auth);
+  const { isAuthenticated, isLoading, isInitializing } = useSelector((state) => state.auth);
 
-  if (isLoading) {
-    // Show loading spinner while checking auth
+  // Show loading spinner while checking auth or initializing
+  if (isLoading || isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">

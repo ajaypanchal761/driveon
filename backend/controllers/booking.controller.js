@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
+import { processReferralTripCompletion } from './referral.controller.js';
 
 /**
  * @desc    Create new booking
@@ -435,18 +436,43 @@ export const getUserBookings = async (req, res) => {
     const userId = req.user._id;
     const { status, page = 1, limit = 10 } = req.query;
 
+    console.log('📥 Get User Bookings Request:', {
+      userId: userId?.toString(),
+      userEmail: req.user?.email,
+      status,
+      page,
+      limit,
+    });
+
     const query = { user: userId };
     if (status && status !== 'all') {
       query.status = status;
     }
 
+    console.log('🔍 Booking Query:', JSON.stringify(query, null, 2));
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // First, check total bookings for this user
+    const totalBookings = await Booking.countDocuments({ user: userId });
+    console.log(`📊 Total bookings for user ${userId}: ${totalBookings}`);
+
+    // Debug: Check all bookings in database to see user IDs
+    if (totalBookings === 0) {
+      const allBookings = await Booking.find({}).select('user bookingId').limit(5);
+      console.log('🔍 Sample bookings in database (for debugging):');
+      allBookings.forEach((b, idx) => {
+        console.log(`  Booking ${idx + 1}: user=${b.user?.toString() || b.user}, bookingId=${b.bookingId}`);
+      });
+    }
 
     const bookings = await Booking.find(query)
       .populate('car', 'brand model year color images pricePerDay')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
+
+    console.log(`✅ Found ${bookings.length} bookings for user ${userId}`);
 
     const total = await Booking.countDocuments(query);
 
@@ -463,7 +489,7 @@ export const getUserBookings = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get user bookings error:', error);
+    console.error('❌ Get user bookings error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch bookings',
@@ -559,6 +585,14 @@ export const updateBookingStatus = async (req, res) => {
       booking.completedAt = new Date();
       booking.tripStatus = 'completed';
       booking.isTrackingActive = false;
+      
+      // Process referral trip completion
+      try {
+        await processReferralTripCompletion(booking.user.toString());
+      } catch (referralError) {
+        console.error('Error processing referral trip completion:', referralError);
+        // Don't fail status update if referral processing fails
+      }
     }
 
     await booking.save();
@@ -683,6 +717,14 @@ export const endTrip = async (req, res) => {
     booking.completedAt = new Date();
 
     await booking.save();
+
+    // Process referral trip completion
+    try {
+      await processReferralTripCompletion(booking.user.toString());
+    } catch (referralError) {
+      console.error('Error processing referral trip completion:', referralError);
+      // Don't fail booking completion if referral processing fails
+    }
 
     res.json({
       success: true,

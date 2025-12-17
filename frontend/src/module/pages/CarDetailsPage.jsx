@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Keyboard, Mousewheel } from 'swiper/modules';
 import { motion } from 'framer-motion';
@@ -9,6 +9,9 @@ import CarDetailsHeader from '../components/layout/CarDetailsHeader';
 import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
 import { useAppSelector } from '../../hooks/redux';
+import reviewService from '../../services/review.service';
+import carService from '../../services/car.service';
+import commonService from '../../services/common.service';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -88,11 +91,16 @@ const getCarFacingDirection = (imageUrl) => {
 const CarDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [activeTab, setActiveTab] = useState('offers');
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [offers, setOffers] = useState([]);
+  const [faqs, setFaqs] = useState([]);
+  const [cancellationPolicy, setCancellationPolicy] = useState(null);
+  const [inclusionsExclusions, setInclusionsExclusions] = useState([]);
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -107,7 +115,7 @@ const CarDetailsPage = () => {
   const inclusionExclusionRef = useRef(null);
   const faqsRef = useRef(null);
 
-  // Mock car data - In real app, fetch from API based on id
+  // Mock car data - used only when no initial car is provided and API data isn't available
   // Structure matches document.txt requirements: Model, Brand, Seats, Transmission, Fuel Type, Color, Features, Rating, Reviews, Owner Details, Price
   const getCarData = () => {
     const cars = {
@@ -117,6 +125,7 @@ const CarDetailsPage = () => {
         model: 'FF',
         name: 'Ferrari-FF', // For display compatibility
         image: carImg1,
+        images: [carImg1],
         rating: 5.0,
         reviewsCount: 100,
         location: 'Washington DC',
@@ -179,6 +188,7 @@ const CarDetailsPage = () => {
         model: 'Model S',
         name: 'Tesla Model S',
         image: carImg6,
+        images: [carImg6],
         rating: 5.0,
         reviewsCount: 125,
         location: 'Chicago, USA',
@@ -241,6 +251,7 @@ const CarDetailsPage = () => {
         model: '3 Series',
         name: 'BMW 3 Series',
         image: carImg8,
+        images: [carImg8],
         rating: 5.0,
         reviewsCount: 125,
         location: 'New York',
@@ -303,6 +314,7 @@ const CarDetailsPage = () => {
         model: 'Aventador',
         name: 'Lamborghini Aventador',
         image: carImg4,
+        images: [carImg4],
         rating: 4.9,
         reviewsCount: 80,
         location: 'New York',
@@ -365,6 +377,7 @@ const CarDetailsPage = () => {
         model: 'M2 GTS',
         name: 'BMW M2 GTS',
         image: carImg5,
+        images: [carImg5],
         rating: 5.0,
         reviewsCount: 95,
         location: 'Los Angeles',
@@ -427,6 +440,7 @@ const CarDetailsPage = () => {
         model: 'i7',
         name: 'BMW i7',
         image: carBanImg3,
+        images: [carBanImg3],
         rating: 5.0,
         reviewsCount: 150,
         location: 'New York',
@@ -559,61 +573,558 @@ const CarDetailsPage = () => {
     return cars[id] || cars['1'];
   };
 
-  const baseCar = getCarData();
-  const [car, setCar] = useState(baseCar);
-
-  // Merge reviews from localStorage with car reviews
-  useEffect(() => {
-    try {
-      const localReviews = JSON.parse(localStorage.getItem('localReviews') || '[]');
-      console.log('CarDetailsPage - All local reviews:', localReviews);
+  // Helper function to clean and normalize car images
+  // Returns all unique images from API (same as admin side)
+  const normalizeCarImages = (carData) => {
+    if (!carData) return null;
+    
+    let allImages = [];
+    let primaryImage = null;
+    
+    // Extract all images from images array (same as admin side)
+    if (carData.images && Array.isArray(carData.images) && carData.images.length > 0) {
+      // First, extract all image URLs with their primary status
+      const imageUrls = carData.images
+        .map(img => {
+          if (typeof img === 'string') return { url: img.trim(), isPrimary: false };
+          return {
+            url: (img?.url || img?.path || null)?.trim(),
+            isPrimary: img?.isPrimary || false
+          };
+        })
+        .filter(img => img.url); // Remove null/empty values
       
-      // Normalize IDs for comparison (convert all to strings)
-      const carIdString = id.toString();
-      const baseCarIdString = baseCar.id.toString();
-      console.log('CarDetailsPage - Looking for carId:', carIdString, 'or', baseCarIdString);
-      
-      // Filter reviews for this car - compare as strings
-      const carReviews = localReviews.filter(review => {
-        if (!review.carId) {
-          console.log('Review missing carId:', review);
-          return false;
+      // Remove duplicates based on URL
+      const uniqueImages = [];
+      const seenUrls = new Set();
+      for (const img of imageUrls) {
+        if (!seenUrls.has(img.url)) {
+          seenUrls.add(img.url);
+          uniqueImages.push(img);
         }
-        const reviewCarId = review.carId.toString();
-        const matches = reviewCarId === carIdString || reviewCarId === baseCarIdString;
-        if (matches) {
-          console.log('Found matching review:', review);
-        }
-        return matches;
-      });
+      }
       
-      console.log('CarDetailsPage - Filtered reviews for this car:', carReviews);
-      
-      // Convert local reviews to match car reviews structure
-      const formattedLocalReviews = carReviews.map(review => ({
-        name: review.name,
-        profilePic: review.profilePic || 'https://via.placeholder.com/40',
-        rating: review.rating,
-        comment: review.comment,
-      }));
-      
-      // Merge with existing reviews (local reviews first)
-      const mergedReviews = [...formattedLocalReviews, ...(baseCar.reviews || [])];
-      console.log('CarDetailsPage - Merged reviews:', mergedReviews);
-      
-      // Update car with merged reviews
-      setCar({
-        ...baseCar,
-        reviews: mergedReviews,
-        reviewsCount: mergedReviews.length,
-      });
-    } catch (error) {
-      console.error('Error loading reviews from localStorage:', error);
-      // If error, use base car data
-      setCar(baseCar);
+      // Find primary image and put it first
+      const primaryImgObj = uniqueImages.find(img => img.isPrimary);
+      if (primaryImgObj) {
+        primaryImage = primaryImgObj.url;
+        // Put primary image first, then others
+        allImages = [
+          primaryImage,
+          ...uniqueImages.filter(img => !img.isPrimary).map(img => img.url)
+        ];
+      } else {
+        // No primary image, use all images in original order
+        allImages = uniqueImages.map(img => img.url);
+        primaryImage = allImages[0];
+      }
     }
+    
+    // If no images from array, try carData.image
+    if (allImages.length === 0 && carData.image) {
+      const img = typeof carData.image === 'string' 
+        ? carData.image.trim() 
+        : (carData.image?.url || carData.image?.path || null)?.trim();
+      if (img) {
+        allImages = [img];
+        primaryImage = img;
+      }
+    }
+    
+    // Ensure we have at least one image
+    if (allImages.length === 0) {
+      allImages = [carImg1];
+      primaryImage = carImg1;
+    } else if (!primaryImage) {
+      primaryImage = allImages[0];
+    }
+    
+    return {
+      ...carData,
+      image: primaryImage,
+      images: allImages // All images array (same as admin side)
+    };
+  };
+
+  // Helper function to extract numeric price from price string or number
+  const extractPrice = (price) => {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') {
+      // Extract number from strings like "Rs. 200" or "200" or "Rs.200"
+      const match = price.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    }
+    return 0;
+  };
+
+  // Normalize car data from location state to ensure pricePerDay is set
+  const normalizeCarFromState = (carData) => {
+    if (!carData) return null;
+    const normalized = normalizeCarImages(carData);
+    // Ensure pricePerDay is set from price if it's missing
+    if (!normalized.pricePerDay && normalized.price) {
+      normalized.pricePerDay = extractPrice(normalized.price);
+    }
+    // Also ensure price is numeric
+    if (typeof normalized.price === 'string') {
+      normalized.price = extractPrice(normalized.price);
+    }
+    // Ensure reviews is initialized as array
+    if (!normalized.reviews || !Array.isArray(normalized.reviews)) {
+      normalized.reviews = [];
+    }
+    return normalized;
+  };
+
+  const initialCar = location.state?.car || null;
+  const normalizedInitialCar = initialCar ? normalizeCarFromState(initialCar) : null;
+  
+  // Always ensure we have a valid baseCar (fallback to mock data if needed)
+  const getBaseCarData = () => {
+    try {
+      const mockCar = normalizeCarImages(getCarData());
+      if (mockCar && (!mockCar.reviews || !Array.isArray(mockCar.reviews))) {
+        mockCar.reviews = [];
+      }
+      return mockCar;
+    } catch (error) {
+      console.error('Error getting base car data:', error);
+      // Return minimal valid car object
+      return {
+        id: id || '1',
+        _id: id || '1',
+        brand: '',
+        model: '',
+        name: 'Car',
+        image: carImg1,
+        images: [carImg1],
+        rating: 0,
+        reviewsCount: 0,
+        reviews: [],
+        location: '',
+        locationObject: {},
+        seats: 4,
+        seatingCapacity: 4,
+        transmission: 'Automatic',
+        fuelType: 'Petrol',
+        year: new Date().getFullYear(),
+        color: '',
+        carType: '',
+        mileage: null,
+        engineCapacity: '',
+        horsepower: null,
+        pricePerDay: 0,
+        price: 0,
+        description: '',
+        features: [],
+        owner: null,
+        host: null,
+      };
+    }
+  };
+  
+  const baseCar = normalizedInitialCar || getBaseCarData();
+  // Ensure baseCar has reviews initialized
+  if (baseCar && (!baseCar.reviews || !Array.isArray(baseCar.reviews))) {
+    baseCar.reviews = [];
+  }
+  // Ensure normalizedInitialCar has reviews initialized
+  const initialCarWithReviews = normalizedInitialCar 
+    ? (normalizedInitialCar.reviews && Array.isArray(normalizedInitialCar.reviews) 
+        ? normalizedInitialCar 
+        : { ...normalizedInitialCar, reviews: [] })
+    : null;
+  const [car, setCar] = useState(initialCarWithReviews || baseCar);
+  // If we have initial car from state, don't show loader - set loading to false immediately
+  // Only show loader if we don't have initial car AND we have an ID to fetch
+  // Set initial loading to false if we have car data (from state or baseCar)
+  const [isLoading, setIsLoading] = useState(!initialCar && !baseCar && !!id);
+  
+  // Immediately set loading to false if we have initial car or baseCar
+  useEffect(() => {
+    if (initialCar || baseCar) {
+      setIsLoading(false);
+    }
+  }, [initialCar, baseCar]);
+
+  // Fetch car details from backend when a real car ID (Mongo ObjectId) is used
+  useEffect(() => {
+    const fetchCarDetails = async () => {
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+
+      // If we already have full car data from navigation state for this id,
+      // don't refetch from API to avoid image order changing (no shuffle)
+      // Also ensure loading is false immediately
+      if (normalizedInitialCar && (normalizedInitialCar._id === id || normalizedInitialCar.id === id)) {
+        setCar(normalizedInitialCar);
+        setIsLoading(false);
+        return;
+      }
+      
+      // If we have initial car but IDs don't match, still don't show loader
+      if (initialCar) {
+        setIsLoading(false);
+        return;
+      }
+
+      // If it's not a Mongo ObjectId (e.g. demo IDs like "1", "bmw-i7"), keep using mock data
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        // Use baseCar but ensure it has the correct ID
+        const carWithId = { ...baseCar, id: id, _id: id };
+        setCar(carWithId);
+        setIsLoading(false);
+        return;
+      }
+
+      // Only set loading to true if we don't have any car data at all
+      // If we have baseCar, keep loading false and fetch in background
+      if (!baseCar) {
+        setIsLoading(true);
+      }
+      try {
+        const response = await carService.getCarDetails(id);
+        if (response.success && response.data?.car) {
+          const apiCar = response.data.car;
+
+          // Extract all images from API (same as admin side)
+          let allImages = [];
+          let primaryImage = null;
+          
+          // Extract all images from images array (same as admin side)
+          if (apiCar.images && Array.isArray(apiCar.images) && apiCar.images.length > 0) {
+            // First, extract all image URLs
+            const imageUrls = apiCar.images
+              .map(img => {
+                if (typeof img === 'string') return { url: img.trim(), isPrimary: false };
+                return {
+                  url: (img?.url || img?.path || null)?.trim(),
+                  isPrimary: img?.isPrimary || false
+                };
+              })
+              .filter(img => img.url); // Remove null/empty values
+            
+            // Remove duplicates based on URL
+            const uniqueImages = [];
+            const seenUrls = new Set();
+            for (const img of imageUrls) {
+              if (!seenUrls.has(img.url)) {
+                seenUrls.add(img.url);
+                uniqueImages.push(img);
+              }
+            }
+            
+            // Find primary image
+            const primaryImgObj = uniqueImages.find(img => img.isPrimary);
+            if (primaryImgObj) {
+              primaryImage = primaryImgObj.url;
+              // Put primary image first, then others
+              allImages = [
+                primaryImage,
+                ...uniqueImages.filter(img => !img.isPrimary).map(img => img.url)
+              ];
+            } else {
+              // No primary image, use all images in original order
+              allImages = uniqueImages.map(img => img.url);
+              primaryImage = allImages[0];
+            }
+          }
+          
+          // If no images from array, try primaryImage field
+          if (allImages.length === 0 && apiCar.primaryImage) {
+            allImages = [apiCar.primaryImage];
+            primaryImage = apiCar.primaryImage;
+          }
+          
+          // Ensure we have at least one image
+          if (allImages.length === 0) {
+            allImages = [carImg1];
+            primaryImage = carImg1;
+          } else if (!primaryImage) {
+            primaryImage = allImages[0];
+          }
+
+          // Build car object purely from backend data (no mock merge)
+          // Use all images (same as admin side)
+          const normalizedCar = normalizeCarImages({
+            id: apiCar._id || apiCar.id,
+            _id: apiCar._id || apiCar.id,
+            brand: apiCar.brand || '',
+            model: apiCar.model || '',
+            name: `${apiCar.brand || ''} ${apiCar.model || ''}`.trim() || 'Car',
+            image: primaryImage,
+            images: allImages, // All images array (same as admin side)
+            rating: apiCar.averageRating || 0,
+            reviewsCount: apiCar.reviewsCount || 0,
+            reviews: [], // Initialize reviews as empty array
+            location:
+              typeof apiCar.location === 'string'
+                ? apiCar.location
+                : apiCar.location?.city ||
+                  apiCar.location?.address ||
+                  '',
+            locationObject: apiCar.location || {},
+            seats: apiCar.seatingCapacity || 4,
+            seatingCapacity: apiCar.seatingCapacity || 4,
+            transmission:
+              apiCar.transmission === 'automatic'
+                ? 'Automatic'
+                : apiCar.transmission === 'manual'
+                ? 'Manual'
+                : apiCar.transmission === 'cvt'
+                ? 'CVT'
+                : 'Automatic',
+            fuelType:
+              apiCar.fuelType === 'petrol'
+                ? 'Petrol'
+                : apiCar.fuelType === 'diesel'
+                ? 'Diesel'
+                : apiCar.fuelType === 'electric'
+                ? 'Electric'
+                : apiCar.fuelType === 'hybrid'
+                ? 'Hybrid'
+                : 'Petrol',
+            year: apiCar.year || new Date().getFullYear(),
+            color: apiCar.color || '',
+            carType: apiCar.carType || '',
+            mileage: apiCar.mileage || null,
+            engineCapacity: apiCar.engineCapacity || '',
+            horsepower: apiCar.horsepower || apiCar.enginePower || null,
+            pricePerDay: apiCar.pricePerDay || 0,
+            price: apiCar.pricePerDay || 0,
+            description: apiCar.description || '',
+            features: apiCar.features || [], // Features array from API
+            owner: apiCar.owner ? {
+              name: apiCar.owner.name || 'DriveOn Premium',
+              email: apiCar.owner.email || '',
+              phone: apiCar.owner.phone || '',
+              profilePhoto: apiCar.owner.profilePhoto || null,
+              verified: apiCar.owner.verified || false,
+              rating: apiCar.owner.rating || 4.5,
+            } : null,
+            host: apiCar.owner ? {
+              name: apiCar.owner.name || 'DriveOn Premium',
+              profilePic: apiCar.owner.profilePhoto || null,
+              verified: apiCar.owner.verified || false,
+            } : null,
+          });
+          
+          // Preserve images from location.state to prevent shuffle
+          // If we have images from initial state, keep them and only update other fields
+          if (initialCar && initialCar.images && initialCar.images.length > 0) {
+            setCar(prevCar => ({
+              ...normalizedCar,
+              images: prevCar.images, // Keep original images order
+              image: prevCar.image || normalizedCar.image, // Keep original primary image
+            }));
+          } else {
+            setCar(normalizedCar);
+          }
+        } else {
+          // API returned success but no car data - use baseCar with correct ID
+          const carWithId = { ...baseCar, id: id, _id: id };
+          setCar(carWithId);
+        }
+      } catch (error) {
+        console.error('Error fetching car details:', error);
+        // On error, use baseCar with correct ID instead of showing error
+        const carWithId = { ...baseCar, id: id, _id: id };
+        setCar(carWithId);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCarDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Fetch reviews from API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        // Use car ID from params or car object
+        const carId = id || car?._id || car?.id || baseCar?._id || baseCar?.id;
+        if (!carId) {
+          return;
+        }
+
+        // Check if carId is a valid MongoDB ObjectId (24 hex characters)
+        // If not, skip API call and keep existing data
+        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(carId);
+        if (!isValidObjectId) {
+          return;
+        }
+
+        const response = await reviewService.getCarReviews(carId, {
+          page: 1,
+          limit: 5, // Show only 5 reviews on car details page
+          sort: 'newest',
+        });
+
+        if (response.success && response.data) {
+          // Format reviews for display
+          const formattedReviews = response.data.reviews.map(review => ({
+            name: review.user?.name || 'Anonymous',
+            profilePic: review.user?.photo || 'https://via.placeholder.com/40',
+            rating: review.overallRating?.toFixed(1) || '0',
+            comment: review.comment,
+          }));
+
+          // Merge reviews into existing car state (don't reset to mock data)
+          setCar(prev => {
+            if (!prev) return prev; // Don't update if car is null
+            return {
+              ...prev,
+              reviews: formattedReviews,
+              reviewsCount: response.data.ratings?.totalReviews || prev.reviewsCount || 0,
+              averageRating: response.data.ratings?.averageOverallRating || prev.rating || 0,
+            };
+          });
+        }
+      } catch (error) {
+        console.error('Error loading reviews:', error);
+        // Keep existing car data on error
+      }
+    };
+
+    fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Fetch common data (offers, FAQs, cancellation policy, inclusions/exclusions)
+  useEffect(() => {
+    const fetchCommonData = async () => {
+      try {
+        // Fetch FAQs from common API
+        try {
+          const faqsResponse = await commonService.getFAQs();
+          if (faqsResponse.success && faqsResponse.data?.faqs) {
+            setFaqs(faqsResponse.data.faqs);
+          } else {
+            // Default FAQs if API fails
+            setFaqs([
+              {
+                question: 'Who pays for the Fuel and FASTag?',
+                answer: 'The guest is responsible for fuel costs. You will receive the car with a full tank and should return it with the same fuel level. FASTag charges are also the responsibility of the guest. Please check with the host for Fastag recharge if needed.'
+              },
+              {
+                question: 'Can I modify or extend my trip after booking creation?',
+                answer: 'Yes, you can modify or extend your trip. Please contact our support team or the car owner at least 24 hours before your scheduled pickup time. Modifications are subject to availability and may result in price adjustments.'
+              },
+              {
+                question: 'How do I cancel my booking?',
+                answer: 'You can cancel your booking through the app or by contacting support. Free cancellation is available up to 24 hours before pickup for a full refund. Cancellations made 12-24 hours before pickup receive a 50% refund. Cancellations made less than 12 hours before pickup are not eligible for refund.'
+              },
+              {
+                question: 'What is refundable security deposit and why do I pay it?',
+                answer: 'The security deposit is a refundable amount held to cover any potential damages, traffic violations, or additional charges during your rental period. It is fully refundable after the trip completion, provided there are no damages or violations. The deposit amount varies based on the car type and is typically returned within 5-7 business days after trip completion.'
+              },
+            ]);
+          }
+        } catch (error) {
+          console.error('Error fetching FAQs:', error);
+          // Use default FAQs on error
+          setFaqs([
+            {
+              question: 'Who pays for the Fuel and FASTag?',
+              answer: 'The guest is responsible for fuel costs. You will receive the car with a full tank and should return it with the same fuel level. FASTag charges are also the responsibility of the guest. Please check with the host for Fastag recharge if needed.'
+            },
+            {
+              question: 'Can I modify or extend my trip after booking creation?',
+              answer: 'Yes, you can modify or extend your trip. Please contact our support team or the car owner at least 24 hours before your scheduled pickup time. Modifications are subject to availability and may result in price adjustments.'
+            },
+            {
+              question: 'How do I cancel my booking?',
+              answer: 'You can cancel your booking through the app or by contacting support. Free cancellation is available up to 24 hours before pickup for a full refund. Cancellations made 12-24 hours before pickup receive a 50% refund. Cancellations made less than 12 hours before pickup are not eligible for refund.'
+            },
+            {
+              question: 'What is refundable security deposit and why do I pay it?',
+              answer: 'The security deposit is a refundable amount held to cover any potential damages, traffic violations, or additional charges during your rental period. It is fully refundable after the trip completion, provided there are no damages or violations. The deposit amount varies based on the car type and is typically returned within 5-7 business days after trip completion.'
+            },
+          ]);
+        }
+
+        // Set default offers (can be fetched from API in future)
+        setOffers([
+          {
+            id: '50-off',
+            title: 'Get 50% OFF!',
+            description: 'Check Availability Here >',
+            code: 'SAVE50',
+            discount: 50,
+            type: 'percentage'
+          },
+          {
+            id: 'first-time',
+            title: 'First Time User Discount',
+            description: 'Get 20% off on your first booking. Use code: FIRST20',
+            code: 'FIRST20',
+            discount: 20,
+            type: 'percentage'
+          },
+          {
+            id: 'weekend',
+            title: 'Weekend Special',
+            description: 'Book for 3+ days and get 15% discount on weekends',
+            code: 'WEEKEND15',
+            discount: 15,
+            type: 'percentage',
+            minDays: 3
+          }
+        ]);
+
+        // Set default cancellation policy (can be fetched from API in future)
+        setCancellationPolicy({
+          freeCancellation: {
+            title: 'Free Cancellation',
+            description: 'Cancel up to 24 hours before pickup time for a full refund.',
+            hours: 24
+          },
+          partialRefund: {
+            title: 'Partial Refund',
+            description: 'Cancel between 12-24 hours before pickup: 50% refund',
+            hours: { min: 12, max: 24 },
+            refundPercentage: 50
+          },
+          noRefund: {
+            title: 'No Refund',
+            description: 'Cancellations made less than 12 hours before pickup are not eligible for refund.',
+            hours: 12
+          }
+        });
+
+        // Set default inclusions/exclusions (can be fetched from API in future)
+        setInclusionsExclusions([
+          {
+            type: 'exclusion',
+            title: 'Fuel',
+            description: 'Fuel not included. Guest should return the car with the same fuel level as at start.',
+            icon: 'fuel'
+          },
+          {
+            type: 'exclusion',
+            title: 'Toll/Fastag',
+            description: 'Toll/Fastag charges not included. Check with host for Fastag recharge.',
+            icon: 'toll'
+          },
+          {
+            type: 'exclusion',
+            title: 'Trip Protection',
+            description: 'Trip Protection excludes: Off-road use, driving under influence, over-speeding, illegal use, restricted zones.',
+            icon: 'protection'
+          }
+        ]);
+      } catch (error) {
+        console.error('Error fetching common data:', error);
+      }
+    };
+
+    fetchCommonData();
+  }, []);
   
   // Extract numeric price from car.price (format: "Rs. 200" or just number)
   const getCarPrice = () => {
@@ -643,29 +1154,48 @@ const CarDetailsPage = () => {
     return specs.join(' · ');
   };
   
-  // Generate car images - use same image 2-3 times for both mobile and web
-  // For web view, we'll show multiple thumbnails
+  // Generate car images for gallery.
+  // Shows all images from API (same as admin side)
   const generateCarImages = () => {
-    const baseImage = car.image;
-    // Generate 4 images by duplicating the base image (like Zoomcar)
-    return [
-      baseImage,
-      baseImage,
-      baseImage,
-      baseImage
-    ];
+    if (!car) return [carImg1];
+    
+    // Return all images from car.images array (same as admin side)
+    if (car.images && Array.isArray(car.images) && car.images.length > 0) {
+      return car.images
+        .map(img => {
+          if (typeof img === 'string') return img.trim();
+          return (img?.url || img?.path || null)?.trim();
+        })
+        .filter(Boolean); // Remove null/empty values
+    }
+    
+    // Fallback to car.image if images array is empty
+    if (car.image) {
+      const img = typeof car.image === 'string' ? car.image : (car.image?.url || car.image?.path || null);
+      if (img) return [img];
+    }
+    
+    return [carImg1];
   };
   
   const carImages = generateCarImages();
+  
+  // Reset image index only when car ID changes (not when images array changes)
+  useEffect(() => {
+    if (carImages.length > 0) {
+      setCurrentImageIndex(0);
+    }
+  }, [car?.id || car?._id || id]); // Only reset when car ID changes, not when images array changes
   
   // Detect car facing direction
   const [facingDirection, setFacingDirection] = useState('right');
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
   
   useEffect(() => {
-    const direction = getCarFacingDirection(car.image);
+    if (!car) return;
+    const direction = getCarFacingDirection(car.image || carImages[0]);
     setFacingDirection(direction);
-  }, [car.image]);
+  }, [car?.image, carImages]);
 
   // Booking form state
   const [pickupDate, setPickupDate] = useState('');
@@ -933,7 +1463,8 @@ const CarDetailsPage = () => {
     }
 
     // Navigate to payment page
-    navigate(`/book-now/${car.id}`, { 
+    if (!car || (!car.id && !car._id)) return;
+    navigate(`/book-now/${car.id || car._id}`, { 
       state: { 
         car, 
         pickupDate, 
@@ -1061,6 +1592,44 @@ const CarDetailsPage = () => {
     }
   };
 
+  // Show loading state only if we're actively loading and have no car data
+  // Don't show loader if we have initial car from navigation state or baseCar
+  if (isLoading && !car && !initialCar && !baseCar) {
+    return (
+      <div 
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.primary }}></div>
+          <p className="text-gray-600">Loading car details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no car data at all (shouldn't happen with fallback, but just in case)
+  // But only show error if we don't have initial car or baseCar
+  if (!car && !initialCar && !baseCar) {
+    return (
+      <div 
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Unable to load car details.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 rounded-lg text-white"
+            style={{ backgroundColor: colors.backgroundTertiary }}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className="min-h-screen w-full relative"
@@ -1092,14 +1661,14 @@ const CarDetailsPage = () => {
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -1195,13 +1764,40 @@ const CarDetailsPage = () => {
           <div className="relative w-full">
             <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
               {/* Main Large Image with Navigation Arrows */}
-              <div className="relative w-full h-[500px] xl:h-[600px] flex items-center justify-center overflow-hidden">
-                <img
-                  src={carImages[currentImageIndex]}
-                  alt={`${car.name} - Main Image`}
-                  className="w-full h-full object-contain p-6 xl:p-10 transition-opacity duration-300"
-                  draggable={false}
-                />
+              <div className="relative w-full h-[500px] xl:h-[600px] flex items-center justify-center overflow-hidden bg-gray-50">
+                {carImages && carImages.length > 0 && carImages[currentImageIndex] ? (
+                  <img
+                    key={`main-image-${currentImageIndex}-${carImages[currentImageIndex]}`}
+                    src={carImages[currentImageIndex]}
+                    alt={`${car.name || getCarDisplayName()} - Main Image`}
+                    className="w-full h-full object-contain p-6 xl:p-10 transition-all duration-500 ease-in-out"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      position: 'relative',
+                      zIndex: 1
+                    }}
+                    draggable={false}
+                    onError={(e) => {
+                      console.error('Image failed to load:', carImages[currentImageIndex]);
+                      e.target.src = carImg1;
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <img
+                      src={carImg1}
+                      alt="Default Car"
+                      className="w-full h-full object-contain p-6 xl:p-10"
+                      draggable={false}
+                      style={{
+                        position: 'relative',
+                        zIndex: 1
+                      }}
+                    />
+                  </div>
+                )}
                 
                 {/* Navigation Arrow - Left */}
                 {carImages.length > 1 && (
@@ -1284,36 +1880,45 @@ const CarDetailsPage = () => {
               </div>
               
               {/* Thumbnail Row - Below Main Image */}
-              <div className="p-4 xl:p-6">
-                <div className="flex gap-2 xl:gap-3 overflow-x-auto scrollbar-hide pb-2">
-                  {carImages.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                        currentImageIndex === index 
-                          ? '' 
-                          : 'hover:opacity-80 opacity-70'
-                      }`}
-                      style={{
-                        backgroundColor: colors.backgroundPrimary,
-                        border: currentImageIndex === index ? `2px solid ${colors.backgroundTertiary}` : '2px solid transparent',
-                        width: '120px',
-                        height: '120px'
-                      }}
-                      onClick={() => setCurrentImageIndex(index)}
-                    >
-                      <div className="w-full h-full flex items-center justify-center p-2">
-                        <img
-                          src={image}
-                          alt={`${car.name} - Thumbnail ${index + 1}`}
-                          className="w-full h-full object-contain"
-                          draggable={false}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              {carImages.length > 1 && (
+                <div className="p-4 xl:p-6">
+                  <div className="flex gap-2 xl:gap-3 overflow-x-auto scrollbar-hide pb-2">
+                    {carImages.map((image, index) => {
+                      const imageKey = typeof image === 'string' ? image : (image?.url || image?.path || `img-${index}`);
+                      return (
+                        <div
+                          key={`thumbnail-${imageKey}-${index}`}
+                          className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                            currentImageIndex === index 
+                              ? '' 
+                              : 'hover:opacity-80 opacity-70'
+                          }`}
+                          style={{
+                            backgroundColor: colors.backgroundPrimary,
+                            border: currentImageIndex === index ? `2px solid ${colors.backgroundTertiary}` : '2px solid transparent',
+                            width: '120px',
+                            height: '120px'
+                          }}
+                          onClick={() => setCurrentImageIndex(index)}
+                        >
+                          <div className="w-full h-full flex items-center justify-center p-2 bg-white">
+                            <img
+                              src={image}
+                              alt={`${car.name || getCarDisplayName()} - Thumbnail ${index + 1}`}
+                              className="w-full h-full object-contain"
+                              draggable={false}
+                              onError={(e) => {
+                                console.error('Thumbnail failed to load:', image);
+                                e.target.src = carImg1;
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -1530,44 +2135,60 @@ const CarDetailsPage = () => {
               watchSlidesProgress={true}
               allowTouchMove={true}
             >
-              {carImages.map((image, index) => (
-                <SwiperSlide key={index} className="!w-full">
-                  <div 
-                    className="relative w-full h-[350px] flex items-center justify-center overflow-hidden"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    {index === 0 ? (
-                      <motion.img
-                        ref={imageRef}
-                        src={image}
-                        alt={`${car.name} - Image ${index + 1}`}
-                        className="w-full h-full object-contain p-4"
-                        draggable={false}
-                        initial={{ 
-                          x: facingDirection === 'left' ? 200 : -200, 
-                          opacity: 0 
-                        }}
-                        animate={isImageInView ? { 
-                          x: 0, 
-                          opacity: 1 
-                        } : { 
-                          x: facingDirection === 'left' ? 200 : -200, 
-                          opacity: 0 
-                        }}
-                        transition={{ 
-                          duration: 0.7, 
-                          ease: 'easeOut'
-                        }}
-                        key={`${car.id}-animated`}
-                      />
-                    ) : (
-                      <img
-                        src={image}
-                        alt={`${car.name} - Image ${index + 1}`}
-                        className="w-full h-full object-contain p-4"
-                        draggable={false}
-                      />
-                    )}
+              {carImages && carImages.length > 0 ? (
+                carImages.map((image, index) => (
+                  <SwiperSlide key={index} className="!w-full">
+                    <div 
+                      className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      {index === 0 ? (
+                        <motion.img
+                          ref={imageRef}
+                          src={image || carImg1}
+                          onError={(e) => {
+                            console.error('Mobile image failed to load:', image);
+                            e.target.src = carImg1;
+                          }}
+                          alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
+                          className="w-full h-full object-contain p-4"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                          }}
+                          draggable={false}
+                          initial={{ 
+                            x: facingDirection === 'left' ? 200 : -200, 
+                            opacity: 0 
+                          }}
+                          animate={{ 
+                            x: 0, 
+                            opacity: 1 
+                          }}
+                          transition={{ 
+                            duration: 0.7, 
+                            ease: 'easeOut'
+                          }}
+                          key={`${car?.id || car?._id || 'car'}-${index}-animated`}
+                        />
+                      ) : (
+                        <img
+                          src={image || carImg1}
+                          onError={(e) => {
+                            console.error('Mobile image failed to load:', image);
+                            e.target.src = carImg1;
+                          }}
+                          alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
+                          className="w-full h-full object-contain p-4"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                          }}
+                          draggable={false}
+                        />
+                      )}
                     
                     {/* Heart Icon - Top Left */}
                     <motion.button 
@@ -1603,11 +2224,65 @@ const CarDetailsPage = () => {
                     </motion.button>
                   </div>
                 </SwiperSlide>
-              ))}
+              ))
+            ) : (
+              <SwiperSlide className="!w-full">
+                  <div 
+                    className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <img
+                      src={carImg1}
+                      alt="Default Car"
+                      className="w-full h-full object-contain p-4"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                      }}
+                      draggable={false}
+                    />
+                    {/* Heart Icon - Top Left */}
+                    <motion.button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFavorite(!isFavorite);
+                        setIsAnimating(true);
+                        setTimeout(() => setIsAnimating(false), 300);
+                      }}
+                      className="absolute top-2 left-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: colors.overlayWhite }}
+                      animate={isAnimating ? {
+                        scale: [1, 1.3, 1],
+                      } : {}}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut"
+                      }}
+                    >
+                      <svg 
+                        className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                        fill={isFavorite ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                        />
+                      </svg>
+                    </motion.button>
+                  </div>
+                </SwiperSlide>
+              )}
             </Swiper>
 
             {/* Pagination Dots - Below Car Image */}
-            <div className="car-pagination-dots absolute bottom-8 left-0 right-0 flex justify-center items-center gap-2 z-10"></div>
+            {carImages && carImages.length > 1 && (
+              <div className="car-pagination-dots absolute bottom-8 left-0 right-0 flex justify-center items-center gap-2 z-10"></div>
+            )}
 
             {/* Custom Pagination Styles */}
             <style>{`
@@ -1652,13 +2327,34 @@ const CarDetailsPage = () => {
             <div className="hidden md:block lg:hidden w-full px-6">
               <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
                 {/* Main Large Image */}
-                <div className="relative w-full h-[500px] flex items-center justify-center overflow-hidden">
-                  <img
-                    src={carImages[currentImageIndex]}
-                    alt={`${car.name} - Main Image`}
-                    className="w-full h-full object-contain p-6 transition-opacity duration-300"
-                    draggable={false}
-                  />
+                <div className="relative w-full h-[500px] flex items-center justify-center overflow-hidden bg-gray-50">
+                  {carImages && carImages.length > 0 && carImages[currentImageIndex] ? (
+                    <img
+                      key={currentImageIndex}
+                      src={carImages[currentImageIndex]}
+                      alt={`${car.name || getCarDisplayName()} - Main Image`}
+                      className="w-full h-full object-contain p-6 transition-all duration-500 ease-in-out"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                      }}
+                      draggable={false}
+                      onError={(e) => {
+                        console.error('Tablet image failed to load:', carImages[currentImageIndex]);
+                        e.target.src = carImg1;
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <img
+                        src={carImg1}
+                        alt="Default Car"
+                        className="w-full h-full object-contain p-6"
+                        draggable={false}
+                      />
+                    </div>
+                  )}
                   
                   {/* Heart Icon - Top Left */}
                   <motion.button 
@@ -1694,34 +2390,43 @@ const CarDetailsPage = () => {
                 </div>
                 
                 {/* Thumbnail Grid - Below Main Image */}
-                <div className="p-4">
-                  <div className="grid grid-cols-3 gap-2">
-                    {carImages.map((image, index) => (
-                      <div
-                        key={index}
-                        className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                          currentImageIndex === index 
-                            ? 'scale-105 shadow-lg border-2' 
-                            : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
-                        }`}
-                        style={{
-                          backgroundColor: colors.backgroundPrimary,
-                          borderColor: currentImageIndex === index ? colors.backgroundTertiary : 'transparent'
-                        }}
-                        onClick={() => setCurrentImageIndex(index)}
-                      >
-                        <div className="aspect-square w-full flex items-center justify-center p-2">
-                          <img
-                            src={image}
-                            alt={`${car.name} - Thumbnail ${index + 1}`}
-                            className="w-full h-full object-contain"
-                            draggable={false}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                {carImages.length > 1 && (
+                  <div className="p-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {carImages.map((image, index) => {
+                        const imageKey = typeof image === 'string' ? image : (image?.url || image?.path || `img-${index}`);
+                        return (
+                          <div
+                            key={`tablet-thumbnail-${imageKey}-${index}`}
+                            className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                              currentImageIndex === index 
+                                ? 'scale-105 shadow-lg border-2' 
+                                : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
+                            }`}
+                            style={{
+                              backgroundColor: colors.backgroundPrimary,
+                              borderColor: currentImageIndex === index ? colors.backgroundTertiary : 'transparent'
+                            }}
+                            onClick={() => setCurrentImageIndex(index)}
+                          >
+                            <div className="aspect-square w-full flex items-center justify-center p-2">
+                              <img
+                                src={image}
+                                alt={`${car.name || getCarDisplayName()} - Thumbnail ${index + 1}`}
+                                className="w-full h-full object-contain"
+                                draggable={false}
+                                onError={(e) => {
+                                  console.error('Tablet thumbnail failed to load:', image);
+                                  e.target.src = carImg1;
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -1756,9 +2461,11 @@ const CarDetailsPage = () => {
               <p className="text-sm text-gray-600 mb-3">{car.description}</p>
               
               {/* Rating and Reviews - As per document.txt */}
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb  -3">
                 <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-black">{car.rating?.toFixed(1) || car.rating}</span>
+                  <span className="text-sm font-semibold text-black">
+                    {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
+                  </span>
                   <svg 
                     className="w-4 h-4" 
                     fill={colors.accentOrange} 
@@ -1767,7 +2474,7 @@ const CarDetailsPage = () => {
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
                 </div>
-                <span className="text-xs text-gray-500">({car.reviewsCount}+ Reviews)</span>
+                <span className="text-xs text-gray-500">({car?.reviewsCount || 0}+ Reviews)</span>
               </div>
 
             </div>
@@ -1808,73 +2515,47 @@ const CarDetailsPage = () => {
             <div ref={offersRef} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-4">Exclusive Offers</h2>
               <div className="space-y-4">
-                <div 
-                  className="p-4 rounded-xl border-2 flex items-center justify-between"
-                  style={{ 
-                    backgroundColor: colors.backgroundPrimary,
-                    borderColor: colors.borderMedium
-                  }}
-                >
-                  <div className="flex items-center gap-4">
+                {offers && offers.length > 0 ? (
+                  offers.map((offer, index) => (
                     <div 
-                      className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl"
-                      style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
+                      key={offer.id || index}
+                      className={`p-4 rounded-xl border-2 ${offer.code ? 'flex items-center justify-between' : ''}`}
+                      style={{ 
+                        backgroundColor: colors.backgroundPrimary,
+                        borderColor: colors.borderMedium
+                      }}
                     >
-                      Z
-                    </div>
-                    <div>
-                      <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
-                        Get 50% OFF!
+                      <div className="flex items-center gap-4">
+                        {index === 0 && (
+                          <div 
+                            className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl"
+                            style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
+                          >
+                            Z
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
+                            {offer.title}
+                          </div>
+                          <div className="text-sm" style={{ color: colors.textSecondary }}>
+                            {offer.description}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm" style={{ color: colors.textSecondary }}>
-                        Check Availability Here &gt;
-                      </div>
+                      {offer.code && (
+                        <button
+                          className="px-6 py-2 rounded-lg text-white font-semibold text-sm"
+                          style={{ backgroundColor: colors.backgroundTertiary }}
+                        >
+                          {index === 0 ? 'APPLY' : 'Apply Code'}
+                        </button>
+                      )}
                     </div>
-                  </div>
-                  <button
-                    className="px-6 py-2 rounded-lg text-white font-semibold text-sm"
-                    style={{ backgroundColor: colors.backgroundTertiary }}
-                  >
-                    APPLY
-                  </button>
-                </div>
-                <div 
-                  className="p-4 rounded-xl border-2"
-                  style={{ 
-                    backgroundColor: colors.backgroundPrimary,
-                    borderColor: colors.borderMedium
-                  }}
-                >
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    First Time User Discount
-                  </div>
-                  <div className="text-sm mb-3" style={{ color: colors.textSecondary }}>
-                    Get 20% off on your first booking. Use code: FIRST20
-                  </div>
-                  <button
-                    className="px-4 py-1.5 rounded-lg text-sm font-medium"
-                    style={{ 
-                      backgroundColor: colors.backgroundTertiary,
-                      color: colors.textWhite
-                    }}
-                  >
-                    Apply Code
-                  </button>
-                </div>
-                <div 
-                  className="p-4 rounded-xl border-2"
-                  style={{ 
-                    backgroundColor: colors.backgroundPrimary,
-                    borderColor: colors.borderMedium
-                  }}
-                >
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    Weekend Special
-                  </div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    Book for 3+ days and get 15% discount on weekends
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No offers available at the moment.</div>
+                )}
               </div>
             </div>
 
@@ -1883,7 +2564,7 @@ const CarDetailsPage = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-black">Review ({car.reviewsCount})</h2>
                 <button 
-                  onClick={() => navigate(`/car-details/${car.id}/reviews`)}
+                  onClick={() => navigate(`/car-details/${car.id}/reviews`, { state: { car } })}
                   className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
                 >
                   See All
@@ -1892,7 +2573,8 @@ const CarDetailsPage = () => {
               
               {/* Reviews - Horizontal Scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-                {car.reviews.map((review, index) => (
+                {car?.reviews && car.reviews.length > 0 ? (
+                  car.reviews.map((review, index) => (
                   <div 
                     key={index}
                     className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
@@ -1915,7 +2597,10 @@ const CarDetailsPage = () => {
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500 text-center py-4">No reviews yet</div>
+                )}
               </div>
             </div>
 
@@ -1931,15 +2616,48 @@ const CarDetailsPage = () => {
                 <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
-                      Sector A, Sukhliya, Indore, Madhya
-                    </div>
-                    <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
-                      Pradesh 452003, India
-                    </div>
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      4.8 Kms Away
-                    </div>
+                    {(() => {
+                      const location = car?.locationObject || car?.location || {};
+                      const locationParts = [];
+                      if (typeof location === 'string') {
+                        locationParts.push(location);
+                      } else {
+                        if (location.address) locationParts.push(location.address);
+                        if (location.city) locationParts.push(location.city);
+                        if (location.state) locationParts.push(location.state);
+                        if (location.pincode) locationParts.push(location.pincode);
+                        if (location.country) locationParts.push(location.country);
+                      }
+                      const locationString = locationParts.length > 0 
+                        ? locationParts.join(', ') 
+                        : (car?.location || 'Location not available');
+                      
+                      // Split into two lines if too long
+                      const words = locationString.split(', ');
+                      const midPoint = Math.ceil(words.length / 2);
+                      const firstLine = words.slice(0, midPoint).join(', ');
+                      const secondLine = words.slice(midPoint).join(', ');
+                      
+                      return (
+                        <>
+                          {firstLine && (
+                            <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
+                              {firstLine}
+                            </div>
+                          )}
+                          {secondLine && (
+                            <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+                              {secondLine}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                    {car?.locationObject?.coordinates && (
+                      <div className="text-sm" style={{ color: colors.textSecondary }}>
+                        Coordinates: {car.locationObject.coordinates.latitude?.toFixed(4)}, {car.locationObject.coordinates.longitude?.toFixed(4)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-shrink-0">
                     <div 
@@ -2009,6 +2727,51 @@ const CarDetailsPage = () => {
               )}
             </div>
 
+            {/* Reviews Section */}
+            <div ref={reviewsRef} className="mb-6 scroll-mt-24">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
+                <button 
+                  onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`, { state: { car } })}
+                  className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
+                >
+                  VIEW MORE &gt;
+                </button>
+              </div>
+              
+              {/* Reviews - Horizontal Scroll */}
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
+                {car?.reviews && car.reviews.length > 0 ? (
+                  car.reviews.map((review, index) => (
+                    <div 
+                      key={index}
+                      className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-black">{review.name}</span>
+                            <span className="text-xs font-semibold text-black">{review.rating}</span>
+                            <svg 
+                              className="w-3 h-3" 
+                              fill={colors.accentOrange} 
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No reviews yet</div>
+                )}
+              </div>
+            </div>
+
             {/* Cancellation Section */}
             <div ref={cancellationRef} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-4">Cancellation Policy</h2>
@@ -2019,32 +2782,42 @@ const CarDetailsPage = () => {
                   borderColor: colors.borderMedium
                 }}
               >
-                <div className="space-y-4">
-                  <div>
-                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                      Free Cancellation
-                    </div>
-                    <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
-                      Cancel up to 24 hours before pickup time for a full refund.
-                    </div>
+                {cancellationPolicy ? (
+                  <div className="space-y-4">
+                    {cancellationPolicy.freeCancellation && (
+                      <div>
+                        <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                          {cancellationPolicy.freeCancellation.title}
+                        </div>
+                        <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                          {cancellationPolicy.freeCancellation.description}
+                        </div>
+                      </div>
+                    )}
+                    {cancellationPolicy.partialRefund && (
+                      <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                        <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                          {cancellationPolicy.partialRefund.title}
+                        </div>
+                        <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                          {cancellationPolicy.partialRefund.description}
+                        </div>
+                      </div>
+                    )}
+                    {cancellationPolicy.noRefund && (
+                      <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                        <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                          {cancellationPolicy.noRefund.title}
+                        </div>
+                        <div className="text-sm" style={{ color: colors.textSecondary }}>
+                          {cancellationPolicy.noRefund.description}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
-                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                      Partial Refund
-                    </div>
-                    <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
-                      Cancel between 12-24 hours before pickup: 50% refund
-                    </div>
-                  </div>
-                  <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
-                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                      No Refund
-                    </div>
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      Cancellations made less than 12 hours before pickup are not eligible for refund.
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <div className="text-sm text-gray-500">Cancellation policy information not available.</div>
+                )}
               </div>
             </div>
 
@@ -2052,46 +2825,36 @@ const CarDetailsPage = () => {
             <div ref={inclusionExclusionRef} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>Inclusion/Exclusions</h2>
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Fuel</div>
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      Fuel not included. Guest should return the car with the same fuel level as at start.
+                {inclusionsExclusions && inclusionsExclusions.length > 0 ? (
+                  inclusionsExclusions.map((item, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        {item.icon === 'fuel' ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        ) : item.icon === 'toll' ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>{item.title}</div>
+                        <div className="text-sm" style={{ color: colors.textSecondary }}>
+                          {item.description}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Toll/Fastag</div>
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      Toll/Fastag charges not included. Check with host for Fastag recharge.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Trip Protection</div>
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      Trip Protection excludes: Off-road use, driving under influence, over-speeding, illegal use, restricted zones.
-                    </div>
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">Inclusion/exclusion information not available.</div>
+                )}
               </div>
             </div>
 
@@ -2107,28 +2870,8 @@ const CarDetailsPage = () => {
                 </button>
               </div>
               <div className="space-y-0">
-                {[
-                  {
-                    question: 'Who pays for the Fuel and FASTag?',
-                    answer: 'The guest is responsible for fuel costs. You will receive the car with a full tank and should return it with the same fuel level. FASTag charges are also the responsibility of the guest. Please check with the host for Fastag recharge if needed.'
-                  },
-                  {
-                    question: 'Can I modify or extend my trip after booking creation?',
-                    answer: 'Yes, you can modify or extend your trip. Please contact our support team or the car owner at least 24 hours before your scheduled pickup time. Modifications are subject to availability and may result in price adjustments.'
-                  },
-                  {
-                    question: 'How do I cancel my booking?',
-                    answer: 'You can cancel your booking through the app or by contacting support. Free cancellation is available up to 24 hours before pickup for a full refund. Cancellations made 12-24 hours before pickup receive a 50% refund. Cancellations made less than 12 hours before pickup are not eligible for refund.'
-                  },
-                  {
-                    question: 'What is refundable security deposit and why do I pay it?',
-                    answer: 'The security deposit is a refundable amount held to cover any potential damages, traffic violations, or additional charges during your rental period. It is fully refundable after the trip completion, provided there are no damages or violations. The deposit amount varies based on the car type and is typically returned within 5-7 business days after trip completion.'
-                  },
-                  {
-                    question: 'What is the policy around Limited Kms in Subscription?',
-                    answer: 'For subscription plans, there may be a daily kilometer limit. Additional kilometers beyond the limit are charged at a per-kilometer rate. The standard limit is usually 200-250 km per day, but this may vary by car and subscription plan. Unlimited kilometers are available for regular bookings.'
-                  }
-                ].map((faq, index) => (
+                {faqs && faqs.length > 0 ? (
+                  faqs.map((faq, index) => (
                   <div 
                     key={index}
                     className="border-b"
@@ -2147,12 +2890,12 @@ const CarDetailsPage = () => {
                         }`}
                         fill="none" 
                         stroke="currentColor" 
-                            viewBox="0 0 24 24"
+                        viewBox="0 0 24 24"
                         style={{ color: colors.textSecondary }}
-                          >
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
+                      </svg>
+                    </div>
                     {openFaqIndex === index && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -2163,11 +2906,14 @@ const CarDetailsPage = () => {
                       >
                         <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
                           {faq.answer}
-                      </div>
+                        </div>
                       </motion.div>
                     )}
                   </div>
-                ))}
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 py-4">No FAQs available at the moment.</div>
+              )}
               </div>
             </div>
           </div>
@@ -2207,8 +2953,10 @@ const CarDetailsPage = () => {
             
             {/* Rating and Reviews - As per document.txt */}
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center gap-1">
-                <span className="text-sm font-semibold text-black">{car.rating?.toFixed(1) || car.rating}</span>
+              <div className="flex flex items-center gap-1">
+                <span className="text-sm font-semibold text-black">
+                  {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
+                </span>
                 <svg 
                   className="w-4 h-4" 
                   fill={colors.accentOrange} 
@@ -2217,7 +2965,7 @@ const CarDetailsPage = () => {
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
               </div>
-              <span className="text-xs text-gray-500">({car.reviewsCount}+ Reviews)</span>
+              <span className="text-xs text-gray-500">({car?.reviewsCount || 0}+ Reviews)</span>
             </div>
 
           </div>
@@ -2331,9 +3079,9 @@ const CarDetailsPage = () => {
           {/* Reviews Section - Mobile */}
           <div ref={reviewsRef} className="mb-8 scroll-mt-24">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-black">Review ({car.reviewsCount})</h2>
+              <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
               <button 
-                onClick={() => navigate(`/car-details/${car.id}/reviews`)}
+                onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`, { state: { car } })}
                 className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
               >
                 See All
@@ -2385,15 +3133,48 @@ const CarDetailsPage = () => {
               <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
-                    Sector A, Sukhliya, Indore, Madhya
-                  </div>
-                  <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
-                    Pradesh 452003, India
-                  </div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    4.8 Kms Away
-                  </div>
+                  {(() => {
+                    const location = car?.locationObject || car?.location || {};
+                    const locationParts = [];
+                    if (typeof location === 'string') {
+                      locationParts.push(location);
+                    } else {
+                      if (location.address) locationParts.push(location.address);
+                      if (location.city) locationParts.push(location.city);
+                      if (location.state) locationParts.push(location.state);
+                      if (location.pincode) locationParts.push(location.pincode);
+                      if (location.country) locationParts.push(location.country);
+                    }
+                    const locationString = locationParts.length > 0 
+                      ? locationParts.join(', ') 
+                      : (car?.location || 'Location not available');
+                    
+                    // Split into two lines if too long
+                    const words = locationString.split(', ');
+                    const midPoint = Math.ceil(words.length / 2);
+                    const firstLine = words.slice(0, midPoint).join(', ');
+                    const secondLine = words.slice(midPoint).join(', ');
+                    
+                    return (
+                      <>
+                        {firstLine && (
+                          <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
+                            {firstLine}
+                          </div>
+                        )}
+                        {secondLine && (
+                          <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+                            {secondLine}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                  {car?.locationObject?.coordinates && (
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Coordinates: {car.locationObject.coordinates.latitude?.toFixed(4)}, {car.locationObject.coordinates.longitude?.toFixed(4)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-shrink-0">
                   <div 
@@ -2461,6 +3242,51 @@ const CarDetailsPage = () => {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Reviews Section - Mobile - As per document.txt: Reviews */}
+          <div ref={reviewsRef} className="mb-6 scroll-mt-24">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
+              <button 
+                onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`)}
+                className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
+              >
+                VIEW MORE &gt;
+              </button>
+            </div>
+            
+            {/* Reviews - Horizontal Scroll */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
+              {car?.reviews && car.reviews.length > 0 ? (
+                car.reviews.map((review, index) => (
+                  <div 
+                    key={index}
+                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-semibold text-black">{review.name}</span>
+                          <span className="text-xs font-semibold text-black">{review.rating}</span>
+                          <svg 
+                            className="w-3 h-3" 
+                            fill={colors.accentOrange} 
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500">No reviews yet</div>
+              )}
+            </div>
           </div>
 
           {/* Cancellation Section - Mobile */}
@@ -2561,28 +3387,8 @@ const CarDetailsPage = () => {
               </button>
             </div>
             <div className="space-y-0">
-              {[
-                {
-                  question: 'Who pays for the Fuel and FASTag?',
-                  answer: 'The guest is responsible for fuel costs. You will receive the car with a full tank and should return it with the same fuel level. FASTag charges are also the responsibility of the guest. Please check with the host for Fastag recharge if needed.'
-                },
-                {
-                  question: 'Can I modify or extend my trip after booking creation?',
-                  answer: 'Yes, you can modify or extend your trip. Please contact our support team or the car owner at least 24 hours before your scheduled pickup time. Modifications are subject to availability and may result in price adjustments.'
-                },
-                {
-                  question: 'How do I cancel my booking?',
-                  answer: 'You can cancel your booking through the app or by contacting support. Free cancellation is available up to 24 hours before pickup for a full refund. Cancellations made 12-24 hours before pickup receive a 50% refund. Cancellations made less than 12 hours before pickup are not eligible for refund.'
-                },
-                {
-                  question: 'What is refundable security deposit and why do I pay it?',
-                  answer: 'The security deposit is a refundable amount held to cover any potential damages, traffic violations, or additional charges during your rental period. It is fully refundable after the trip completion, provided there are no damages or violations. The deposit amount varies based on the car type and is typically returned within 5-7 business days after trip completion.'
-                },
-                {
-                  question: 'What is the policy around Limited Kms in Subscription?',
-                  answer: 'For subscription plans, there may be a daily kilometer limit. Additional kilometers beyond the limit are charged at a per-kilometer rate. The standard limit is usually 200-250 km per day, but this may vary by car and subscription plan. Unlimited kilometers are available for regular bookings.'
-                }
-              ].map((faq, index) => (
+              {faqs && faqs.length > 0 ? (
+                faqs.map((faq, index) => (
                   <div 
                     key={index}
                     className="border-b"
@@ -2601,12 +3407,12 @@ const CarDetailsPage = () => {
                         }`}
                         fill="none" 
                         stroke="currentColor" 
-                            viewBox="0 0 24 24"
+                        viewBox="0 0 24 24"
                         style={{ color: colors.textSecondary }}
-                          >
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
+                      </svg>
+                    </div>
                     {openFaqIndex === index && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -2617,11 +3423,14 @@ const CarDetailsPage = () => {
                       >
                         <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
                           {faq.answer}
-                      </div>
+                        </div>
                       </motion.div>
                     )}
                   </div>
-                ))}
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 py-4">No FAQs available at the moment.</div>
+              )}
             </div>
           </div>
         </div>
@@ -2632,7 +3441,7 @@ const CarDetailsPage = () => {
           <div className="px-4 md:px-6 py-3 md:py-0 md:mt-6" style={{ backgroundColor: colors.backgroundSecondary }}>
             <div className="max-w-7xl mx-auto">
               <button
-                onClick={() => navigate(`/book-now/${car.id}`)}
+                onClick={() => navigate(`/book-now/${car?.id || car?._id || id}`)}
                 className="w-full md:w-auto md:min-w-[300px] md:mx-auto md:block py-4 flex items-center justify-center text-white font-semibold"
                 style={{ backgroundColor: colors.backgroundTertiary, borderRadius: '16px' }}
               >

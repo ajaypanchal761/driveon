@@ -4,11 +4,33 @@ import AdminRoute from "../components/layout/AdminRoute";
 import AdminLayout from "../components/admin/layout/AdminLayout";
 import ModuleLayout from "../module/components/layout/ModuleLayout";
 import { useAdminAuth } from "../context/AdminContext";
+import RouteErrorBoundary from "../components/common/RouteErrorBoundary";
 
 // Module pages (new frontend)
 const ModuleHomePage = lazy(() => import("../module/pages/HomePage"));
 const ModuleSearchPage = lazy(() => import("../module/pages/SearchPage"));
-const ModuleCarDetailsPage = lazy(() => import("../module/pages/CarDetailsPage"));
+const ModuleCarDetailsPage = lazy(() => 
+  import("../module/pages/CarDetailsPage").catch((error) => {
+    console.error("Failed to load CarDetailsPage:", error);
+    // Return a fallback component
+    return {
+      default: () => (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Failed to load page</h1>
+            <p className="text-gray-600 mb-4">{error.message}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      ),
+    };
+  })
+);
 const ModuleCarReviewsPage = lazy(() => import("../module/pages/CarReviewsPage"));
 const ModuleProfilePage = lazy(() => import("../module/pages/ModuleProfilePage"));
 const ModuleCompleteProfilePage = lazy(() => import("../module/pages/ModuleCompleteProfilePage"));
@@ -25,6 +47,8 @@ const ModuleBookingsPage = lazy(() => import("../module/pages/BookingsPage"));
 const ModuleBookNowPage = lazy(() => import("../module/pages/BookNowPage"));
 const ModuleWriteReviewPage = lazy(() => import("../module/pages/ModuleWriteReviewPage"));
 const ModuleFAQPage = lazy(() => import("../module/pages/FAQPage"));
+const ModuleAboutPage = lazy(() => import("../module/pages/AboutPage"));
+const ModuleContactPage = lazy(() => import("../module/pages/ContactPage"));
 const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
 const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
@@ -168,6 +192,7 @@ const router = createBrowserRouter([
       {
         path: "/car-details/:id",
         element: <ModuleCarDetailsPage />,
+        errorElement: <RouteErrorBoundary />,
       },
       {
         path: "/car-details/:id/reviews",
@@ -224,6 +249,14 @@ const router = createBrowserRouter([
       {
         path: "/faq",
         element: <ModuleFAQPage />,
+      },
+      {
+        path: "/about",
+        element: <ModuleAboutPage />,
+      },
+      {
+        path: "/contact",
+        element: <ModuleContactPage />,
       },
       {
         path: "/privacy-policy",

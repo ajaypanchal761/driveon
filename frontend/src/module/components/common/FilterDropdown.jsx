@@ -8,8 +8,22 @@ import CustomDatePicker from './CustomDatePicker';
  * Dropdown with all filter options based on document.txt specifications
  * Includes: Brand, Model, Seats, Fuel Type, Transmission, Color, Price Range, Rating, Location, Availability, Features, Car Type
  */
-const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
+const FilterDropdown = ({ 
+  isOpen, 
+  onClose, 
+  onApplyFilters,
+  brands,
+  fuelTypes,
+  transmissions,
+  colorsList,
+  carTypes,
+  featuresList,
+  seatOptions,
+  ratingOptions,
+  locations
+}) => {
   const dropdownRef = useRef(null);
+  const desktopRef = useRef(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -33,29 +47,65 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
     const handleClickOutside = (event) => {
       // Only close on mobile (when dropdown is visible)
       const isMobile = window.innerWidth < 768;
-      if (isMobile && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        onClose();
+      
+      if (!isMobile) {
+        // Desktop: Don't close on click outside
+        return;
+      }
+
+      // Check if click is outside the dropdown
+      if (dropdownRef.current) {
+        const clickedElement = event.target;
+        
+        // Check if the click target is inside the dropdown or any of its children
+        const isClickInside = dropdownRef.current.contains(clickedElement);
+        
+        // Check if click is on the filter button that opened the modal (should not close)
+        const isFilterButton = clickedElement.closest('[aria-label="Open filters"]');
+        
+        // Only close if click is truly outside (not inside dropdown, not on filter button)
+        if (!isClickInside && !isFilterButton) {
+          onClose();
+        }
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+      // Use a small delay to avoid immediate closing when opening
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
   }, [isOpen, onClose]);
 
-  // Filter options based on document.txt
-  const brands = ['Tesla', 'Lamborghini', 'BMW', 'Ferrari', 'Toyota', 'Honda', 'Mercedes', 'Audi'];
-  const fuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid'];
-  const transmissions = ['Manual', 'Automatic', 'CVT'];
-  const colorsList = ['Black', 'White', 'Red', 'Blue', 'Silver', 'Gray', 'Other'];
-  const carTypes = ['SUV', 'Sedan', 'Hatchback', 'Coupe', 'Convertible', 'Wagon'];
-  const featuresList = ['GPS Navigation', 'Bluetooth', 'USB Charging', 'Air Conditioning', 'Sunroof', 'Leather Seats', 'Backup Camera', 'Parking Sensors'];
-  const seatOptions = ['2', '4', '5', '7', '8+'];
-  const ratingOptions = ['4.0+', '4.5+', '5.0'];
+  // Filter options - use props if provided, otherwise use empty arrays (fully dynamic)
+  // Only use defaults if no props are provided at all (for backward compatibility)
+  const defaultBrands = ['Tesla', 'Lamborghini', 'BMW', 'Ferrari', 'Toyota', 'Honda', 'Mercedes', 'Audi'];
+  const defaultFuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid'];
+  const defaultTransmissions = ['Manual', 'Automatic', 'CVT'];
+  const defaultColorsList = ['Black', 'White', 'Red', 'Blue', 'Silver', 'Gray', 'Other'];
+  const defaultCarTypes = ['SUV', 'Sedan', 'Hatchback', 'Coupe', 'Convertible', 'Wagon'];
+  const defaultFeaturesList = ['GPS Navigation', 'Bluetooth', 'USB Charging', 'Air Conditioning', 'Sunroof', 'Leather Seats', 'Backup Camera', 'Parking Sensors'];
+  const defaultSeatOptions = ['2', '4', '5', '7', '8+'];
+  const defaultRatingOptions = ['4.0+', '4.5+', '5.0'];
+
+  // Use dynamic props if provided (even if empty), only fallback to defaults if props are undefined
+  // This ensures that if SearchPage passes empty arrays, we use those (fully dynamic)
+  // Always ensure arrays are defined to prevent undefined errors
+  const filterBrands = brands !== undefined ? (Array.isArray(brands) && brands.length > 0 ? brands : []) : defaultBrands;
+  const filterFuelTypes = fuelTypes !== undefined ? (Array.isArray(fuelTypes) && fuelTypes.length > 0 ? fuelTypes : []) : defaultFuelTypes;
+  const filterTransmissions = transmissions !== undefined ? (Array.isArray(transmissions) && transmissions.length > 0 ? transmissions : []) : defaultTransmissions;
+  const filterColorsList = colorsList !== undefined ? (Array.isArray(colorsList) && colorsList.length > 0 ? colorsList : []) : defaultColorsList;
+  const filterCarTypes = carTypes !== undefined ? (Array.isArray(carTypes) && carTypes.length > 0 ? carTypes : []) : defaultCarTypes;
+  const filterFeaturesList = featuresList !== undefined ? (Array.isArray(featuresList) && featuresList.length > 0 ? featuresList : []) : defaultFeaturesList;
+  const filterSeatOptions = seatOptions !== undefined ? (Array.isArray(seatOptions) && seatOptions.length > 0 ? seatOptions : []) : defaultSeatOptions;
+  const filterRatingOptions = ratingOptions !== undefined ? (Array.isArray(ratingOptions) && ratingOptions.length > 0 ? ratingOptions : []) : defaultRatingOptions;
+  const filterLocations = locations !== undefined ? (Array.isArray(locations) && locations.length > 0 ? locations : []) : [];
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
@@ -127,6 +177,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
       {/* Desktop Sidebar - Always visible when isOpen is true */}
       {isOpen && (
         <div
+          ref={desktopRef}
           className="filter-dropdown hidden md:block md:fixed md:left-0 md:top-20 md:bottom-0 md:w-80 md:z-40 md:overflow-y-auto md:rounded-none md:shadow-lg md:border-r"
           style={{
             backgroundColor: colors.backgroundSecondary,
@@ -296,7 +347,13 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
         </div>
 
         {/* Content */}
-        <div className="p-3 md:p-4 space-y-3 md:space-y-4">
+        <div 
+          className="p-3 md:p-4 space-y-3 md:space-y-4"
+          onMouseDown={(e) => {
+            // Prevent clicks inside filter content from closing the modal
+            e.stopPropagation();
+          }}
+        >
           {/* Brand */}
           <div>
             <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
@@ -307,14 +364,14 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               onChange={(value) => handleFilterChange('brand', value)}
               options={[
                 { label: 'All Brands', value: '' },
-                ...brands.map(brand => ({ label: brand, value: brand }))
+                ...filterBrands.map(brand => ({ label: brand, value: brand }))
               ]}
               placeholder="All Brands"
             />
           </div>
 
           {/* Model */}
-          <div>
+          <div onClick={(e) => e.stopPropagation()}>
             <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
               Model
             </label>
@@ -322,6 +379,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               type="text"
               value={filters.model}
               onChange={(e) => handleFilterChange('model', e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               placeholder="Enter model name"
               className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
               style={{ 
@@ -342,7 +400,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               onChange={(value) => handleFilterChange('seats', value)}
               options={[
                 { label: 'Any', value: '' },
-                ...seatOptions.map(seats => ({ label: `${seats} Seats`, value: seats }))
+                ...filterSeatOptions.map(seats => ({ label: `${seats} Seats`, value: seats }))
               ]}
               placeholder="Any"
             />
@@ -354,7 +412,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               Fuel Type
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {fuelTypes.map(fuel => (
+              {filterFuelTypes.map(fuel => (
                 <button
                   key={fuel}
                   onClick={() => handleFilterChange('fuelType', filters.fuelType === fuel ? '' : fuel)}
@@ -385,7 +443,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               Transmission
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {transmissions.map(trans => (
+              {filterTransmissions.map(trans => (
                 <button
                   key={trans}
                   onClick={() => handleFilterChange('transmission', filters.transmission === trans ? '' : trans)}
@@ -420,7 +478,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               onChange={(value) => handleFilterChange('color', value)}
               options={[
                 { label: 'Any Color', value: '' },
-                ...colorsList.map(color => ({ label: color, value: color }))
+                ...filterColorsList.map(color => ({ label: color, value: color }))
               ]}
               placeholder="Any Color"
             />
@@ -465,7 +523,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               Minimum Rating
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {ratingOptions.map(rating => (
+              {filterRatingOptions.map(rating => (
                 <button
                   key={rating}
                   onClick={() => handleFilterChange('rating', filters.rating === rating ? '' : rating)}
@@ -496,7 +554,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               Car Type
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {carTypes.map(type => (
+              {filterCarTypes.map(type => (
                 <button
                   key={type}
                   onClick={() => handleFilterChange('carType', filters.carType === type ? '' : type)}
@@ -531,6 +589,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               value={filters.location}
               onChange={(e) => handleFilterChange('location', e.target.value)}
               placeholder="Enter location"
+              list={filterLocations && filterLocations.length > 0 ? "location-options" : undefined}
               className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
               style={{ 
                 borderColor: colors.borderForm,
@@ -538,6 +597,13 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
                 color: colors.textPrimary
               }}
             />
+            {filterLocations && filterLocations.length > 0 && (
+              <datalist id="location-options">
+                {filterLocations.map((location, index) => (
+                  <option key={index} value={location} />
+                ))}
+              </datalist>
+            )}
           </div>
 
           {/* Availability */}
@@ -565,7 +631,7 @@ const FilterDropdown = ({ isOpen, onClose, onApplyFilters }) => {
               Features
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {featuresList.map(feature => (
+              {filterFeaturesList.map(feature => (
                 <button
                   key={feature}
                   onClick={() => handleFeatureToggle(feature)}

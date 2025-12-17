@@ -23,7 +23,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
           backgroundColor: colors.backgroundSecondary, // White background on desktop
           border: `1px solid ${colors.borderSubtle}`
         }}
-        onClick={() => navigate(`/car-details/${car.id}`)}
+        onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
         whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
         transition={{ duration: 0.3 }}
       >
@@ -83,7 +83,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
         border: `1px solid ${colors.borderLight}`,
         boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
       }}
-      onClick={() => navigate(`/car-details/${car.id}`)}
+      onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
       whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
       transition={{ duration: 0.3 }}
     >
@@ -191,7 +191,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/car-details/${car.id}`);
+              navigate(`/car-details/${car.id}`, { state: { car } });
             }}
             className="px-3 py-1.5 md:px-4 md:py-2 lg:px-5 lg:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-sm lg:text-base font-semibold text-white"
             style={{ backgroundColor: colors.backgroundTertiary }}

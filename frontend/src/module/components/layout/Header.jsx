@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 import FilterDropdown from '../common/FilterDropdown';
 import { useAppSelector } from '../../../hooks/redux';
@@ -11,10 +11,12 @@ import { useLocation } from '../../../hooks/useLocation';
  * Dark background (#21292b) with abstract patterns
  */
 const Header = ({ onHeightChange }) => {
+  const navigate = useNavigate();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSearchBarVisible, setIsSearchBarVisible] = useState(false);
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const lastScrollY = useRef(0);
   const headerRef = useRef(null);
   const { user } = useAppSelector((state) => state.user);
@@ -327,7 +329,17 @@ const Header = ({ onHeightChange }) => {
               <input
                 type="text"
                 placeholder="Search"
-                className="flex-1 text-sm outline-none bg-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  } else if (e.key === 'Enter') {
+                    navigate('/search');
+                  }
+                }}
+                onClick={() => navigate('/search')}
+                className="flex-1 text-sm outline-none bg-transparent cursor-pointer"
                 style={{ color: colors.backgroundTertiary }}
               />
             </div>

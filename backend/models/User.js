@@ -70,6 +70,21 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    points: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalPointsEarned: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalPointsUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     isActive: {
       type: Boolean,
       default: true,

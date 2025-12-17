@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 
 /**
@@ -7,6 +7,13 @@ import { colors } from '../../theme/colors';
  */
 const BottomNavbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  
+  const handleNavClick = (path, e) => {
+    e.preventDefault();
+    navigate(path);
+  };
+  
   const isActive = (path) => {
     if (path === '/') {
       return location.pathname === '/';
@@ -65,17 +72,32 @@ const BottomNavbar = () => {
   };
 
   return (
-    <nav 
-      className="fixed bottom-0 left-0 right-0 w-full px-4 py-3 rounded-t-2xl flex items-center justify-around z-50"
-      style={{ backgroundColor: colors.backgroundTertiary }}
-    >
+    <>
+      <style>{`
+        /* Hide URL preview on navigation buttons */
+        nav button {
+          text-decoration: none;
+          outline: none;
+        }
+        nav button:focus {
+          outline: none;
+        }
+        nav button:hover {
+          text-decoration: none;
+        }
+      `}</style>
+      <nav 
+        className="fixed bottom-0 left-0 right-0 w-full px-4 py-3 rounded-t-2xl flex items-center justify-around z-50"
+        style={{ backgroundColor: colors.backgroundTertiary }}
+      >
       {navItems.map((item) => {
         const active = isActive(item.path);
         return (
-          <Link
+          <button
             key={item.path}
-            to={item.path}
-            className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px]"
+            onClick={(e) => handleNavClick(item.path, e)}
+            className="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] border-none bg-transparent cursor-pointer p-0"
+            aria-label={item.label}
           >
             {active ? (
               <div 
@@ -87,10 +109,11 @@ const BottomNavbar = () => {
             ) : (
               getIcon(item.icon, active)
             )}
-          </Link>
+          </button>
         );
       })}
-    </nav>
+      </nav>
+    </>
   );
 };
 

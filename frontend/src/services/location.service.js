@@ -97,6 +97,42 @@ export const getAddressFromCoordinates = async (lat, lng) => {
 };
 
 /**
+ * Search places using backend API proxy (avoids CORS issues)
+ * @param {string} query - Search query
+ * @param {Object} coordinates - Optional { lat, lng } for location bias
+ * @returns {Promise<Array>} - Array of place results
+ */
+export const searchPlaces = async (query, coordinates = null) => {
+  if (!query || query.trim() === '') {
+    return [];
+  }
+
+  try {
+    // Use backend API proxy to avoid CORS issues
+    const params = new URLSearchParams({
+      query: query.trim(),
+    });
+    
+    // Add location bias if coordinates provided
+    if (coordinates && coordinates.lat && coordinates.lng) {
+      params.append('lat', coordinates.lat);
+      params.append('lng', coordinates.lng);
+    }
+
+    const response = await api.get(`/common/places/search?${params.toString()}`);
+    
+    if (response.data && response.data.success && response.data.data) {
+      return response.data.data.places || [];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error searching places:', error);
+    return [];
+  }
+};
+
+/**
  * Update user location on backend (fire-and-forget for speed)
  * @param {number} lat - Latitude
  * @param {number} lng - Longitude

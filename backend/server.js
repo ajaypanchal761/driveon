@@ -57,6 +57,7 @@ import supportRoutes from "./routes/support.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import locationRoutes from "./routes/location.routes.js";
+import commonRoutes from "./routes/common.routes.js";
 
 // Socket.IO Configuration
 const io = new Server(server, {
@@ -238,6 +239,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/cars", carRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/common", commonRoutes);
 app.use("/api", supportRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
@@ -295,6 +297,18 @@ server.listen(PORT, () => {
     console.log(`✅ JWT Secret configured`);
   } else {
     console.warn(`⚠️ JWT_SECRET not configured or using default value`);
+  }
+
+  // Verify Google Maps API configuration
+  const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
+  if (googleMapsApiKey) {
+    console.log(
+      `✅ Google Maps API configured (API Key: ${googleMapsApiKey.substring(0, 8)}...)`
+    );
+  } else {
+    console.warn(`⚠️ Google Maps API not configured:`);
+    console.warn(`   GOOGLE_MAPS_API_KEY: ✗ Missing`);
+    console.warn(`   Please add GOOGLE_MAPS_API_KEY to your backend .env file`);
   }
 
   // Verify SMSIndia Hub configuration
