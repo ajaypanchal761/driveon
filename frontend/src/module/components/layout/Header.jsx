@@ -234,11 +234,11 @@ const Header = ({ onHeightChange }) => {
               ? 'max-h-0 opacity-0 mb-0 overflow-hidden' 
               : isLocationDropdownOpen 
                 ? 'opacity-100' 
-                : 'opacity-100 overflow-hidden max-h-6'
+                : 'opacity-100 overflow-hidden max-h-14'
           }`}>
             <button
               onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
-              className="flex items-start text-white hover:opacity-80 transition-opacity"
+              className="flex items-start gap-2 text-white hover:opacity-80 transition-opacity w-full"
             >
               {/* Map Pin Icon */}
               <svg 
@@ -259,41 +259,43 @@ const Header = ({ onHeightChange }) => {
                   strokeWidth={2} 
                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" 
                 />
-              </svg><span className="text-sm font-medium text-white break-words">
-                {(() => {
-                  if (!currentLocation || currentLocation.includes("Getting") || currentLocation.includes("Loading")) {
-                    return "Getting location...";
-                  }
-                  if (currentLocation.includes("error") || currentLocation.includes("denied") || currentLocation.includes("unavailable")) {
-                    return "Location unavailable";
-                  }
-                  
-                  // If dropdown is open, show full location
-                  if (isLocationDropdownOpen) {
-                    return currentLocation;
-                  }
-                  
-                  // Otherwise show shortened version
-                  // Extract city and country from address if available
-                  const parts = currentLocation.split(',');
-                  if (parts.length >= 2) {
-                    return `${parts[parts.length - 2].trim()}, ${parts[parts.length - 1].trim()}`;
-                  }
-                  return currentLocation.length > 30 ? currentLocation.substring(0, 30) + "..." : currentLocation;
-                })()}
-              </span><svg 
-                className={`w-4 h-4 text-white transition-transform flex-shrink-0 mt-0.5 ${isLocationDropdownOpen ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M19 9l-7 7-7-7" 
-                />
-              </svg>
+              </svg><div className="flex items-start gap-1 flex-1 min-w-0">
+                <span className="text-sm font-medium text-white break-words leading-tight text-left whitespace-normal flex-1 truncate max-w-[120px]">
+                  {(() => {
+                    if (!currentLocation || currentLocation.includes("Getting") || currentLocation.includes("Loading")) {
+                      return "Getting location...";
+                    }
+                    if (currentLocation.includes("error") || currentLocation.includes("denied") || currentLocation.includes("unavailable")) {
+                      return "Location unavailable";
+                    }
+                    
+                    // If dropdown is open, show full location
+                    if (isLocationDropdownOpen) {
+                      return currentLocation;
+                    }
+                    
+                    // Otherwise show shortened version
+                    // Extract city and country from address if available
+                    const parts = currentLocation.split(',');
+                    if (parts.length >= 2) {
+                      return `${parts[parts.length - 2].trim()}, ${parts[parts.length - 1].trim()}`;
+                    }
+                    return currentLocation.length > 30 ? currentLocation.substring(0, 30) + "..." : currentLocation;
+                  })()}
+                </span><svg 
+                  className={`w-4 h-4 text-white transition-transform flex-shrink-0 mt-0.5 ${isLocationDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M19 9l-7 7-7-7" 
+                  />
+                </svg>
+              </div>
             </button>
           </div>
 

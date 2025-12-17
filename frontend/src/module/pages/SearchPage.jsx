@@ -49,7 +49,7 @@ const SearchPage = () => {
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
-  
+
   // Get user's current live location
   const { currentLocation } = useLocation(true, isAuthenticated, user?._id || user?.id);
 
@@ -791,7 +791,7 @@ const SearchPage = () => {
                   />
                 </svg>
               </span>
-              <span className="truncate">{currentLocation || 'Getting location...'}</span>
+              <span className="truncate max-w-[140px]">{currentLocation || 'Getting location...'}</span>
             </span>
             <svg
               className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
@@ -811,13 +811,13 @@ const SearchPage = () => {
 
         {/* Search Bar Section - In Header */}
         <motion.div
-          className="flex items-center gap-2 mt-3"
+          className="flex items-center gap-2 mt-3 w-full"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
           <div 
-            className="rounded-lg px-3 py-2.5 flex items-center gap-2 flex-1"
+            className="rounded-lg px-3 py-0 flex items-center gap-2 flex-1 min-w-0"
             style={{ 
               backgroundColor: colors.backgroundPrimary,
               border: `1px solid ${colors.borderMedium}`
@@ -833,20 +833,20 @@ const SearchPage = () => {
               className="flex-shrink-0 cursor-pointer hover:opacity-70 transition-opacity p-1 -ml-1"
               aria-label="Search"
               style={{ zIndex: 10 }}
-            >
-              <svg 
+          >
+            <svg 
                 className="w-5 h-5 text-gray-400 hover:text-gray-600" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-                />
-              </svg>
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+              />
+            </svg>
             </button>
             <input
               type="text"
@@ -864,7 +864,7 @@ const SearchPage = () => {
           </div>
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
             style={{ 
               backgroundColor: colors.backgroundPrimary,
               border: `1px solid ${colors.borderMedium}`
@@ -895,7 +895,8 @@ const SearchPage = () => {
       >
         {/* Floating white card container */}
         <motion.div 
-          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
+          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-44 space-y-4"
+          style={{ minHeight: '100vh' }} // ensure full height on mobile even with little content
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -1039,7 +1040,7 @@ const SearchPage = () => {
         className="hidden md:block min-h-screen w-full"
         style={{ backgroundColor: colors.backgroundPrimary }}
       >
-        {/* Web Header */}
+        {/* Web Header - match Home page */}
         <header
           className="w-full sticky top-0 z-50"
           style={{ backgroundColor: colors.brandBlack }}
@@ -1056,48 +1057,67 @@ const SearchPage = () => {
               </Link>
 
               {/* Center - Navigation Tabs */}
-              <nav className="hidden lg:flex items-center gap-6">
+              <nav className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 xl:gap-10 h-full">
                 <Link
                   to="/"
-                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
+                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                  style={{ color: colors.textWhite }}
                 >
                   Home
                 </Link>
-                <Link
-                  to="/about"
-                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
-                >
-                  About
-                </Link>
-                <Link
-                  to="/contact"
-                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
-                >
-                  Contact
-                </Link>
-                <Link
-                  to="/faq"
-                  className="text-sm lg:text-base xl:text-lg font-medium text-white hover:opacity-80 transition-opacity"
-                >
-                  FAQs
-                </Link>
+              <Link
+                to="/about"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite }}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite }}
+              >
+                Contact
+              </Link>
+              <Link
+                to="/faq"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite }}
+              >
+                FAQs
+              </Link>
               </nav>
 
-              {/* Right - User Actions */}
-              <div className="flex items-center gap-4">
+              {/* Right - Login/Signup and Profile Icon */}
+              <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
                 {isAuthenticated ? (
                   <Link
                     to="/profile"
-                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center text-sm md:text-base font-semibold"
-                    style={{ color: colors.backgroundTertiary }}
+                    className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
                   >
+                    <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full border-2 border-white flex items-center justify-center overflow-hidden bg-gray-800">
+                      {user?.profilePhoto && user.profilePhoto.trim() !== '' ? (
+                        <img
+                          src={user.profilePhoto}
+                          alt="Profile"
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white text-sm md:text-base font-semibold">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 ) : (
                   <Link
                     to="/login"
-                    className="px-4 py-2 rounded-lg text-sm md:text-base font-medium text-white hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: colors.backgroundTertiary }}
+                    className="px-3 md:px-4 lg:px-5 xl:px-6 py-1.5 md:py-2 lg:py-2.5 rounded-lg border text-xs md:text-sm lg:text-base font-medium transition-all hover:opacity-90"
+                    style={{
+                      borderColor: colors.borderMedium,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary,
+                    }}
                   >
                     Login
                   </Link>
@@ -1112,9 +1132,9 @@ const SearchPage = () => {
           <div className="max-w-7xl mx-auto">
             {/* Search Bar Section - Web */}
             <div className="mb-6 md:mb-8 lg:mb-10">
-              <div className="flex items-center gap-4 max-w-3xl mx-auto">
+            <div className="flex items-center gap-4 max-w-3xl mx-auto">
                 <div 
-                  className="rounded-xl px-4 py-3 flex items-center gap-3 flex-1"
+                  className="rounded-xl px-4 py-2 flex items-center gap-3 flex-1"
                   style={{ 
                     backgroundColor: colors.backgroundSecondary,
                     border: `1px solid ${colors.borderMedium}`
@@ -1130,20 +1150,20 @@ const SearchPage = () => {
                     className="flex-shrink-0 cursor-pointer hover:opacity-70 transition-opacity p-1 -ml-1"
                     aria-label="Search"
                     style={{ zIndex: 10 }}
-                  >
-                    <svg 
+                >
+                  <svg 
                       className="w-5 h-5 text-gray-400 hover:text-gray-600" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-                      />
-                    </svg>
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                    />
+                  </svg>
                   </button>
                   <input
                     type="text"
@@ -1161,7 +1181,7 @@ const SearchPage = () => {
                 </div>
                 <button 
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
-                  className="px-6 py-3 rounded-xl text-base font-medium text-white hover:opacity-90 transition-opacity"
+                  className="px-6 py-2 rounded-xl text-base font-medium text-white hover:opacity-90 transition-opacity"
                   style={{ 
                     backgroundColor: colors.backgroundTertiary
                   }}

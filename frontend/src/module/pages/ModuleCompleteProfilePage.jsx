@@ -491,7 +491,7 @@ const ModuleCompleteProfilePage = () => {
       style={{ backgroundColor: colors.backgroundSecondary }}
     >
       {/* Header */}
-      <ProfileHeader />
+      <ProfileHeader showBack />
 
       {/* Web Container - Centered with max-width */}
       <div className="max-w-3xl mx-auto">

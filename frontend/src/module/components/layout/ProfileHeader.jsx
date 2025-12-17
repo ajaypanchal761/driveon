@@ -1,14 +1,16 @@
+import { useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 
-const ProfileHeader = ({ title = 'Profile' }) => {
+const ProfileHeader = ({ title = 'Profile', showBack = false, onBack }) => {
+  const navigate = useNavigate();
 
   return (
     <header 
       className="w-full relative rounded-b-3xl sticky top-0 z-50"
-      style={{ backgroundColor: colors.backgroundTertiary }}
+      style={{ backgroundColor: '#21292b' }}
     >
       {/* Status Bar Area (for mobile) */}
-      <div className="h-2" style={{ backgroundColor: colors.backgroundTertiary }}></div>
+      <div className="h-2" style={{ backgroundColor: '#21292b' }}></div>
 
       {/* Abstract Line Graphics Background - Lighter blue patterns */}
       <div className="absolute inset-0 opacity-15 pointer-events-none overflow-hidden">
@@ -67,6 +69,35 @@ const ProfileHeader = ({ title = 'Profile' }) => {
 
       {/* Main Header Content */}
       <div className="relative z-10 px-4 py-3 flex items-center justify-center">
+        {/* Back button */}
+        {showBack && (
+          <button
+            onClick={onBack || (() => navigate(-1))}
+            className="absolute left-4 w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shadow-sm"
+            style={{
+              backgroundColor: '#f8f8f8',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#111827',
+            }}
+            aria-label="Go back"
+          >
+            <svg
+              className="w-5 h-5 md:w-6 md:h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              style={{ color: '#111827' }}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+        )}
+
         {/* Profile Title - Center */}
         <h1 className="text-lg font-bold text-center" style={{ color: colors.textWhite }}>{title}</h1>
       </div>

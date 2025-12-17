@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination, Autoplay } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/pagination';
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
 import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 import FilterDropdown from "../components/common/FilterDropdown";
@@ -55,7 +55,11 @@ const ModuleTestPage = () => {
   const { user } = useAppSelector((state) => state.user);
 
   // Get user's current live location (throttled to avoid frequent updates)
-  const { currentLocation, coordinates } = useLocation(true, isAuthenticated, user?._id || user?.id);
+  const { currentLocation, coordinates } = useLocation(
+    true,
+    isAuthenticated,
+    user?._id || user?.id
+  );
 
   // Dynamic data states
   const [categories, setCategories] = useState([]);
@@ -65,7 +69,7 @@ const ModuleTestPage = () => {
   const [totalCarsCount, setTotalCarsCount] = useState(0);
   const [featuredCar, setFeaturedCar] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Filter options state for FilterDropdown
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
@@ -81,19 +85,19 @@ const ModuleTestPage = () => {
 
   // Applied filters state
   const [appliedFilters, setAppliedFilters] = useState({
-    brand: '',
-    model: '',
-    seats: '',
-    fuelType: '',
-    transmission: '',
-    color: '',
-    priceRange: { min: '', max: '' },
-    rating: '',
-    location: '',
-    carType: '',
+    brand: "",
+    model: "",
+    seats: "",
+    fuelType: "",
+    transmission: "",
+    color: "",
+    priceRange: { min: "", max: "" },
+    rating: "",
+    location: "",
+    carType: "",
     features: [],
-    availableFrom: '',
-    availableTo: '',
+    availableFrom: "",
+    availableTo: "",
   });
 
   // Store all cars for filtering
@@ -121,7 +125,7 @@ const ModuleTestPage = () => {
     Kia: logo1,
     // Indian brands
     Maruti: logo2,
-    'Maruti Suzuki': logo2,
+    "Maruti Suzuki": logo2,
     Tata: logo4,
     Mahindra: logo5,
     // Other popular brands
@@ -131,17 +135,33 @@ const ModuleTestPage = () => {
     Volvo: logo7,
     Skoda: logo8,
     // Common model names that might come as brands
-    'Swift Dzire': logo2,
-    'Swift': logo2,
-    'Dzire': logo2,
-    'XUV500': logo5,
-    'XUV': logo5,
-    'Alto 800': logo2,
-    'Alto': logo2,
+    "Swift Dzire": logo2,
+    Swift: logo2,
+    Dzire: logo2,
+    XUV500: logo5,
+    XUV: logo5,
+    "Alto 800": logo2,
+    Alto: logo2,
   };
 
   // Fallback brand logos array for unknown brands
-  const fallbackBrandLogos = [logo1, logo2, logo3, logo4, logo5, logo6, logo7, logo8, logo9, logo10, logo11, logo13, logo14, logo15, logo16];
+  const fallbackBrandLogos = [
+    logo1,
+    logo2,
+    logo3,
+    logo4,
+    logo5,
+    logo6,
+    logo7,
+    logo8,
+    logo9,
+    logo10,
+    logo11,
+    logo13,
+    logo14,
+    logo15,
+    logo16,
+  ];
 
   // Category images map
   const categoryImages = {
@@ -156,66 +176,91 @@ const ModuleTestPage = () => {
   };
 
   // Fallback images for cars
-  const fallbackCarImages = [carImg1, nearbyImg1, nearbyImg2, nearbyImg3, carImg6, carImg4, carImg5];
+  const fallbackCarImages = [
+    carImg1,
+    nearbyImg1,
+    nearbyImg2,
+    nearbyImg3,
+    carImg6,
+    carImg4,
+    carImg5,
+  ];
 
   // Transform car data
   const transformCarData = (car, index = 0) => {
     let carImage = fallbackCarImages[index % fallbackCarImages.length];
-    
+
     if (car.images && car.images.length > 0) {
       const primaryImage = car.images.find((img) => img.isPrimary);
       if (primaryImage) {
-        const imgUrl = typeof primaryImage === 'string' 
-          ? primaryImage 
-          : (primaryImage.url || primaryImage.path || primaryImage);
-        if (typeof imgUrl === 'string') {
-          carImage = imgUrl.startsWith('http') 
-            ? imgUrl 
-            : `${import.meta.env.VITE_API_BASE_URL || ''}${imgUrl}`;
+        const imgUrl =
+          typeof primaryImage === "string"
+            ? primaryImage
+            : primaryImage.url || primaryImage.path || primaryImage;
+        if (typeof imgUrl === "string") {
+          carImage = imgUrl.startsWith("http")
+            ? imgUrl
+            : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
         }
       } else if (car.images[0]) {
-        const imgUrl = typeof car.images[0] === 'string' 
-          ? car.images[0] 
-          : (car.images[0].url || car.images[0].path || car.images[0]);
-        if (typeof imgUrl === 'string') {
-          carImage = imgUrl.startsWith('http') 
-            ? imgUrl 
-            : `${import.meta.env.VITE_API_BASE_URL || ''}${imgUrl}`;
+        const imgUrl =
+          typeof car.images[0] === "string"
+            ? car.images[0]
+            : car.images[0].url || car.images[0].path || car.images[0];
+        if (typeof imgUrl === "string") {
+          carImage = imgUrl.startsWith("http")
+            ? imgUrl
+            : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
         }
       }
     } else if (car.image) {
-      const imgUrl = typeof car.image === 'string' 
-        ? car.image 
-        : (car.image.url || car.image.path || car.image);
-      if (typeof imgUrl === 'string') {
-        carImage = imgUrl.startsWith('http') 
-          ? imgUrl 
-          : `${import.meta.env.VITE_API_BASE_URL || ''}${imgUrl}`;
+      const imgUrl =
+        typeof car.image === "string"
+          ? car.image
+          : car.image.url || car.image.path || car.image;
+      if (typeof imgUrl === "string") {
+        carImage = imgUrl.startsWith("http")
+          ? imgUrl
+          : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
       }
     }
 
     // Normalize fuel type
-    const fuelType = car.fuelType || '';
-    const normalizedFuelType = fuelType.toLowerCase() === 'petrol' ? 'Petrol' :
-      fuelType.toLowerCase() === 'diesel' ? 'Diesel' :
-      fuelType.toLowerCase() === 'electric' ? 'Electric' :
-      fuelType.toLowerCase() === 'hybrid' ? 'Hybrid' :
-      fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
+    const fuelType = car.fuelType || "";
+    const normalizedFuelType =
+      fuelType.toLowerCase() === "petrol"
+        ? "Petrol"
+        : fuelType.toLowerCase() === "diesel"
+        ? "Diesel"
+        : fuelType.toLowerCase() === "electric"
+        ? "Electric"
+        : fuelType.toLowerCase() === "hybrid"
+        ? "Hybrid"
+        : fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
 
     // Normalize transmission
-    const transmission = car.transmission || '';
-    const normalizedTransmission = transmission.toLowerCase() === 'automatic' ? 'Automatic' :
-      transmission.toLowerCase() === 'manual' ? 'Manual' :
-      transmission.toLowerCase() === 'cvt' ? 'CVT' :
-      transmission.charAt(0).toUpperCase() + transmission.slice(1).toLowerCase();
+    const transmission = car.transmission || "";
+    const normalizedTransmission =
+      transmission.toLowerCase() === "automatic"
+        ? "Automatic"
+        : transmission.toLowerCase() === "manual"
+        ? "Manual"
+        : transmission.toLowerCase() === "cvt"
+        ? "CVT"
+        : transmission.charAt(0).toUpperCase() +
+          transmission.slice(1).toLowerCase();
 
     return {
       id: car._id || car.id,
       name: `${car.brand} ${car.model}`,
-      brand: car.brand || '',
-      model: car.model || '',
-      rating: car.averageRating ? car.averageRating.toFixed(1) : '5.0',
-      location: car.location?.city || car.location?.address || car.location || 'Location',
+      brand: car.brand || "",
+      model: car.model || "",
+      rating: car.averageRating ? car.averageRating.toFixed(1) : "5.0",
+      location:
+        car.location?.city ||
+        car.location?.address ||
+        car.location ||
+        "Location",
       seats: `${car.seatingCapacity || car.seats || 4} Seats`,
       seatingCapacity: car.seatingCapacity || car.seats || 4,
       price: `Rs. ${car.pricePerDay || 0}/Day`,
@@ -224,8 +269,8 @@ const ModuleTestPage = () => {
       // Filter-related properties
       fuelType: normalizedFuelType,
       transmission: normalizedTransmission,
-      color: car.color || '',
-      carType: car.carType || car.bodyType || '',
+      color: car.color || "",
+      carType: car.carType || car.bodyType || "",
       features: car.features || [],
     };
   };
@@ -285,12 +330,16 @@ const ModuleTestPage = () => {
         // Fetch categories (car types) with counts
         const carTypesResponse = await carService.getTopCarTypes({ limit: 10 });
         if (carTypesResponse.success && carTypesResponse.data?.carTypes) {
-          const carTypes = carTypesResponse.data.carTypes.map((type, index) => ({
-            id: index + 1,
-            label: type.name || type.carType || type,
-            count: type.count || 0,
-            image: categoryImages[type.name || type.carType || type] || categoryImages.Sports,
-          }));
+          const carTypes = carTypesResponse.data.carTypes.map(
+            (type, index) => ({
+              id: index + 1,
+              label: type.name || type.carType || type,
+              count: type.count || 0,
+              image:
+                categoryImages[type.name || type.carType || type] ||
+                categoryImages.Sports,
+            })
+          );
           setCategories(carTypes);
         }
 
@@ -313,13 +362,13 @@ const ModuleTestPage = () => {
             // First, check if API returned a logo for this brand
             if (!brandLogo && (brand.logo || brand.brandLogo || brand.image)) {
               const apiLogo = brand.logo || brand.brandLogo || brand.image;
-              if (typeof apiLogo === 'string' && apiLogo) {
-                brandLogo = apiLogo.startsWith('http') 
-                  ? apiLogo 
-                  : `${import.meta.env.VITE_API_BASE_URL || ''}${apiLogo}`;
+              if (typeof apiLogo === "string" && apiLogo) {
+                brandLogo = apiLogo.startsWith("http")
+                  ? apiLogo
+                  : `${import.meta.env.VITE_API_BASE_URL || ""}${apiLogo}`;
               }
             }
-            
+
             // If no API logo, map specific brand/model names to correct logos
             if (!brandLogo) {
             // Indian brands/models
@@ -397,8 +446,7 @@ const ModuleTestPage = () => {
                 brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
               }
             }
-          }
-            
+
             return {
               id: index + 1,
               name: displayName,
@@ -419,24 +467,24 @@ const ModuleTestPage = () => {
         }
         const nearbyResponse = await carService.getNearbyCars(nearbyParams);
         if (nearbyResponse.success && nearbyResponse.data?.cars) {
-          const nearbyCarsData = nearbyResponse.data.cars.slice(0, 3).map((car, index) => 
-            transformCarData(car, index)
-          );
+          const nearbyCarsData = nearbyResponse.data.cars
+            .slice(0, 3)
+            .map((car, index) => transformCarData(car, index));
           setNearbyCars(nearbyCarsData);
         }
 
         // Fetch best cars (latest/featured cars)
         const bestCarsResponse = await carService.getCars({
           limit: 2,
-          sortBy: 'averageRating',
-          sortOrder: 'desc',
-          status: 'active',
+          sortBy: "averageRating",
+          sortOrder: "desc",
+          status: "active",
           isAvailable: true,
         });
         if (bestCarsResponse.success && bestCarsResponse.data?.cars) {
-          const bestCarsData = bestCarsResponse.data.cars.slice(0, 2).map((car, index) => 
-            transformCarData(car, index)
-          );
+          const bestCarsData = bestCarsResponse.data.cars
+            .slice(0, 2)
+            .map((car, index) => transformCarData(car, index));
           setBestCars(bestCarsData);
 
           // Set featured car (first one)
@@ -448,10 +496,10 @@ const ModuleTestPage = () => {
         // Fetch all cars to extract filter options
         const allCarsResponse = await carService.getCars({
           limit: 100, // Get more cars to extract filter options
-          status: 'active',
+          status: "active",
           isAvailable: true,
         });
-        
+
         if (allCarsResponse.success && allCarsResponse.data?.pagination) {
           setTotalCarsCount(allCarsResponse.data.pagination.total || 0);
         }
@@ -459,9 +507,11 @@ const ModuleTestPage = () => {
         // Extract filter options from all cars and store cars for filtering
         if (allCarsResponse.success && allCarsResponse.data?.cars) {
           const cars = allCarsResponse.data.cars;
-          
+
           // Store all cars for filtering
-          const transformedAllCars = cars.map((car, index) => transformCarData(car, index));
+          const transformedAllCars = cars.map((car, index) =>
+            transformCarData(car, index)
+          );
           setAllCars(transformedAllCars);
 
           // Extract unique brands
@@ -474,12 +524,14 @@ const ModuleTestPage = () => {
             new Set(
               cars
                 .map((car) => {
-                  const fuel = car.fuelType || '';
-                  if (fuel.toLowerCase() === 'petrol') return 'Petrol';
-                  if (fuel.toLowerCase() === 'diesel') return 'Diesel';
-                  if (fuel.toLowerCase() === 'electric') return 'Electric';
-                  if (fuel.toLowerCase() === 'hybrid') return 'Hybrid';
-                  return fuel.charAt(0).toUpperCase() + fuel.slice(1).toLowerCase();
+                  const fuel = car.fuelType || "";
+                  if (fuel.toLowerCase() === "petrol") return "Petrol";
+                  if (fuel.toLowerCase() === "diesel") return "Diesel";
+                  if (fuel.toLowerCase() === "electric") return "Electric";
+                  if (fuel.toLowerCase() === "hybrid") return "Hybrid";
+                  return (
+                    fuel.charAt(0).toUpperCase() + fuel.slice(1).toLowerCase()
+                  );
                 })
                 .filter(Boolean)
             )
@@ -490,11 +542,13 @@ const ModuleTestPage = () => {
             new Set(
               cars
                 .map((car) => {
-                  const trans = car.transmission || '';
-                  if (trans.toLowerCase() === 'automatic') return 'Automatic';
-                  if (trans.toLowerCase() === 'manual') return 'Manual';
-                  if (trans.toLowerCase() === 'cvt') return 'CVT';
-                  return trans.charAt(0).toUpperCase() + trans.slice(1).toLowerCase();
+                  const trans = car.transmission || "";
+                  if (trans.toLowerCase() === "automatic") return "Automatic";
+                  if (trans.toLowerCase() === "manual") return "Manual";
+                  if (trans.toLowerCase() === "cvt") return "CVT";
+                  return (
+                    trans.charAt(0).toUpperCase() + trans.slice(1).toLowerCase()
+                  );
                 })
                 .filter(Boolean)
             )
@@ -505,8 +559,10 @@ const ModuleTestPage = () => {
             new Set(
               cars
                 .map((car) => {
-                  const color = car.color || '';
-                  return color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
+                  const color = car.color || "";
+                  return (
+                    color.charAt(0).toUpperCase() + color.slice(1).toLowerCase()
+                  );
                 })
                 .filter(Boolean)
             )
@@ -517,8 +573,10 @@ const ModuleTestPage = () => {
             new Set(
               cars
                 .map((car) => {
-                  const type = car.carType || car.bodyType || '';
-                  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+                  const type = car.carType || car.bodyType || "";
+                  return (
+                    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
+                  );
                 })
                 .filter(Boolean)
             )
@@ -532,7 +590,11 @@ const ModuleTestPage = () => {
 
           // Extract unique seat counts
           const uniqueSeats = Array.from(
-            new Set(cars.map((car) => car.seatingCapacity || car.seats).filter(Boolean))
+            new Set(
+              cars
+                .map((car) => car.seatingCapacity || car.seats)
+                .filter(Boolean)
+            )
           )
             .map((seats) => String(seats))
             .sort((a, b) => parseInt(a) - parseInt(b));
@@ -542,7 +604,11 @@ const ModuleTestPage = () => {
             new Set(
               cars
                 .map((car) => {
-                  const loc = car.location?.city || car.location?.address || car.location || '';
+                  const loc =
+                    car.location?.city ||
+                    car.location?.address ||
+                    car.location ||
+                    "";
                   return loc.trim();
                 })
                 .filter(Boolean)
@@ -562,9 +628,9 @@ const ModuleTestPage = () => {
           if (allRatings.length > 0) {
             const maxRating = Math.max(...allRatings);
             const minRating = Math.min(...allRatings);
-            if (maxRating >= 4.0) ratingOptions.push('4.0+');
-            if (maxRating >= 4.5) ratingOptions.push('4.5+');
-            if (maxRating >= 5.0) ratingOptions.push('5.0');
+            if (maxRating >= 4.0) ratingOptions.push("4.0+");
+            if (maxRating >= 4.5) ratingOptions.push("4.5+");
+            if (maxRating >= 5.0) ratingOptions.push("5.0");
           }
 
           // Set filter options
@@ -581,7 +647,7 @@ const ModuleTestPage = () => {
           });
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         // Keep default/empty data on error
       } finally {
         setIsLoading(false);
@@ -625,40 +691,46 @@ const ModuleTestPage = () => {
 
     // Filter by brand
     if (appliedFilters.brand) {
-      filtered = filtered.filter((car) => 
-        car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
+      filtered = filtered.filter(
+        (car) => car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
       );
     }
 
     // Filter by model
     if (appliedFilters.model) {
       const modelQuery = appliedFilters.model.toLowerCase().trim();
-      filtered = filtered.filter((car) => 
-        car.model?.toLowerCase().includes(modelQuery) ||
-        car.name?.toLowerCase().includes(modelQuery)
+      filtered = filtered.filter(
+        (car) =>
+          car.model?.toLowerCase().includes(modelQuery) ||
+          car.name?.toLowerCase().includes(modelQuery)
       );
     }
 
     // Filter by fuel type
     if (appliedFilters.fuelType) {
       filtered = filtered.filter((car) => {
-        const carFuelType = car.fuelType || '';
-        return carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase();
+        const carFuelType = car.fuelType || "";
+        return (
+          carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase()
+        );
       });
     }
 
     // Filter by transmission
     if (appliedFilters.transmission) {
       filtered = filtered.filter((car) => {
-        const carTransmission = car.transmission || '';
-        return carTransmission.toLowerCase() === appliedFilters.transmission.toLowerCase();
+        const carTransmission = car.transmission || "";
+        return (
+          carTransmission.toLowerCase() ===
+          appliedFilters.transmission.toLowerCase()
+        );
       });
     }
 
     // Filter by car type
     if (appliedFilters.carType) {
       filtered = filtered.filter((car) => {
-        const carType = car.carType || '';
+        const carType = car.carType || "";
         return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
       });
     }
@@ -666,7 +738,7 @@ const ModuleTestPage = () => {
     // Filter by color
     if (appliedFilters.color) {
       filtered = filtered.filter((car) => {
-        const carColor = car.color || '';
+        const carColor = car.color || "";
         return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
       });
     }
@@ -674,7 +746,7 @@ const ModuleTestPage = () => {
     // Filter by seats
     if (appliedFilters.seats) {
       filtered = filtered.filter((car) => {
-        const carSeats = String(car.seatingCapacity || '');
+        const carSeats = String(car.seatingCapacity || "");
         return carSeats === appliedFilters.seats;
       });
     }
@@ -684,8 +756,8 @@ const ModuleTestPage = () => {
       filtered = filtered.filter((car) => {
         const carFeatures = car.features || [];
         return appliedFilters.features.every((feature) =>
-          carFeatures.some((carFeature) =>
-            carFeature.toLowerCase() === feature.toLowerCase()
+          carFeatures.some(
+            (carFeature) => carFeature.toLowerCase() === feature.toLowerCase()
           )
         );
       });
@@ -694,7 +766,9 @@ const ModuleTestPage = () => {
     // Filter by price range
     if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
       filtered = filtered.filter((car) => {
-        const carPrice = parseFloat(car.price?.replace(/[^0-9.]/g, '') || car.pricePerDay || 0);
+        const carPrice = parseFloat(
+          car.price?.replace(/[^0-9.]/g, "") || car.pricePerDay || 0
+        );
         const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
         const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
         return carPrice >= minPrice && carPrice <= maxPrice;
@@ -705,7 +779,8 @@ const ModuleTestPage = () => {
     if (appliedFilters.rating) {
       filtered = filtered.filter((car) => {
         const carRating = parseFloat(car.rating) || 0;
-        const minRating = parseFloat(appliedFilters.rating.replace('+', '')) || 0;
+        const minRating =
+          parseFloat(appliedFilters.rating.replace("+", "")) || 0;
         return carRating >= minRating;
       });
     }
@@ -713,7 +788,9 @@ const ModuleTestPage = () => {
     // Filter by location
     if (appliedFilters.location) {
       filtered = filtered.filter((car) => {
-        return car.location?.toLowerCase().includes(appliedFilters.location.toLowerCase());
+        return car.location
+          ?.toLowerCase()
+          .includes(appliedFilters.location.toLowerCase());
       });
     }
 
@@ -772,7 +849,9 @@ const ModuleTestPage = () => {
                   />
                 </svg>
               </span>
-              <span className="truncate">{currentLocation || 'Getting location...'}</span>
+              <span className="truncate max-w-[140px]">
+                {currentLocation || "Getting location..."}
+              </span>
             </span>
             <svg
               className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
@@ -807,10 +886,10 @@ const ModuleTestPage = () => {
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
               onClick={() => setIsSearchActive(true)}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.02,
                 borderColor: "rgba(255,255,255,0.2)",
-                transition: { duration: 0.2 }
+                transition: { duration: 0.2 },
               }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, x: -20 }}
@@ -822,13 +901,13 @@ const ModuleTestPage = () => {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
-                animate={{ 
+                animate={{
                   scale: [1, 1.1, 1],
                 }}
-                transition={{ 
+                transition={{
                   duration: 2,
                   repeat: Infinity,
-                  repeatDelay: 1
+                  repeatDelay: 1,
                 }}
               >
                 <path
@@ -969,11 +1048,11 @@ const ModuleTestPage = () => {
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* Floating white card container like reference */}
-        <motion.div 
+        <motion.div
           className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         >
           {/* FILTER PILLS ROW */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
@@ -1061,7 +1140,7 @@ const ModuleTestPage = () => {
           </div>
 
           {/* CATEGORY IMAGE CARDS */}
-          <motion.div 
+          <motion.div
             className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-lg border border-gray-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1073,10 +1152,12 @@ const ModuleTestPage = () => {
                   key={cat.id}
                   type="button"
                   className="flex-shrink-0 w-24"
-                  onClick={() => navigate(`/category/${cat.label.toLowerCase()}`)}
+                  onClick={() =>
+                    navigate(`/category/${cat.label.toLowerCase()}`)
+                  }
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.2 + (index * 0.05) }}
+                  transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -1101,7 +1182,7 @@ const ModuleTestPage = () => {
           </motion.div>
 
           {/* TOP BRANDS SECTION (between categories and meta row) */}
-          <motion.div 
+          <motion.div
             className="mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1158,7 +1239,9 @@ const ModuleTestPage = () => {
 
           {/* META ROW */}
           <div className="flex items-center justify-between mt-1 px-1">
-            <span className="text-xs text-gray-500">{totalCarsCount || 0} available</span>
+            <span className="text-xs text-gray-500">
+              {totalCarsCount || 0} available
+            </span>
             <button
               type="button"
               className="flex items-center gap-1 text-xs text-gray-600"
@@ -1182,15 +1265,18 @@ const ModuleTestPage = () => {
 
           {/* FEATURED CAR CARD */}
           {featuredCar && (
-            <motion.div 
+            <motion.div
               className="px-1"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
             >
-              <motion.div 
+              <motion.div
                 className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
-                whileHover={{ scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                }}
                 transition={{ duration: 0.3 }}
                 onClick={() => navigate(`/car-details/${featuredCar.id}`)}
               >
@@ -1209,7 +1295,9 @@ const ModuleTestPage = () => {
                       <h3 className="text-sm font-bold text-gray-900">
                         {featuredCar.name}
                       </h3>
-                      <p className="mt-1 text-xs font-semibold text-gray-700">{featuredCar.price}</p>
+                      <p className="mt-1 text-xs font-semibold text-gray-700">
+                        {featuredCar.price}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1">
                       <span
@@ -1244,21 +1332,21 @@ const ModuleTestPage = () => {
               }}
               pagination={{
                 clickable: true,
-                bulletClass: 'swiper-pagination-bullet-custom',
-                bulletActiveClass: 'swiper-pagination-bullet-active-custom',
-                el: '.mobile-banner-pagination',
+                bulletClass: "swiper-pagination-bullet-custom",
+                bulletActiveClass: "swiper-pagination-bullet-active-custom",
+                el: ".mobile-banner-pagination",
               }}
               className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
-              style={{ background: 'rgb(41, 70, 87)' }}
+              style={{ background: "rgb(41, 70, 87)" }}
             >
               {[
-                { image: bannerCar1, alt: 'Car 1' },
-                { image: bannerCar2, alt: 'Car 2' },
-                { image: bannerCar3, alt: 'Car 3' },
-                { image: bannerCar4, alt: 'Car 4' },
+                { image: bannerCar1, alt: "Car 1" },
+                { image: bannerCar2, alt: "Car 2" },
+                { image: bannerCar3, alt: "Car 3" },
+                { image: bannerCar4, alt: "Car 4" },
               ].map((car, index) => (
                 <SwiperSlide key={index} className="!w-full">
-                  <div 
+                  <div
                     className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
                     onClick={() => navigate("/search")}
                   >
@@ -1269,7 +1357,7 @@ const ModuleTestPage = () => {
                       <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
                         Experience Seamless Car Rentals.
                       </p>
-                      <button 
+                      <button
                         className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1285,7 +1373,11 @@ const ModuleTestPage = () => {
                         className="h-full max-h-full w-auto object-contain"
                         draggable="false"
                         src={car.image}
-                        style={{ maxWidth: '100%', objectFit: 'contain', transform: 'translateX(15px)' }}
+                        style={{
+                          maxWidth: "100%",
+                          objectFit: "contain",
+                          transform: "translateX(15px)",
+                        }}
                       />
                     </div>
                   </div>
@@ -1314,16 +1406,14 @@ const ModuleTestPage = () => {
           </div>
 
           {/* BEST CARS GRID (above Nearby) */}
-          <motion.div 
+          <motion.div
             className="mt-4 px-1"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.25 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-black">
-                Best Cars
-              </h2>
+              <h2 className="text-xl font-bold text-black">Best Cars</h2>
               <motion.button
                 type="button"
                 className="text-sm text-gray-600 font-semibold"
@@ -1343,12 +1433,15 @@ const ModuleTestPage = () => {
                   style={{
                     backgroundColor: "#ffffff",
                     border: "1px solid #e5e7eb",
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                   }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 + (index * 0.05) }}
-                  whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                  transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
+                  whileHover={{
+                    scale: 1.03,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  }}
                   onClick={() => navigate(`/car-details/${car.id}`)}
                 >
                   <div
@@ -1361,28 +1454,43 @@ const ModuleTestPage = () => {
                       className="w-full h-full object-contain scale-125"
                       style={{ opacity: 1 }}
                     />
-                    <motion.button 
+                    <motion.button
                       className="absolute -top-1 left-1.5 md:left-2 z-10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setFavoriteStates(prev => ({ ...prev, [car.id]: !prev[car.id] }));
-                        setAnimatingStates(prev => ({ ...prev, [car.id]: true }));
+                        setFavoriteStates((prev) => ({
+                          ...prev,
+                          [car.id]: !prev[car.id],
+                        }));
+                        setAnimatingStates((prev) => ({
+                          ...prev,
+                          [car.id]: true,
+                        }));
                         setTimeout(() => {
-                          setAnimatingStates(prev => ({ ...prev, [car.id]: false }));
+                          setAnimatingStates((prev) => ({
+                            ...prev,
+                            [car.id]: false,
+                          }));
                         }, 300);
                       }}
-                      animate={animatingStates[car.id] ? {
-                        scale: [1, 1.3, 1],
-                      } : {}}
+                      animate={
+                        animatingStates[car.id]
+                          ? {
+                              scale: [1, 1.3, 1],
+                            }
+                          : {}
+                      }
                       transition={{
                         duration: 0.3,
-                        ease: "easeOut"
+                        ease: "easeOut",
                       }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <svg
-                        className={`w-5 h-5 md:w-6 md:h-6 ${favoriteStates[car.id] ? 'text-red-500' : 'text-white'}`}
-                        fill={favoriteStates[car.id] ? 'currentColor' : 'none'}
+                        className={`w-5 h-5 md:w-6 md:h-6 ${
+                          favoriteStates[car.id] ? "text-red-500" : "text-white"
+                        }`}
+                        fill={favoriteStates[car.id] ? "currentColor" : "none"}
                         stroke="currentColor"
                         strokeWidth={2}
                         viewBox="0 0 24 24"
@@ -1473,7 +1581,7 @@ const ModuleTestPage = () => {
           </motion.div>
 
           {/* NEARBY CARS SECTION (horizontal cards) */}
-          <motion.div 
+          <motion.div
             className="mt-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1493,21 +1601,24 @@ const ModuleTestPage = () => {
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
               {nearbyCars.map((car, index) => (
-                <motion.div 
-                  key={car.id} 
+                <motion.div
+                  key={car.id}
                   className="min-w-[280px] flex-shrink-0"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4 + (index * 0.1) }}
+                  transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
                 >
                   <motion.div
                     className="w-full rounded-xl overflow-hidden cursor-pointer"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1px solid #e5e7eb",
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                     }}
-                    whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                    whileHover={{
+                      scale: 1.02,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    }}
                     onClick={() => navigate(`/car-details/${car.id}`)}
                   >
                     <div
@@ -1519,28 +1630,47 @@ const ModuleTestPage = () => {
                         alt={car.name}
                         className="w-full h-full object-contain scale-125"
                       />
-                      <motion.button 
+                      <motion.button
                         className="absolute -top-1 left-1.5 z-10"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFavoriteStates(prev => ({ ...prev, [car.id]: !prev[car.id] }));
-                          setAnimatingStates(prev => ({ ...prev, [car.id]: true }));
+                          setFavoriteStates((prev) => ({
+                            ...prev,
+                            [car.id]: !prev[car.id],
+                          }));
+                          setAnimatingStates((prev) => ({
+                            ...prev,
+                            [car.id]: true,
+                          }));
                           setTimeout(() => {
-                            setAnimatingStates(prev => ({ ...prev, [car.id]: false }));
+                            setAnimatingStates((prev) => ({
+                              ...prev,
+                              [car.id]: false,
+                            }));
                           }, 300);
                         }}
-                        animate={animatingStates[car.id] ? {
-                          scale: [1, 1.3, 1],
-                        } : {}}
+                        animate={
+                          animatingStates[car.id]
+                            ? {
+                                scale: [1, 1.3, 1],
+                              }
+                            : {}
+                        }
                         transition={{
                           duration: 0.3,
-                          ease: "easeOut"
+                          ease: "easeOut",
                         }}
                         whileTap={{ scale: 0.95 }}
                       >
                         <svg
-                          className={`w-5 h-5 ${favoriteStates[car.id] ? 'text-red-500' : 'text-white'}`}
-                          fill={favoriteStates[car.id] ? 'currentColor' : 'none'}
+                          className={`w-5 h-5 ${
+                            favoriteStates[car.id]
+                              ? "text-red-500"
+                              : "text-white"
+                          }`}
+                          fill={
+                            favoriteStates[car.id] ? "currentColor" : "none"
+                          }
                           stroke="currentColor"
                           strokeWidth={2}
                           viewBox="0 0 24 24"

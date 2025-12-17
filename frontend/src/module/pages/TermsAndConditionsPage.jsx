@@ -245,7 +245,7 @@ If You have any questions regarding these Host T&Cs, please email Us at Host.sup
     >
       {/* Header - Mobile only */}
       <div className="md:hidden">
-        <ProfileHeader title="Terms & Conditions" />
+        <ProfileHeader title="Terms & Conditions" showBack />
       </div>
 
       {/* Web Header - Only visible on web */}

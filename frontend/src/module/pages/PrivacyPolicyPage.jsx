@@ -569,7 +569,7 @@ Response Time: Within 7 business days`;
     >
       {/* Header - Mobile only */}
       <div className="md:hidden">
-        <ProfileHeader title="Privacy Policy" />
+        <ProfileHeader title="Privacy Policy" showBack />
       </div>
 
       {/* Web Header - Only visible on web */}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 import { useLocation } from "../../hooks/useLocation";
 import { useAppSelector } from "../../hooks/redux";
@@ -103,7 +102,38 @@ const ModuleLocationPage = () => {
       const temp = fromLocation;
       setFromLocation(destination.label);
       setDestination(null);
-      // You could also set a new from location here if needed
+    }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (
+      currentLocation &&
+      currentLocation !== "Getting location..." &&
+      currentLocation !== "Location not supported" &&
+      currentLocation !== "Location permission denied" &&
+      currentLocation !== "Location unavailable"
+    ) {
+      setFromLocation(currentLocation);
+    }
+  };
+
+  const handleSetDestinationCurrent = () => {
+    if (
+      currentLocation &&
+      currentLocation !== "Getting location..." &&
+      currentLocation !== "Location not supported" &&
+      currentLocation !== "Location permission denied" &&
+      currentLocation !== "Location unavailable"
+    ) {
+      const currentDest = {
+        id: "current-destination",
+        label: currentLocation,
+        sublabel: "Current location",
+        type: "current",
+        coordinates,
+      };
+      setDestination(currentDest);
+      setSearchValue("");
     }
   };
 
@@ -230,12 +260,8 @@ const ModuleLocationPage = () => {
       <main className="flex-1 px-4 pb-28 overflow-y-auto">
         {/* From / To inputs */}
         <div className="pt-2 space-y-3">
-            {/* From */}
-            <button
-              type="button"
-              onClick={handleSwapLocations}
-              className="w-full flex items-start gap-3 hover:bg-gray-50 rounded-lg p-1 -m-1 transition-colors"
-            >
+            {/* From (editable) */}
+            <div className="w-full flex items-start gap-3">
               <div
                 className="mt-1 w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                 style={{ borderColor: colors.backgroundTertiary }}
@@ -246,22 +272,66 @@ const ModuleLocationPage = () => {
                 ></div>
               </div>
               <div className="flex-1 text-left">
-                <p className="text-[11px] font-semibold text-gray-500 mb-0.5">
+                <p className="text-[11px] font-semibold text-gray-500 mb-1">
                   From
                 </p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {fromLocation}
-                </p>
+                <input
+                  value={fromLocation}
+                  onChange={(e) => setFromLocation(e.target.value)}
+                  placeholder="Enter pickup location"
+                  className="w-full rounded-lg border text-sm font-semibold px-3 py-2 bg-white outline-none"
+                  style={{ borderColor: "#e5e7eb", color: "#111827" }}
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full border"
+                    style={{
+                      borderColor: colors.backgroundTertiary,
+                      color: colors.backgroundTertiary,
+                      backgroundColor: "#f7f7f7",
+                    }}
+                  >
+                    Use current
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFromLocation("")}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full border"
+                    style={{
+                      borderColor: "#e5e7eb",
+                      color: "#6b7280",
+                      backgroundColor: "#f9fafb",
+                    }}
+                  >
+                    Clear
+                  </button>
+                  {destination && (
+                    <button
+                      type="button"
+                      onClick={handleSwapLocations}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-full border"
+                      style={{
+                        borderColor: "#e5e7eb",
+                        color: "#6b7280",
+                        backgroundColor: "#f9fafb",
+                      }}
+                    >
+                      Swap
+                    </button>
+                  )}
+                </div>
               </div>
-            </button>
+            </div>
 
             {/* Separator line */}
             <div className="ml-4 pl-1 border-l border-dashed border-gray-200 h-4" />
 
             {/* Add destination - Search input */}
             <div
-              className="w-full flex items-center gap-2 rounded-2xl border-2 bg-white px-3 py-2.5 shadow-sm"
-              style={{ borderColor: "#10b981" }}
+              className="w-full max-w-[320px] flex items-center gap-2 rounded-2xl border-2 bg-white px-3 py-1.5 shadow-sm mx-auto"
+              style={{ borderColor: "#21292b" }}
             >
               {/* Search icon */}
               <svg
@@ -310,8 +380,10 @@ const ModuleLocationPage = () => {
               {/* Map pin icon */}
               <button
                 type="button"
+                onClick={handleSetDestinationCurrent}
                 className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: colors.backgroundTertiary }}
+                aria-label="Use current location for destination"
               >
                 <svg
                   className="w-4 h-4 text-white"
@@ -424,11 +496,6 @@ const ModuleLocationPage = () => {
           )}
         </div>
       </main>
-
-      {/* Bottom navbar to keep module navigation consistent */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <BottomNavbar />
-      </div>
     </div>
   );
 };

@@ -58,6 +58,8 @@ const AdminLoginPage = () => {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(adminLoginSchema),
@@ -66,6 +68,9 @@ const AdminLoginPage = () => {
       password: '',
     },
   });
+
+  const emailValue = watch('email') || '';
+  const passwordValue = watch('password') || '';
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -493,6 +498,8 @@ const AdminLoginPage = () => {
                   autoComplete="email"
                   autoFocus
                   {...register('email')}
+                  value={emailValue}
+                  onChange={(e) => setValue('email', e.target.value)}
                   onFocus={(e) => {
                     e.target.parentElement.style.borderColor = colors.backgroundTertiary;
                     e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
@@ -543,6 +550,8 @@ const AdminLoginPage = () => {
                   style={{ color: colors.backgroundTertiary }}
                   autoComplete="current-password"
                   {...register('password')}
+                  value={passwordValue}
+                  onChange={(e) => setValue('password', e.target.value)}
                   onFocus={(e) => {
                     e.target.parentElement.style.borderColor = colors.backgroundTertiary;
                     e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
@@ -556,7 +565,10 @@ const AdminLoginPage = () => {
                 {/* Show/Hide Password Toggle */}
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPassword((prev) => !prev);
+                  }}
                   className="ml-2 p-1 hover:opacity-70 transition-opacity"
                   style={{ color: colors.backgroundTertiary }}
                 >

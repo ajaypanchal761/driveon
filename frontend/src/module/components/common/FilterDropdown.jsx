@@ -177,8 +177,7 @@ const FilterDropdown = ({
       {/* Desktop Sidebar - Always visible when isOpen is true */}
       {isOpen && (
         <div
-          ref={desktopRef}
-          className="filter-dropdown hidden md:block md:fixed md:left-0 md:top-20 md:bottom-0 md:w-80 md:z-40 md:overflow-y-auto md:rounded-none md:shadow-lg md:border-r"
+          className="filter-dropdown hidden md:block md:fixed md:left-0 md:top-24 md:bottom-0 md:w-80 md:z-40 md:overflow-y-auto md:rounded-none md:shadow-lg md:border-r"
           style={{
             backgroundColor: colors.backgroundSecondary,
             borderRightColor: colors.borderForm
