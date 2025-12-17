@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
+import { adminService } from '../../../services/admin.service';
+import toastUtils from '../../../config/toast';
 
 /**
  * Payment List Page
@@ -37,179 +39,97 @@ const PaymentListPage = () => {
     booking: 'all',
   });
 
-  // Mock payments data
+  // Fetch payments from API (extract from bookings transactions)
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockPayments = [
-        {
-          id: '1',
-          transactionId: 'TXN001',
-          bookingId: 'BK001',
-          userId: '1',
-          userName: 'John Doe',
-          userEmail: 'john.doe@example.com',
-          amount: 15000,
-          paymentType: 'full',
-          paymentMethod: 'UPI',
-          paymentGateway: 'Razorpay',
-          status: 'success',
-          timestamp: '2024-03-15T10:30:00',
-          bookingDate: '2024-03-15T10:00:00',
-          invoiceGenerated: true,
-        },
-        {
-          id: '2',
-          transactionId: 'TXN002',
-          bookingId: 'BK002',
-          userId: '2',
-          userName: 'Jane Smith',
-          userEmail: 'jane.smith@example.com',
-          amount: 4800,
-          paymentType: 'full',
-          paymentMethod: 'Credit Card',
-          paymentGateway: 'Stripe',
-          status: 'pending',
-          timestamp: '2024-03-16T14:30:00',
-          bookingDate: '2024-03-16T14:00:00',
-          invoiceGenerated: false,
-        },
-        {
-          id: '3',
-          transactionId: 'TXN003',
-          bookingId: 'BK003',
-          userId: '5',
-          userName: 'David Brown',
-          userEmail: 'david.b@example.com',
-          amount: 50000,
-          paymentType: 'full',
-          paymentMethod: 'Net Banking',
-          paymentGateway: 'Razorpay',
-          status: 'success',
-          timestamp: '2024-03-10T09:00:00',
-          bookingDate: '2024-03-10T09:00:00',
-          invoiceGenerated: true,
-        },
-        {
-          id: '4',
-          transactionId: 'TXN004',
-          bookingId: 'BK004',
-          userId: '7',
-          userName: 'Robert Wilson',
-          userEmail: 'robert.w@example.com',
-          amount: 14400,
-          paymentType: 'full',
-          paymentMethod: 'UPI',
-          paymentGateway: 'Razorpay',
-          status: 'success',
-          timestamp: '2024-03-05T12:00:00',
-          bookingDate: '2024-03-05T12:00:00',
-          invoiceGenerated: true,
-        },
-        {
-          id: '5',
-          transactionId: 'TXN005',
-          bookingId: 'BK005',
-          userId: '1',
-          userName: 'John Doe',
-          userEmail: 'john.doe@example.com',
-          amount: 15000,
-          paymentType: 'full',
-          paymentMethod: 'Debit Card',
-          paymentGateway: 'Razorpay',
-          status: 'refunded',
-          refundAmount: 15000,
-          refundDate: '2024-03-11T15:00:00',
-          timestamp: '2024-03-08T10:00:00',
-          bookingDate: '2024-03-08T10:00:00',
-          invoiceGenerated: true,
-        },
-        {
-          id: '6',
-          transactionId: 'TXN006',
-          bookingId: 'BK006',
-          userId: '5',
-          userName: 'David Brown',
-          userEmail: 'david.b@example.com',
-          amount: 8000,
-          paymentType: 'partial',
-          paymentMethod: 'UPI',
-          paymentGateway: 'Razorpay',
-          status: 'failed',
-          failureReason: 'Insufficient funds',
-          timestamp: '2024-03-17T11:00:00',
-          bookingDate: '2024-03-17T11:00:00',
-          invoiceGenerated: false,
-        },
-        {
-          id: '7',
-          transactionId: 'TXN007',
-          bookingId: 'BK007',
-          userId: '8',
-          userName: 'Lisa Anderson',
-          userEmail: 'lisa.a@example.com',
-          amount: 7200,
-          paymentType: 'full',
-          paymentMethod: 'Wallet',
-          paymentGateway: 'Paytm',
-          status: 'success',
-          timestamp: '2024-03-15T16:00:00',
-          bookingDate: '2024-03-15T16:00:00',
-          invoiceGenerated: false,
-        },
-        {
-          id: '8',
-          transactionId: 'TXN008',
-          bookingId: 'BK008',
-          userId: '6',
-          userName: 'Emily Davis',
-          userEmail: 'emily.d@example.com',
-          amount: 5000,
-          paymentType: 'security_deposit',
-          paymentMethod: 'Credit Card',
-          paymentGateway: 'Stripe',
-          status: 'success',
-          timestamp: '2024-03-12T10:00:00',
-          bookingDate: '2024-03-12T10:00:00',
-          invoiceGenerated: true,
-        },
-        {
-          id: '9',
-          transactionId: 'TXN009',
-          bookingId: 'BK003',
-          userId: '5',
-          userName: 'David Brown',
-          userEmail: 'david.b@example.com',
-          amount: 10000,
-          paymentType: 'partial',
-          paymentMethod: 'Net Banking',
-          paymentGateway: 'Razorpay',
-          status: 'pending',
-          timestamp: '2024-03-18T09:00:00',
-          bookingDate: '2024-03-10T09:00:00',
-          invoiceGenerated: false,
-        },
-        {
-          id: '10',
-          transactionId: 'TXN010',
-          bookingId: 'BK001',
-          userId: '1',
-          userName: 'John Doe',
-          userEmail: 'john.doe@example.com',
-          amount: 3000,
-          paymentType: 'security_deposit',
-          paymentMethod: 'UPI',
-          paymentGateway: 'Razorpay',
-          status: 'success',
-          timestamp: '2024-03-14T08:00:00',
-          bookingDate: '2024-03-15T10:00:00',
-          invoiceGenerated: true,
-        },
-      ];
-      setPayments(mockPayments);
-      setFilteredPayments(mockPayments);
-      setLoading(false);
-    }, 500);
+    const fetchPayments = async () => {
+      try {
+        setLoading(true);
+        
+        // Get all bookings to extract transactions
+        const response = await adminService.getAllBookings({
+          page: 1,
+          limit: 1000, // Get all bookings to extract all transactions
+        });
+        
+        if (response.success && response.data?.bookings) {
+          const bookings = response.data.bookings;
+          
+          // Extract all transactions from bookings
+          const allPayments = [];
+          
+          bookings.forEach((booking) => {
+            if (booking.transactions && Array.isArray(booking.transactions)) {
+              booking.transactions.forEach((transaction) => {
+                // Determine payment type based on booking payment option
+                let paymentType = 'full';
+                if (booking.paymentOption === 'advance') {
+                  // Check if this is advance payment or remaining payment
+                  const advanceAmount = booking.pricing?.advancePayment || 0;
+                  if (transaction.amount <= advanceAmount) {
+                    paymentType = 'partial';
+                  } else {
+                    paymentType = 'partial'; // Remaining payment
+                  }
+                }
+                
+                // Map payment method to display name
+                const paymentMethodMap = {
+                  'phonepe': 'UPI',
+                  'razorpay': transaction.razorpayPaymentId ? 'Credit Card' : 'UPI',
+                  'stripe': 'Credit Card',
+                };
+                
+                const paymentMethod = paymentMethodMap[transaction.paymentMethod] || transaction.paymentMethod || 'UPI';
+                
+                // Map payment gateway
+                const paymentGatewayMap = {
+                  'phonepe': 'PhonePe',
+                  'razorpay': 'Razorpay',
+                  'stripe': 'Stripe',
+                };
+                
+                const paymentGateway = paymentGatewayMap[transaction.paymentMethod] || 'Razorpay';
+                
+                allPayments.push({
+                  id: transaction._id?.toString() || transaction.transactionId,
+                  transactionId: transaction.transactionId,
+                  bookingId: booking.bookingId || booking._id?.toString(),
+                  userId: booking.user?._id?.toString() || booking.user?.toString() || '',
+                  userName: booking.user?.name || 'Unknown',
+                  userEmail: booking.user?.email || '',
+                  amount: transaction.amount || 0,
+                  paymentType: paymentType,
+                  paymentMethod: paymentMethod,
+                  paymentGateway: paymentGateway,
+                  status: transaction.status || 'pending',
+                  timestamp: transaction.paymentDate || transaction.createdAt || booking.createdAt || new Date().toISOString(),
+                  bookingDate: booking.bookingDate || booking.createdAt || new Date().toISOString(),
+                  invoiceGenerated: booking.paymentStatus === 'paid' || booking.paymentStatus === 'partial',
+                  refundAmount: transaction.refundAmount || 0,
+                  refundDate: transaction.refundDate || null,
+                  failureReason: transaction.status === 'failed' ? 'Payment failed' : null,
+                });
+              });
+            }
+          });
+          
+          // Sort by timestamp (newest first)
+          allPayments.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          
+          setPayments(allPayments);
+        } else {
+          setPayments([]);
+        }
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to fetch payments');
+        setPayments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPayments();
   }, []);
 
   // Filter and search payments

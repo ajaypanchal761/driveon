@@ -416,7 +416,7 @@ const ModuleProfilePage = () => {
   return (
     <div 
       className="min-h-screen w-full relative pb-20 md:pb-0"
-      style={{ backgroundColor: colors.backgroundSecondary }}
+      style={{ backgroundColor: colors.backgroundSecondary, contain: 'layout style' }}
     >
       {/* Web Header - Only visible on web */}
       <header
@@ -444,14 +444,14 @@ const ModuleProfilePage = () => {
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
@@ -526,8 +526,8 @@ const ModuleProfilePage = () => {
         style={{ backgroundColor: profileSectionBg }}
       >
         {/* Profile Picture - Centered */}
-          <div className="flex flex-col items-center mb-3 md:mb-3 lg:mb-4">
-          <div className="relative mb-1.5 md:mb-2">
+        <div className="flex flex-col items-center">
+          <div className="relative mb-3 md:mb-4" style={{ contain: 'layout' }}>
             {userPhoto && !imageError ? (
               <img
                 src={userPhoto}
@@ -536,20 +536,19 @@ const ModuleProfilePage = () => {
                   console.log('🖼️ Profile photo failed to load, showing default icon');
                   setImageError(true);
                 }}
-                onLoad={() => {
-                  console.log('✅ Profile photo loaded successfully');
-                  setImageError(false);
-                }}
                 className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
                 style={{ borderColor: profileSectionBg }}
+                loading="eager"
+                width="96"
+                height="96"
               />
             ) : (
               <div 
-                  className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
+                className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
                 style={{ backgroundColor: iconBgColor }}
               >
                 <svg
-                    className="w-10 h-10 md:w-10 md:h-10 lg:w-12 lg:h-12 text-gray-500"
+                  className="w-10 h-10 md:w-10 md:h-10 lg:w-12 lg:h-12 text-gray-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -566,21 +565,68 @@ const ModuleProfilePage = () => {
           </div>
           
           {/* User Name - Direct from user object with fallbacks */}
-            <h2 className="text-lg md:text-lg lg:text-xl font-bold text-black mb-1">
+          <h2 className="text-lg md:text-lg lg:text-xl font-bold text-black mb-1.5 md:mb-2 text-center w-full">
             {user?.name || user?.fullName || userName || 'User'}
           </h2>
           
           {/* Phone Number Display - Direct from user object with formatting */}
-            <p className="text-xs md:text-xs lg:text-sm text-gray-600 mb-0.5">
+          <p className="text-xs md:text-xs lg:text-sm text-black mb-1 md:mb-1.5 text-center w-full">
             {displayPhone}
           </p>
           
           {/* Email Display (if available) - Direct from user object */}
           {(user?.email || (userEmail && userEmail !== 'N/A')) && (
-            <p className="text-xs md:text-xs lg:text-sm text-gray-500">
+            <p className="text-xs md:text-xs lg:text-sm text-black mb-0 leading-tight text-center w-full">
               {user?.email || userEmail}
             </p>
           )}
+          
+          {/* User ID Display with Copy Button - Centered below email */}
+          {user?._id || user?.id ? (() => {
+            const userId = (user._id || user.id).toString();
+            // Extract last 4 characters from ObjectId (e.g., "693bd034e3e0a763f25a6555" -> "5620")
+            const lastFour = userId.slice(-4);
+            const formattedUserId = `user-${lastFour}`;
+            
+            const handleCopyUserId = async () => {
+              try {
+                await navigator.clipboard.writeText(formattedUserId);
+                toastUtils.success('User ID copied to clipboard!');
+              } catch (err) {
+                console.error('Failed to copy:', err);
+                toastUtils.error('Failed to copy User ID');
+              }
+            };
+            
+            return (
+              <div className="w-full flex justify-center mt-[-6.5px] pl-9 leading-tight">
+                <div className="flex items-center gap- md:gap-2">
+                  <span className="text-xs md:text-xs lg:text-sm text-black font-mono">
+                    {formattedUserId}
+                  </span>
+                  <button
+                    onClick={handleCopyUserId}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                    title="Copy User ID"
+                  >
+                    <svg
+                      className="w-3.5 h-3.5 text-gray-500 hover:text-gray-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })() : null}
         </div>
       </div>
 

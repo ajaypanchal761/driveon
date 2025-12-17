@@ -245,7 +245,7 @@ If You have any questions regarding these Host T&Cs, please email Us at Host.sup
     >
       {/* Header - Mobile only */}
       <div className="md:hidden">
-        <ProfileHeader title="Terms & Conditions" />
+        <ProfileHeader title="Terms & Conditions" showBack />
       </div>
 
       {/* Web Header - Only visible on web */}
@@ -274,14 +274,14 @@ If You have any questions regarding these Host T&Cs, please email Us at Host.sup
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >

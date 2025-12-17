@@ -306,14 +306,56 @@ api.interceptors.response.use(
           // No refresh token, logout user
           console.warn('No refresh token available, logging out user');
           store.dispatch(logout());
-          window.location.href = '/login';
+          
+          // Don't redirect if auth is still initializing
+          const authState = store.getState().auth;
+          if (authState.isInitializing) {
+            console.log('Auth still initializing, skipping redirect');
+            return Promise.reject(error);
+          }
+          
+          // Only redirect to login if we're on a protected route
+          const currentPath = window.location.pathname;
+          const publicRoutes = ['/', '/login', '/register', '/search', '/faq', '/about', '/contact', '/privacy-policy', '/terms'];
+          const isPublicRoute = publicRoutes.includes(currentPath) || 
+                               currentPath.startsWith('/car-details/') ||
+                               (currentPath.startsWith('/car-details/') && currentPath.includes('/reviews'));
+          
+          // Only redirect if not already on a public route
+          if (!isPublicRoute && !currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+            // Use setTimeout to avoid redirect during render
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 100);
+          }
           return Promise.reject(error);
         }
       } catch (refreshError) {
         // Refresh failed, logout user
         console.error('Token refresh error:', refreshError);
         store.dispatch(logout());
-        window.location.href = '/login';
+        
+        // Don't redirect if auth is still initializing
+        const authState = store.getState().auth;
+        if (authState.isInitializing) {
+          console.log('Auth still initializing, skipping redirect');
+          return Promise.reject(refreshError);
+        }
+        
+        // Only redirect to login if we're on a protected route
+        const currentPath = window.location.pathname;
+        const publicRoutes = ['/', '/login', '/register', '/search', '/faq', '/about', '/contact', '/privacy-policy', '/terms'];
+        const isPublicRoute = publicRoutes.includes(currentPath) || 
+                             currentPath.startsWith('/car-details/') ||
+                             (currentPath.startsWith('/car-details/') && currentPath.includes('/reviews'));
+        
+        // Only redirect if not already on a public route
+        if (!isPublicRoute && !currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
+          // Use setTimeout to avoid redirect during render
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
+        }
         return Promise.reject(refreshError);
       }
     }

@@ -1,13 +1,16 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination, Autoplay } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/pagination';
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
 import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 import FilterDropdown from "../components/common/FilterDropdown";
+import { useAppSelector } from "../../hooks/redux";
+import { carService } from "../../services/car.service";
+import { useLocation } from "../../hooks/useLocation";
 
 // Use existing car images from assets
 import carImg1 from "../../assets/car_banImg1.jpg";
@@ -25,11 +28,19 @@ import bannerCar3 from "../../assets/car_img5-removebg-preview.png";
 import bannerCar4 from "../../assets/car_img6-removebg-preview.png";
 import logo1 from "../../assets/car_logo1_PNG1.png";
 import logo2 from "../../assets/car_logo2_PNG.png";
+import logo3 from "../../assets/car_logo3_PNG.png";
 import logo4 from "../../assets/car_logo4_PNG.png";
 import logo5 from "../../assets/car_logo5_PNG.png";
+import logo6 from "../../assets/car_logo6_PNG.png";
+import logo7 from "../../assets/car_logo7_PNG.png";
 import logo8 from "../../assets/car_logo8_PNG.png";
+import logo9 from "../../assets/car_logo9_PNG.png";
 import logo10 from "../../assets/car_logo10_PNG.png";
 import logo11 from "../../assets/car_logo11_PNG.png";
+import logo13 from "../../assets/car_logo13_PNG.png";
+import logo14 from "../../assets/car_logo14_PNG.png";
+import logo15 from "../../assets/car_logo15.png";
+import logo16 from "../../assets/car_logo16.png";
 
 /**
  * ModuleTestPage
@@ -39,53 +50,230 @@ import logo11 from "../../assets/car_logo11_PNG.png";
 const ModuleTestPage = () => {
   const navigate = useNavigate();
 
-  const categories = [
-    { id: 1, label: "Sports", count: 78, image: carImg1 },
-    { id: 2, label: "Electric", count: 304, image: carImg2 },
-    { id: 3, label: "Legends", count: 47, image: carImg3 },
-    { id: 4, label: "Classic", count: 12, image: carImg4 },
-    { id: 5, label: "Coupe", count: 19, image: carImg5 },
+  // Get authentication state
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user } = useAppSelector((state) => state.user);
+
+  // Get user's current live location (throttled to avoid frequent updates)
+  const { currentLocation, coordinates } = useLocation(
+    true,
+    isAuthenticated,
+    user?._id || user?.id
+  );
+
+  // Dynamic data states
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [nearbyCars, setNearbyCars] = useState([]);
+  const [bestCars, setBestCars] = useState([]);
+  const [totalCarsCount, setTotalCarsCount] = useState(0);
+  const [featuredCar, setFeaturedCar] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Filter options state for FilterDropdown
+  const [filterOptions, setFilterOptions] = useState({
+    brands: [],
+    fuelTypes: [],
+    transmissions: [],
+    colors: [],
+    carTypes: [],
+    features: [],
+    seats: [],
+    ratings: [],
+    locations: [],
+  });
+
+  // Applied filters state
+  const [appliedFilters, setAppliedFilters] = useState({
+    brand: "",
+    model: "",
+    seats: "",
+    fuelType: "",
+    transmission: "",
+    color: "",
+    priceRange: { min: "", max: "" },
+    rating: "",
+    location: "",
+    carType: "",
+    features: [],
+    availableFrom: "",
+    availableTo: "",
+  });
+
+  // Store all cars for filtering
+  const [allCars, setAllCars] = useState([]);
+
+  // Brand logos map for dynamic brands - expanded mapping
+  const brandLogos = {
+    // Luxury brands
+    Ferrari: logo10,
+    Lamborghini: logo5,
+    BMW: logo11,
+    Audi: logo10,
+    Mercedes: logo11,
+    Porsche: logo5,
+    // Electric/Modern
+    Tesla: logo4,
+    // Japanese brands
+    Toyota: logo2,
+    Honda: logo8,
+    Nissan: logo11,
+    Mazda: logo4,
+    Subaru: logo5,
+    // Korean brands
+    Hyundai: logo6,
+    Kia: logo1,
+    // Indian brands
+    Maruti: logo2,
+    "Maruti Suzuki": logo2,
+    Tata: logo4,
+    Mahindra: logo5,
+    // Other popular brands
+    Ford: logo4,
+    Chevrolet: logo5,
+    Volkswagen: logo6,
+    Volvo: logo7,
+    Skoda: logo8,
+    // Common model names that might come as brands
+    "Swift Dzire": logo2,
+    Swift: logo2,
+    Dzire: logo2,
+    XUV500: logo5,
+    XUV: logo5,
+    "Alto 800": logo2,
+    Alto: logo2,
+  };
+
+  // Fallback brand logos array for unknown brands
+  const fallbackBrandLogos = [
+    logo1,
+    logo2,
+    logo3,
+    logo4,
+    logo5,
+    logo6,
+    logo7,
+    logo8,
+    logo9,
+    logo10,
+    logo11,
+    logo13,
+    logo14,
+    logo15,
+    logo16,
   ];
 
-  const brands = [
-    { id: 1, logo: logo4, name: "Ferrari" },
-    { id: 2, logo: logo5, name: "Lamborghini" },
-    { id: 3, logo: logo11, name: "Nissan" },
-    { id: 4, logo: logo10, name: "Audi" },
-    { id: 5, logo: logo8, name: "Honda" },
-    { id: 6, logo: logo1, name: "Kia" },
-    { id: 7, logo: logo2, name: "Toyota" },
+  // Category images map
+  const categoryImages = {
+    Sports: carImg1,
+    Electric: carImg2,
+    Legends: carImg3,
+    Classic: carImg4,
+    Coupe: carImg5,
+    SUV: carImg1,
+    Sedan: carImg2,
+    Hatchback: carImg3,
+  };
+
+  // Fallback images for cars
+  const fallbackCarImages = [
+    carImg1,
+    nearbyImg1,
+    nearbyImg2,
+    nearbyImg3,
+    carImg6,
+    carImg4,
+    carImg5,
   ];
 
-  const nearbyCars = [
-    {
-      id: 3, // BMW 3 Series - matches CarDetailsPage
-      name: "BMW 3 Series",
-      rating: "5.0",
-      location: "New York",
-      seats: "5 Seats",
-      price: "Rs. 150/Day",
-      image: nearbyImg1,
-    },
-    {
-      id: 4, // Lamborghini Aventador - matches CarDetailsPage
-      name: "Lamborghini Aventador",
-      rating: "4.9",
-      location: "New York",
-      seats: "2 Seats",
-      price: "Rs. 250/Day",
-      image: nearbyImg2,
-    },
-    {
-      id: 5, // BMW M2 GTS - matches CarDetailsPage
-      name: "BMW M2 GTS",
-      rating: "5.0",
-      location: "Los Angeles",
-      seats: "5 Seats",
-      price: "Rs. 150/Day",
-      image: nearbyImg3,
-    },
-  ];
+  // Transform car data
+  const transformCarData = (car, index = 0) => {
+    let carImage = fallbackCarImages[index % fallbackCarImages.length];
+
+    if (car.images && car.images.length > 0) {
+      const primaryImage = car.images.find((img) => img.isPrimary);
+      if (primaryImage) {
+        const imgUrl =
+          typeof primaryImage === "string"
+            ? primaryImage
+            : primaryImage.url || primaryImage.path || primaryImage;
+        if (typeof imgUrl === "string") {
+          carImage = imgUrl.startsWith("http")
+            ? imgUrl
+            : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
+        }
+      } else if (car.images[0]) {
+        const imgUrl =
+          typeof car.images[0] === "string"
+            ? car.images[0]
+            : car.images[0].url || car.images[0].path || car.images[0];
+        if (typeof imgUrl === "string") {
+          carImage = imgUrl.startsWith("http")
+            ? imgUrl
+            : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
+        }
+      }
+    } else if (car.image) {
+      const imgUrl =
+        typeof car.image === "string"
+          ? car.image
+          : car.image.url || car.image.path || car.image;
+      if (typeof imgUrl === "string") {
+        carImage = imgUrl.startsWith("http")
+          ? imgUrl
+          : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
+      }
+    }
+
+    // Normalize fuel type
+    const fuelType = car.fuelType || "";
+    const normalizedFuelType =
+      fuelType.toLowerCase() === "petrol"
+        ? "Petrol"
+        : fuelType.toLowerCase() === "diesel"
+        ? "Diesel"
+        : fuelType.toLowerCase() === "electric"
+        ? "Electric"
+        : fuelType.toLowerCase() === "hybrid"
+        ? "Hybrid"
+        : fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
+
+    // Normalize transmission
+    const transmission = car.transmission || "";
+    const normalizedTransmission =
+      transmission.toLowerCase() === "automatic"
+        ? "Automatic"
+        : transmission.toLowerCase() === "manual"
+        ? "Manual"
+        : transmission.toLowerCase() === "cvt"
+        ? "CVT"
+        : transmission.charAt(0).toUpperCase() +
+          transmission.slice(1).toLowerCase();
+
+    return {
+      id: car._id || car.id,
+      name: `${car.brand} ${car.model}`,
+      brand: car.brand || "",
+      model: car.model || "",
+      rating: car.averageRating ? car.averageRating.toFixed(1) : "5.0",
+      location:
+        car.location?.city ||
+        car.location?.address ||
+        car.location ||
+        "Location",
+      seats: `${car.seatingCapacity || car.seats || 4} Seats`,
+      seatingCapacity: car.seatingCapacity || car.seats || 4,
+      price: `Rs. ${car.pricePerDay || 0}/Day`,
+      image: carImage,
+      pricePerDay: car.pricePerDay || 0,
+      // Filter-related properties
+      fuelType: normalizedFuelType,
+      transmission: normalizedTransmission,
+      color: car.color || "",
+      carType: car.carType || car.bodyType || "",
+      features: car.features || [],
+    };
+  };
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(false);
@@ -101,6 +289,326 @@ const ModuleTestPage = () => {
   const searchInputRef = useRef(null);
   const [favoriteStates, setFavoriteStates] = useState({});
   const [animatingStates, setAnimatingStates] = useState({});
+
+  // Fetch dynamic data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch categories (car types) with counts
+        const carTypesResponse = await carService.getTopCarTypes({ limit: 10 });
+        if (carTypesResponse.success && carTypesResponse.data?.carTypes) {
+          const carTypes = carTypesResponse.data.carTypes.map(
+            (type, index) => ({
+              id: index + 1,
+              label: type.name || type.carType || type,
+              count: type.count || 0,
+              image:
+                categoryImages[type.name || type.carType || type] ||
+                categoryImages.Sports,
+            })
+          );
+          setCategories(carTypes);
+        }
+
+        // Fetch top brands
+        const brandsResponse = await carService.getTopBrands({ limit: 10 });
+        if (brandsResponse.success && brandsResponse.data?.brands) {
+          const brandsData = brandsResponse.data.brands.map((brand, index) => {
+            const brandName = brand.name || brand.brand || brand;
+            const normalizedName = brandName.trim();
+            let brandLogo = null;
+
+            // First, check if API returned a logo for this brand
+            if (brand.logo || brand.brandLogo || brand.image) {
+              const apiLogo = brand.logo || brand.brandLogo || brand.image;
+              if (typeof apiLogo === "string" && apiLogo) {
+                brandLogo = apiLogo.startsWith("http")
+                  ? apiLogo
+                  : `${import.meta.env.VITE_API_BASE_URL || ""}${apiLogo}`;
+              }
+            }
+
+            // If no API logo, map specific brand/model names to correct logos
+            if (!brandLogo) {
+              // Indian brands/models
+              if (
+                normalizedName.toLowerCase().includes("alto") ||
+                normalizedName.toLowerCase().includes("800")
+              ) {
+                brandLogo = logo2; // Maruti/Toyota logo for Alto
+              } else if (
+                normalizedName.toLowerCase().includes("xuv") ||
+                normalizedName.toLowerCase().includes("500")
+              ) {
+                brandLogo = logo9; // Mahindra logo for XUV
+              } else if (
+                normalizedName.toLowerCase().includes("swift") ||
+                normalizedName.toLowerCase().includes("dzire")
+              ) {
+                brandLogo = logo2; // Maruti logo for Swift/Dzire
+              } else if (normalizedName.toLowerCase().includes("hyundai")) {
+                brandLogo = logo6; // Hyundai logo (different from KIA)
+              } else if (normalizedName.toLowerCase().includes("kia")) {
+                brandLogo = logo1; // KIA logo
+              } else if (normalizedName.toLowerCase().includes("volvo")) {
+                brandLogo = logo7; // Volvo logo
+              } else if (normalizedName.toLowerCase().includes("toyota")) {
+                brandLogo = logo2; // Toyota logo
+              } else if (normalizedName.toLowerCase().includes("mahindra")) {
+                brandLogo = logo9; // Mahindra logo
+              } else if (normalizedName.toLowerCase().includes("maruti")) {
+                brandLogo = logo2; // Maruti logo
+              } else if (normalizedName.toLowerCase().includes("tata")) {
+                brandLogo = logo3; // Tata logo
+              } else if (normalizedName.toLowerCase().includes("honda")) {
+                brandLogo = logo8; // Honda logo
+              } else if (normalizedName.toLowerCase().includes("nissan")) {
+                brandLogo = logo11; // Nissan logo
+              } else if (normalizedName.toLowerCase().includes("ford")) {
+                brandLogo = logo4; // Ford logo
+              } else if (normalizedName.toLowerCase().includes("chevrolet")) {
+                brandLogo = logo5; // Chevrolet logo
+              } else if (normalizedName.toLowerCase().includes("ferrari")) {
+                brandLogo = logo10; // Ferrari logo
+              } else if (normalizedName.toLowerCase().includes("lamborghini")) {
+                brandLogo = logo5; // Lamborghini logo
+              } else if (normalizedName.toLowerCase().includes("bmw")) {
+                brandLogo = logo11; // BMW logo
+              } else if (normalizedName.toLowerCase().includes("audi")) {
+                brandLogo = logo10; // Audi logo
+              } else if (normalizedName.toLowerCase().includes("tesla")) {
+                brandLogo = logo4; // Tesla logo
+              } else {
+                // Try exact match from brandLogos map
+                brandLogo = brandLogos[normalizedName];
+
+                // Try case-insensitive match
+                if (!brandLogo) {
+                  const brandKey = Object.keys(brandLogos).find(
+                    (key) => key.toLowerCase() === normalizedName.toLowerCase()
+                  );
+                  brandLogo = brandKey ? brandLogos[brandKey] : null;
+                }
+
+                // Use fallback brand logo if still not found
+                if (!brandLogo) {
+                  brandLogo =
+                    fallbackBrandLogos[index % fallbackBrandLogos.length];
+                }
+              }
+            }
+
+            return {
+              id: index + 1,
+              name: brandName,
+              logo: brandLogo,
+              count: brand.count || 0,
+            };
+          });
+          setBrands(brandsData);
+        }
+
+        // Fetch nearby cars (using user's coordinates if available)
+        const nearbyParams = {
+          limit: 3,
+        };
+        if (coordinates && coordinates.lat && coordinates.lng) {
+          nearbyParams.latitude = coordinates.lat;
+          nearbyParams.longitude = coordinates.lng;
+        }
+        const nearbyResponse = await carService.getNearbyCars(nearbyParams);
+        if (nearbyResponse.success && nearbyResponse.data?.cars) {
+          const nearbyCarsData = nearbyResponse.data.cars
+            .slice(0, 3)
+            .map((car, index) => transformCarData(car, index));
+          setNearbyCars(nearbyCarsData);
+        }
+
+        // Fetch best cars (latest/featured cars)
+        const bestCarsResponse = await carService.getCars({
+          limit: 2,
+          sortBy: "averageRating",
+          sortOrder: "desc",
+          status: "active",
+          isAvailable: true,
+        });
+        if (bestCarsResponse.success && bestCarsResponse.data?.cars) {
+          const bestCarsData = bestCarsResponse.data.cars
+            .slice(0, 2)
+            .map((car, index) => transformCarData(car, index));
+          setBestCars(bestCarsData);
+
+          // Set featured car (first one)
+          if (bestCarsResponse.data.cars.length > 0) {
+            setFeaturedCar(transformCarData(bestCarsResponse.data.cars[0], 0));
+          }
+        }
+
+        // Fetch all cars to extract filter options
+        const allCarsResponse = await carService.getCars({
+          limit: 100, // Get more cars to extract filter options
+          status: "active",
+          isAvailable: true,
+        });
+
+        if (allCarsResponse.success && allCarsResponse.data?.pagination) {
+          setTotalCarsCount(allCarsResponse.data.pagination.total || 0);
+        }
+
+        // Extract filter options from all cars and store cars for filtering
+        if (allCarsResponse.success && allCarsResponse.data?.cars) {
+          const cars = allCarsResponse.data.cars;
+
+          // Store all cars for filtering
+          const transformedAllCars = cars.map((car, index) =>
+            transformCarData(car, index)
+          );
+          setAllCars(transformedAllCars);
+
+          // Extract unique brands
+          const uniqueBrands = Array.from(
+            new Set(cars.map((car) => car.brand).filter(Boolean))
+          ).sort();
+
+          // Extract unique fuel types
+          const uniqueFuelTypes = Array.from(
+            new Set(
+              cars
+                .map((car) => {
+                  const fuel = car.fuelType || "";
+                  if (fuel.toLowerCase() === "petrol") return "Petrol";
+                  if (fuel.toLowerCase() === "diesel") return "Diesel";
+                  if (fuel.toLowerCase() === "electric") return "Electric";
+                  if (fuel.toLowerCase() === "hybrid") return "Hybrid";
+                  return (
+                    fuel.charAt(0).toUpperCase() + fuel.slice(1).toLowerCase()
+                  );
+                })
+                .filter(Boolean)
+            )
+          ).sort();
+
+          // Extract unique transmissions
+          const uniqueTransmissions = Array.from(
+            new Set(
+              cars
+                .map((car) => {
+                  const trans = car.transmission || "";
+                  if (trans.toLowerCase() === "automatic") return "Automatic";
+                  if (trans.toLowerCase() === "manual") return "Manual";
+                  if (trans.toLowerCase() === "cvt") return "CVT";
+                  return (
+                    trans.charAt(0).toUpperCase() + trans.slice(1).toLowerCase()
+                  );
+                })
+                .filter(Boolean)
+            )
+          ).sort();
+
+          // Extract unique colors
+          const uniqueColors = Array.from(
+            new Set(
+              cars
+                .map((car) => {
+                  const color = car.color || "";
+                  return (
+                    color.charAt(0).toUpperCase() + color.slice(1).toLowerCase()
+                  );
+                })
+                .filter(Boolean)
+            )
+          ).sort();
+
+          // Extract unique car types
+          const uniqueCarTypes = Array.from(
+            new Set(
+              cars
+                .map((car) => {
+                  const type = car.carType || car.bodyType || "";
+                  return (
+                    type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
+                  );
+                })
+                .filter(Boolean)
+            )
+          ).sort();
+
+          // Extract all unique features
+          const allFeatures = cars
+            .flatMap((car) => car.features || [])
+            .filter(Boolean);
+          const uniqueFeatures = Array.from(new Set(allFeatures)).sort();
+
+          // Extract unique seat counts
+          const uniqueSeats = Array.from(
+            new Set(
+              cars
+                .map((car) => car.seatingCapacity || car.seats)
+                .filter(Boolean)
+            )
+          )
+            .map((seats) => String(seats))
+            .sort((a, b) => parseInt(a) - parseInt(b));
+
+          // Extract unique locations
+          const uniqueLocations = Array.from(
+            new Set(
+              cars
+                .map((car) => {
+                  const loc =
+                    car.location?.city ||
+                    car.location?.address ||
+                    car.location ||
+                    "";
+                  return loc.trim();
+                })
+                .filter(Boolean)
+            )
+          ).sort();
+
+          // Extract unique ratings and create rating options
+          const allRatings = cars
+            .map((car) => {
+              const rating = car.averageRating || car.rating || 0;
+              return parseFloat(rating) || 0;
+            })
+            .filter((rating) => rating > 0);
+
+          // Create rating filter options based on available ratings
+          const ratingOptions = [];
+          if (allRatings.length > 0) {
+            const maxRating = Math.max(...allRatings);
+            const minRating = Math.min(...allRatings);
+            if (maxRating >= 4.0) ratingOptions.push("4.0+");
+            if (maxRating >= 4.5) ratingOptions.push("4.5+");
+            if (maxRating >= 5.0) ratingOptions.push("5.0");
+          }
+
+          // Set filter options
+          setFilterOptions({
+            brands: uniqueBrands,
+            fuelTypes: uniqueFuelTypes,
+            transmissions: uniqueTransmissions,
+            colors: uniqueColors,
+            carTypes: uniqueCarTypes,
+            features: uniqueFeatures,
+            seats: uniqueSeats,
+            ratings: ratingOptions,
+            locations: uniqueLocations,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        // Keep default/empty data on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [coordinates]);
 
   // Auto focus input when search becomes active
   useEffect(() => {
@@ -126,9 +634,121 @@ const ModuleTestPage = () => {
   // Handler for when filters are applied
   const handleApplyFilters = (filters) => {
     console.log("Applied Filters:", filters);
-    // You can add logic here to filter the cars based on the applied filters
+    setAppliedFilters(filters);
     setIsFilterOpen(false);
   };
+
+  // Filter cars based on applied filters
+  const filteredCars = useMemo(() => {
+    let filtered = [...allCars];
+
+    // Filter by brand
+    if (appliedFilters.brand) {
+      filtered = filtered.filter(
+        (car) => car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
+      );
+    }
+
+    // Filter by model
+    if (appliedFilters.model) {
+      const modelQuery = appliedFilters.model.toLowerCase().trim();
+      filtered = filtered.filter(
+        (car) =>
+          car.model?.toLowerCase().includes(modelQuery) ||
+          car.name?.toLowerCase().includes(modelQuery)
+      );
+    }
+
+    // Filter by fuel type
+    if (appliedFilters.fuelType) {
+      filtered = filtered.filter((car) => {
+        const carFuelType = car.fuelType || "";
+        return (
+          carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase()
+        );
+      });
+    }
+
+    // Filter by transmission
+    if (appliedFilters.transmission) {
+      filtered = filtered.filter((car) => {
+        const carTransmission = car.transmission || "";
+        return (
+          carTransmission.toLowerCase() ===
+          appliedFilters.transmission.toLowerCase()
+        );
+      });
+    }
+
+    // Filter by car type
+    if (appliedFilters.carType) {
+      filtered = filtered.filter((car) => {
+        const carType = car.carType || "";
+        return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
+      });
+    }
+
+    // Filter by color
+    if (appliedFilters.color) {
+      filtered = filtered.filter((car) => {
+        const carColor = car.color || "";
+        return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
+      });
+    }
+
+    // Filter by seats
+    if (appliedFilters.seats) {
+      filtered = filtered.filter((car) => {
+        const carSeats = String(car.seatingCapacity || "");
+        return carSeats === appliedFilters.seats;
+      });
+    }
+
+    // Filter by features (all selected features must be present)
+    if (appliedFilters.features && appliedFilters.features.length > 0) {
+      filtered = filtered.filter((car) => {
+        const carFeatures = car.features || [];
+        return appliedFilters.features.every((feature) =>
+          carFeatures.some(
+            (carFeature) => carFeature.toLowerCase() === feature.toLowerCase()
+          )
+        );
+      });
+    }
+
+    // Filter by price range
+    if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
+      filtered = filtered.filter((car) => {
+        const carPrice = parseFloat(
+          car.price?.replace(/[^0-9.]/g, "") || car.pricePerDay || 0
+        );
+        const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
+        const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
+        return carPrice >= minPrice && carPrice <= maxPrice;
+      });
+    }
+
+    // Filter by rating
+    if (appliedFilters.rating) {
+      filtered = filtered.filter((car) => {
+        const carRating = parseFloat(car.rating) || 0;
+        const minRating =
+          parseFloat(appliedFilters.rating.replace("+", "")) || 0;
+        return carRating >= minRating;
+      });
+    }
+
+    // Filter by location
+    if (appliedFilters.location) {
+      filtered = filtered.filter((car) => {
+        return car.location
+          ?.toLowerCase()
+          .includes(appliedFilters.location.toLowerCase());
+      });
+    }
+
+    return filtered;
+  }, [allCars, appliedFilters]);
 
   return (
     <div
@@ -182,8 +802,8 @@ const ModuleTestPage = () => {
                   />
                 </svg>
               </span>
-              <span className="text-[10px] leading-tight whitespace-normal break-words max-w-[160px] text-left">
-                Los Angeles, California, U.S.
+              <span className="truncate max-w-[140px]">
+                {currentLocation || "Getting location..."}
               </span>
             </span>
             <svg
@@ -219,10 +839,10 @@ const ModuleTestPage = () => {
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
               onClick={() => setIsSearchActive(true)}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.02,
                 borderColor: "rgba(255,255,255,0.2)",
-                transition: { duration: 0.2 }
+                transition: { duration: 0.2 },
               }}
               whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, x: -20 }}
@@ -234,13 +854,13 @@ const ModuleTestPage = () => {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
-                animate={{ 
+                animate={{
                   scale: [1, 1.1, 1],
                 }}
-                transition={{ 
+                transition={{
                   duration: 2,
                   repeat: Infinity,
-                  repeatDelay: 1
+                  repeatDelay: 1,
                 }}
               >
                 <path
@@ -379,11 +999,11 @@ const ModuleTestPage = () => {
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* Floating white card container like reference */}
-        <motion.div 
+        <motion.div
           className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         >
           {/* FILTER PILLS ROW */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
@@ -471,7 +1091,7 @@ const ModuleTestPage = () => {
           </div>
 
           {/* CATEGORY IMAGE CARDS */}
-          <motion.div 
+          <motion.div
             className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-lg border border-gray-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -483,10 +1103,12 @@ const ModuleTestPage = () => {
                   key={cat.id}
                   type="button"
                   className="flex-shrink-0 w-24"
-                  onClick={() => navigate(`/category/${cat.label.toLowerCase()}`)}
+                  onClick={() =>
+                    navigate(`/category/${cat.label.toLowerCase()}`)
+                  }
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.2 + (index * 0.05) }}
+                  transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -511,7 +1133,7 @@ const ModuleTestPage = () => {
           </motion.div>
 
           {/* TOP BRANDS SECTION (between categories and meta row) */}
-          <motion.div 
+          <motion.div
             className="mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -568,7 +1190,9 @@ const ModuleTestPage = () => {
 
           {/* META ROW */}
           <div className="flex items-center justify-between mt-1 px-1">
-            <span className="text-xs text-gray-500">165 available</span>
+            <span className="text-xs text-gray-500">
+              {totalCarsCount || 0} available
+            </span>
             <button
               type="button"
               className="flex items-center gap-1 text-xs text-gray-600"
@@ -591,54 +1215,61 @@ const ModuleTestPage = () => {
           </div>
 
           {/* FEATURED CAR CARD */}
-          <motion.div 
-            className="px-1"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-          >
-            <motion.div 
-              className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
-              whileHover={{ scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
-              transition={{ duration: 0.3 }}
-              onClick={() => navigate("/car-details/audi-r8")}
+          {featuredCar && (
+            <motion.div
+              className="px-1"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
             >
-              <div className="w-full h-48 bg-gray-100 overflow-hidden">
-                <motion.img
-                  src={carImg1}
-                  alt="Audi R8 Performance"
-                  className="w-full h-full object-cover"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ duration: 0.4 }}
-                />
-              </div>
-              <div className="px-4 pt-3 pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900">
-                      Audi R8 Performance
-                    </h3>
-                    <p className="mt-1 text-xs font-semibold text-gray-700">$800 / day</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
-                      style={{ backgroundColor: colors.backgroundTertiary }}
-                    >
-                      <svg
-                        className="w-3 h-3 text-yellow-400"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
+              <motion.div
+                className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                }}
+                transition={{ duration: 0.3 }}
+                onClick={() => navigate(`/car-details/${featuredCar.id}`)}
+              >
+                <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                  <motion.img
+                    src={featuredCar.image}
+                    alt={featuredCar.name}
+                    className="w-full h-full object-cover"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ duration: 0.4 }}
+                  />
+                </div>
+                <div className="px-4 pt-3 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        {featuredCar.name}
+                      </h3>
+                      <p className="mt-1 text-xs font-semibold text-gray-700">
+                        {featuredCar.price}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
+                        style={{ backgroundColor: colors.backgroundTertiary }}
                       >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                      <span>5.0</span>
-                    </span>
+                        <svg
+                          className="w-3 h-3 text-yellow-400"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        <span>{featuredCar.rating}</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
+          )}
 
           {/* BANNER SECTION - Between Featured Car and Best Cars */}
           <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
@@ -652,21 +1283,21 @@ const ModuleTestPage = () => {
               }}
               pagination={{
                 clickable: true,
-                bulletClass: 'swiper-pagination-bullet-custom',
-                bulletActiveClass: 'swiper-pagination-bullet-active-custom',
-                el: '.mobile-banner-pagination',
+                bulletClass: "swiper-pagination-bullet-custom",
+                bulletActiveClass: "swiper-pagination-bullet-active-custom",
+                el: ".mobile-banner-pagination",
               }}
               className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
-              style={{ background: 'rgb(41, 70, 87)' }}
+              style={{ background: "rgb(41, 70, 87)" }}
             >
               {[
-                { image: bannerCar1, alt: 'Car 1' },
-                { image: bannerCar2, alt: 'Car 2' },
-                { image: bannerCar3, alt: 'Car 3' },
-                { image: bannerCar4, alt: 'Car 4' },
+                { image: bannerCar1, alt: "Car 1" },
+                { image: bannerCar2, alt: "Car 2" },
+                { image: bannerCar3, alt: "Car 3" },
+                { image: bannerCar4, alt: "Car 4" },
               ].map((car, index) => (
                 <SwiperSlide key={index} className="!w-full">
-                  <div 
+                  <div
                     className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
                     onClick={() => navigate("/search")}
                   >
@@ -677,7 +1308,7 @@ const ModuleTestPage = () => {
                       <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
                         Experience Seamless Car Rentals.
                       </p>
-                      <button 
+                      <button
                         className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -693,7 +1324,11 @@ const ModuleTestPage = () => {
                         className="h-full max-h-full w-auto object-contain"
                         draggable="false"
                         src={car.image}
-                        style={{ maxWidth: '100%', objectFit: 'contain', transform: 'translateX(15px)' }}
+                        style={{
+                          maxWidth: "100%",
+                          objectFit: "contain",
+                          transform: "translateX(15px)",
+                        }}
                       />
                     </div>
                   </div>
@@ -722,16 +1357,14 @@ const ModuleTestPage = () => {
           </div>
 
           {/* BEST CARS GRID (above Nearby) */}
-          <motion.div 
+          <motion.div
             className="mt-4 px-1"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.25 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-black">
-                Best Cars
-              </h2>
+              <h2 className="text-xl font-bold text-black">Best Cars</h2>
               <motion.button
                 type="button"
                 className="text-sm text-gray-600 font-semibold"
@@ -744,106 +1377,100 @@ const ModuleTestPage = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {/* Ferrari-FF card */}
-              <motion.div
-                className="w-full rounded-xl overflow-hidden cursor-pointer"
-                style={{
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e5e7eb",
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-                }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
-                onClick={() => navigate("/car-details/1")}
-              >
-                <div
-                  className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
-                  style={{ backgroundColor: "#f0f0f0" }}
+              {bestCars.map((car, index) => (
+                <motion.div
+                  key={car.id}
+                  className="w-full rounded-xl overflow-hidden cursor-pointer"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
+                  whileHover={{
+                    scale: 1.03,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  }}
+                  onClick={() => navigate(`/car-details/${car.id}`)}
                 >
-                  <img
-                    alt="Ferrari-FF"
-                    src={carImg1}
-                    className="w-full h-full object-contain scale-125"
-                    style={{ opacity: 1 }}
-                  />
-                  <motion.button 
-                    className="absolute -top-1 left-1.5 md:left-2 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFavoriteStates(prev => ({ ...prev, ferrari: !prev.ferrari }));
-                      setAnimatingStates(prev => ({ ...prev, ferrari: true }));
-                      setTimeout(() => {
-                        setAnimatingStates(prev => ({ ...prev, ferrari: false }));
-                      }, 300);
-                    }}
-                    animate={animatingStates.ferrari ? {
-                      scale: [1, 1.3, 1],
-                    } : {}}
-                    transition={{
-                      duration: 0.3,
-                      ease: "easeOut"
-                    }}
-                    whileTap={{ scale: 0.95 }}
+                  <div
+                    className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
+                    style={{ backgroundColor: "#f0f0f0" }}
                   >
-                    <svg
-                      className={`w-5 h-5 md:w-6 md:h-6 ${favoriteStates.ferrari ? 'text-red-500' : 'text-white'}`}
-                      fill={favoriteStates.ferrari ? 'currentColor' : 'none'}
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
+                    <img
+                      alt={car.name}
+                      src={car.image}
+                      className="w-full h-full object-contain scale-125"
+                      style={{ opacity: 1 }}
+                    />
+                    <motion.button
+                      className="absolute -top-1 left-1.5 md:left-2 z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFavoriteStates((prev) => ({
+                          ...prev,
+                          [car.id]: !prev[car.id],
+                        }));
+                        setAnimatingStates((prev) => ({
+                          ...prev,
+                          [car.id]: true,
+                        }));
+                        setTimeout(() => {
+                          setAnimatingStates((prev) => ({
+                            ...prev,
+                            [car.id]: false,
+                          }));
+                        }, 300);
+                      }}
+                      animate={
+                        animatingStates[car.id]
+                          ? {
+                              scale: [1, 1.3, 1],
+                            }
+                          : {}
+                      }
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut",
+                      }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  </motion.button>
-                </div>
-                <div className="p-2 md:p-3 lg:p-4">
-                  <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
-                    Ferrari-FF
-                  </h3>
-                  <div className="flex items-center gap-1 mb-1 md:mb-1.5">
-                    <span className="text-xs md:text-sm font-semibold text-black">
-                      5.0
-                    </span>
-                    <svg
-                      className="w-3.5 h-3.5 md:w-4 md:h-4"
-                      fill="#FF6B35"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex items-center gap-1 mb-1.5 md:mb-2">
-                    <svg
-                      className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <svg
+                        className={`w-5 h-5 md:w-6 md:h-6 ${
+                          favoriteStates[car.id] ? "text-red-500" : "text-white"
+                        }`}
+                        fill={favoriteStates[car.id] ? "currentColor" : "none"}
+                        stroke="currentColor"
                         strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    <span className="text-[10px] md:text-xs text-gray-500">
-                      Washington DC
-                    </span>
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                    </motion.button>
                   </div>
-                  <div className="flex items-center justify-between mt-1.5 md:mt-2">
-                    <div className="flex items-center gap-1">
+                  <div className="p-2 md:p-3 lg:p-4">
+                    <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
+                      {car.name}
+                    </h3>
+                    <div className="flex items-center gap-1 mb-1 md:mb-1.5">
+                      <span className="text-xs md:text-sm font-semibold text-black">
+                        {car.rating}
+                      </span>
+                      <svg
+                        className="w-3.5 h-3.5 md:w-4 md:h-4"
+                        fill="#FF6B35"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex items-center gap-1 mb-1.5 md:mb-2">
                       <svg
                         className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
                         fill="none"
@@ -854,164 +1481,58 @@ const ModuleTestPage = () => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
                         />
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
                       <span className="text-[10px] md:text-xs text-gray-500">
-                        4 Seats
+                        {car.location}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] md:text-xs text-gray-500">
-                        Rs. 200/Day
-                      </span>
+                    <div className="flex items-center justify-between mt-1.5 md:mt-2">
+                      <div className="flex items-center gap-1">
+                        <svg
+                          className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
+                          />
+                        </svg>
+                        <span className="text-[10px] md:text-xs text-gray-500">
+                          {car.seats}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] md:text-xs text-gray-500">
+                          {car.price}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-
-              {/* Tesla Model S card */}
-              <motion.div
-                className="w-full rounded-xl overflow-hidden cursor-pointer"
-                style={{
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e5e7eb",
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-                }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.35 }}
-                whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
-                onClick={() => navigate("/car-details/2")}
-              >
-                <div
-                  className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
-                  style={{ backgroundColor: "#f0f0f0" }}
-                >
-                  <img
-                    alt="Tesla Model S"
-                    src={carImg6}
-                    className="w-full h-full object-contain scale-125"
-                    style={{ opacity: 1 }}
-                  />
-                  <motion.button 
-                    className="absolute -top-1 left-1.5 md:left-2 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFavoriteStates(prev => ({ ...prev, tesla: !prev.tesla }));
-                      setAnimatingStates(prev => ({ ...prev, tesla: true }));
-                      setTimeout(() => {
-                        setAnimatingStates(prev => ({ ...prev, tesla: false }));
-                      }, 300);
-                    }}
-                    animate={animatingStates.tesla ? {
-                      scale: [1, 1.3, 1],
-                    } : {}}
-                    transition={{
-                      duration: 0.3,
-                      ease: "easeOut"
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <svg
-                      className={`w-5 h-5 md:w-6 md:h-6 ${favoriteStates.tesla ? 'text-red-500' : 'text-white'}`}
-                      fill={favoriteStates.tesla ? 'currentColor' : 'none'}
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  </motion.button>
-                </div>
-                <div className="p-2 md:p-3 lg:p-4">
-                  <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
-                    Tesla Model S
-                  </h3>
-                  <div className="flex items-center gap-1 mb-1 md:mb-1.5">
-                    <span className="text-xs md:text-sm font-semibold text-black">
-                      5.0
-                    </span>
-                    <svg
-                      className="w-3.5 h-3.5 md:w-4 md:h-4"
-                      fill="#FF6B35"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex items-center gap-1 mb-1.5 md:mb-2">
-                    <svg
-                      className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    <span className="text-[10px] md:text-xs text-gray-500">
-                      Chicago, USA
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1.5 md:mt-2">
-                    <div className="flex items-center gap-1">
-                      <svg
-                        className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
-                        />
-                      </svg>
-                      <span className="text-[10px] md:text-xs text-gray-500">
-                        5 Seats
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] md:text-xs text-gray-500">
-                        Rs. 100/Day
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
 
           {/* NEARBY CARS SECTION (horizontal cards) */}
-          <motion.div 
+          <motion.div
             className="mt-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1031,21 +1552,24 @@ const ModuleTestPage = () => {
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
               {nearbyCars.map((car, index) => (
-                <motion.div 
-                  key={car.id} 
+                <motion.div
+                  key={car.id}
                   className="min-w-[280px] flex-shrink-0"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4 + (index * 0.1) }}
+                  transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
                 >
                   <motion.div
                     className="w-full rounded-xl overflow-hidden cursor-pointer"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1px solid #e5e7eb",
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                     }}
-                    whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                    whileHover={{
+                      scale: 1.02,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    }}
                     onClick={() => navigate(`/car-details/${car.id}`)}
                   >
                     <div
@@ -1057,28 +1581,47 @@ const ModuleTestPage = () => {
                         alt={car.name}
                         className="w-full h-full object-contain scale-125"
                       />
-                      <motion.button 
+                      <motion.button
                         className="absolute -top-1 left-1.5 z-10"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFavoriteStates(prev => ({ ...prev, [car.id]: !prev[car.id] }));
-                          setAnimatingStates(prev => ({ ...prev, [car.id]: true }));
+                          setFavoriteStates((prev) => ({
+                            ...prev,
+                            [car.id]: !prev[car.id],
+                          }));
+                          setAnimatingStates((prev) => ({
+                            ...prev,
+                            [car.id]: true,
+                          }));
                           setTimeout(() => {
-                            setAnimatingStates(prev => ({ ...prev, [car.id]: false }));
+                            setAnimatingStates((prev) => ({
+                              ...prev,
+                              [car.id]: false,
+                            }));
                           }, 300);
                         }}
-                        animate={animatingStates[car.id] ? {
-                          scale: [1, 1.3, 1],
-                        } : {}}
+                        animate={
+                          animatingStates[car.id]
+                            ? {
+                                scale: [1, 1.3, 1],
+                              }
+                            : {}
+                        }
                         transition={{
                           duration: 0.3,
-                          ease: "easeOut"
+                          ease: "easeOut",
                         }}
                         whileTap={{ scale: 0.95 }}
                       >
                         <svg
-                          className={`w-5 h-5 ${favoriteStates[car.id] ? 'text-red-500' : 'text-white'}`}
-                          fill={favoriteStates[car.id] ? 'currentColor' : 'none'}
+                          className={`w-5 h-5 ${
+                            favoriteStates[car.id]
+                              ? "text-red-500"
+                              : "text-white"
+                          }`}
+                          fill={
+                            favoriteStates[car.id] ? "currentColor" : "none"
+                          }
                           stroke="currentColor"
                           strokeWidth={2}
                           viewBox="0 0 24 24"
@@ -1344,6 +1887,15 @@ const ModuleTestPage = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApplyFilters={handleApplyFilters}
+        brands={filterOptions.brands}
+        fuelTypes={filterOptions.fuelTypes}
+        transmissions={filterOptions.transmissions}
+        colorsList={filterOptions.colors}
+        carTypes={filterOptions.carTypes}
+        featuresList={filterOptions.features}
+        seatOptions={filterOptions.seats}
+        ratingOptions={filterOptions.ratings}
+        locations={filterOptions.locations}
       />
 
       {/* Time picker popup shown above calendar */}

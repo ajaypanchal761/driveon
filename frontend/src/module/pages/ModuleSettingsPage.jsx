@@ -240,7 +240,7 @@ const ModuleSettingsPage = () => {
       style={{ backgroundColor: colors.backgroundSecondary }}
     >
       {/* Header */}
-      <ProfileHeader title="Settings" />
+      <ProfileHeader title="Settings" showBack />
 
       {/* Web Container - Centered with max-width */}
       <div className="max-w-4xl mx-auto">

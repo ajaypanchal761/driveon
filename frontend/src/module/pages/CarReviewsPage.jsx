@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import CarDetailsHeader from '../components/layout/CarDetailsHeader';
 import { colors } from '../theme/colors';
 import { useAppSelector } from '../../hooks/redux';
+import reviewService from '../../services/review.service';
+import carService from '../../services/car.service';
+import toastUtils from '../../config/toast';
 
 // Import car images - matching CarDetailsPage
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -19,279 +22,168 @@ import carImg8 from '../../assets/car_img8.png';
 const CarReviewsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
-  // Mock car data - matching CarDetailsPage exactly
-  const getCarData = () => {
-    const cars = {
-      '1': {
-        id: 1,
-        brand: 'Ferrari',
-        model: 'FF',
-        name: 'Ferrari-FF',
-        image: carImg1,
-        rating: 5.0,
-        reviewsCount: 100,
-      },
-      '2': {
-        id: 2,
-        brand: 'Tesla',
-        model: 'Model S',
-        name: 'Tesla Model S',
-        image: carImg6, // Matching CarDetailsPage
-        rating: 5.0,
-        reviewsCount: 125,
-      },
-      '3': {
-        id: 3,
-        brand: 'BMW',
-        model: '3 Series',
-        name: 'BMW 3 Series',
-        image: carImg8, // Matching CarDetailsPage
-        rating: 5.0,
-        reviewsCount: 125,
-      },
-      '4': {
-        id: 4,
-        brand: 'Lamborghini',
-        model: 'Aventador',
-        name: 'Lamborghini Aventador',
-        image: carImg4,
-        rating: 4.9,
-        reviewsCount: 80,
-      },
-      '5': {
-        id: 5,
-        brand: 'BMW',
-        model: 'M2 GTS',
-        name: 'BMW M2 GTS',
-        image: carImg5,
-        rating: 5.0,
-        reviewsCount: 95,
-      },
+  // Get initial car from navigation state if available
+  const initialCar = location.state?.car || null;
+  
+  // Initial car data - use from state if available, otherwise fallback
+  const getInitialCarData = () => {
+    if (initialCar) {
+      return {
+        id: initialCar.id || initialCar._id || id,
+        brand: initialCar.brand || '',
+        model: initialCar.model || '',
+        name: initialCar.name || `${initialCar.brand || ''} ${initialCar.model || ''}`.trim() || '',
+        image: initialCar.image || initialCar.images?.[0] || carImg1,
+        rating: initialCar.rating || initialCar.averageRating || 0,
+        reviewsCount: initialCar.reviewsCount || 0,
+      };
+    }
+    return {
+    id,
+    brand: '',
+    model: '',
+    name: '',
+    image: carImg1,
+    rating: 0,
+    reviewsCount: 0,
     };
-    return cars[id] || cars['1'];
   };
 
-  const car = getCarData();
+  const [car, setCar] = useState(getInitialCarData());
+  // Only show loader if we don't have initial car from state
+  const [carLoading, setCarLoading] = useState(!initialCar);
 
-  // Mock reviews data with detailed information based on document.txt
-  // Reviews include: User rates car, trip experience, car owner ratings, date, verified status
-  const getAllReviews = () => {
-    const reviewsData = {
-      '1': [
-        {
-          id: 1,
-          name: 'Mr. Jack',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 5,
-          ownerRating: 5,
-          comment: 'The rental car was clean, reliable, and the service was quick and efficient. Overall, the experience was hassle-free and enjoyable.',
-          date: new Date().toISOString().split('T')[0], // Today
-          verified: true,
-        },
-        {
-          id: 2,
-          name: 'Robert',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 4,
-          ownerRating: 5,
-          comment: 'The rental car was clean, reliable, and the service was quick and efficient. Overall, the experience was hassle-free and enjoyable.',
-          date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Yesterday
-          verified: true,
-        },
-        {
-          id: 3,
-          name: 'Sarah Johnson',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '4.5',
-          carRating: 5,
-          tripExperienceRating: 4,
-          ownerRating: 4,
-          comment: 'Great car with excellent features. The owner was very professional and responsive. The trip was comfortable and the car handled beautifully on the highway.',
-          date: '2024-01-08',
-          verified: true,
-        },
-        {
-          id: 4,
-          name: 'Michael Chen',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 5,
-          ownerRating: 5,
-          comment: 'Perfect rental experience! The car is in immaculate condition and the owner was extremely helpful. Highly recommended for anyone looking for a premium car rental.',
-          date: '2024-01-05',
-          verified: true,
-        },
-        {
-          id: 5,
-          name: 'Emily Davis',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '4.0',
-          carRating: 4,
-          tripExperienceRating: 4,
-          ownerRating: 4,
-          comment: 'Very good car with modern features. The owner was punctual and the handover process was smooth. Overall a pleasant experience.',
-          date: '2024-01-03',
-          verified: true,
-        },
-        {
-          id: 6,
-          name: 'David Wilson',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 5,
-          ownerRating: 5,
-          comment: 'Outstanding service and car quality! The Ferrari-FF is a dream to drive. The owner was professional and the entire process was seamless.',
-          date: '2023-12-28',
-          verified: true,
-        },
-        {
-          id: 7,
-          name: 'Lisa Anderson',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '4.5',
-          carRating: 5,
-          tripExperienceRating: 4,
-          ownerRating: 4,
-          comment: 'Excellent car with great performance. The owner was very cooperative and understanding. Would definitely rent again!',
-          date: '2023-12-25',
-          verified: true,
-        },
-        {
-          id: 8,
-          name: 'James Brown',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 5,
-          ownerRating: 5,
-          comment: 'Best rental experience ever! The car exceeded all expectations. The owner is very professional and the car is maintained perfectly.',
-          date: '2023-12-20',
-          verified: true,
-        },
-      ],
-      '2': [
-        {
-          id: 1,
-          name: 'Mr. Jack',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 5,
-          ownerRating: 5,
-          comment: 'The rental car was clean, reliable, and the service was quick and efficient. Tesla Model S is amazing!',
-          date: '2024-01-12',
-          verified: true,
-        },
-        {
-          id: 2,
-          name: 'Robert',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 4,
-          ownerRating: 5,
-          comment: 'The rental car was clean, reliable, and the service was quick.',
-          date: '2024-01-08',
-          verified: true,
-        },
-      ],
-      '3': [
-        {
-          id: 1,
-          name: 'Mr. Jack',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 5,
-          ownerRating: 5,
-          comment: 'The rental car was clean, reliable, and the service was quick and efficient. BMW is fantastic!',
-          date: '2024-01-10',
-          verified: true,
-        },
-        {
-          id: 2,
-          name: 'Robert',
-          profilePic: 'https://via.placeholder.com/40',
-          rating: '5.0',
-          carRating: 5,
-          tripExperienceRating: 4,
-          ownerRating: 5,
-          comment: 'The rental car was clean, reliable, and the service was quick.',
-          date: '2024-01-06',
-          verified: true,
-        },
-      ],
-    };
-    return reviewsData[id] || reviewsData['1'];
-  };
-
-  const baseReviews = getAllReviews();
-  const [reviews, setReviews] = useState(baseReviews);
-
-  // Merge reviews from localStorage with existing reviews
+  // Fetch actual car data from API (only if we don't have initial car from state)
   useEffect(() => {
-    try {
-      const localReviews = JSON.parse(localStorage.getItem('localReviews') || '[]');
-      console.log('CarReviewsPage - All local reviews:', localReviews);
-      
-      // Normalize IDs for comparison (convert all to strings)
-      const carIdString = id.toString();
-      const carIdString2 = car.id.toString();
-      console.log('CarReviewsPage - Looking for carId:', carIdString, 'or', carIdString2);
-      
-      // Filter reviews for this car - compare as strings
-      const carReviews = localReviews.filter(review => {
-        if (!review.carId) {
-          console.log('Review missing carId:', review);
-          return false;
+    const fetchCar = async () => {
+      if (!id) {
+        setCarLoading(false);
+        return;
+      }
+
+      // If we have initial car from navigation state, don't fetch from API
+      if (initialCar) {
+        setCarLoading(false);
+        return;
+      }
+
+      try {
+        setCarLoading(true);
+        const response = await carService.getCarDetails(id);
+        if (response.success && response.data?.car) {
+          const apiCar = response.data.car;
+
+          // Resolve primary image from images array
+          let image = carImg1;
+          if (apiCar.images && Array.isArray(apiCar.images) && apiCar.images.length > 0) {
+            const primary = apiCar.images.find((img) => img.isPrimary);
+            image = primary ? primary.url : (apiCar.images[0]?.url || image);
+          } else if (apiCar.primaryImage) {
+            image = apiCar.primaryImage;
+          }
+
+          setCar({
+            id: apiCar._id || apiCar.id || id,
+            brand: apiCar.brand || '',
+            model: apiCar.model || '',
+            name: `${apiCar.brand || ''} ${apiCar.model || ''}`.trim() || '',
+            image,
+            rating: apiCar.averageRating || 0,
+            reviewsCount: apiCar.reviewsCount || 0,
+          });
         }
-        const reviewCarId = review.carId.toString();
-        const matches = reviewCarId === carIdString || reviewCarId === carIdString2;
-        if (matches) {
-          console.log('Found matching review:', review);
+      } catch (error) {
+        console.error('Error fetching car:', error);
+        // Keep fallback car data on error
+      } finally {
+        setCarLoading(false);
+      }
+    };
+
+    fetchCar();
+  }, [id]);
+
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [ratings, setRatings] = useState({
+    averageCarRating: 0,
+    averageTripRating: 0,
+    averageOwnerRating: 0,
+    averageOverallRating: 0,
+    totalReviews: 0,
+  });
+
+  // Fetch reviews from API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        // Use car ID from params or car object
+        // Priority: car._id (from API) > id (from params) > car.id (fallback)
+        let carId = car._id || id || car.id;
+        
+        // If id is MongoDB ObjectId format, use it directly
+        if (id && /^[0-9a-fA-F]{24}$/.test(id)) {
+          carId = id;
         }
-        return matches;
-      });
-      
-      console.log('CarReviewsPage - Filtered reviews for this car:', carReviews);
-      
-      // Convert local reviews to match reviews structure
-      const formattedLocalReviews = carReviews.map(review => ({
-        id: review.id || `local_${Date.now()}`,
-        name: review.name,
-        profilePic: review.profilePic || 'https://via.placeholder.com/40',
-        rating: review.rating,
-        carRating: review.carRating || parseFloat(review.rating),
-        tripExperienceRating: review.tripExperienceRating || parseFloat(review.rating),
-        ownerRating: review.ownerRating || parseFloat(review.rating),
-        comment: review.comment,
-        date: review.date,
-        verified: review.verified || true,
-      }));
-      
-      // Merge with existing reviews (local reviews first)
-      const mergedReviews = [...formattedLocalReviews, ...baseReviews];
-      console.log('CarReviewsPage - Merged reviews:', mergedReviews);
-      
-      setReviews(mergedReviews);
-    } catch (error) {
-      console.error('Error loading reviews from localStorage:', error);
-      // If error, use base reviews
-      setReviews(baseReviews);
+
+        if (!carId) {
+          setReviews([]);
+          setLoading(false);
+          return;
+        }
+
+        const response = await reviewService.getCarReviews(carId, {
+          page: 1,
+          limit: 50,
+          sort: 'newest',
+        });
+
+        if (response.success && response.data) {
+          // Format reviews for display
+          const formattedReviews = response.data.reviews.map(review => ({
+            id: review._id || review.id,
+            name: review.user?.name || 'Anonymous',
+            profilePic: review.user?.photo || 'https://via.placeholder.com/40',
+            rating: review.overallRating?.toFixed(1) || '0',
+            carRating: review.carRating,
+            tripExperienceRating: review.tripExperienceRating,
+            ownerRating: review.ownerRating,
+            comment: review.comment,
+            date: review.createdAt ? new Date(review.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            verified: review.isVerified || false,
+          }));
+
+          setReviews(formattedReviews);
+          setRatings(response.data.ratings || ratings);
+        } else {
+          // No reviews found - show empty state
+          setReviews([]);
+        }
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        // Don't show error toast if it's just "no reviews" - show empty state instead
+        if (error.response?.status !== 404) {
+          toastUtils.error(error.response?.data?.message || 'Failed to load reviews');
+        }
+        setReviews([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Wait for car to load before fetching reviews
+    if (!carLoading) {
+      fetchReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, car._id, carLoading]);
 
   // Format date - "Today", "Yesterday", or date
   const formatDate = (dateString) => {
@@ -399,14 +291,14 @@ const CarReviewsPage = () => {
                 Home
               </Link>
               <Link
-                to="#"
+                to="/about"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >
                 About
               </Link>
               <Link
-                to="#"
+                to="/contact"
                 className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
                 style={{ color: colors.textWhite }}
               >

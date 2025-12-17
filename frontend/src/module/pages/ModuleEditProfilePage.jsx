@@ -197,7 +197,7 @@ const ModuleEditProfilePage = () => {
       style={{ backgroundColor: colors.backgroundSecondary }}
     >
       {/* Header */}
-      <ProfileHeader title="Edit Profile" />
+      <ProfileHeader title="Edit Profile" showBack />
 
       {/* Web Container - Centered with max-width */}
       <div className="max-w-3xl mx-auto">

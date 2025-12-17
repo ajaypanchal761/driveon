@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 import FilterDropdown from './FilterDropdown';
 
@@ -6,8 +7,15 @@ import FilterDropdown from './FilterDropdown';
  * SearchBar Component - Exact match to design
  * Search bar with magnifying glass icon and filter button
  */
-const SearchBar = ({ onFilterToggle }) => {
+const SearchBar = ({ onFilterToggle, onSearch, searchQuery = '' }) => {
+  const navigate = useNavigate();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  
+  // Sync local state with prop when it changes externally
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
   
   const handleFilterClick = () => {
     const newState = !isFilterOpen;
@@ -28,6 +36,27 @@ const SearchBar = ({ onFilterToggle }) => {
     // Handle filter application here
     console.log('Applied filters:', filters);
     // You can pass this to parent component or use context/state management
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setLocalSearchQuery(value);
+    // Call onSearch callback if provided
+    if (onSearch) {
+      onSearch(value);
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Search is already triggered on change, but we can add additional logic here if needed
+      if (onSearch) {
+        onSearch(localSearchQuery);
+      }
+    }
   };
 
   return (
@@ -60,6 +89,9 @@ const SearchBar = ({ onFilterToggle }) => {
           <input
             type="text"
             placeholder="Search your dream car....."
+            value={localSearchQuery}
+            onChange={handleSearchChange}
+            onKeyPress={handleKeyPress}
             className="flex-1 text-sm md:text-base lg:text-lg text-gray-500 placeholder-gray-400 outline-none bg-transparent"
           />
         </div>

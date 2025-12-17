@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import BottomNavbar from "../components/layout/BottomNavbar";
 import CarCard from "../components/common/CarCard";
 import { colors } from "../theme/colors";
+import { carService } from "../../services/car.service";
 
-// Import car images
+// Import car images for fallback
 import carImg1 from "../../assets/car_banImg1.jpg";
 import carImg2 from "../../assets/car_banImg2.jpg";
 import carImg3 from "../../assets/car_banImg3.jpg";
@@ -18,136 +19,136 @@ import nearbyImg3 from "../../assets/car_img5-removebg-preview.png";
 
 /**
  * CategoryPage Component
- * Shows cars filtered by category (Sports, Electric, Legends, Classic, Coupe)
+ * Shows cars filtered by category (Sports, Electric, Legends, Classic, Coupe, SUV, Sedan, etc.)
+ * Fully dynamic - fetches cars from API
  */
 const CategoryPage = () => {
   const navigate = useNavigate();
   const { categoryName } = useParams();
+  const [cars, setCars] = useState([]);
+  const [category, setCategory] = useState({ label: categoryName || "Cars", count: 0 });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Category mapping
-  const categoryMap = {
-    sports: { label: "Sports", count: 78 },
-    electric: { label: "Electric", count: 304 },
-    legends: { label: "Legends", count: 47 },
-    classic: { label: "Classic", count: 12 },
-    coupe: { label: "Coupe", count: 19 },
+  // Fallback images array
+  const fallbackImages = [carImg1, carImg2, carImg3, carImg4, carImg5, carImg6, nearbyImg1, nearbyImg2, nearbyImg3];
+
+  // Transform car data from API to component format
+  const transformCarData = (car, index = 0) => {
+    // Get car image - prioritize API images
+    let carImage = fallbackImages[index % fallbackImages.length];
+    
+    if (car.images && Array.isArray(car.images) && car.images.length > 0) {
+      // Find primary image or use first image
+      const primaryImage = car.images.find((img) => img.isPrimary) || car.images[0];
+      
+      // Handle image object or string
+      if (typeof primaryImage === 'string') {
+        carImage = primaryImage.startsWith('http') 
+          ? primaryImage 
+          : `${import.meta.env.VITE_API_BASE_URL || ''}${primaryImage}`;
+      } else if (primaryImage && typeof primaryImage === 'object') {
+        // Handle image object with url or path property
+        const imageUrl = primaryImage.url || primaryImage.path || primaryImage;
+        if (typeof imageUrl === 'string') {
+          carImage = imageUrl.startsWith('http') 
+            ? imageUrl 
+            : `${import.meta.env.VITE_API_BASE_URL || ''}${imageUrl}`;
+        }
+      }
+    } else if (car.image) {
+      // Handle single image (string or object)
+      if (typeof car.image === 'string') {
+        carImage = car.image.startsWith('http') 
+          ? car.image 
+          : `${import.meta.env.VITE_API_BASE_URL || ''}${car.image}`;
+      } else if (typeof car.image === 'object' && car.image.url) {
+        const imageUrl = car.image.url || car.image.path;
+        if (typeof imageUrl === 'string') {
+          carImage = imageUrl.startsWith('http') 
+            ? imageUrl 
+            : `${import.meta.env.VITE_API_BASE_URL || ''}${imageUrl}`;
+        }
+      }
+    }
+
+    return {
+      id: car._id || car.id,
+      name: `${car.brand || ''} ${car.model || ''}`.trim() || car.name || 'Car',
+      rating: car.averageRating ? car.averageRating.toFixed(1) : '5.0',
+      location: car.location?.city || car.location?.address || car.location || 'Location',
+      seats: `${car.seatingCapacity || car.seats || 4} Seats`,
+      price: `Rs. ${car.pricePerDay || car.price || 0}/Day`,
+      image: carImage,
+    };
   };
 
-  // Mock cars data - In real app, this would come from API filtered by category
-  const allCars = {
-    sports: [
-      {
-        id: 1,
-        name: "Ferrari-FF",
-        rating: "5.0",
-        location: "Washington DC",
-        seats: "4 Seats",
-        price: "Rs. 200/Day",
-        image: carImg1,
-      },
-      {
-        id: 2,
-        name: "Lamborghini Aventador",
-        rating: "4.9",
-        location: "New York",
-        seats: "2 Seats",
-        price: "Rs. 250/Day",
-        image: nearbyImg2,
-      },
-      {
-        id: 3,
-        name: "BMW M2 GTS",
-        rating: "5.0",
-        location: "Los Angeles",
-        seats: "5 Seats",
-        price: "Rs. 150/Day",
-        image: nearbyImg3,
-      },
-    ],
-    electric: [
-      {
-        id: 4,
-        name: "Tesla Model S",
-        rating: "5.0",
-        location: "Chicago, USA",
-        seats: "5 Seats",
-        price: "Rs. 100/Day",
-        image: carImg6,
-      },
-      {
-        id: 5,
-        name: "BMW 3 Series",
-        rating: "5.0",
-        location: "New York",
-        seats: "5 Seats",
-        price: "Rs. 150/Day",
-        image: nearbyImg1,
-      },
-    ],
-    legends: [
-      {
-        id: 6,
-        name: "Audi R8 Performance",
-        rating: "5.0",
-        location: "Los Angeles",
-        seats: "2 Seats",
-        price: "Rs. 300/Day",
-        image: carImg1,
-      },
-      {
-        id: 7,
-        name: "Porsche 911",
-        rating: "4.8",
-        location: "Miami",
-        seats: "4 Seats",
-        price: "Rs. 280/Day",
-        image: carImg3,
-      },
-    ],
-    classic: [
-      {
-        id: 8,
-        name: "Vintage Mustang",
-        rating: "4.9",
-        location: "Detroit",
-        seats: "4 Seats",
-        price: "Rs. 350/Day",
-        image: carImg4,
-      },
-      {
-        id: 9,
-        name: "Classic Corvette",
-        rating: "5.0",
-        location: "Las Vegas",
-        seats: "2 Seats",
-        price: "Rs. 400/Day",
-        image: carImg5,
-      },
-    ],
-    coupe: [
-      {
-        id: 10,
-        name: "Mercedes AMG GT",
-        rating: "4.9",
-        location: "New York",
-        seats: "2 Seats",
-        price: "Rs. 220/Day",
-        image: carImg2,
-      },
-      {
-        id: 11,
-        name: "Aston Martin DB11",
-        rating: "5.0",
-        location: "London",
-        seats: "4 Seats",
-        price: "Rs. 450/Day",
-        image: carImg3,
-      },
-    ],
-  };
+  // Fetch cars by category
+  useEffect(() => {
+    const fetchCarsByCategory = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Normalize category name
+        const normalizedCategory = categoryName?.toLowerCase() || '';
+        const categoryLabel = categoryName 
+          ? categoryName.charAt(0).toUpperCase() + categoryName.slice(1).toLowerCase()
+          : 'Cars';
 
-  const category = categoryMap[categoryName?.toLowerCase()] || categoryMap.sports;
-  const cars = allCars[categoryName?.toLowerCase()] || allCars.sports;
+        // Map common category names to API filter values
+        const categoryMap = {
+          'sports': 'Sports',
+          'electric': 'Electric',
+          'legends': 'Legends',
+          'classic': 'Classic',
+          'coupe': 'Coupe',
+          'suv': 'SUV',
+          'sedan': 'Sedan',
+          'hatchback': 'Hatchback',
+          'luxury': 'Luxury',
+          'muv': 'MUV',
+        };
+
+        const carTypeFilter = categoryMap[normalizedCategory] || categoryLabel;
+
+        // Fetch cars filtered by category
+        const response = await carService.getCars({
+          carType: carTypeFilter,
+          bodyType: carTypeFilter,
+          status: 'active',
+          limit: 100, // Get more cars for category page
+        });
+
+        if (response.success && response.data?.cars) {
+          const transformedCars = response.data.cars.map((car, index) => 
+            transformCarData(car, index)
+          );
+          setCars(transformedCars);
+          setCategory({
+            label: categoryLabel,
+            count: response.data.pagination?.total || transformedCars.length,
+          });
+        } else {
+          // If no cars found, set empty array
+          setCars([]);
+          setCategory({
+            label: categoryLabel,
+            count: 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching cars by category:', error);
+        setCars([]);
+        setCategory({
+          label: categoryName || 'Cars',
+          count: 0,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCarsByCategory();
+  }, [categoryName]);
 
   return (
     <div
@@ -188,7 +189,12 @@ const CategoryPage = () => {
 
       {/* Content */}
       <main className="flex-1 px-4 pb-28">
-        {cars.length > 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
+            <p className="text-gray-500 text-center">Loading cars...</p>
+          </div>
+        ) : cars.length > 0 ? (
           <div className="grid grid-cols-2 gap-3 mb-6">
             {cars.map((car, index) => (
               <motion.div

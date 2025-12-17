@@ -41,11 +41,14 @@ export const useLocationTracking = ({
 
     try {
       // Connect to Socket.IO server
+      // Use polling first, then upgrade to websocket (better Firefox compatibility)
       socketRef.current = io(SOCKET_URL, {
-        transports: ['websocket'],
+        transports: ['polling', 'websocket'], // Allow polling fallback for better compatibility
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5,
+        timeout: 20000, // 20 second connection timeout
+        forceNew: false, // Reuse existing connection if available
       });
 
       socketRef.current.on('connect', () => {
@@ -85,7 +88,13 @@ export const useLocationTracking = ({
 
       socketRef.current.on('connect_error', (err) => {
         console.error('❌ Socket connection error:', err);
-        setError('Failed to connect to server');
+        const errorMessage = err.message || 'Failed to connect to server';
+        // Provide more helpful error messages
+        if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network')) {
+          setError('Cannot connect to server. Please ensure the backend server is running on port 5000.');
+        } else {
+          setError(`Connection error: ${errorMessage}`);
+        }
         setIsTracking(false);
       });
 

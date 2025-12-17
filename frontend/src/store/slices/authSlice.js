@@ -29,6 +29,7 @@ const initialState = {
   refreshToken: localStorage.getItem('refreshToken') || null,
   isAuthenticated: !!localStorage.getItem('authToken'),
   isLoading: false,
+  isInitializing: true, // Track if auth is being initialized on app mount
   error: null,
   userRole: localStorage.getItem('userRole') || null,
 };
@@ -44,6 +45,7 @@ const authSlice = createSlice({
     },
     loginSuccess: (state, action) => {
       state.isLoading = false;
+      state.isInitializing = false; // Auth initialization complete
       state.isAuthenticated = true;
       state.token = action.payload.token;
       state.refreshToken = action.payload.refreshToken;
@@ -70,6 +72,7 @@ const authSlice = createSlice({
     // Logout action (synchronous - for immediate state clearing)
     logout: (state) => {
       state.isAuthenticated = false;
+      state.isInitializing = false; // Auth initialization complete (even if failed)
       state.token = null;
       state.refreshToken = null;
       state.userRole = null;
@@ -80,6 +83,11 @@ const authSlice = createSlice({
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('userRole');
       localStorage.removeItem('profileComplete');
+    },
+    
+    // Mark auth initialization as complete
+    authInitialized: (state) => {
+      state.isInitializing = false;
     },
 
     // Token refresh
@@ -137,6 +145,7 @@ export const {
   logout,
   refreshTokenSuccess,
   clearError,
+  authInitialized,
 } = authSlice.actions;
 
 export default authSlice.reducer;

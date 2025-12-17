@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import CarDetailsHeader from "../components/layout/CarDetailsHeader";
-import { colors } from "../theme/colors";
-import { motion } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import CarDetailsHeader from '../components/layout/CarDetailsHeader';
+import { colors } from '../theme/colors';
+import { motion } from 'framer-motion';
 
 // Import car images for mock data
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -12,6 +12,19 @@ import carImg6 from "../../assets/car_img6-removebg-preview.png";
 import carImg8 from "../../assets/car_img8.png";
 
 /**
+ * Helper function to extract numeric price from price string or number
+ */
+const extractPrice = (price) => {
+  if (typeof price === 'number') return price;
+  if (typeof price === 'string') {
+    // Extract number from strings like "Rs. 200" or "200" or "Rs.200"
+    const match = price.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 0;
+  }
+  return 0;
+};
+
+/**
  * BookNowPage Component
  * Premium booking page for car rental
  * Based on document.txt requirements with premium UI design
@@ -19,9 +32,31 @@ import carImg8 from "../../assets/car_img8.png";
 const BookNowPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  // Mock car data - In real app, fetch from API
+  const location = useLocation();
+  
+  // Get car data from navigation state or use mock data as fallback
   const getCarData = () => {
+    // First, try to get car from navigation state (when coming from search or car details)
+    if (location.state?.car) {
+      const stateCar = location.state.car;
+      return {
+        id: stateCar.id || stateCar._id || id,
+        name: stateCar.name || `${stateCar.brand || ''} ${stateCar.model || ''}`.trim(),
+        brand: stateCar.brand,
+        model: stateCar.model,
+        image: stateCar.image || stateCar.images?.[0] || carImg1,
+        images: stateCar.images || [stateCar.image || carImg1],
+        price: extractPrice(stateCar.price || stateCar.pricePerDay || 0),
+        pricePerDay: extractPrice(stateCar.pricePerDay || stateCar.price || 0),
+        seats: stateCar.seats || 4,
+        transmission: stateCar.transmission || 'Automatic',
+        fuelType: stateCar.fuelType || 'Petrol',
+        rating: stateCar.rating || stateCar.averageRating || 5.0,
+        location: stateCar.location || 'Location',
+      };
+    }
+    
+    // Fallback to mock data if no state car
     const cars = {
       1: {
         id: 1,
@@ -160,7 +195,8 @@ const BookNowPage = () => {
     const diffTime = Math.abs(drop - pickup);
     const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
-    const basePrice = car.price || 0;
+    // Extract numeric price (handles both number and string formats)
+    const basePrice = extractPrice(car.price || car.pricePerDay || 0);
     let totalPrice = basePrice * totalDays;
 
     // Apply dynamic pricing multipliers (from document.txt)
@@ -493,7 +529,7 @@ const BookNowPage = () => {
                     className="text-lg font-bold"
                     style={{ color: colors.textPrimary }}
                   >
-                    Rs. {car.price}
+                    Rs. {extractPrice(car.price || car.pricePerDay || 0)}
                   </span>
                   <span
                     className="text-xs"
@@ -1103,7 +1139,6 @@ const BookNowPage = () => {
                       (dateYear === todayYear &&
                         dateMonth === todayMonth &&
                         dateDay < todayDay);
-
                     const isMinDate = dateStr === getMinDate();
                     const isCurrentMonth =
                       dateMonth === calendarMonth.getMonth();

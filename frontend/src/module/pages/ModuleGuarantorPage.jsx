@@ -154,7 +154,7 @@ const ModuleGuarantorPage = () => {
       {/* Web Container - Centered with max-width */}
       <div className="max-w-4xl mx-auto">
       {/* Header */}
-      {!showDetailsModal && !showRequestsPage && <ProfileHeader title="Guarantor" />}
+      {!showDetailsModal && !showRequestsPage && <ProfileHeader title="Guarantor" showBack />}
 
       {/* Requests Page with Bell Icon */}
       {showRequestsPage && !showDetailsModal && (

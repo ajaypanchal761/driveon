@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 import FilterDropdown from '../common/FilterDropdown';
 import { useAppSelector } from '../../../hooks/redux';
@@ -11,10 +11,12 @@ import { useLocation } from '../../../hooks/useLocation';
  * Dark background (#21292b) with abstract patterns
  */
 const Header = ({ onHeightChange }) => {
+  const navigate = useNavigate();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSearchBarVisible, setIsSearchBarVisible] = useState(false);
   const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const lastScrollY = useRef(0);
   const headerRef = useRef(null);
   const { user } = useAppSelector((state) => state.user);
@@ -232,11 +234,11 @@ const Header = ({ onHeightChange }) => {
               ? 'max-h-0 opacity-0 mb-0 overflow-hidden' 
               : isLocationDropdownOpen 
                 ? 'opacity-100' 
-                : 'opacity-100 overflow-hidden max-h-6'
+                : 'opacity-100 overflow-hidden max-h-14'
           }`}>
             <button
               onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
-              className="flex items-start text-white hover:opacity-80 transition-opacity"
+              className="flex items-start gap-2 text-white hover:opacity-80 transition-opacity w-full"
             >
               {/* Map Pin Icon */}
               <svg 
@@ -257,41 +259,43 @@ const Header = ({ onHeightChange }) => {
                   strokeWidth={2} 
                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" 
                 />
-              </svg><span className="text-sm font-medium text-white break-words">
-                {(() => {
-                  if (!currentLocation || currentLocation.includes("Getting") || currentLocation.includes("Loading")) {
-                    return "Getting location...";
-                  }
-                  if (currentLocation.includes("error") || currentLocation.includes("denied") || currentLocation.includes("unavailable")) {
-                    return "Location unavailable";
-                  }
-                  
-                  // If dropdown is open, show full location
-                  if (isLocationDropdownOpen) {
-                    return currentLocation;
-                  }
-                  
-                  // Otherwise show shortened version
-                  // Extract city and country from address if available
-                  const parts = currentLocation.split(',');
-                  if (parts.length >= 2) {
-                    return `${parts[parts.length - 2].trim()}, ${parts[parts.length - 1].trim()}`;
-                  }
-                  return currentLocation.length > 30 ? currentLocation.substring(0, 30) + "..." : currentLocation;
-                })()}
-              </span><svg 
-                className={`w-4 h-4 text-white transition-transform flex-shrink-0 mt-0.5 ${isLocationDropdownOpen ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M19 9l-7 7-7-7" 
-                />
-              </svg>
+              </svg><div className="flex items-start gap-1 flex-1 min-w-0">
+                <span className="text-sm font-medium text-white break-words leading-tight text-left whitespace-normal flex-1 truncate max-w-[120px]">
+                  {(() => {
+                    if (!currentLocation || currentLocation.includes("Getting") || currentLocation.includes("Loading")) {
+                      return "Getting location...";
+                    }
+                    if (currentLocation.includes("error") || currentLocation.includes("denied") || currentLocation.includes("unavailable")) {
+                      return "Location unavailable";
+                    }
+                    
+                    // If dropdown is open, show full location
+                    if (isLocationDropdownOpen) {
+                      return currentLocation;
+                    }
+                    
+                    // Otherwise show shortened version
+                    // Extract city and country from address if available
+                    const parts = currentLocation.split(',');
+                    if (parts.length >= 2) {
+                      return `${parts[parts.length - 2].trim()}, ${parts[parts.length - 1].trim()}`;
+                    }
+                    return currentLocation.length > 30 ? currentLocation.substring(0, 30) + "..." : currentLocation;
+                  })()}
+                </span><svg 
+                  className={`w-4 h-4 text-white transition-transform flex-shrink-0 mt-0.5 ${isLocationDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M19 9l-7 7-7-7" 
+                  />
+                </svg>
+              </div>
             </button>
           </div>
 
@@ -327,7 +331,17 @@ const Header = ({ onHeightChange }) => {
               <input
                 type="text"
                 placeholder="Search"
-                className="flex-1 text-sm outline-none bg-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  } else if (e.key === 'Enter') {
+                    navigate('/search');
+                  }
+                }}
+                onClick={() => navigate('/search')}
+                className="flex-1 text-sm outline-none bg-transparent cursor-pointer"
                 style={{ color: colors.backgroundTertiary }}
               />
             </div>

@@ -304,7 +304,7 @@ const ModuleSupportPage = () => {
       style={{ backgroundColor: colors.backgroundSecondary }}
     >
       {/* Header */}
-      <ProfileHeader title="Help & Support" />
+      <ProfileHeader title="Help & Support" showBack />
 
       {/* Web Container - Centered with max-width */}
       <div className="max-w-4xl mx-auto">

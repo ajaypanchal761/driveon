@@ -104,20 +104,20 @@ const ModuleKYCStatusPage = () => {
       {/* Header */}
       <div 
         className="px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6 lg:pt-8 pb-4 md:pb-6 rounded-b-3xl"
-        style={{ backgroundColor: profileSectionBg }}
+        style={{ backgroundColor: '#21292b' }}
       >
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-            style={{ backgroundColor: colors.backgroundIcon }}
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity shadow-sm"
+            style={{ backgroundColor: '#f8f8f8', color: '#111827' }}
             aria-label="Go back"
           >
-            <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#111827' }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-lg font-bold text-black flex-1 text-center">KYC Verification</h1>
+          <h1 className="text-lg font-bold text-white flex-1 text-center">KYC Verification</h1>
           <div className="w-10"></div>
         </div>
       </div>

@@ -188,10 +188,14 @@ const CustomDatePicker = ({
   ];
 
   const displayValue = selectedDate
-    ? `${selectedDate.toLocaleDateString()} ${String(selectedHour).padStart(
-        2,
-        "0"
-      )} : ${String(selectedMinute).padStart(2, "0")} ${selectedPeriod}`
+    ? (() => {
+        const day = selectedDate.getDate();
+        const monthShort = monthNames[selectedDate.getMonth()].slice(0, 3);
+        const year = selectedDate.getFullYear();
+        const hour = String(selectedHour).padStart(2, "0");
+        const minute = String(selectedMinute).padStart(2, "0");
+        return `${day} ${monthShort} ${year} • ${hour}:${minute} ${selectedPeriod}`;
+      })()
     : placeholder;
 
   return (
@@ -224,259 +228,232 @@ const CustomDatePicker = ({
       </button>
 
       {isOpen && (
-        <>
-          {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-[105] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setIsOpen(false)}
+        >
           <div
-            className="fixed inset-0 z-[105] bg-black/30"
-            onClick={() => setIsOpen(false)}
-          />
-
-          {/* Calendar Popup */}
-          <div
-            className="fixed z-[110] rounded-lg shadow-2xl border p-3"
-            style={{
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.borderForm,
-              width: "280px",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-              maxHeight: "400px",
-              overflowY: "auto",
-            }}
+            className="w-full max-w-sm rounded-2xl max-h-[85vh] overflow-y-auto shadow-2xl"
+            style={{ backgroundColor: colors.backgroundSecondary }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Calendar Section */}
-            <div className="mb-2">
-              {/* Month Header */}
-              <div className="flex items-center justify-between mb-1.5">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCurrentMonth(
-                      new Date(
-                        currentMonth.getFullYear(),
-                        currentMonth.getMonth() - 1
-                      )
-                    )
-                  }
-                  className="p-0.5 rounded"
+            <div className="p-4">
+              {/* Time Selection */}
+              <div className="mb-4">
+                <label
+                  className="block text-sm font-semibold mb-2"
                   style={{ color: colors.textPrimary }}
                 >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                  Time
+                </label>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTimePickerOpen(true);
+                    }}
+                    className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+                    style={{
+                      borderColor: colors.backgroundTertiary,
+                      backgroundColor: colors.backgroundTertiary,
+                      color: colors.backgroundSecondary,
+                    }}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
-                </button>
-                <span
-                  className="text-xs font-semibold"
-                  style={{ color: colors.textPrimary }}
-                >
-                  {monthNames[currentMonth.getMonth()].substring(0, 3)},{" "}
-                  {currentMonth.getFullYear()}
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCurrentMonth(
-                      new Date(
-                        currentMonth.getFullYear(),
-                        currentMonth.getMonth() + 1
-                      )
-                    )
-                  }
-                  className="p-0.5 rounded"
-                  style={{ color: colors.textPrimary }}
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Week Days */}
-              <div className="grid grid-cols-7 gap-0.5 mb-1">
-                {weekDays.map((day) => (
-                  <div
-                    key={day}
-                    className="text-center text-[10px] font-medium"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 gap-0.5">
-                {days.map((date, idx) => {
-                  if (!date) {
-                    return <div key={idx} />;
-                  }
-                  // Compare dates using local date components to avoid timezone issues
-                  const dateYear = date.getFullYear();
-                  const dateMonth = date.getMonth();
-                  const dateDay = date.getDate();
-
-                  let isSelected = false;
-                  if (selectedDate) {
-                    const selectedYear = selectedDate.getFullYear();
-                    const selectedMonth = selectedDate.getMonth();
-                    const selectedDay = selectedDate.getDate();
-                    isSelected =
-                      dateYear === selectedYear &&
-                      dateMonth === selectedMonth &&
-                      dateDay === selectedDay;
-                  }
-
-                  // Check if today using local date components
-                  const today = new Date();
-                  const todayYear = today.getFullYear();
-                  const todayMonth = today.getMonth();
-                  const todayDay = today.getDate();
-                  const isToday =
-                    dateYear === todayYear &&
-                    dateMonth === todayMonth &&
-                    dateDay === todayDay;
-
-                  const isCurrentMonth = dateMonth === currentMonth.getMonth();
-
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleDateSelect(date)}
-                      className="w-6 h-6 rounded text-[10px] flex items-center justify-center"
-                      style={{
-                        backgroundColor: isSelected
-                          ? colors.brandBlack
-                          : "transparent",
-                        color: isSelected
-                          ? colors.backgroundSecondary
-                          : isCurrentMonth
-                          ? colors.textPrimary
-                          : colors.textTertiary,
-                        border:
-                          isToday && !isSelected
-                            ? `1px solid ${colors.brandBlack}`
-                            : "none",
-                      }}
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      {date.getDate()}
-                    </button>
-                  );
-                })}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="font-semibold text-sm">
+                      {String(selectedHour).padStart(2, "0")} :{" "}
+                      {String(selectedMinute).padStart(2, "0")} {selectedPeriod}
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Time Selection Button - Like BookNowPage */}
-            <div className="mb-2">
-              <label
-                className="block text-[10px] font-medium mb-1"
-                style={{ color: colors.textPrimary }}
-              >
-                Time
-              </label>
-              <div className="flex justify-center">
+              {/* Calendar */}
+              <div className="mb-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    className="p-1.5 rounded-lg hover:bg-gray-100"
+                    onClick={() =>
+                      setCurrentMonth(
+                        new Date(
+                          currentMonth.getFullYear(),
+                          currentMonth.getMonth() - 1,
+                          1
+                        )
+                      )
+                    }
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <h4
+                    className="text-base font-semibold"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    {monthNames[currentMonth.getMonth()]}{" "}
+                    {currentMonth.getFullYear()}
+                  </h4>
+                  <button
+                    className="p-1.5 rounded-lg hover:bg-gray-100"
+                    onClick={() =>
+                      setCurrentMonth(
+                        new Date(
+                          currentMonth.getFullYear(),
+                          currentMonth.getMonth() + 1,
+                          1
+                        )
+                      )
+                    }
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-4">
+                  {weekDays.map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-semibold py-1"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {day}
+                    </div>
+                  ))}
+                  {days.map((date, idx) => {
+                    if (!date) return <div key={idx}></div>;
+                    const dateYear = date.getFullYear();
+                    const dateMonth = date.getMonth();
+                    const dateDay = date.getDate();
+
+                    let isSelected = false;
+                    if (selectedDate) {
+                      const selectedYear = selectedDate.getFullYear();
+                      const selectedMonth = selectedDate.getMonth();
+                      const selectedDay = selectedDate.getDate();
+                      isSelected =
+                        dateYear === selectedYear &&
+                        dateMonth === selectedMonth &&
+                        dateDay === selectedDay;
+                    }
+
+                    const today = new Date();
+                    const isPast =
+                      dateYear < today.getFullYear() ||
+                      (dateYear === today.getFullYear() &&
+                        (dateMonth < today.getMonth() ||
+                          (dateMonth === today.getMonth() &&
+                            dateDay < today.getDate())));
+
+                    const isCurrentMonth =
+                      dateMonth === currentMonth.getMonth();
+
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          if (!isPast && isCurrentMonth) {
+                            handleDateSelect(date);
+                            setIsOpen(false);
+                          }
+                        }}
+                        disabled={isPast && !isSelected}
+                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          isSelected
+                            ? "text-white"
+                            : isPast && !isSelected
+                            ? "cursor-not-allowed"
+                            : !isCurrentMonth
+                            ? "opacity-40"
+                            : "hover:bg-gray-100"
+                        }`}
+                        style={{
+                          backgroundColor: isSelected
+                            ? colors.backgroundTertiary
+                            : "transparent",
+                          color: isSelected
+                            ? colors.backgroundSecondary
+                            : isPast && !isSelected
+                            ? colors.borderForm
+                            : colors.textPrimary,
+                        }}
+                      >
+                        {dateDay}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
                 <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsTimePickerOpen(true);
+                  onClick={() => {
+                    setSelectedDate(null);
+                    onChange("");
+                    setIsOpen(false);
                   }}
-                  className="w-auto px-3 py-1.5 rounded-lg border-2 flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity"
+                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
                   style={{
                     borderColor: colors.backgroundTertiary,
-                    backgroundColor: colors.backgroundTertiary,
-                    color: colors.backgroundSecondary,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary,
                   }}
                 >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span className="font-semibold text-[10px]">
-                    {String(selectedHour).padStart(2, "0")} :{" "}
-                    {String(selectedMinute).padStart(2, "0")} {selectedPeriod}
-                  </span>
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedDate) {
+                      onChange(selectedDate);
+                    }
+                    setIsOpen(false);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                >
+                  Done
                 </button>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div
-              className="flex gap-1.5 mt-2 pt-2 border-t"
-              style={{ borderColor: colors.borderForm }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedDate(null);
-                  onChange("");
-                  setIsOpen(false);
-                }}
-                className="flex-1 px-2 py-1 text-[10px] rounded"
-                style={{
-                  color: colors.brandBlack,
-                  backgroundColor: "transparent",
-                }}
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // Create today's date at noon to avoid timezone issues
-                  const today = new Date();
-                  const todayAtNoon = new Date(
-                    today.getFullYear(),
-                    today.getMonth(),
-                    today.getDate(),
-                    12,
-                    0,
-                    0
-                  );
-                  handleDateSelect(todayAtNoon);
-                  setIsOpen(false);
-                }}
-                className="flex-1 px-2 py-1 text-[10px] rounded"
-                style={{
-                  color: colors.brandBlack,
-                  backgroundColor: "transparent",
-                }}
-              >
-                Today
-              </button>
-            </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Time Picker Popup - Like Calendar Popup */}
