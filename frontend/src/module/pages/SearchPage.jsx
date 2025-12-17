@@ -128,9 +128,7 @@ const SearchPage = () => {
   // Sync state when query params change (e.g., from home pills)
   useEffect(() => {
     const q = searchParams.get('q') || '';
-    if (q !== searchQuery) {
-      setSearchQuery(q);
-    }
+    setSearchQuery(q);
 
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
@@ -149,7 +147,7 @@ const SearchPage = () => {
     if (filterParam) {
       setShouldOpenFilters(true);
     }
-  }, [searchParams, searchQuery]);
+  }, [searchParams]);
 
   // Open filters when requested by URL params
   useEffect(() => {
@@ -863,6 +861,7 @@ const SearchPage = () => {
             />
           </div>
           <button 
+            aria-label="Open filters"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
             style={{ 
@@ -1016,7 +1015,11 @@ const SearchPage = () => {
         onApplyFilters={(filters) => {
           console.log('Applied filters:', filters);
           setAppliedFilters(filters);
+          // Keep pills in sync with brand filter
+          setSelectedBrand(filters.brand ? filters.brand : 'all');
           setIsFilterOpen(false);
+          // Scroll to top to reveal filtered results
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         brands={filterOptions.brands}
         fuelTypes={filterOptions.fuelTypes}
@@ -1180,6 +1183,7 @@ const SearchPage = () => {
                   />
                 </div>
                 <button 
+                  aria-label="Open filters"
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                   className="px-6 py-2 rounded-xl text-base font-medium text-white hover:opacity-90 transition-opacity"
                   style={{ 

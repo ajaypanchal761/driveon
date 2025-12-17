@@ -11,6 +11,19 @@ import User from "./models/User.js";
 // Load environment variables
 dotenv.config();
 
+// Log masked Razorpay keys on startup to confirm env load (safe for dev)
+if (process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_SECRET) {
+  const mask = (val, start = 4, end = 3) =>
+    val && val.length > start + end
+      ? `${val.slice(0, start)}***${val.slice(-end)}`
+      : val;
+  console.log(
+    `🔑 Razorpay env (id: ${mask(process.env.RAZORPAY_KEY_ID || '')}, secret: ${mask(
+      process.env.RAZORPAY_KEY_SECRET || ''
+    )})`
+  );
+}
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
@@ -58,6 +71,7 @@ import bookingRoutes from "./routes/booking.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import commonRoutes from "./routes/common.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
 
 // Socket.IO Configuration
 const io = new Server(server, {
@@ -240,6 +254,7 @@ app.use("/api/cars", carRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/common", commonRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api", supportRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);

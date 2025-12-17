@@ -1467,6 +1467,29 @@ const CarDetailsPage = () => {
     });
   };
 
+  // Lightweight navigation helper for CTA buttons that don't submit the form
+  const handleQuickBook = () => {
+    try {
+      sessionStorage.setItem('driveon:selectedCar', JSON.stringify(car));
+    } catch (err) {
+      console.warn('Failed to cache car before booking', err);
+    }
+    navigate(`/book-now/${car?.id || car?._id || id}`, {
+      state: {
+        car,
+        pickupDate,
+        pickupTime,
+        dropDate,
+        dropTime,
+        paymentOption,
+        specialRequests,
+        couponCode: appliedCoupon?.code,
+        couponDiscount,
+        priceDetails,
+      },
+    });
+  };
+
   // Navigation for image gallery
   const handlePreviousImage = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? carImages.length - 1 : prev - 1));
@@ -3428,7 +3451,7 @@ const CarDetailsPage = () => {
           <div className="px-4 md:px-6 py-3 md:py-0 md:mt-6" style={{ backgroundColor: colors.backgroundSecondary }}>
             <div className="max-w-7xl mx-auto">
               <button
-                onClick={() => navigate(`/book-now/${car?.id || car?._id || id}`)}
+                onClick={handleQuickBook}
                 className="w-full md:w-auto md:min-w-[300px] md:mx-auto md:block py-4 flex items-center justify-center text-white font-semibold"
                 style={{ backgroundColor: colors.backgroundTertiary, borderRadius: '16px' }}
               >

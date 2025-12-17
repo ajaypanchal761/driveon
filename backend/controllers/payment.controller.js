@@ -400,11 +400,29 @@ export const createRazorpayOrder = async (req, res) => {
       });
       
       // Check if it's a configuration error
-      if (razorpayError.code === 'RAZORPAY_NOT_CONFIGURED' || razorpayError.message.includes('not configured')) {
+      const rawMessage = razorpayError?.message;
+      const rpMessage = typeof rawMessage === 'string' ? rawMessage : '';
+      const rpMessageLower = rpMessage.toLowerCase();
+      if (
+        razorpayError?.code === 'RAZORPAY_NOT_CONFIGURED' ||
+        rpMessageLower.includes('not configured')
+      ) {
         return res.status(500).json({
           success: false,
           message: 'Payment service not configured. Please contact support.',
           error: 'RAZORPAY_NOT_CONFIGURED',
+        });
+      }
+      
+      // Surface Razorpay authentication failures explicitly
+      if (
+        razorpayError?.statusCode === 401 ||
+        razorpayError?.error?.code === 'BAD_REQUEST_ERROR'
+      ) {
+        return res.status(500).json({
+          success: false,
+          message: razorpayError?.error?.description || 'Payment provider authentication failed.',
+          error: razorpayError?.error?.code || 'RAZORPAY_AUTH_FAILED',
         });
       }
       
@@ -420,7 +438,7 @@ export const createRazorpayOrder = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: 'Failed to create payment order. Please try again.',
-        error: process.env.NODE_ENV === 'development' ? razorpayError.message : undefined,
+        error: process.env.NODE_ENV === 'development' ? (rpMessage || razorpayError.code || 'UNKNOWN_ERROR') : undefined,
       });
     }
 

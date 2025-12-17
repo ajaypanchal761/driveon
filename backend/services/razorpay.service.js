@@ -14,6 +14,11 @@ class RazorpayService {
         console.error('Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file');
         this.razorpay = null;
       } else {
+        // Log masked credentials to verify correct env loading (safe for dev)
+        const maskedKeyId = `${process.env.RAZORPAY_KEY_ID.slice(0, 6)}***${process.env.RAZORPAY_KEY_ID.slice(-3)}`;
+        const maskedSecret = `${process.env.RAZORPAY_KEY_SECRET.slice(0, 4)}***${process.env.RAZORPAY_KEY_SECRET.slice(-3)}`;
+        console.log(`✅ Razorpay env loaded (id: ${maskedKeyId}, secret: ${maskedSecret})`);
+
         this.razorpay = new Razorpay({
           key_id: process.env.RAZORPAY_KEY_ID,
           key_secret: process.env.RAZORPAY_KEY_SECRET,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -446,6 +446,7 @@ const ModuleTestPage = () => {
                 brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
               }
             }
+          }
 
             return {
               id: index + 1,
@@ -685,117 +686,142 @@ const ModuleTestPage = () => {
     setIsFilterOpen(false);
   };
 
-  // Filter cars based on applied filters
-  const filteredCars = useMemo(() => {
-    let filtered = [...allCars];
+  // Apply filters to any car list
+  const filterCars = useCallback(
+    (list) => {
+      let filtered = [...list];
 
-    // Filter by brand
-    if (appliedFilters.brand) {
-      filtered = filtered.filter(
-        (car) => car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
-      );
-    }
-
-    // Filter by model
-    if (appliedFilters.model) {
-      const modelQuery = appliedFilters.model.toLowerCase().trim();
-      filtered = filtered.filter(
-        (car) =>
-          car.model?.toLowerCase().includes(modelQuery) ||
-          car.name?.toLowerCase().includes(modelQuery)
-      );
-    }
-
-    // Filter by fuel type
-    if (appliedFilters.fuelType) {
-      filtered = filtered.filter((car) => {
-        const carFuelType = car.fuelType || "";
-        return (
-          carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase()
+      // Filter by brand
+      if (appliedFilters.brand) {
+        filtered = filtered.filter(
+          (car) => car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
         );
-      });
-    }
+      }
 
-    // Filter by transmission
-    if (appliedFilters.transmission) {
-      filtered = filtered.filter((car) => {
-        const carTransmission = car.transmission || "";
-        return (
-          carTransmission.toLowerCase() ===
-          appliedFilters.transmission.toLowerCase()
+      // Filter by model
+      if (appliedFilters.model) {
+        const modelQuery = appliedFilters.model.toLowerCase().trim();
+        filtered = filtered.filter(
+          (car) =>
+            car.model?.toLowerCase().includes(modelQuery) ||
+            car.name?.toLowerCase().includes(modelQuery)
         );
-      });
-    }
+      }
 
-    // Filter by car type
-    if (appliedFilters.carType) {
-      filtered = filtered.filter((car) => {
-        const carType = car.carType || "";
-        return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
-      });
-    }
+      // Filter by fuel type
+      if (appliedFilters.fuelType) {
+        filtered = filtered.filter((car) => {
+          const carFuelType = car.fuelType || "";
+          return carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase();
+        });
+      }
 
-    // Filter by color
-    if (appliedFilters.color) {
-      filtered = filtered.filter((car) => {
-        const carColor = car.color || "";
-        return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
-      });
-    }
+      // Filter by transmission
+      if (appliedFilters.transmission) {
+        filtered = filtered.filter((car) => {
+          const carTransmission = car.transmission || "";
+          return (
+            carTransmission.toLowerCase() === appliedFilters.transmission.toLowerCase()
+          );
+        });
+      }
 
-    // Filter by seats
-    if (appliedFilters.seats) {
-      filtered = filtered.filter((car) => {
-        const carSeats = String(car.seatingCapacity || "");
-        return carSeats === appliedFilters.seats;
-      });
-    }
+      // Filter by car type
+      if (appliedFilters.carType) {
+        filtered = filtered.filter((car) => {
+          const carType = car.carType || "";
+          return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
+        });
+      }
 
-    // Filter by features (all selected features must be present)
-    if (appliedFilters.features && appliedFilters.features.length > 0) {
-      filtered = filtered.filter((car) => {
-        const carFeatures = car.features || [];
-        return appliedFilters.features.every((feature) =>
-          carFeatures.some(
-            (carFeature) => carFeature.toLowerCase() === feature.toLowerCase()
-          )
-        );
-      });
-    }
+      // Filter by color
+      if (appliedFilters.color) {
+        filtered = filtered.filter((car) => {
+          const carColor = car.color || "";
+          return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
+        });
+      }
 
-    // Filter by price range
-    if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
-      filtered = filtered.filter((car) => {
-        const carPrice = parseFloat(
-          car.price?.replace(/[^0-9.]/g, "") || car.pricePerDay || 0
-        );
-        const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
-        const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
-        return carPrice >= minPrice && carPrice <= maxPrice;
-      });
-    }
+      // Filter by seats
+      if (appliedFilters.seats) {
+        filtered = filtered.filter((car) => {
+          const carSeats = String(
+            (car.seats ?? car.seatingCapacity ?? car.seatingCapacity) || ""
+          );
+          return carSeats === appliedFilters.seats;
+        });
+      }
 
-    // Filter by rating
-    if (appliedFilters.rating) {
-      filtered = filtered.filter((car) => {
-        const carRating = parseFloat(car.rating) || 0;
-        const minRating =
-          parseFloat(appliedFilters.rating.replace("+", "")) || 0;
-        return carRating >= minRating;
-      });
-    }
+      // Filter by features (all selected features must be present)
+      if (appliedFilters.features && appliedFilters.features.length > 0) {
+        filtered = filtered.filter((car) => {
+          const carFeatures = car.features || [];
+          return appliedFilters.features.every((feature) =>
+            carFeatures.some(
+              (carFeature) => carFeature.toLowerCase() === feature.toLowerCase()
+            )
+          );
+        });
+      }
 
-    // Filter by location
-    if (appliedFilters.location) {
-      filtered = filtered.filter((car) => {
-        return car.location
-          ?.toLowerCase()
-          .includes(appliedFilters.location.toLowerCase());
-      });
-    }
+      // Filter by price range
+      if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
+        filtered = filtered.filter((car) => {
+          const carPrice = parseFloat(
+            car.price?.replace(/[^0-9.]/g, "") || car.pricePerDay || 0
+          );
+          const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
+          const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
+          return carPrice >= minPrice && carPrice <= maxPrice;
+        });
+      }
 
-    return filtered;
-  }, [allCars, appliedFilters]);
+      // Filter by rating
+      if (appliedFilters.rating) {
+        filtered = filtered.filter((car) => {
+          const carRating = parseFloat(car.rating) || 0;
+          const minRating = parseFloat(appliedFilters.rating.replace("+", "")) || 0;
+          return carRating >= minRating;
+        });
+      }
+
+      // Filter by location
+      if (appliedFilters.location) {
+        filtered = filtered.filter((car) => {
+          return car.location
+            ?.toLowerCase()
+            .includes(appliedFilters.location.toLowerCase());
+        });
+      }
+
+      return filtered;
+    },
+    [appliedFilters]
+  );
+
+  const filteredCars = useMemo(() => filterCars(allCars), [allCars, filterCars]);
+  const filteredBestCars = useMemo(
+    () => filterCars(bestCars),
+    [bestCars, filterCars]
+  );
+  const filteredNearbyCars = useMemo(
+    () => filterCars(nearbyCars),
+    [nearbyCars, filterCars]
+  );
+  const activeFeaturedCar = useMemo(
+    () => filteredBestCars[0] || filteredCars[0] || featuredCar,
+    [filteredBestCars, filteredCars, featuredCar]
+  );
+
+  // Tap brand pills at the top to set brand filter immediately
+  const handleQuickBrandFilter = (brandName) => {
+    setAppliedFilters((prev) => ({
+      ...prev,
+      brand: brandName || "",
+    }));
+    // Also close filters if open and refresh featured car selection
+    setIsFilterOpen(false);
+  };
 
   return (
     <div
@@ -1151,10 +1177,8 @@ const ModuleTestPage = () => {
                 <motion.button
                   key={cat.id}
                   type="button"
-                  className="flex-shrink-0 w-24"
-                  onClick={() =>
-                    navigate(`/category/${cat.label.toLowerCase()}`)
-                  }
+                className="flex-shrink-0 w-24"
+                onClick={() => handleQuickBrandFilter(cat.label)}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
@@ -1196,7 +1220,7 @@ const ModuleTestPage = () => {
                     key={`${brand.id}-${index}`}
                     type="button"
                     className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
-                    onClick={() => navigate(`/brand/${brand.name}`)}
+                    onClick={() => handleQuickBrandFilter(brand.name)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -1264,7 +1288,7 @@ const ModuleTestPage = () => {
           </div>
 
           {/* FEATURED CAR CARD */}
-          {featuredCar && (
+          {activeFeaturedCar && (
             <motion.div
               className="px-1"
               initial={{ opacity: 0, y: 20 }}
@@ -1278,12 +1302,12 @@ const ModuleTestPage = () => {
                   boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
                 }}
                 transition={{ duration: 0.3 }}
-                onClick={() => navigate(`/car-details/${featuredCar.id}`)}
+                onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
               >
                 <div className="w-full h-48 bg-gray-100 overflow-hidden">
                   <motion.img
-                    src={featuredCar.image}
-                    alt={featuredCar.name}
+                    src={activeFeaturedCar.image}
+                    alt={activeFeaturedCar.name}
                     className="w-full h-full object-cover"
                     whileHover={{ scale: 1.1 }}
                     transition={{ duration: 0.4 }}
@@ -1293,10 +1317,10 @@ const ModuleTestPage = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-gray-900">
-                        {featuredCar.name}
+                        {activeFeaturedCar.name}
                       </h3>
                       <p className="mt-1 text-xs font-semibold text-gray-700">
-                        {featuredCar.price}
+                        {activeFeaturedCar.price}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1311,7 +1335,7 @@ const ModuleTestPage = () => {
                         >
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                         </svg>
-                        <span>{featuredCar.rating}</span>
+                        <span>{activeFeaturedCar.rating}</span>
                       </span>
                     </div>
                   </div>
@@ -1426,7 +1450,7 @@ const ModuleTestPage = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {bestCars.map((car, index) => (
+              {(filteredBestCars.length ? filteredBestCars : bestCars).map((car, index) => (
                 <motion.div
                   key={car.id}
                   className="w-full rounded-xl overflow-hidden cursor-pointer"
@@ -1600,7 +1624,7 @@ const ModuleTestPage = () => {
               </motion.button>
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {nearbyCars.map((car, index) => (
+              {(filteredNearbyCars.length ? filteredNearbyCars : nearbyCars).map((car, index) => (
                 <motion.div
                   key={car.id}
                   className="min-w-[280px] flex-shrink-0"
