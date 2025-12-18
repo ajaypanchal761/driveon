@@ -13,15 +13,28 @@ dotenv.config();
 
 // Log masked Razorpay keys on startup to confirm env load (safe for dev)
 if (process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_SECRET) {
-  const mask = (val, start = 4, end = 3) =>
-    val && val.length > start + end
-      ? `${val.slice(0, start)}***${val.slice(-end)}`
-      : val;
+  const mask = (val, start = 4, end = 3) => {
+    const trimmed = val?.trim() || '';
+    return trimmed && trimmed.length > start + end
+      ? `${trimmed.slice(0, start)}***${trimmed.slice(-end)}`
+      : trimmed;
+  };
   console.log(
     `🔑 Razorpay env (id: ${mask(process.env.RAZORPAY_KEY_ID || '')}, secret: ${mask(
       process.env.RAZORPAY_KEY_SECRET || ''
     )})`
   );
+  
+  // Debug: Log actual keys (trimmed) for verification in development
+  if (process.env.NODE_ENV === 'development') {
+    const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+    const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+    console.log(
+      `[RAZORPAY CHECK]`,
+      keyId || 'MISSING',
+      keySecret ? 'SET' : 'MISSING'
+    );
+  }
 }
 
 const app = express();
@@ -72,6 +85,7 @@ import paymentRoutes from "./routes/payment.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import commonRoutes from "./routes/common.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
+import referralRoutes from "./routes/referral.routes.js";
 
 // Socket.IO Configuration
 const io = new Server(server, {
@@ -259,6 +273,7 @@ app.use("/api", supportRoutes);
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api", locationRoutes);
+app.use("/api", referralRoutes);
 
 // Basic route
 app.get("/", (req, res) => {

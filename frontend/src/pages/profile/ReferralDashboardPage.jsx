@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { theme } from '../../theme/theme.constants';
 import toastUtils from '../../config/toast';
+import { referralService } from '../../services/referral.service';
 
 /**
  * ReferralDashboardPage Component
@@ -11,54 +12,71 @@ import toastUtils from '../../config/toast';
  */
 const ReferralDashboardPage = () => {
   const navigate = useNavigate();
-  const { referralCode, points } = useAppSelector((state) => state.user);
+  const { referralCode: reduxReferralCode, points: reduxPoints } = useAppSelector((state) => state.user);
 
-  // Mock referral data
-  const [referrals] = useState([
-    {
-      id: 1,
-      name: 'Rahul Sharma',
-      email: 'rahul@example.com',
-      signupDate: '2024-01-15',
-      tripsCompleted: 2,
-      pointsEarned: 150, // 50 for signup + 100 for trips
-      status: 'active',
-    },
-    {
-      id: 2,
-      name: 'Priya Patel',
-      email: 'priya@example.com',
-      signupDate: '2024-01-10',
-      tripsCompleted: 0,
-      pointsEarned: 50, // Only signup
-      status: 'pending',
-    },
-    {
-      id: 3,
-      name: 'Amit Kumar',
-      email: 'amit@example.com',
-      signupDate: '2024-01-05',
-      tripsCompleted: 1,
-      pointsEarned: 100, // 50 for signup + 50 for trip
-      status: 'active',
-    },
-  ]);
+  // State for referral data
+  const [referralCode, setReferralCode] = useState(reduxReferralCode || '');
+  const [points, setPoints] = useState(reduxPoints || 0);
+  const [referrals, setReferrals] = useState([]);
+  const [statistics, setStatistics] = useState({
+    totalReferrals: 0,
+    activeReferrals: 0,
+    totalPointsFromReferrals: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   // Points system
   const pointsForSignup = 50;
   const pointsForTrip = 50;
 
+  // Fetch referral dashboard data from API
+  useEffect(() => {
+    const fetchReferralDashboard = async () => {
+      try {
+        setLoading(true);
+        const response = await referralService.getReferralDashboard();
+        
+        if (response.success && response.data) {
+          setReferralCode(response.data.referralCode || '');
+          setPoints(response.data.points || 0);
+          setReferrals(response.data.referrals || []);
+          setStatistics(response.data.statistics || {
+            totalReferrals: 0,
+            activeReferrals: 0,
+            totalPointsFromReferrals: 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching referral dashboard:', error);
+        toastUtils.error('Failed to load referral dashboard');
+        // Keep existing data or use fallback
+        if (!referralCode) {
+          setReferralCode(reduxReferralCode || 'DRIVE123');
+        }
+        if (points === 0) {
+          setPoints(reduxPoints || 0);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReferralDashboard();
+  }, []);
+
   // Handle copy referral code
   const handleCopyReferralCode = () => {
-    if (referralCode) {
-      navigator.clipboard.writeText(referralCode);
+    const codeToCopy = referralCode || reduxReferralCode || 'DRIVE123';
+    if (codeToCopy) {
+      navigator.clipboard.writeText(codeToCopy);
       toastUtils.success('Referral code copied!');
     }
   };
 
   // Handle share referral
   const handleShareReferral = () => {
-    const shareText = `Join DriveOn using my referral code: ${referralCode || 'DRIVE123'}. Get amazing deals on car rentals!`;
+    const codeToShare = referralCode || reduxReferralCode || 'DRIVE123';
+    const shareText = `Join DriveOn using my referral code: ${codeToShare}. Get amazing deals on car rentals!`;
     if (navigator.share) {
       navigator.share({
         title: 'Join DriveOn',
@@ -71,13 +89,14 @@ const ReferralDashboardPage = () => {
     }
   };
 
-  // Calculate total points from referrals
-  const totalPointsFromReferrals = referrals.reduce((sum, ref) => sum + ref.pointsEarned, 0);
-  const totalReferrals = referrals.length;
-  const activeReferrals = referrals.filter(ref => ref.status === 'active').length;
+  // Use statistics from API or calculate from referrals
+  const totalReferrals = statistics.totalReferrals || referrals.length;
+  const activeReferrals = statistics.activeReferrals || referrals.filter(ref => ref.status === 'active').length;
+  const totalPointsFromReferrals = statistics.totalPointsFromReferrals || referrals.reduce((sum, ref) => sum + ref.pointsEarned, 0);
 
-  // Generate referral code if not exists (mock)
-  const displayReferralCode = referralCode || 'DRIVE123';
+  // Display referral code
+  const displayReferralCode = referralCode || reduxReferralCode || 'DRIVE123';
+  const displayPoints = points || reduxPoints || 0;
 
   return (
     <div className="min-h-screen pb-24 bg-gray-50">
@@ -118,7 +137,7 @@ const ReferralDashboardPage = () => {
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div>
                 <p className="text-xs md:text-sm text-white/80 mb-1 md:mb-2">Total Points</p>
-                <h2 className="text-3xl md:text-5xl font-bold">{points || totalPointsFromReferrals}</h2>
+                <h2 className="text-3xl md:text-5xl font-bold">{loading ? '...' : displayPoints}</h2>
               </div>
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/20 flex items-center justify-center">
                 <svg className="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,7 +310,15 @@ const ReferralDashboardPage = () => {
             </h3>
           </div>
           
-          {referrals.length === 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-xl p-6 md:p-8 text-center shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
+              <div className="animate-pulse">
+                <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-48 mx-auto"></div>
+              </div>
+            </div>
+          ) : referrals.length === 0 ? (
             <div className="bg-white rounded-xl p-6 md:p-8 text-center shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
               <svg className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 md:mb-4" style={{ color: theme.colors.textTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />

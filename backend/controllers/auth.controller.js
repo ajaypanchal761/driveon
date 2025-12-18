@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import OTP from '../models/OTP.js';
 import { generateOTP, getOTPExpiry, isOTPExpired, sendOTP } from '../utils/otp.service.js';
 import { generateToken, generateRefreshToken } from '../utils/generateToken.js';
+import { processReferralSignup } from './referral.controller.js';
 
 /**
  * @desc    Register new user (Send OTP)
@@ -539,6 +540,14 @@ export const verifyOTP = async (req, res) => {
     otpRecord.isUsed = true;
     await otpRecord.save();
 
+    // Check if this is a signup verification (not login)
+    const isSignupVerification = otpRecord.purpose === 'register';
+    
+    // Check if this is the first verification (both phone and email were unverified before)
+    const wasPhoneVerified = user.isPhoneVerified;
+    const wasEmailVerified = user.isEmailVerified;
+    const isFirstVerification = !wasPhoneVerified && !wasEmailVerified;
+    
     // Mark phone/email as verified (use normalized phone)
     if (normalizedPhone) {
       user.isPhoneVerified = true;
@@ -547,6 +556,18 @@ export const verifyOTP = async (req, res) => {
       user.isEmailVerified = true;
     }
     await user.save();
+
+    // Process referral signup if:
+    // 1. This is a signup verification (purpose: 'register')
+    // 2. User was referred by someone
+    // 3. This is the first verification (to prevent duplicate points)
+    if (isSignupVerification && user.referredBy && isFirstVerification) {
+      // Award points to referrer for signup (runs asynchronously, doesn't block response)
+      processReferralSignup(user._id.toString()).catch((error) => {
+        console.error('Failed to process referral signup:', error);
+        // Don't fail the signup if referral processing fails
+      });
+    }
 
     // Generate tokens
     const token = generateToken(user._id.toString());

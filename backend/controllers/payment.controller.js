@@ -367,11 +367,29 @@ export const createRazorpayOrder = async (req, res) => {
     // Check if Razorpay is configured
     if (!razorpayService.isConfigured()) {
       console.error('❌ Razorpay not configured - missing environment variables');
-      return res.status(500).json({
-        success: false,
-        message: 'Payment service not configured. Please contact support.',
-        error: 'RAZORPAY_NOT_CONFIGURED',
-      });
+      
+      // Validate keys and provide helpful error message
+      const validation = razorpayService.validateKeys();
+      if (!validation.hasKeys) {
+        return res.status(500).json({
+          success: false,
+          message: 'Payment service not configured. RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in environment variables.',
+          error: 'RAZORPAY_NOT_CONFIGURED',
+        });
+      }
+      
+      // Try to re-initialize if keys exist but service failed
+      if (validation.hasKeys) {
+        const reinitSuccess = razorpayService.reinitialize();
+        if (!reinitSuccess) {
+          return res.status(500).json({
+            success: false,
+            message: 'Payment service configuration error. Please check your Razorpay API keys.',
+            error: 'RAZORPAY_CONFIG_ERROR',
+            issues: validation.issues,
+          });
+        }
+      }
     }
 
     // Generate transaction ID

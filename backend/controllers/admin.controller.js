@@ -1,6 +1,7 @@
 import Admin from '../models/Admin.js';
 import User from '../models/User.js';
 import Car from '../models/Car.js';
+import Booking from '../models/Booking.js';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 
 /**
@@ -1012,6 +1013,188 @@ export const updateUserStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error updating user status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Get All Referrals (Admin)
+ * @route   GET /api/admin/referrals
+ * @access  Private (Admin)
+ */
+export const getAllReferrals = async (req, res) => {
+  try {
+    const { status, dateRange, referrer, search } = req.query;
+
+    // Get all users who have been referred (have referredBy field)
+    const referredUsers = await User.find({ referredBy: { $exists: true, $ne: null } })
+      .populate('referredBy', 'name email referralCode')
+      .select('name email createdAt referredBy points totalPointsEarned totalPointsUsed')
+      .sort({ createdAt: -1 });
+
+    // Transform to referral format
+    const referrals = await Promise.all(
+      referredUsers.map(async (referredUser) => {
+        const referrer = referredUser.referredBy;
+        
+        // Count completed trips for the referred user
+        const tripsCompleted = await Booking.countDocuments({
+          user: referredUser._id,
+          status: 'completed',
+        });
+
+        // Calculate points earned (50 for signup + 50 for first completed trip)
+        let pointsEarned = 50; // Signup points
+        if (tripsCompleted > 0) {
+          pointsEarned += 50; // First trip completion points
+        }
+
+        // Determine status: completed if has completed trips, pending otherwise
+        const referralStatus = tripsCompleted > 0 ? 'completed' : 'pending';
+
+        // Get redemption history (points used)
+        const redemptionHistory = [];
+        // Note: In a real system, you might want to track individual redemptions
+        // For now, we'll use totalPointsUsed as a proxy
+        if (referredUser.totalPointsUsed > 0) {
+          redemptionHistory.push({
+            date: new Date().toISOString(), // You might want to track actual redemption dates
+            points: referredUser.totalPointsUsed,
+            description: 'Points redeemed',
+          });
+        }
+
+        return {
+          id: referredUser._id.toString(),
+          referrerId: referrer?._id?.toString() || '',
+          referrerName: referrer?.name || referrer?.email?.split('@')[0] || 'Unknown',
+          referrerEmail: referrer?.email || '',
+          referralCode: referrer?.referralCode || '',
+          referredUserId: referredUser._id.toString(),
+          referredUserName: referredUser.name || referredUser.email.split('@')[0],
+          referredUserEmail: referredUser.email,
+          pointsEarned,
+          status: referralStatus,
+          referralDate: referredUser.createdAt,
+          completedDate: tripsCompleted > 0 ? referredUser.createdAt : null,
+          redemptionHistory,
+        };
+      })
+    );
+
+    // Apply filters
+    let filteredReferrals = referrals;
+
+    // Status filter
+    if (status && status !== 'all') {
+      filteredReferrals = filteredReferrals.filter((r) => r.status === status);
+    }
+
+    // Date range filter
+    if (dateRange && dateRange !== 'all') {
+      const now = new Date();
+      filteredReferrals = filteredReferrals.filter((referral) => {
+        const referralDate = new Date(referral.referralDate);
+        switch (dateRange) {
+          case 'today':
+            return referralDate.toDateString() === now.toDateString();
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return referralDate >= weekAgo;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return referralDate >= monthAgo;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Referrer filter
+    if (referrer && referrer !== 'all') {
+      filteredReferrals = filteredReferrals.filter((r) => r.referrerId === referrer);
+    }
+
+    // Search filter
+    if (search && search !== '') {
+      const query = search.toLowerCase();
+      filteredReferrals = filteredReferrals.filter(
+        (referral) =>
+          referral.referrerName.toLowerCase().includes(query) ||
+          referral.referrerEmail.toLowerCase().includes(query) ||
+          referral.referredUserName.toLowerCase().includes(query) ||
+          referral.referredUserEmail.toLowerCase().includes(query) ||
+          referral.referralCode.toLowerCase().includes(query)
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        referrals: filteredReferrals,
+        total: filteredReferrals.length,
+      },
+    });
+  } catch (error) {
+    console.error('Get all referrals error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching referrals',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Update Referral Points (Admin)
+ * @route   PUT /api/admin/referrals/:referralId/points
+ * @access  Private (Admin)
+ */
+export const updateReferralPoints = async (req, res) => {
+  try {
+    const { referralId } = req.params;
+    const { points } = req.body; // Points to add (can be negative to subtract)
+
+    if (typeof points !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Points must be a number',
+      });
+    }
+
+    // Find the referred user
+    const referredUser = await User.findById(referralId);
+    if (!referredUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Referred user not found',
+      });
+    }
+
+    // Update points
+    referredUser.points = Math.max(0, (referredUser.points || 0) + points);
+    if (points > 0) {
+      referredUser.totalPointsEarned = (referredUser.totalPointsEarned || 0) + points;
+    }
+    await referredUser.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Points updated successfully',
+      data: {
+        referral: {
+          id: referredUser._id.toString(),
+          points: referredUser.points,
+          totalPointsEarned: referredUser.totalPointsEarned,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Update referral points error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating referral points',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
