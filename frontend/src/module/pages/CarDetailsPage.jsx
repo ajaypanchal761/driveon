@@ -10,10 +10,12 @@ import BookingConfirmationModal from '../components/common/BookingConfirmationMo
 import CustomSelect from '../components/common/CustomSelect';
 import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
-import { useAppSelector } from '../../hooks/redux';
+import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import reviewService from '../../services/review.service';
 import carService from '../../services/car.service';
 import commonService from '../../services/common.service';
+import { userService } from '../../services/user.service';
+import { setUser, updateUser } from '../../store/slices/userSlice';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -105,6 +107,7 @@ const CarDetailsPage = () => {
   const [inclusionsExclusions, setInclusionsExclusions] = useState([]);
 
   // Get authentication state
+  const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
@@ -1114,6 +1117,42 @@ const CarDetailsPage = () => {
 
     fetchCommonData();
   }, []);
+
+  // Fetch user profile from database when authenticated - always fetch fresh data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await userService.getProfile();
+        
+        // userService.getProfile() returns: { success: true, data: { user: {...} } }
+        // So we access: response.data.user
+        const userData = response?.data?.user || response?.user || response?.data;
+        
+        if (userData) {
+          // Normalize user data (handle fullName vs name)
+          const normalizedUserData = {
+            ...userData,
+            name: userData.name || userData.fullName || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            age: userData.age || null,
+            gender: userData.gender || '',
+          };
+          
+          // Update Redux store with fetched data from database
+          dispatch(setUser(normalizedUserData));
+        }
+      } catch (error) {
+        console.error('❌ CarDetailsPage - Error fetching user profile:', error);
+        // Don't show error - just use existing Redux data if available
+      }
+    };
+
+    fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, isAuthenticated]);
   
   // Extract numeric price from car.price (format: "Rs. 200" or just number)
   const getCarPrice = () => {
@@ -1260,6 +1299,49 @@ const CarDetailsPage = () => {
   
   // Time picker modal state
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+
+  // Use ref to track if we've auto-filled to prevent infinite loops
+  const autoFilledRef = useRef(false);
+  const lastUserDataRef = useRef(null);
+
+  // Auto-fill personal details from database when checkbox is checked and user data is available
+  useEffect(() => {
+    // Only auto-fill if checkbox is checked and user data is available
+    if (!isPersonal || !user) {
+      // Reset ref when checkbox is unchecked
+      if (!isPersonal) {
+        autoFilledRef.current = false;
+        lastUserDataRef.current = null;
+      }
+      return;
+    }
+
+    // Create a stable key from user data to detect changes
+    const userDataKey = `${user.name || ''}_${user.phone || ''}_${user.email || ''}_${user.age || ''}_${user.gender || ''}`;
+    
+    // Only auto-fill if user data has changed or hasn't been filled yet
+    if (lastUserDataRef.current !== userDataKey) {
+      console.log('📱 CarDetailsPage - Auto-filling personal details from user data:', {
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        age: user.age,
+        gender: user.gender,
+      });
+      
+      const newPersonalDetails = {
+        name: user.name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        age: user.age ? String(user.age) : '',
+        gender: user.gender || '',
+      };
+      
+      setPersonalDetails(newPersonalDetails);
+      autoFilledRef.current = true;
+      lastUserDataRef.current = userDataKey;
+    }
+  }, [isPersonal, user?.name, user?.phone, user?.email, user?.age, user?.gender]);
 
   // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
   // Use noon (12:00) to avoid timezone shift issues
@@ -1434,9 +1516,10 @@ const CarDetailsPage = () => {
       return;
     }
     
+    let dateStr = null;
     if (calendarSelectedDate) {
       // Use local date components instead of toISOString to avoid timezone shift
-      const dateStr = formatLocalDate(calendarSelectedDate);
+      dateStr = formatLocalDate(calendarSelectedDate);
       if (dateTimePickerTarget === 'pickup') {
         setPickupDate(dateStr);
         // Compare dates properly
@@ -1469,9 +1552,9 @@ const CarDetailsPage = () => {
     // Save dates to localStorage for auto-fill in book-now page
     try {
       const dates = {
-        pickupDate: dateTimePickerTarget === 'pickup' ? dateStr : pickupDate,
+        pickupDate: dateTimePickerTarget === 'pickup' ? (dateStr || pickupDate) : pickupDate,
         pickupTime: dateTimePickerTarget === 'pickup' ? timeStr : pickupTime,
-        dropDate: dateTimePickerTarget === 'drop' ? dateStr : dropDate,
+        dropDate: dateTimePickerTarget === 'drop' ? (dateStr || dropDate) : dropDate,
         dropTime: dateTimePickerTarget === 'drop' ? timeStr : dropTime,
       };
       localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
@@ -2256,7 +2339,7 @@ const CarDetailsPage = () => {
                     type="checkbox"
                     id="personal-purpose"
                     checked={isPersonal}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       setIsPersonal(e.target.checked);
                       if (e.target.checked) {
                         // Clear other purpose if personal is selected
@@ -2266,6 +2349,72 @@ const CarDetailsPage = () => {
                         setStudentId('');
                         setDocumentPhoto(null);
                         setDocumentPhotoPreview(null);
+                        
+                        // Fetch fresh user data from database when checkbox is checked
+                        if (isAuthenticated) {
+                          try {
+                            const response = await userService.getProfile();
+                            const userData = response?.data?.user || response?.user || response?.data;
+                            
+                            if (userData) {
+                              // Normalize user data
+                              const normalizedUserData = {
+                                ...userData,
+                                name: userData.name || userData.fullName || '',
+                                phone: userData.phone || '',
+                                email: userData.email || '',
+                                age: userData.age || null,
+                                gender: userData.gender || '',
+                              };
+                              
+                              // Update Redux store
+                              dispatch(setUser(normalizedUserData));
+                              
+                              // Auto-fill personal details from fresh database data immediately
+                              setPersonalDetails({
+                                name: normalizedUserData.name || '',
+                                phone: normalizedUserData.phone || '',
+                                email: normalizedUserData.email || '',
+                                age: normalizedUserData.age ? String(normalizedUserData.age) : '',
+                                gender: normalizedUserData.gender || '',
+                              });
+                              
+                              // Update refs to prevent duplicate auto-fill
+                              autoFilledRef.current = true;
+                              lastUserDataRef.current = `${normalizedUserData.name || ''}_${normalizedUserData.phone || ''}_${normalizedUserData.email || ''}_${normalizedUserData.age || ''}_${normalizedUserData.gender || ''}`;
+                            } else if (user) {
+                              // Fallback to Redux user data if API doesn't return data
+                              setPersonalDetails({
+                                name: user.name || '',
+                                phone: user.phone || '',
+                                email: user.email || '',
+                                age: user.age ? String(user.age) : '',
+                                gender: user.gender || '',
+                              });
+                            }
+                          } catch (error) {
+                            console.error('❌ CarDetailsPage - Error fetching user data on checkbox check:', error);
+                            // Fallback to Redux user data if API call fails
+                            if (user) {
+                              setPersonalDetails({
+                                name: user.name || '',
+                                phone: user.phone || '',
+                                email: user.email || '',
+                                age: user.age ? String(user.age) : '',
+                                gender: user.gender || '',
+                              });
+                            }
+                          }
+                        } else if (user) {
+                          // If not authenticated but user data exists in Redux, use it
+                          setPersonalDetails({
+                            name: user.name || '',
+                            phone: user.phone || '',
+                            email: user.email || '',
+                            age: user.age ? String(user.age) : '',
+                            gender: user.gender || '',
+                          });
+                        }
                       } else {
                         // Clear personal details if unchecked
                         setPersonalDetails({
