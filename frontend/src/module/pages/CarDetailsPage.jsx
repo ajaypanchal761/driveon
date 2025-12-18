@@ -14,6 +14,9 @@ import { useAppSelector } from '../../hooks/redux';
 import reviewService from '../../services/review.service';
 import carService from '../../services/car.service';
 import commonService from '../../services/common.service';
+import { userService } from '../../services/user.service';
+import razorpayService from '../../services/razorpay.service';
+import bookingService from '../../services/booking.service';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -1235,6 +1238,52 @@ const CarDetailsPage = () => {
   const [studentId, setStudentId] = useState('');
   const [documentPhoto, setDocumentPhoto] = useState(null);
   const [documentPhotoPreview, setDocumentPhotoPreview] = useState(null);
+
+  // Fetch user profile and auto-fill personal details
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await userService.getProfile();
+        const userProfile = response?.data?.user || response?.user || user;
+        
+        if (userProfile) {
+          // Auto-fill personal details from user profile (prioritize database values)
+          setPersonalDetails((prev) => ({
+            name: userProfile.name || userProfile.fullName || prev.name || "",
+            phone: userProfile.phone || userProfile.mobile || userProfile.phoneNumber || prev.phone || "",
+            email: userProfile.email || prev.email || "",
+            age: userProfile.age ? String(userProfile.age) : prev.age || "",
+            gender: userProfile.gender || prev.gender || "",
+          }));
+          
+          // Auto-fill current address if available
+          if (userProfile.address) {
+            setCurrentAddress((prev) => prev || userProfile.address);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback to Redux user data if API fails
+        if (user) {
+          setPersonalDetails((prev) => ({
+            name: user.name || user.fullName || prev.name || "",
+            phone: user.phone || user.mobile || user.phoneNumber || prev.phone || "",
+            email: user.email || prev.email || "",
+            age: user.age ? String(user.age) : prev.age || "",
+            gender: user.gender || prev.gender || "",
+          }));
+          if (user.address) {
+            setCurrentAddress((prev) => prev || user.address);
+          }
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, user]);
+
   // Add-on services with quantities
   const [addOnServices, setAddOnServices] = useState({
     driver: 0,
@@ -1243,6 +1292,7 @@ const CarDetailsPage = () => {
     bouncer: 0,
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Booking confirmation modal state
   const [showBookingConfirmationModal, setShowBookingConfirmationModal] = useState(false);
@@ -1502,7 +1552,7 @@ const CarDetailsPage = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!pickupDate || !dropDate || !pickupTime || !dropTime) {
@@ -1515,107 +1565,160 @@ const CarDetailsPage = () => {
       return;
     }
 
-    // Check if it's web view (lg breakpoint and above)
-    const isWebView = window.innerWidth >= 1024;
+    // Both mobile and web views: Use Razorpay payment flow
+    if (!car || (!car.id && !car._id)) return;
 
-    if (isWebView) {
-      // Web view: Directly confirm booking (like mobile flow)
-      if (!car || (!car.id && !car._id)) return;
+    // Parse car name to extract brand and model
+    let brand = car.name;
+    let model = "";
+    if (car.name && car.name.includes("-")) {
+      // Format: "Ferrari-FF"
+      const parts = car.name.split("-");
+      brand = parts[0];
+      model = parts.slice(1).join(" ");
+    } else if (car.name && car.name.includes(" ")) {
+      // Format: "Tesla Model S" or "BMW GTS3 M2"
+      const parts = car.name.split(" ");
+      brand = parts[0];
+      model = parts.slice(1).join(" ");
+    }
 
-      // Generate unique booking ID
-      const bookingId = `BK${Date.now().toString().slice(-6)}`;
+    // Build booking payload for API
+    const effectiveCarId = (car.id || car._id).toString();
+    const bookingPayload = {
+      carId: effectiveCarId,
+      tripStart: {
+        location: car.location || "Pickup location",
+        coordinates: {},
+        date: pickupDate,
+        time: pickupTime || "10:00",
+      },
+      tripEnd: {
+        location: car.location || "Drop location",
+        coordinates: {},
+        date: dropDate,
+        time: dropTime || "18:00",
+      },
+      paymentOption: paymentOption || "advance",
+      specialRequests: specialRequests || "",
+      couponCode: appliedCoupon?.code || null,
+      couponDiscount: couponDiscount,
+      // Additional details for verification and reporting
+      bookingPurpose: isPersonal ? "personal" : bookingPurpose || null,
+      personalDetails: isPersonal ? personalDetails : null,
+      currentAddress: currentAddress || null,
+      jobDetails: bookingPurpose === "job" ? jobDetails : null,
+      businessDetails: bookingPurpose === "business" ? businessDetails : null,
+      studentId: bookingPurpose === "student" ? studentId : null,
+      documentPhoto: documentPhoto ? documentPhotoPreview : null,
+      addOnServices,
+    };
 
-      // Parse car name to extract brand and model
-      let brand = car.name;
-      let model = "";
-      if (car.name && car.name.includes("-")) {
-        // Format: "Ferrari-FF"
-        const parts = car.name.split("-");
-        brand = parts[0];
-        model = parts.slice(1).join(" ");
-      } else if (car.name && car.name.includes(" ")) {
-        // Format: "Tesla Model S" or "BMW GTS3 M2"
-        const parts = car.name.split(" ");
-        brand = parts[0];
-        model = parts.slice(1).join(" ");
+    const amountToPay =
+      paymentOption === "advance"
+        ? priceDetails.advancePayment
+        : priceDetails.finalPrice;
+
+    setIsProcessing(true);
+
+    try {
+      const bookingResponse = await bookingService.createBooking(
+        bookingPayload
+      );
+      const booking = bookingResponse?.data?.booking || bookingResponse?.data;
+      const bookingId =
+        booking?._id ||
+        booking?.id ||
+        booking?.bookingId ||
+        bookingResponse?.bookingId;
+
+      if (!bookingId) {
+        throw new Error("Booking ID missing from server response");
       }
-      // If no separator, use full name as brand (e.g., "BMW")
 
-      // Create booking object matching BookingsPage structure
-      const newBooking = {
-        id: `booking_${Date.now()}`,
-        bookingId: bookingId,
-        car: {
-          id: (car.id || car._id).toString(),
-          brand: brand,
-          model: model || brand,
-          image: car.image,
-          seats: car.seats,
-          transmission: car.transmission,
-          fuelType: car.fuelType,
+      await razorpayService.processBookingPayment({
+        bookingId: bookingId.toString(),
+        amount: amountToPay,
+        description: `Car booking payment - ${brand} ${model}`.trim(),
+        name: user?.name || user?.fullName || "",
+        email: user?.email || "",
+        phone: user?.phone || user?.mobile || user?.phoneNumber || "",
+        onSuccess: () => {
+          // Build a rich booking payload for the confirmation modal / PDF
+          const bookingDataForPdf = {
+            // Booking core
+            bookingId: bookingId.toString(),
+            createdAt: booking?.createdAt || new Date().toISOString(),
+
+            // Car information
+            car: {
+              brand: brand || car.brand,
+              model: model || car.model,
+              seats: car.seats,
+              seatingCapacity: car.seats,
+              transmission: car.transmission,
+              fuelType: car.fuelType,
+              registrationNumber: car.registrationNumber,
+            },
+
+            // Trip details
+            pickupDate: pickupDate,
+            pickupTime: pickupTime,
+            dropDate: dropDate,
+            dropTime: dropTime,
+
+            // Additional details
+            bookingPurpose: bookingPayload.bookingPurpose,
+            personalDetails: bookingPayload.personalDetails,
+            currentAddress: bookingPayload.currentAddress,
+            jobDetails: bookingPayload.jobDetails,
+            businessDetails: bookingPayload.businessDetails,
+            studentId: bookingPayload.studentId,
+            addOnServices: bookingPayload.addOnServices,
+            specialRequests: bookingPayload.specialRequests,
+
+            // Pricing details
+            totalPrice: priceDetails.totalPrice,
+            paidAmount: amountToPay,
+            remainingAmount:
+              (priceDetails.finalPrice || 0) - (amountToPay || 0),
+            couponCode: bookingPayload.couponCode,
+            couponDiscount: bookingPayload.couponDiscount,
+            paymentOption: bookingPayload.paymentOption,
+
+            // Status information
+            status: booking?.status || "pending",
+            paymentStatus:
+              booking?.paymentStatus ||
+              (paymentOption === "advance" ? "partial" : "full"),
+            tripStatus: booking?.tripStatus || "pending",
+          };
+
+          setIsProcessing(false);
+          
+          // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
+          setTimeout(() => {
+            console.log('🎉 Showing booking confirmation modal now!');
+            setConfirmedBookingId(bookingId.toString());
+            setConfirmedBookingData(bookingDataForPdf);
+            setShowBookingConfirmationModal(true);
+          }, 500); // 500ms delay to ensure Razorpay modal is closed
         },
-        // Booking status is initially pending until physical document verification at office
-        status: "pending",
-        tripStatus: "not_started",
-        paymentStatus: "partial",
-        pickupDate: pickupDate,
-        pickupTime: pickupTime,
-        dropDate: dropDate,
-        dropTime: dropTime,
-        totalPrice: priceDetails.finalPrice,
-        paidAmount: priceDetails.advancePayment,
-        remainingAmount: priceDetails.remainingPayment,
-        isTrackingActive: false,
-        createdAt: new Date().toISOString().split("T")[0],
-        paymentOption: paymentOption,
-        specialRequests: specialRequests,
-        couponCode: appliedCoupon?.code || null,
-        couponDiscount: couponDiscount,
-        // Additional details
-        bookingPurpose: isPersonal ? 'personal' : (bookingPurpose || null),
-        personalDetails: isPersonal ? personalDetails : null,
-        currentAddress: currentAddress || null,
-        jobDetails: bookingPurpose === 'job' ? jobDetails : null,
-        businessDetails: bookingPurpose === 'business' ? businessDetails : null,
-        studentId: bookingPurpose === 'student' ? studentId : null,
-        documentPhoto: documentPhoto ? documentPhotoPreview : null, // Store as base64 for now
-        // Add-on services
-        addOnServices: addOnServices,
-      };
-
-      // Save to localStorage
-      try {
-        const existingBookings = JSON.parse(
-          localStorage.getItem("localBookings") || "[]"
-        );
-        existingBookings.unshift(newBooking); // Add to beginning
-        localStorage.setItem("localBookings", JSON.stringify(existingBookings));
-
-        // Show booking confirmation modal with document verification message
-        setConfirmedBookingId(bookingId);
-        setConfirmedBookingData(newBooking);
-        setShowBookingConfirmationModal(true);
-      } catch (error) {
-        console.error("Error saving booking to localStorage:", error);
-        alert("Error saving booking. Please try again.");
-      }
-    } else {
-      // Mobile view: Navigate to payment page (unchanged)
-      if (!car || (!car.id && !car._id)) return;
-      navigate(`/book-now/${car.id || car._id}`, { 
-        state: { 
-          car, 
-          pickupDate, 
-          pickupTime, 
-          dropDate, 
-          dropTime, 
-          paymentOption, 
-          specialRequests, 
-          couponCode: appliedCoupon?.code, 
-          couponDiscount, 
-          priceDetails 
-        } 
+        onError: (error) => {
+          console.error("Payment error:", error);
+          setIsProcessing(false);
+          if (error?.message === "PAYMENT_CANCELLED") return;
+          alert(error?.message || "Payment failed. Please try again.");
+        },
       });
+    } catch (error) {
+      console.error("Error during booking/payment:", error);
+      setIsProcessing(false);
+      alert(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to create booking. Please try again."
+      );
     }
   };
 
@@ -2266,15 +2369,6 @@ const CarDetailsPage = () => {
                         setStudentId('');
                         setDocumentPhoto(null);
                         setDocumentPhotoPreview(null);
-                      } else {
-                        // Clear personal details if unchecked
-                        setPersonalDetails({
-                          name: '',
-                          phone: '',
-                          email: '',
-                          age: '',
-                          gender: '',
-                        });
                       }
                     }}
                     className="mt-0.5 w-4 h-4 rounded border-2"
@@ -2285,9 +2379,8 @@ const CarDetailsPage = () => {
                   </label>
                 </div>
 
-                {/* Personal Details Fields */}
-                {isPersonal && (
-                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
+                {/* Personal Details Fields - Always visible and auto-filled */}
+                <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
                     <h4 className="text-xs font-bold mb-2" style={{ color: colors.textPrimary }}>Personal Details</h4>
                     
                     {/* Name */}
@@ -2298,6 +2391,7 @@ const CarDetailsPage = () => {
                       <input
                         type="text"
                         value={personalDetails.name}
+                        autoComplete="off"
                         onChange={(e) => setPersonalDetails(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="Enter your name"
                         className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
@@ -2317,6 +2411,7 @@ const CarDetailsPage = () => {
                       <input
                         type="tel"
                         value={personalDetails.phone}
+                        autoComplete="off"
                         onChange={(e) => setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))}
                         placeholder="Enter your phone number"
                         className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
@@ -2336,6 +2431,7 @@ const CarDetailsPage = () => {
                       <input
                         type="email"
                         value={personalDetails.email}
+                        autoComplete="off"
                         onChange={(e) => setPersonalDetails(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="Enter your email"
                         className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
@@ -2355,6 +2451,7 @@ const CarDetailsPage = () => {
                       <input
                         type="number"
                         value={personalDetails.age}
+                        autoComplete="off"
                         onChange={(e) => setPersonalDetails(prev => ({ ...prev, age: e.target.value }))}
                         placeholder="Enter your age"
                         min="18"
@@ -2384,7 +2481,6 @@ const CarDetailsPage = () => {
                       />
                     </div>
                   </div>
-                )}
 
                 {/* Booking Purpose Dropdown (Job, Business, Student only) */}
                 <div>
@@ -2810,10 +2906,18 @@ const CarDetailsPage = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl text-white font-bold text-base shadow-xl"
+                disabled={isProcessing}
+                className="w-full py-3 rounded-xl text-white font-bold text-base shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ backgroundColor: colors.backgroundTertiary }}
               >
-                Proceed to Payment
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  'Proceed to Payment'
+                )}
               </button>
             </form>
           </div>

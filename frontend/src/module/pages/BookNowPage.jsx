@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import razorpayService from "../../services/razorpay.service";
 import bookingService from "../../services/booking.service";
+import { userService } from "../../services/user.service";
 import { useAppSelector } from "../../hooks/redux";
 import CarDetailsHeader from "../components/layout/CarDetailsHeader";
 import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
@@ -42,11 +43,6 @@ const BookNowPage = () => {
     isAuthenticated: state.auth?.isAuthenticated,
     user: state.auth?.user || state.user?.user || state.user,
   }));
-
-  // Booking confirmation modal state (shown after successful Razorpay payment)
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [confirmationBookingId, setConfirmationBookingId] = useState(null);
-  const [confirmationBookingData, setConfirmationBookingData] = useState(null);
 
   // Get car data from navigation state, session cache, or use mock data as fallback
   const getCarData = () => {
@@ -245,6 +241,57 @@ const BookNowPage = () => {
   const [studentId, setStudentId] = useState("");
   const [documentPhoto, setDocumentPhoto] = useState(null);
   const [documentPhotoPreview, setDocumentPhotoPreview] = useState(null);
+
+  // Fetch user profile and auto-fill personal details
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+
+      try {
+        const response = await userService.getProfile();
+        const userProfile = response?.data?.user || response?.user || user;
+
+        if (userProfile) {
+          // Auto-fill personal details from user profile
+          setPersonalDetails((prev) => ({
+            name: userProfile.name || userProfile.fullName || prev.name || "",
+            phone:
+              userProfile.phone ||
+              userProfile.mobile ||
+              userProfile.phoneNumber ||
+              prev.phone ||
+              "",
+            email: userProfile.email || prev.email || "",
+            age: userProfile.age ? String(userProfile.age) : prev.age || "",
+            gender: userProfile.gender || prev.gender || "",
+          }));
+
+          // Auto-fill current address if available
+          if (userProfile.address) {
+            setCurrentAddress(userProfile.address);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Fallback to Redux user data if API fails
+        if (user) {
+          setPersonalDetails((prev) => ({
+            name: user.name || user.fullName || prev.name || "",
+            phone:
+              user.phone || user.mobile || user.phoneNumber || prev.phone || "",
+            email: user.email || prev.email || "",
+            age: user.age ? String(user.age) : prev.age || "",
+            gender: user.gender || prev.gender || "",
+          }));
+          if (user.address) {
+            setCurrentAddress(user.address);
+          }
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, user]);
   // Add-on services with quantities
   const [addOnServices, setAddOnServices] = useState({
     driver: 0,
@@ -812,9 +859,14 @@ const BookNowPage = () => {
           };
 
           setIsProcessing(false);
-          setConfirmationBookingId(bookingId.toString());
-          setConfirmationBookingData(bookingDataForPdf);
-          setShowConfirmationModal(true);
+
+          // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
+          setTimeout(() => {
+            console.log("🎉 Showing booking confirmation modal now!");
+            setConfirmedBookingId(bookingId.toString());
+            setConfirmedBookingData(bookingDataForPdf);
+            setShowBookingConfirmationModal(true);
+          }, 500); // 500ms delay to ensure Razorpay modal is closed
         },
         onError: (error) => {
           console.error("Payment error:", error);
@@ -1364,6 +1416,7 @@ const BookNowPage = () => {
                       }))
                     }
                     placeholder="Enter your name"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1391,6 +1444,7 @@ const BookNowPage = () => {
                       }))
                     }
                     placeholder="Enter your phone number"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1418,6 +1472,7 @@ const BookNowPage = () => {
                       }))
                     }
                     placeholder="Enter your email"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1446,6 +1501,7 @@ const BookNowPage = () => {
                     }
                     placeholder="Enter your age"
                     min="18"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
