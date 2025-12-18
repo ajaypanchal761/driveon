@@ -21,7 +21,7 @@ const carFormSchema = z.object({
   
   // Car Type & Category
   carType: z.enum(['sedan', 'suv', 'hatchback', 'luxury', 'sports', 'compact', 'muv', 'coupe']),
-  fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'cng']),
+  fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'cng', 'petrol_cng']),
   transmission: z.enum(['manual', 'automatic', 'cvt']),
   seatingCapacity: z.number().min(2).max(10),
   
@@ -38,8 +38,6 @@ const carFormSchema = z.object({
   
   // Additional
   description: z.string().max(1000).optional(),
-  mileage: z.number().min(0).optional(),
-  engineCapacity: z.string().optional(),
   isAvailable: z.boolean().default(true),
 });
 
@@ -151,8 +149,6 @@ const AddCarPage = () => {
       
       // Add optional fields
       if (data.description) formData.append('description', data.description);
-      if (data.mileage) formData.append('mileage', data.mileage);
-      if (data.engineCapacity) formData.append('engineCapacity', data.engineCapacity);
       formData.append('isAvailable', data.isAvailable ? 'true' : 'false');
 
       // Add images
@@ -305,6 +301,7 @@ const AddCarPage = () => {
                           { value: 'electric', label: 'Electric' },
                           { value: 'hybrid', label: 'Hybrid' },
                           { value: 'cng', label: 'CNG' },
+                          { value: 'petrol_cng', label: 'Petrol + CNG' },
                         ]}
                       />
                     )}
@@ -336,19 +333,6 @@ const AddCarPage = () => {
                   placeholder="e.g., 5"
                   error={errors.seatingCapacity?.message}
                   {...register('seatingCapacity', { valueAsNumber: true })}
-                />
-                <Input
-                  type="number"
-                  label="Mileage (km)"
-                  placeholder="e.g., 15000"
-                  error={errors.mileage?.message}
-                  {...register('mileage', { valueAsNumber: true })}
-                />
-                <Input
-                  label="Engine Capacity"
-                  placeholder="e.g., 1.5L"
-                  error={errors.engineCapacity?.message}
-                  {...register('engineCapacity')}
                 />
               </div>
             </Card>

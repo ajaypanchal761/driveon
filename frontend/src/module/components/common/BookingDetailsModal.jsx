@@ -184,6 +184,26 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                 {booking.bookingId || 'N/A'}
               </p>
             </div>
+
+            {/* Pending Status Note for Physical Verification */}
+            {booking.status === 'pending' && (
+              <div
+                className="p-3 rounded-lg space-y-1"
+                style={{
+                  backgroundColor: `${colors.warning}15`,
+                  border: `1px solid ${colors.warning}40`,
+                }}
+              >
+                <p className="text-xs font-semibold" style={{ color: colors.warning }}>
+                  Booking Status: Pending Physical Verification
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: colors.textSecondary }}>
+                  Your booking is currently marked as <span className="font-semibold">Pending</span> because physical
+                  document verification at our office is still remaining. Once your documents are verified at the office,
+                  your booking status will be updated to <span className="font-semibold">Confirmed</span>.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Trip Details */}

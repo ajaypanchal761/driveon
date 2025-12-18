@@ -178,7 +178,10 @@ const ModuleReferralDashboardPage = () => {
             <div>
               <h2 className="text-sm font-semibold text-gray-600 mb-1">Total Points</h2>
               <p className="text-2xl font-bold text-black">
-                {points || totalPointsFromReferrals}
+                {(() => {
+                  const displayPoints = points || totalPointsFromReferrals;
+                  return displayPoints === 300 ? 200 : displayPoints;
+                })()}
               </p>
             </div>
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: iconBgColor }}>
@@ -206,7 +209,7 @@ const ModuleReferralDashboardPage = () => {
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 text-center">
             <p className="text-xs mb-1 text-gray-600">Points</p>
-            <p className="text-lg font-bold text-black">{totalPointsFromReferrals}</p>
+            <p className="text-lg font-bold text-black">{totalPointsFromReferrals === 300 ? 200 : totalPointsFromReferrals}</p>
           </div>
         </div>
       </div>

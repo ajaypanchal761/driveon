@@ -154,6 +154,20 @@ const HomePage = () => {
     } else {
       setDropoffDate(dateStr);
     }
+    
+    // Save dates to localStorage for auto-fill in car details page
+    try {
+      const dates = {
+        pickupDate: calendarTarget === "pickup" ? dateStr : pickupDate,
+        pickupTime: pickupTime,
+        dropDate: calendarTarget === "dropoff" ? dateStr : dropoffDate,
+        dropTime: dropoffTime,
+      };
+      localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
+    } catch (error) {
+      console.error('Error saving dates to localStorage:', error);
+    }
+    
     setIsCalendarOpen(false);
   };
 
@@ -188,11 +202,72 @@ const HomePage = () => {
 
   const handleTimeSelect = () => {
     const formattedTime = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')} ${selectedPeriod}`;
+    // Convert to 24-hour format for storage (HH:mm)
+    let hour24 = selectedHour;
+    if (selectedPeriod === 'pm' && selectedHour !== 12) {
+      hour24 = selectedHour + 12;
+    } else if (selectedPeriod === 'am' && selectedHour === 12) {
+      hour24 = 0;
+    }
+    const time24Format = `${String(hour24).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`;
+    
     if (timePickerTarget === "pickup") {
       setPickupTime(formattedTime);
     } else if (timePickerTarget === "dropoff") {
       setDropoffTime(formattedTime);
     }
+    
+    // Save dates to localStorage for auto-fill in car details page
+    try {
+      // Get current times in 24-hour format
+      let currentPickupTime24 = '';
+      let currentDropoffTime24 = '';
+      
+      if (timePickerTarget === "pickup") {
+        currentPickupTime24 = time24Format;
+        // Convert existing dropoff time if available
+        if (dropoffTime) {
+          const [time, period] = dropoffTime.split(' ');
+          if (time && period) {
+            const [hour, minute] = time.split(':');
+            let hour24 = parseInt(hour);
+            if (period === 'pm' && hour24 !== 12) {
+              hour24 = hour24 + 12;
+            } else if (period === 'am' && hour24 === 12) {
+              hour24 = 0;
+            }
+            currentDropoffTime24 = `${String(hour24).padStart(2, '0')}:${minute}`;
+          }
+        }
+      } else {
+        currentDropoffTime24 = time24Format;
+        // Convert existing pickup time if available
+        if (pickupTime) {
+          const [time, period] = pickupTime.split(' ');
+          if (time && period) {
+            const [hour, minute] = time.split(':');
+            let hour24 = parseInt(hour);
+            if (period === 'pm' && hour24 !== 12) {
+              hour24 = hour24 + 12;
+            } else if (period === 'am' && hour24 === 12) {
+              hour24 = 0;
+            }
+            currentPickupTime24 = `${String(hour24).padStart(2, '0')}:${minute}`;
+          }
+        }
+      }
+      
+      const dates = {
+        pickupDate: pickupDate,
+        pickupTime: currentPickupTime24,
+        dropDate: dropoffDate,
+        dropTime: currentDropoffTime24,
+      };
+      localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
+    } catch (error) {
+      console.error('Error saving dates to localStorage:', error);
+    }
+    
     setIsTimePickerOpen(false);
   };
 

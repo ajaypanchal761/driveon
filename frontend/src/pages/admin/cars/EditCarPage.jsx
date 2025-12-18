@@ -21,7 +21,7 @@ const carFormSchema = z.object({
   
   // Car Type & Category
   carType: z.enum(['sedan', 'suv', 'hatchback', 'luxury', 'sports', 'compact', 'muv', 'coupe']),
-  fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'cng']),
+  fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'cng', 'petrol_cng']),
   transmission: z.enum(['manual', 'automatic', 'cvt']),
   seatingCapacity: z.number().min(2).max(10),
   
@@ -385,6 +385,7 @@ const EditCarPage = () => {
                           { value: 'electric', label: 'Electric' },
                           { value: 'hybrid', label: 'Hybrid' },
                           { value: 'cng', label: 'CNG' },
+                          { value: 'petrol_cng', label: 'Petrol + CNG' },
                         ]}
                       />
                     )}

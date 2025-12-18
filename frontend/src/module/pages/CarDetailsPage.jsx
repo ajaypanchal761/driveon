@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import CarDetailsHeader from '../components/layout/CarDetailsHeader';
+import BookingConfirmationModal from '../components/common/BookingConfirmationModal';
+import CustomSelect from '../components/common/CustomSelect';
 import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
 import { useAppSelector } from '../../hooks/redux';
@@ -1202,12 +1204,63 @@ const CarDetailsPage = () => {
   const [pickupTime, setPickupTime] = useState('');
   const [dropDate, setDropDate] = useState('');
   const [dropTime, setDropTime] = useState('');
+
+  // Auto-fill dates from localStorage (when coming from home page or filter)
+  useEffect(() => {
+    try {
+      const storedDates = localStorage.getItem('selectedBookingDates');
+      if (storedDates) {
+        const dates = JSON.parse(storedDates);
+        if (dates.pickupDate && !pickupDate) {
+          setPickupDate(dates.pickupDate);
+        }
+        if (dates.pickupTime && !pickupTime) {
+          setPickupTime(dates.pickupTime);
+        }
+        if (dates.dropDate && !dropDate) {
+          setDropDate(dates.dropDate);
+        }
+        if (dates.dropTime && !dropTime) {
+          setDropTime(dates.dropTime);
+        }
+      }
+    } catch (error) {
+      console.error('Error reading dates from localStorage:', error);
+    }
+  }, []); // Run once on mount
   const [paymentOption, setPaymentOption] = useState('advance');
   const [specialRequests, setSpecialRequests] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
+  const [bookingPurpose, setBookingPurpose] = useState(''); // 'job', 'business', 'student'
+  const [isPersonal, setIsPersonal] = useState(false); // Separate checkbox for personal
+  const [personalDetails, setPersonalDetails] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    age: '',
+    gender: '',
+  });
+  const [currentAddress, setCurrentAddress] = useState('');
+  const [jobDetails, setJobDetails] = useState('');
+  const [businessDetails, setBusinessDetails] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [documentPhoto, setDocumentPhoto] = useState(null);
+  const [documentPhotoPreview, setDocumentPhotoPreview] = useState(null);
+  // Add-on services with quantities
+  const [addOnServices, setAddOnServices] = useState({
+    driver: 0,
+    bodyguard: 0,
+    gunmen: 0,
+    bouncer: 0,
+  });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+
+  // Booking confirmation modal state
+  const [showBookingConfirmationModal, setShowBookingConfirmationModal] = useState(false);
+  const [confirmedBookingData, setConfirmedBookingData] = useState(null);
+  const [confirmedBookingId, setConfirmedBookingId] = useState(null);
 
   // Combined date-time picker modal state
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false);
@@ -1426,6 +1479,19 @@ const CarDetailsPage = () => {
       setDropTime(timeStr);
     }
     
+    // Save dates to localStorage for auto-fill in book-now page
+    try {
+      const dates = {
+        pickupDate: dateTimePickerTarget === 'pickup' ? dateStr : pickupDate,
+        pickupTime: dateTimePickerTarget === 'pickup' ? timeStr : pickupTime,
+        dropDate: dateTimePickerTarget === 'drop' ? dateStr : dropDate,
+        dropTime: dateTimePickerTarget === 'drop' ? timeStr : dropTime,
+      };
+      localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
+    } catch (error) {
+      console.error('Error saving dates to localStorage:', error);
+    }
+    
     setIsDateTimePickerOpen(false);
   };
 
@@ -1462,22 +1528,108 @@ const CarDetailsPage = () => {
       return;
     }
 
-    // Navigate to payment page
-    if (!car || (!car.id && !car._id)) return;
-    navigate(`/book-now/${car.id || car._id}`, { 
-      state: { 
-        car, 
-        pickupDate, 
-        pickupTime, 
-        dropDate, 
-        dropTime, 
-        paymentOption, 
-        specialRequests, 
-        couponCode: appliedCoupon?.code, 
-        couponDiscount, 
-        priceDetails 
-      } 
-    });
+    // Check if it's web view (lg breakpoint and above)
+    const isWebView = window.innerWidth >= 1024;
+
+    if (isWebView) {
+      // Web view: Directly confirm booking (like mobile flow)
+      if (!car || (!car.id && !car._id)) return;
+
+      // Generate unique booking ID
+      const bookingId = `BK${Date.now().toString().slice(-6)}`;
+
+      // Parse car name to extract brand and model
+      let brand = car.name;
+      let model = "";
+      if (car.name && car.name.includes("-")) {
+        // Format: "Ferrari-FF"
+        const parts = car.name.split("-");
+        brand = parts[0];
+        model = parts.slice(1).join(" ");
+      } else if (car.name && car.name.includes(" ")) {
+        // Format: "Tesla Model S" or "BMW GTS3 M2"
+        const parts = car.name.split(" ");
+        brand = parts[0];
+        model = parts.slice(1).join(" ");
+      }
+      // If no separator, use full name as brand (e.g., "BMW")
+
+      // Create booking object matching BookingsPage structure
+      const newBooking = {
+        id: `booking_${Date.now()}`,
+        bookingId: bookingId,
+        car: {
+          id: (car.id || car._id).toString(),
+          brand: brand,
+          model: model || brand,
+          image: car.image,
+          seats: car.seats,
+          transmission: car.transmission,
+          fuelType: car.fuelType,
+        },
+        // Booking status is initially pending until physical document verification at office
+        status: "pending",
+        tripStatus: "not_started",
+        paymentStatus: "partial",
+        pickupDate: pickupDate,
+        pickupTime: pickupTime,
+        dropDate: dropDate,
+        dropTime: dropTime,
+        totalPrice: priceDetails.finalPrice,
+        paidAmount: priceDetails.advancePayment,
+        remainingAmount: priceDetails.remainingPayment,
+        isTrackingActive: false,
+        createdAt: new Date().toISOString().split("T")[0],
+        paymentOption: paymentOption,
+        specialRequests: specialRequests,
+        couponCode: appliedCoupon?.code || null,
+        couponDiscount: couponDiscount,
+        // Additional details
+        bookingPurpose: isPersonal ? 'personal' : (bookingPurpose || null),
+        personalDetails: isPersonal ? personalDetails : null,
+        currentAddress: currentAddress || null,
+        jobDetails: bookingPurpose === 'job' ? jobDetails : null,
+        businessDetails: bookingPurpose === 'business' ? businessDetails : null,
+        studentId: bookingPurpose === 'student' ? studentId : null,
+        documentPhoto: documentPhoto ? documentPhotoPreview : null, // Store as base64 for now
+        // Add-on services
+        addOnServices: addOnServices,
+      };
+
+      // Save to localStorage
+      try {
+        const existingBookings = JSON.parse(
+          localStorage.getItem("localBookings") || "[]"
+        );
+        existingBookings.unshift(newBooking); // Add to beginning
+        localStorage.setItem("localBookings", JSON.stringify(existingBookings));
+
+        // Show booking confirmation modal with document verification message
+        setConfirmedBookingId(bookingId);
+        setConfirmedBookingData(newBooking);
+        setShowBookingConfirmationModal(true);
+      } catch (error) {
+        console.error("Error saving booking to localStorage:", error);
+        alert("Error saving booking. Please try again.");
+      }
+    } else {
+      // Mobile view: Navigate to payment page (unchanged)
+      if (!car || (!car.id && !car._id)) return;
+      navigate(`/book-now/${car.id || car._id}`, { 
+        state: { 
+          car, 
+          pickupDate, 
+          pickupTime, 
+          dropDate, 
+          dropTime, 
+          paymentOption, 
+          specialRequests, 
+          couponCode: appliedCoupon?.code, 
+          couponDiscount, 
+          priceDetails 
+        } 
+      });
+    }
   };
 
   // Navigation for image gallery
@@ -2083,6 +2235,552 @@ const CarDetailsPage = () => {
                   </div>
                 </div>
               )}
+
+              {/* Additional Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Additional Details</h3>
+                
+                {/* Personal Purpose Checkbox */}
+                <div className="flex items-start gap-2 p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                  <input
+                    type="checkbox"
+                    id="personal-purpose"
+                    checked={isPersonal}
+                    onChange={(e) => {
+                      setIsPersonal(e.target.checked);
+                      if (e.target.checked) {
+                        // Clear other purpose if personal is selected
+                        setBookingPurpose('');
+                        setJobDetails('');
+                        setBusinessDetails('');
+                        setStudentId('');
+                        setDocumentPhoto(null);
+                        setDocumentPhotoPreview(null);
+                      } else {
+                        // Clear personal details if unchecked
+                        setPersonalDetails({
+                          name: '',
+                          phone: '',
+                          email: '',
+                          age: '',
+                          gender: '',
+                        });
+                      }
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded border-2"
+                    style={{ borderColor: isPersonal ? colors.backgroundTertiary : colors.borderCheckbox }}
+                  />
+                  <label htmlFor="personal-purpose" className="text-sm font-semibold cursor-pointer" style={{ color: colors.textPrimary }}>
+                    Personal
+                  </label>
+                </div>
+
+                {/* Personal Details Fields */}
+                {isPersonal && (
+                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
+                    <h4 className="text-xs font-bold mb-2" style={{ color: colors.textPrimary }}>Personal Details</h4>
+                    
+                    {/* Name */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Name
+                      </label>
+                      <input
+                        type="text"
+                        value={personalDetails.name}
+                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Enter your name"
+                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={personalDetails.phone}
+                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Enter your phone number"
+                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={personalDetails.email}
+                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Enter your email"
+                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                    </div>
+
+                    {/* Age */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        value={personalDetails.age}
+                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, age: e.target.value }))}
+                        placeholder="Enter your age"
+                        min="18"
+                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                    </div>
+
+                    {/* Gender */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Gender
+                      </label>
+                      <CustomSelect
+                        value={personalDetails.gender}
+                        onChange={(value) => setPersonalDetails(prev => ({ ...prev, gender: value }))}
+                        options={[
+                          { label: 'Male', value: 'male' },
+                          { label: 'Female', value: 'female' },
+                          { label: 'Other', value: 'other' },
+                        ]}
+                        placeholder="Select gender"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Booking Purpose Dropdown (Job, Business, Student only) */}
+                <div>
+                  <CustomSelect
+                    value={bookingPurpose}
+                    onChange={(value) => {
+                      setBookingPurpose(value);
+                      // Clear personal if other purpose is selected
+                      if (value) {
+                        setIsPersonal(false);
+                      }
+                      // Reset conditional fields when purpose changes
+                      setJobDetails('');
+                      setBusinessDetails('');
+                      setStudentId('');
+                      setDocumentPhoto(null);
+                      setDocumentPhotoPreview(null);
+                    }}
+                    options={[
+                      { label: 'Job', value: 'job' },
+                      { label: 'Business', value: 'business' },
+                      { label: 'Student', value: 'student' },
+                    ]}
+                    placeholder="Select purpose (Job/Business/Student)"
+                  />
+                </div>
+
+                {/* Current Address */}
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                    Current Address
+                  </label>
+                  <textarea
+                    value={currentAddress}
+                    onChange={(e) => setCurrentAddress(e.target.value)}
+                    placeholder="Enter your current address"
+                    rows="3"
+                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none resize-none text-sm"
+                    style={{
+                      borderColor: colors.borderMedium,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
+                  />
+                </div>
+
+                {/* Conditional Fields based on Purpose */}
+                {bookingPurpose === 'job' && (
+                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
+                    <label className="block text-xs font-semibold" style={{ color: colors.textPrimary }}>
+                      Job Details
+                    </label>
+                    <input
+                      type="text"
+                      value={jobDetails}
+                      onChange={(e) => setJobDetails(e.target.value)}
+                      placeholder="Enter your job details (e.g., Company name, designation)"
+                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                    />
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Job Document Photo
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setDocumentPhoto(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setDocumentPhotoPreview(reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                      {documentPhotoPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={documentPhotoPreview}
+                            alt="Document preview"
+                            className="w-32 h-32 object-cover rounded-lg border-2"
+                            style={{ borderColor: colors.borderMedium }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDocumentPhoto(null);
+                              setDocumentPhotoPreview(null);
+                            }}
+                            className="mt-1 text-xs text-red-600 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {bookingPurpose === 'business' && (
+                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
+                    <label className="block text-xs font-semibold" style={{ color: colors.textPrimary }}>
+                      Business Details
+                    </label>
+                    <input
+                      type="text"
+                      value={businessDetails}
+                      onChange={(e) => setBusinessDetails(e.target.value)}
+                      placeholder="Enter your business details (e.g., Business name, type)"
+                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                    />
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Business Document Photo
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setDocumentPhoto(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setDocumentPhotoPreview(reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                      {documentPhotoPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={documentPhotoPreview}
+                            alt="Document preview"
+                            className="w-32 h-32 object-cover rounded-lg border-2"
+                            style={{ borderColor: colors.borderMedium }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDocumentPhoto(null);
+                              setDocumentPhotoPreview(null);
+                            }}
+                            className="mt-1 text-xs text-red-600 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {bookingPurpose === 'student' && (
+                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Student ID
+                      </label>
+                      <input
+                        type="text"
+                        value={studentId}
+                        onChange={(e) => setStudentId(e.target.value)}
+                        placeholder="Enter your student ID"
+                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                        Student ID Document Photo
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setDocumentPhoto(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setDocumentPhotoPreview(reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg border-2 text-sm"
+                        style={{
+                          borderColor: colors.borderMedium,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                      />
+                      {documentPhotoPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={documentPhotoPreview}
+                            alt="Document preview"
+                            className="w-32 h-32 object-cover rounded-lg border-2"
+                            style={{ borderColor: colors.borderMedium }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDocumentPhoto(null);
+                              setDocumentPhotoPreview(null);
+                            }}
+                            className="mt-1 text-xs text-red-600 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Add-on Services Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Add-on Services (Optional)</h3>
+                
+                <div className="space-y-3">
+                  {/* Driver */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
+                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Driver</p>
+                        <p className="text-xs" style={{ color: colors.textSecondary }}>Professional driver service</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, driver: Math.max(0, prev.driver - 1) }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.driver}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, driver: prev.driver + 1 }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bodyguard */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
+                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Bodyguard</p>
+                        <p className="text-xs" style={{ color: colors.textSecondary }}>Security personnel</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, bodyguard: Math.max(0, prev.bodyguard - 1) }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.bodyguard}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, bodyguard: prev.bodyguard + 1 }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Gun men */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
+                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Gun men</p>
+                        <p className="text-xs" style={{ color: colors.textSecondary }}>Armed security personnel</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, gunmen: Math.max(0, prev.gunmen - 1) }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.gunmen}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, gunmen: prev.gunmen + 1 }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bouncer */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
+                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Bouncer</p>
+                        <p className="text-xs" style={{ color: colors.textSecondary }}>Event security personnel</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, bouncer: Math.max(0, prev.bouncer - 1) }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                      </button>
+                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.bouncer}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAddOnServices(prev => ({ ...prev, bouncer: prev.bouncer + 1 }))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Terms & Conditions */}
               <div className="flex items-start gap-2">
@@ -3746,6 +4444,19 @@ const CarDetailsPage = () => {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Booking Confirmation Modal */}
+      {showBookingConfirmationModal && (
+        <BookingConfirmationModal
+          bookingId={confirmedBookingId}
+          bookingData={confirmedBookingData}
+          onClose={() => {
+            setShowBookingConfirmationModal(false);
+            setConfirmedBookingId(null);
+            setConfirmedBookingData(null);
+          }}
+        />
       )}
 
       {/* Scrollbar Hide Styles */}
