@@ -43,6 +43,11 @@ const BookNowPage = () => {
     user: state.auth?.user || state.user?.user || state.user,
   }));
 
+  // Booking confirmation modal state (shown after successful Razorpay payment)
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [confirmationBookingId, setConfirmationBookingId] = useState(null);
+  const [confirmationBookingData, setConfirmationBookingData] = useState(null);
+
   // Get car data from navigation state, session cache, or use mock data as fallback
   const getCarData = () => {
     // First, try to get car from navigation state (when coming from search or car details)
@@ -251,7 +256,7 @@ const BookNowPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [submitWarning, setSubmitWarning] = useState("");
 
-  // Booking confirmation modal state
+  // Booking confirmation modal state (shown after successful Razorpay payment)
   const [showBookingConfirmationModal, setShowBookingConfirmationModal] =
     useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState(null);
@@ -756,9 +761,60 @@ const BookNowPage = () => {
         email: user?.email || "",
         phone: user?.phone || user?.mobile || user?.phoneNumber || "",
         onSuccess: () => {
+          // Build a rich booking payload for the confirmation modal / PDF
+          const bookingDataForPdf = {
+            // Booking core
+            bookingId: bookingId.toString(),
+            createdAt: booking?.createdAt || new Date().toISOString(),
+
+            // Car information
+            car: {
+              brand: brand || car.brand,
+              model: model || car.model,
+              seats: car.seats,
+              seatingCapacity: car.seats,
+              transmission: car.transmission,
+              fuelType: car.fuelType,
+              registrationNumber: car.registrationNumber,
+            },
+
+            // Trip details
+            pickupDate: pickupDateStr,
+            pickupTime: pickupTimeStr,
+            dropDate: dropDateStr,
+            dropTime: dropTimeStr,
+
+            // Additional details
+            bookingPurpose: bookingPayload.bookingPurpose,
+            personalDetails: bookingPayload.personalDetails,
+            currentAddress: bookingPayload.currentAddress,
+            jobDetails: bookingPayload.jobDetails,
+            businessDetails: bookingPayload.businessDetails,
+            studentId: bookingPayload.studentId,
+            addOnServices: bookingPayload.addOnServices,
+            specialRequests: bookingPayload.specialRequests,
+
+            // Pricing details
+            totalPrice: priceDetails.totalPrice,
+            paidAmount: amountToPay,
+            remainingAmount:
+              (priceDetails.finalPrice || 0) - (amountToPay || 0),
+            couponCode: bookingPayload.couponCode,
+            couponDiscount: bookingPayload.couponDiscount,
+            paymentOption: bookingPayload.paymentOption,
+
+            // Status information
+            status: booking?.status || "pending",
+            paymentStatus:
+              booking?.paymentStatus ||
+              (paymentOption === "advance" ? "partial" : "full"),
+            tripStatus: booking?.tripStatus || "pending",
+          };
+
           setIsProcessing(false);
-          alert("Payment successful! Your booking has been confirmed.");
-          navigate("/bookings", { replace: true });
+          setConfirmationBookingId(bookingId.toString());
+          setConfirmationBookingData(bookingDataForPdf);
+          setShowConfirmationModal(true);
         },
         onError: (error) => {
           console.error("Payment error:", error);
