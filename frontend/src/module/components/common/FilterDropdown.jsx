@@ -173,7 +173,7 @@ const FilterDropdown = ({
   };
 
   const handleReset = () => {
-    setFilters({
+    const cleared = {
       brand: '',
       model: '',
       seats: '',
@@ -187,7 +187,10 @@ const FilterDropdown = ({
       features: [],
       availableFrom: '',
       availableTo: '',
-    });
+    };
+    setFilters(cleared);
+    onApplyFilters(cleared);
+    onClose();
   };
 
   // On mobile, only show if isOpen is true (dropdown)
@@ -208,16 +211,23 @@ const FilterDropdown = ({
         </div>
       )}
 
-      {/* Desktop Sidebar - Always visible when isOpen is true */}
+      {/* Desktop Sidebar - with backdrop */}
       {isOpen && (
-        <div
-          className="filter-dropdown hidden md:block md:fixed md:left-0 md:top-24 md:bottom-0 md:w-80 md:z-40 md:overflow-y-auto md:rounded-none md:shadow-lg md:border-r"
-          style={{
-            backgroundColor: colors.backgroundSecondary,
-            borderRightColor: colors.borderForm
-          }}
-        >
-          {renderFilterContent(true)}
+        <div className="hidden md:flex md:fixed md:inset-0 md:z-[90]">
+          <div
+            className="flex-1 bg-black/30"
+            onClick={onClose}
+            aria-label="Close filters"
+          />
+          <div
+            className="filter-dropdown relative w-96 max-w-md h-full overflow-y-auto shadow-2xl border-l"
+            style={{
+              backgroundColor: colors.backgroundSecondary,
+              borderColor: colors.borderForm
+            }}
+          >
+            {renderFilterContent(true)}
+          </div>
         </div>
       )}
 

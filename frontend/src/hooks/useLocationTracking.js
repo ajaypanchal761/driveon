@@ -45,10 +45,13 @@ export const useLocationTracking = ({
       socketRef.current = io(SOCKET_URL, {
         transports: ['polling', 'websocket'], // Allow polling fallback for better compatibility
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-        timeout: 20000, // 20 second connection timeout
+        reconnectionDelay: 2000, // Increased delay to reduce spam
+        reconnectionAttempts: 3, // Reduced attempts to fail faster
+        timeout: 10000, // Reduced timeout to 10 seconds
         forceNew: false, // Reuse existing connection if available
+        autoConnect: true,
+        // Suppress connection errors in console
+        withCredentials: false,
       });
 
       socketRef.current.on('connect', () => {
@@ -87,11 +90,26 @@ export const useLocationTracking = ({
       });
 
       socketRef.current.on('connect_error', (err) => {
-        console.error('❌ Socket connection error:', err);
+        // Only log error in development mode to reduce console noise
+        if (import.meta.env.DEV) {
+          console.error('❌ Socket connection error:', err);
+        }
+        
         const errorMessage = err.message || 'Failed to connect to server';
-        // Provide more helpful error messages
-        if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network')) {
-          setError('Cannot connect to server. Please ensure the backend server is running on port 5000.');
+        
+        // Suppress connection errors if server is not available
+        // Don't show error to user unless they explicitly enabled tracking
+        if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network') || errorMessage.includes('xhr poll error')) {
+          // Silently fail - location tracking is optional feature
+          // Only set error if tracking was explicitly enabled
+          if (enabled) {
+            // Don't set error for automatic reconnection attempts
+            // Only set error after multiple failed attempts
+            const reconnectAttempts = socketRef.current?.io?.reconnecting || 0;
+            if (reconnectAttempts >= 3) {
+              setError('Location tracking unavailable. Server connection failed.');
+            }
+          }
         } else {
           setError(`Connection error: ${errorMessage}`);
         }
@@ -216,10 +234,14 @@ export const useLocationTracking = ({
 
   // Auto-start/stop based on enabled prop
   useEffect(() => {
+    // Only attempt connection if explicitly enabled
     if (enabled && userId) {
       startTracking();
     } else {
-      stopTracking();
+      // Ensure socket is disconnected when disabled
+      if (socketRef.current) {
+        stopTracking();
+      }
     }
 
     // Cleanup on unmount

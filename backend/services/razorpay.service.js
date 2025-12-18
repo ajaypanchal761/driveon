@@ -9,19 +9,50 @@ class RazorpayService {
   constructor() {
     // Initialize Razorpay with error handling
     try {
-      if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      // Trim and validate keys
+      const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+      const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+      
+      if (!keyId || !keySecret) {
         console.error('⚠️  RAZORPAY ENVIRONMENT VARIABLES NOT CONFIGURED!');
         console.error('Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file');
         this.razorpay = null;
-      } else {
-        this.razorpay = new Razorpay({
-          key_id: process.env.RAZORPAY_KEY_ID,
-          key_secret: process.env.RAZORPAY_KEY_SECRET,
-        });
-        console.log('✅ Razorpay service initialized successfully');
+        return;
       }
+
+      // Validate key format (Razorpay keys usually start with rzp_)
+      if (!keyId.startsWith('rzp_')) {
+        console.warn('⚠️  RAZORPAY_KEY_ID format may be incorrect (should start with "rzp_")');
+      }
+
+      // Log masked credentials to verify correct env loading (safe for dev)
+      const maskedKeyId = keyId.length > 9 
+        ? `${keyId.slice(0, 6)}***${keyId.slice(-3)}`
+        : '***';
+      const maskedSecret = keySecret.length > 7
+        ? `${keySecret.slice(0, 4)}***${keySecret.slice(-3)}`
+        : '***';
+      console.log(`✅ Razorpay env loaded (id: ${maskedKeyId}, secret: ${maskedSecret})`);
+
+      // Initialize Razorpay with trimmed keys
+      this.razorpay = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
+      });
+      
+      // Store keys for comparison later
+      this._lastKeyId = keyId;
+      this._lastKeySecret = keySecret;
+      
+      console.log('✅ Razorpay service initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Razorpay service:', error.message);
+      console.error('Error details:', {
+        hasKeyId: !!keyId,
+        hasKeySecret: !!keySecret,
+        keyIdLength: keyId?.length,
+        keySecretLength: keySecret?.length,
+      });
       this.razorpay = null;
     }
   }
@@ -45,10 +76,31 @@ class RazorpayService {
    */
   async createOrder(orderData) {
     try {
-      if (!this.razorpay) {
+      // Re-validate and re-initialize if needed before creating order
+      const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+      const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+      
+      if (!keyId || !keySecret) {
         const error = new Error('Razorpay service not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
         error.code = 'RAZORPAY_NOT_CONFIGURED';
         throw error;
+      }
+
+      // Re-initialize Razorpay instance with fresh keys (in case keys were updated)
+      if (!this.razorpay || keyId !== this._lastKeyId || keySecret !== this._lastKeySecret) {
+        console.log('🔄 Re-initializing Razorpay with current keys...');
+        try {
+          this.razorpay = new Razorpay({
+            key_id: keyId,
+            key_secret: keySecret,
+          });
+          this._lastKeyId = keyId;
+          this._lastKeySecret = keySecret;
+          console.log('✅ Razorpay re-initialized successfully');
+        } catch (initError) {
+          console.error('❌ Failed to re-initialize Razorpay:', initError.message);
+          throw new Error('Razorpay initialization failed. Please check your API keys.');
+        }
       }
 
       const { amount, receipt, notes = {} } = orderData;
@@ -72,6 +124,12 @@ class RazorpayService {
         payment_capture: 1, // Auto capture payment
       };
 
+      console.log('📤 Creating Razorpay order with options:', {
+        amount: options.amount,
+        currency: options.currency,
+        receipt: options.receipt,
+      });
+
       const order = await this.razorpay.orders.create(options);
       console.log('✅ Razorpay order created successfully:', order.id);
 
@@ -85,6 +143,43 @@ class RazorpayService {
       };
     } catch (error) {
       console.error('❌ Error creating Razorpay order:', error);
+      
+      // Enhanced error logging for authentication issues
+      if (error.statusCode === 401 || error.error?.code === 'BAD_REQUEST_ERROR') {
+        const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+        const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+        
+        console.error('🔐 Razorpay Authentication Error Details:');
+        console.error('  - Status Code:', error.statusCode);
+        console.error('  - Error Code:', error.error?.code);
+        console.error('  - Description:', error.error?.description);
+        console.error('  - Key ID present:', !!keyId);
+        console.error('  - Key Secret present:', !!keySecret);
+        console.error('  - Key ID length:', keyId?.length);
+        console.error('  - Key Secret length:', keySecret?.length);
+        console.error('  - Key ID starts with rzp_:', keyId?.startsWith('rzp_'));
+        console.error('  - Key ID first 8 chars:', keyId?.substring(0, 8));
+        console.error('  - Key ID last 4 chars:', keyId?.substring(keyId.length - 4));
+        
+        // Check for common issues
+        if (keyId && keySecret) {
+          console.error('\n💡 Troubleshooting Steps:');
+          console.error('  1. Verify keys in Razorpay Dashboard: https://dashboard.razorpay.com/app/keys');
+          console.error('  2. Make sure you are using correct environment (Test/Live)');
+          console.error('  3. Check if keys are from same Razorpay account');
+          console.error('  4. Verify keys are not expired or revoked');
+          console.error('  5. Ensure no extra spaces or quotes in .env file');
+          console.error('  6. Restart server after updating .env file');
+        }
+        
+        // Provide helpful error message
+        const authError = new Error(error.error?.description || 'Razorpay authentication failed. Please verify your API keys in Razorpay dashboard.');
+        authError.statusCode = 401;
+        authError.code = 'RAZORPAY_AUTH_FAILED';
+        authError.originalError = error;
+        throw authError;
+      }
+      
       throw error;
     }
   }
@@ -98,13 +193,14 @@ class RazorpayService {
    */
   verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature) {
     try {
-      if (!process.env.RAZORPAY_KEY_SECRET) {
+      const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+      if (!keySecret) {
         throw new Error('RAZORPAY_KEY_SECRET not configured');
       }
 
       const body = `${razorpay_order_id}|${razorpay_payment_id}`;
       const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .createHmac('sha256', keySecret)
         .update(body)
         .digest('hex');
 
@@ -160,6 +256,68 @@ const razorpayService = new RazorpayService();
 // Add a method to check if Razorpay is configured
 razorpayService.isConfigured = function() {
   return this.razorpay !== null;
+};
+
+// Method to re-initialize Razorpay (useful if keys are updated)
+razorpayService.reinitialize = function() {
+  console.log('🔄 Re-initializing Razorpay service...');
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+  
+  if (!keyId || !keySecret) {
+    console.error('❌ Cannot re-initialize: Keys not found');
+    this.razorpay = null;
+    return false;
+  }
+
+  try {
+    this.razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+    console.log('✅ Razorpay re-initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to re-initialize Razorpay:', error.message);
+    this.razorpay = null;
+    return false;
+  }
+};
+
+// Method to validate Razorpay keys
+razorpayService.validateKeys = function() {
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim();
+  const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
+  
+  const issues = [];
+  
+  if (!keyId) {
+    issues.push('RAZORPAY_KEY_ID is missing');
+  } else if (!keyId.startsWith('rzp_')) {
+    issues.push('RAZORPAY_KEY_ID format may be incorrect (should start with "rzp_")');
+  } else if (keyId.length < 20) {
+    issues.push('RAZORPAY_KEY_ID seems too short');
+  }
+  
+  if (!keySecret) {
+    issues.push('RAZORPAY_KEY_SECRET is missing');
+  } else if (keySecret.length < 20) {
+    issues.push('RAZORPAY_KEY_SECRET seems too short');
+  }
+  
+  if (keyId && keyId.includes(' ')) {
+    issues.push('RAZORPAY_KEY_ID contains spaces (should be trimmed)');
+  }
+  
+  if (keySecret && keySecret.includes(' ')) {
+    issues.push('RAZORPAY_KEY_SECRET contains spaces (should be trimmed)');
+  }
+  
+  return {
+    valid: issues.length === 0,
+    issues,
+    hasKeys: !!keyId && !!keySecret,
+  };
 };
 
 export default razorpayService;

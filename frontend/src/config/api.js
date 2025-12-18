@@ -28,12 +28,17 @@ const getApiBaseUrl = () => {
  */
 export const getSocketUrl = () => {
   const apiUrl = getApiBaseUrl();
-  const socketUrl = apiUrl.replace('/api', '');
+  let socketUrl = apiUrl.replace('/api', '');
+  
+  // Remove trailing slash if present
+  socketUrl = socketUrl.replace(/\/$/, '');
   
   // If it's a full URL, use it; otherwise construct it
   if (socketUrl.startsWith('http')) {
     return socketUrl;
   }
+  
+  // Fallback to current origin
   return window.location.origin;
 };
 

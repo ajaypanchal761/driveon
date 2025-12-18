@@ -680,6 +680,27 @@ const CarDetailsPage = () => {
 
   const initialCar = location.state?.car || null;
   const normalizedInitialCar = initialCar ? normalizeCarFromState(initialCar) : null;
+  const getStoredCar = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem('driveon:selectedCar');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed) return null;
+      // Use stored car only when it matches the current route id
+      if (id && (parsed.id === id || parsed._id === id)) {
+        return parsed;
+      }
+      return null;
+    } catch (error) {
+      console.warn('Failed to read stored car', error);
+      return null;
+    }
+  };
+  const [storedCar] = useState(() => getStoredCar());
+  const normalizedStoredCar = storedCar ? normalizeCarFromState(storedCar) : null;
+  const effectiveInitialCar = normalizedInitialCar || normalizedStoredCar;
+  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id || '');
   
   // Always ensure we have a valid baseCar (fallback to mock data if needed)
   const getBaseCarData = () => {
@@ -725,68 +746,31 @@ const CarDetailsPage = () => {
     }
   };
   
-  const baseCar = normalizedInitialCar || getBaseCarData();
+  const shouldUseMockBase = !effectiveInitialCar && (!id || !isValidObjectId);
+  const baseCar = shouldUseMockBase ? getBaseCarData() : null;
   // Ensure baseCar has reviews initialized
   if (baseCar && (!baseCar.reviews || !Array.isArray(baseCar.reviews))) {
     baseCar.reviews = [];
   }
   // Ensure normalizedInitialCar has reviews initialized
-  const initialCarWithReviews = normalizedInitialCar 
-    ? (normalizedInitialCar.reviews && Array.isArray(normalizedInitialCar.reviews) 
-        ? normalizedInitialCar 
-        : { ...normalizedInitialCar, reviews: [] })
+  const initialCarWithReviews = effectiveInitialCar 
+    ? (effectiveInitialCar.reviews && Array.isArray(effectiveInitialCar.reviews) 
+        ? effectiveInitialCar 
+        : { ...effectiveInitialCar, reviews: [] })
     : null;
+  const shouldFetchFromApi = !!id && isValidObjectId && !effectiveInitialCar;
   const [car, setCar] = useState(initialCarWithReviews || baseCar);
-  // If we have initial car from state, don't show loader - set loading to false immediately
-  // Only show loader if we don't have initial car AND we have an ID to fetch
-  // Set initial loading to false if we have car data (from state or baseCar)
-  const [isLoading, setIsLoading] = useState(!initialCar && !baseCar && !!id);
-  
-  // Immediately set loading to false if we have initial car or baseCar
-  useEffect(() => {
-    if (initialCar || baseCar) {
-      setIsLoading(false);
-    }
-  }, [initialCar, baseCar]);
+  // Only show loader when we have to fetch real data from backend
+  const [isLoading, setIsLoading] = useState(shouldFetchFromApi);
 
   // Fetch car details from backend when a real car ID (Mongo ObjectId) is used
   useEffect(() => {
+    if (!shouldFetchFromApi) {
+      return;
+    }
+
     const fetchCarDetails = async () => {
-      if (!id) {
-        setIsLoading(false);
-        return;
-      }
-
-      // If we already have full car data from navigation state for this id,
-      // don't refetch from API to avoid image order changing (no shuffle)
-      // Also ensure loading is false immediately
-      if (normalizedInitialCar && (normalizedInitialCar._id === id || normalizedInitialCar.id === id)) {
-        setCar(normalizedInitialCar);
-        setIsLoading(false);
-        return;
-      }
-      
-      // If we have initial car but IDs don't match, still don't show loader
-      if (initialCar) {
-        setIsLoading(false);
-        return;
-      }
-
-      // If it's not a Mongo ObjectId (e.g. demo IDs like "1", "bmw-i7"), keep using mock data
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-      if (!isValidObjectId) {
-        // Use baseCar but ensure it has the correct ID
-        const carWithId = { ...baseCar, id: id, _id: id };
-        setCar(carWithId);
-        setIsLoading(false);
-        return;
-      }
-
-      // Only set loading to true if we don't have any car data at all
-      // If we have baseCar, keep loading false and fetch in background
-      if (!baseCar) {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
       try {
         const response = await carService.getCarDetails(id);
         if (response.success && response.data?.car) {
@@ -925,16 +909,19 @@ const CarDetailsPage = () => {
           } else {
             setCar(normalizedCar);
           }
+          try {
+            sessionStorage.setItem('driveon:selectedCar', JSON.stringify(normalizedCar));
+          } catch (error) {
+            console.warn('Failed to cache car details', error);
+          }
         } else {
-          // API returned success but no car data - use baseCar with correct ID
-          const carWithId = { ...baseCar, id: id, _id: id };
-          setCar(carWithId);
+          // API returned success but no car data - show error state
+          setCar(baseCar ? { ...baseCar, id: id, _id: id } : null);
         }
       } catch (error) {
         console.error('Error fetching car details:', error);
-        // On error, use baseCar with correct ID instead of showing error
-        const carWithId = { ...baseCar, id: id, _id: id };
-        setCar(carWithId);
+        // On error, prefer showing error state instead of static mock for real cars
+        setCar(baseCar ? { ...baseCar, id: id, _id: id } : null);
       } finally {
         setIsLoading(false);
       }
@@ -942,7 +929,7 @@ const CarDetailsPage = () => {
 
     fetchCarDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, shouldFetchFromApi]);
 
   // Fetch reviews from API
   useEffect(() => {
@@ -1632,6 +1619,29 @@ const CarDetailsPage = () => {
     }
   };
 
+  // Lightweight navigation helper for CTA buttons that don't submit the form
+  const handleQuickBook = () => {
+    try {
+      sessionStorage.setItem('driveon:selectedCar', JSON.stringify(car));
+    } catch (err) {
+      console.warn('Failed to cache car before booking', err);
+    }
+    navigate(`/book-now/${car?.id || car?._id || id}`, {
+      state: {
+        car,
+        pickupDate,
+        pickupTime,
+        dropDate,
+        dropTime,
+        paymentOption,
+        specialRequests,
+        couponCode: appliedCoupon?.code,
+        couponDiscount,
+        priceDetails,
+      },
+    });
+  };
+
   // Navigation for image gallery
   const handlePreviousImage = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? carImages.length - 1 : prev - 1));
@@ -1745,8 +1755,8 @@ const CarDetailsPage = () => {
   };
 
   // Show loading state only if we're actively loading and have no car data
-  // Don't show loader if we have initial car from navigation state or baseCar
-  if (isLoading && !car && !initialCar && !baseCar) {
+  // Don't show loader if we have initial car from navigation state, stored car, or baseCar
+  if (isLoading && !car && !effectiveInitialCar && !baseCar) {
     return (
       <div 
         className="min-h-screen w-full flex items-center justify-center"
@@ -1762,7 +1772,7 @@ const CarDetailsPage = () => {
 
   // If no car data at all (shouldn't happen with fallback, but just in case)
   // But only show error if we don't have initial car or baseCar
-  if (!car && !initialCar && !baseCar) {
+  if (!car && !effectiveInitialCar && !baseCar) {
     return (
       <div 
         className="min-h-screen w-full flex items-center justify-center"
@@ -4139,7 +4149,7 @@ const CarDetailsPage = () => {
           <div className="px-4 md:px-6 py-3 md:py-0 md:mt-6" style={{ backgroundColor: colors.backgroundSecondary }}>
             <div className="max-w-7xl mx-auto">
               <button
-                onClick={() => navigate(`/book-now/${car?.id || car?._id || id}`)}
+                onClick={handleQuickBook}
                 className="w-full md:w-auto md:min-w-[300px] md:mx-auto md:block py-4 flex items-center justify-center text-white font-semibold"
                 style={{ backgroundColor: colors.backgroundTertiary, borderRadius: '16px' }}
               >

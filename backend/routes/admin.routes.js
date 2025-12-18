@@ -13,6 +13,8 @@ import {
   getAllUsers,
   getUserById,
   updateUserStatus,
+  getAllReferrals,
+  updateReferralPoints,
 } from '../controllers/admin.controller.js';
 import {
   getAllCars,
@@ -301,6 +303,18 @@ router.patch('/coupons/:id/toggle', authenticateAdmin, toggleCouponStatus);
 // Get Coupon Usage Statistics - PROTECTED
 // Route: GET /api/admin/coupons/:id/usage
 router.get('/coupons/:id/usage', authenticateAdmin, getCouponUsage);
+
+// ============================================
+// REFERRAL MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Get All Referrals - PROTECTED
+// Route: GET /api/admin/referrals
+router.get('/referrals', authenticateAdmin, getAllReferrals);
+
+// Update Referral Points - PROTECTED
+// Route: PUT /api/admin/referrals/:referralId/points
+router.put('/referrals/:referralId/points', authenticateAdmin, updateReferralPoints);
 
 export default router;
 

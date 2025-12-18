@@ -14,6 +14,15 @@ const CarCard = ({ car, index = 0 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
 
+  const handleOpenDetails = () => {
+    try {
+      sessionStorage.setItem('driveon:selectedCar', JSON.stringify(car));
+    } catch (err) {
+      console.warn('Failed to persist selected car', err);
+    }
+    navigate(`/car-details/${car.id}`, { state: { car } });
+  };
+
   return (
     <div 
       className="w-full rounded-xl overflow-hidden cursor-pointer"
@@ -21,7 +30,7 @@ const CarCard = ({ car, index = 0 }) => {
         backgroundColor: colors.backgroundSecondary,
         border: `1px solid ${colors.borderLight}`
       }}
-      onClick={() => navigate(`/car-details/${car.id}`, { state: { car } })}
+      onClick={handleOpenDetails}
     >
       {/* Car Image Container */}
       <div 

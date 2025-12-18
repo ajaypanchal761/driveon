@@ -518,6 +518,37 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Get All Referrals (Admin)
+   * @param {Object} params - Query parameters (status, dateRange, referrer, search)
+   * @returns {Promise}
+   */
+  getAllReferrals: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/referrals', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get all referrals error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update Referral Points (Admin)
+   * @param {String} referralId - Referral ID (referred user ID)
+   * @param {Number} points - Points to add (can be negative to subtract)
+   * @returns {Promise}
+   */
+  updateReferralPoints: async (referralId, points) => {
+    try {
+      const response = await api.put(`/admin/referrals/${referralId}/points`, { points });
+      return response.data;
+    } catch (error) {
+      console.error('Update referral points error:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;

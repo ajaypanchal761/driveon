@@ -144,31 +144,11 @@ const ModuleResponsiveHome = () => {
 
 /**
  * ModuleResponsiveProfile Component
- * - Mobile view: show ModuleProfile1Page (unchanged mobile design)
- * - Desktop / tablet view: show ModuleProfilePage (previous web design)
+ * Use the unified mobile-first profile UI on all breakpoints to avoid
+ * inconsistent designs between desktop and mobile.
  */
 const ModuleResponsiveProfile = () => {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.innerWidth < 768; // Tailwind md breakpoint
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  if (isMobile) {
-    return <ModuleProfile1Page />;
-  }
-
-  return <ModuleProfilePage />;
+  return <ModuleProfile1Page />;
 };
 
 /**

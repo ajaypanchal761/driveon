@@ -11,7 +11,8 @@
     "create:admin": "node scripts/createAdmin.js",
     "test:admin": "node scripts/testAdminLogin.js",
     "test:admin-system": "node scripts/testAdminSystem.js",
-    "test:otp": "node scripts/sendTestOTP.js"
+    "test:otp": "node scripts/sendTestOTP.js",
+    "test:razorpay": "node scripts/testRazorpayKeys.js"
   },
   "keywords": [
     "car-rental",

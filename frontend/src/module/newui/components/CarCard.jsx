@@ -1,21 +1,46 @@
+import { useNavigate } from 'react-router-dom';
+
 /**
  * CarCard Component
  * Individual car card for Available Near You section
  * Dark background with white text - Exact match to image design
  */
 const CarCard = ({ car }) => {
-  const { name, image, rating, weeklyPrice } = car;
+  const navigate = useNavigate();
+  const { name, image, rating = 0, weeklyPrice, carId } = car;
+
+  const handleCardClick = () => {
+    if (carId) {
+      navigate(`/cars/${carId}`);
+    }
+  };
+
+  // Calculate number of filled stars based on rating
+  const filledStars = Math.round(rating);
+  const displayRating = rating > 0 ? rating.toFixed(1) : '0.0';
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden flex-shrink-0 w-48 p-2 relative">
+    <div 
+      className="bg-gray-800 rounded-lg overflow-hidden flex-shrink-0 w-48 p-2 relative cursor-pointer hover:bg-gray-700 transition-colors"
+      onClick={handleCardClick}
+    >
       {/* Car Image - Direct in Card */}
       <img
         src={image}
         alt={name}
         className="w-full h-28 object-contain mb-1"
+        onError={(e) => {
+          e.target.src = 'https://via.placeholder.com/200x120?text=Car+Image';
+        }}
       />
       {/* Favorite Icon - Red heart outline */}
-      <button className="absolute top-3 right-3 flex items-center justify-center">
+      <button 
+        className="absolute top-3 right-3 flex items-center justify-center z-10"
+        onClick={(e) => {
+          e.stopPropagation();
+          // TODO: Add favorite functionality
+        }}
+      >
         <svg
           className="w-4 h-4"
           fill="none"
@@ -37,19 +62,23 @@ const CarCard = ({ car }) => {
         {/* Car Name */}
         <h4 className="text-sm font-bold text-white mb-0.5 leading-tight">{name}</h4>
 
-        {/* Rating - 5 gold stars */}
+        {/* Rating - Dynamic stars based on actual rating */}
         <div className="flex items-center gap-0.5 mb-0.5">
           {[...Array(5)].map((_, i) => (
             <svg
               key={i}
               className="w-3 h-3"
-              fill="currentColor"
+              fill={i < filledStars ? 'currentColor' : 'none'}
+              stroke="currentColor"
               viewBox="0 0 24 24"
-              style={{ color: '#FACC15' }}
+              style={{ color: i < filledStars ? '#FACC15' : '#6B7280' }}
             >
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
           ))}
+          {rating > 0 && (
+            <span className="text-xs text-gray-400 ml-1">({displayRating})</span>
+          )}
         </div>
 
         {/* Price and View Button - Same Row */}
@@ -57,12 +86,16 @@ const CarCard = ({ car }) => {
           {/* Price - White text */}
           <div>
             <span className="text-xs text-white">Weekly</span>
-            <div className="text-sm font-bold text-white">${weeklyPrice}</div>
+            <div className="text-sm font-bold text-white">₹{weeklyPrice}</div>
           </div>
           {/* View Button - Red background */}
           <button
             className="px-3 py-1 rounded text-white font-medium text-xs hover:opacity-90 transition-opacity"
             style={{ backgroundColor: '#DC2626' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCardClick();
+            }}
           >
             View
           </button>

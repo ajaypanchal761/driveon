@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
+import { adminService } from '../../../services';
+import toastUtils from '../../../config/toast';
 
 /**
  * Referral Management Page
@@ -36,192 +38,42 @@ const ReferralManagementPage = () => {
     referrer: 'all',
   });
 
-  // Mock referrals data
+  // Fetch referrals data from API
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockReferrals = [
-        {
-          id: '1',
-          referrerId: '1',
-          referrerName: 'John Doe',
-          referrerEmail: 'john.doe@example.com',
-          referralCode: 'JOHN2024',
-          referredUserId: '2',
-          referredUserName: 'Jane Smith',
-          referredUserEmail: 'jane.smith@example.com',
-          pointsEarned: 100,
-          status: 'completed',
-          referralDate: '2024-03-10T10:00:00',
-          completedDate: '2024-03-15T14:00:00',
-          redemptionHistory: [
-            { date: '2024-03-20', points: 50, description: 'Redeemed for discount' },
-          ],
-        },
-        {
-          id: '2',
-          referrerId: '1',
-          referrerName: 'John Doe',
-          referrerEmail: 'john.doe@example.com',
-          referralCode: 'JOHN2024',
-          referredUserId: '5',
-          referredUserName: 'David Brown',
-          referredUserEmail: 'david.b@example.com',
-          pointsEarned: 100,
-          status: 'pending',
-          referralDate: '2024-03-16T11:00:00',
-          redemptionHistory: [],
-        },
-        {
-          id: '3',
-          referrerId: '5',
-          referrerName: 'David Brown',
-          referrerEmail: 'david.b@example.com',
-          referralCode: 'DAVID2024',
-          referredUserId: '6',
-          referredUserName: 'Emily Davis',
-          referredUserEmail: 'emily.d@example.com',
-          pointsEarned: 100,
-          status: 'completed',
-          referralDate: '2024-03-12T09:00:00',
-          completedDate: '2024-03-18T16:00:00',
-          redemptionHistory: [],
-        },
-        {
-          id: '4',
-          referrerId: '7',
-          referrerName: 'Robert Wilson',
-          referrerEmail: 'robert.w@example.com',
-          referralCode: 'ROBERT2024',
-          referredUserId: '8',
-          referredUserName: 'Lisa Anderson',
-          referredUserEmail: 'lisa.a@example.com',
-          pointsEarned: 100,
-          status: 'completed',
-          referralDate: '2024-03-08T08:00:00',
-          completedDate: '2024-03-14T12:00:00',
-          redemptionHistory: [
-            { date: '2024-03-22', points: 100, description: 'Redeemed for free ride' },
-          ],
-        },
-        {
-          id: '5',
-          referrerId: '2',
-          referrerName: 'Jane Smith',
-          referrerEmail: 'jane.smith@example.com',
-          referralCode: 'JANE2024',
-          referredUserId: '4',
-          referredUserName: 'Sarah Williams',
-          referredUserEmail: 'sarah.w@example.com',
-          pointsEarned: 100,
-          status: 'pending',
-          referralDate: '2024-03-17T15:00:00',
-          redemptionHistory: [],
-        },
-        {
-          id: '6',
-          referrerId: '1',
-          referrerName: 'John Doe',
-          referrerEmail: 'john.doe@example.com',
-          referralCode: 'JOHN2024',
-          referredUserId: '6',
-          referredUserName: 'Emily Davis',
-          referredUserEmail: 'emily.d@example.com',
-          pointsEarned: 100,
-          status: 'completed',
-          referralDate: '2024-03-05T10:00:00',
-          completedDate: '2024-03-11T09:00:00',
-          redemptionHistory: [],
-        },
-        {
-          id: '7',
-          referrerId: '8',
-          referrerName: 'Lisa Anderson',
-          referrerEmail: 'lisa.a@example.com',
-          referralCode: 'LISA2024',
-          referredUserId: '3',
-          referredUserName: 'Mike Johnson',
-          referredUserEmail: 'mike.j@example.com',
-          pointsEarned: 100,
-          status: 'completed',
-          referralDate: '2024-03-01T12:00:00',
-          completedDate: '2024-03-07T10:00:00',
-          redemptionHistory: [
-            { date: '2024-03-15', points: 50, description: 'Redeemed for discount' },
-            { date: '2024-03-25', points: 50, description: 'Redeemed for discount' },
-          ],
-        },
-        {
-          id: '8',
-          referrerId: '6',
-          referrerName: 'Emily Davis',
-          referrerEmail: 'emily.d@example.com',
-          referralCode: 'EMILY2024',
-          referredUserId: '7',
-          referredUserName: 'Robert Wilson',
-          referredUserEmail: 'robert.w@example.com',
-          pointsEarned: 100,
-          status: 'completed',
-          referralDate: '2024-02-28T14:00:00',
-          completedDate: '2024-03-06T11:00:00',
-          redemptionHistory: [],
-        },
-      ];
-      setReferrals(mockReferrals);
-      setFilteredReferrals(mockReferrals);
-      setLoading(false);
-    }, 500);
-  }, []);
-
-  // Filter and search referrals
-  useEffect(() => {
-    let filtered = [...referrals];
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (referral) =>
-          referral.referrerName.toLowerCase().includes(query) ||
-          referral.referrerEmail.toLowerCase().includes(query) ||
-          referral.referredUserName.toLowerCase().includes(query) ||
-          referral.referredUserEmail.toLowerCase().includes(query) ||
-          referral.referralCode.toLowerCase().includes(query)
-      );
-    }
-
-    // Status filter
-    if (filters.status !== 'all') {
-      filtered = filtered.filter((referral) => referral.status === filters.status);
-    }
-
-    // Date range filter
-    if (filters.dateRange !== 'all') {
-      const now = new Date();
-      filtered = filtered.filter((referral) => {
-        const referralDate = new Date(referral.referralDate);
-        switch (filters.dateRange) {
-          case 'today':
-            return referralDate.toDateString() === now.toDateString();
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return referralDate >= weekAgo;
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            return referralDate >= monthAgo;
-          default:
-            return true;
+    const fetchReferrals = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getAllReferrals({
+          status: filters.status !== 'all' ? filters.status : undefined,
+          dateRange: filters.dateRange !== 'all' ? filters.dateRange : undefined,
+          referrer: filters.referrer !== 'all' ? filters.referrer : undefined,
+          search: searchQuery || undefined,
+        });
+        
+        if (response.success && response.data?.referrals) {
+          setReferrals(response.data.referrals);
+        } else {
+          setReferrals([]);
+          toastUtils.error('Failed to fetch referrals');
         }
-      });
-    }
+      } catch (error) {
+        console.error('Error fetching referrals:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to fetch referrals');
+        setReferrals([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Referrer filter
-    if (filters.referrer !== 'all') {
-      filtered = filtered.filter((referral) => referral.referrerId === filters.referrer);
-    }
+    fetchReferrals();
+  }, [filters.status, filters.dateRange, filters.referrer, searchQuery]);
 
-    setFilteredReferrals(filtered);
-  }, [referrals, searchQuery, filters]);
+  // Filter referrals (backend already applies filters, but we keep this for client-side filtering if needed)
+  useEffect(() => {
+    // Since backend already applies filters, we can directly use referrals
+    // But we keep this effect for any additional client-side filtering if needed
+    setFilteredReferrals(referrals);
+  }, [referrals]);
 
   // Calculate statistics
   const statistics = {
@@ -274,16 +126,28 @@ const ReferralManagementPage = () => {
     setShowReferralDetail(true);
   };
 
-  const handleAdjustPoints = (referralId, points) => {
-    // In real app, this would make an API call
-    setReferrals((prevList) =>
-      prevList.map((referral) => {
-        if (referral.id === referralId) {
-          return { ...referral, pointsEarned: referral.pointsEarned + points };
+  const handleAdjustPoints = async (referralId, points) => {
+    try {
+      const response = await adminService.updateReferralPoints(referralId, points);
+      if (response.success) {
+        toastUtils.success('Points updated successfully');
+        // Refresh referrals list
+        const refreshResponse = await adminService.getAllReferrals({
+          status: filters.status !== 'all' ? filters.status : undefined,
+          dateRange: filters.dateRange !== 'all' ? filters.dateRange : undefined,
+          referrer: filters.referrer !== 'all' ? filters.referrer : undefined,
+          search: searchQuery || undefined,
+        });
+        if (refreshResponse.success && refreshResponse.data?.referrals) {
+          setReferrals(refreshResponse.data.referrals);
         }
-        return referral;
-      })
-    );
+      } else {
+        toastUtils.error('Failed to update points');
+      }
+    } catch (error) {
+      console.error('Error updating referral points:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to update points');
+    }
   };
 
   const handleExport = () => {

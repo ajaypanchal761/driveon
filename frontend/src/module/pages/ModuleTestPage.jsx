@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -290,6 +290,37 @@ const ModuleTestPage = () => {
   const [favoriteStates, setFavoriteStates] = useState({});
   const [animatingStates, setAnimatingStates] = useState({});
 
+  const performSearch = () => {
+    const trimmed = searchValue.trim();
+    if (trimmed) {
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    } else {
+      navigate("/search");
+    }
+  };
+
+  // Navigate to search with optional filter query params when pills are tapped
+  const handleFilterNavigate = (label) => {
+    setActiveFilter(label);
+    if (label === "$200–$1,000 / day") {
+      navigate(`/search?minPrice=200&maxPrice=1000`);
+      return;
+    }
+    if (label === "Brand") {
+      navigate(`/search?filter=brand`);
+      return;
+    }
+    if (label === "Body") {
+      navigate(`/search?filter=body`);
+      return;
+    }
+    if (label === "More") {
+      navigate(`/search?filter=more`);
+      return;
+    }
+    navigate("/search");
+  };
+
   // Fetch dynamic data from API
   useEffect(() => {
     const fetchData = async () => {
@@ -316,12 +347,20 @@ const ModuleTestPage = () => {
         const brandsResponse = await carService.getTopBrands({ limit: 10 });
         if (brandsResponse.success && brandsResponse.data?.brands) {
           const brandsData = brandsResponse.data.brands.map((brand, index) => {
-            const brandName = brand.name || brand.brand || brand;
+            const brandName = brand.name || brand.brand || brand || "";
             const normalizedName = brandName.trim();
+            const lowerName = normalizedName.toLowerCase();
             let brandLogo = null;
+            let displayName = normalizedName || "Brand";
+
+            // Hard-set Volvo to our asset to avoid dark/invalid API logos
+            if (lowerName.includes('volvo')) {
+              brandLogo = logo7;
+              displayName = 'Volvo';
+            }
 
             // First, check if API returned a logo for this brand
-            if (brand.logo || brand.brandLogo || brand.image) {
+            if (!brandLogo && (brand.logo || brand.brandLogo || brand.image)) {
               const apiLogo = brand.logo || brand.brandLogo || brand.image;
               if (typeof apiLogo === "string" && apiLogo) {
                 brandLogo = apiLogo.startsWith("http")
@@ -332,77 +371,86 @@ const ModuleTestPage = () => {
 
             // If no API logo, map specific brand/model names to correct logos
             if (!brandLogo) {
-              // Indian brands/models
-              if (
-                normalizedName.toLowerCase().includes("alto") ||
-                normalizedName.toLowerCase().includes("800")
-              ) {
-                brandLogo = logo2; // Maruti/Toyota logo for Alto
-              } else if (
-                normalizedName.toLowerCase().includes("xuv") ||
-                normalizedName.toLowerCase().includes("500")
-              ) {
-                brandLogo = logo9; // Mahindra logo for XUV
-              } else if (
-                normalizedName.toLowerCase().includes("swift") ||
-                normalizedName.toLowerCase().includes("dzire")
-              ) {
-                brandLogo = logo2; // Maruti logo for Swift/Dzire
-              } else if (normalizedName.toLowerCase().includes("hyundai")) {
-                brandLogo = logo6; // Hyundai logo (different from KIA)
-              } else if (normalizedName.toLowerCase().includes("kia")) {
-                brandLogo = logo1; // KIA logo
-              } else if (normalizedName.toLowerCase().includes("volvo")) {
-                brandLogo = logo7; // Volvo logo
-              } else if (normalizedName.toLowerCase().includes("toyota")) {
-                brandLogo = logo2; // Toyota logo
-              } else if (normalizedName.toLowerCase().includes("mahindra")) {
-                brandLogo = logo9; // Mahindra logo
-              } else if (normalizedName.toLowerCase().includes("maruti")) {
-                brandLogo = logo2; // Maruti logo
-              } else if (normalizedName.toLowerCase().includes("tata")) {
-                brandLogo = logo3; // Tata logo
-              } else if (normalizedName.toLowerCase().includes("honda")) {
-                brandLogo = logo8; // Honda logo
-              } else if (normalizedName.toLowerCase().includes("nissan")) {
-                brandLogo = logo11; // Nissan logo
-              } else if (normalizedName.toLowerCase().includes("ford")) {
-                brandLogo = logo4; // Ford logo
-              } else if (normalizedName.toLowerCase().includes("chevrolet")) {
-                brandLogo = logo5; // Chevrolet logo
-              } else if (normalizedName.toLowerCase().includes("ferrari")) {
-                brandLogo = logo10; // Ferrari logo
-              } else if (normalizedName.toLowerCase().includes("lamborghini")) {
-                brandLogo = logo5; // Lamborghini logo
-              } else if (normalizedName.toLowerCase().includes("bmw")) {
-                brandLogo = logo11; // BMW logo
-              } else if (normalizedName.toLowerCase().includes("audi")) {
-                brandLogo = logo10; // Audi logo
-              } else if (normalizedName.toLowerCase().includes("tesla")) {
-                brandLogo = logo4; // Tesla logo
-              } else {
-                // Try exact match from brandLogos map
-                brandLogo = brandLogos[normalizedName];
-
-                // Try case-insensitive match
-                if (!brandLogo) {
-                  const brandKey = Object.keys(brandLogos).find(
-                    (key) => key.toLowerCase() === normalizedName.toLowerCase()
-                  );
-                  brandLogo = brandKey ? brandLogos[brandKey] : null;
-                }
-
-                // Use fallback brand logo if still not found
-                if (!brandLogo) {
-                  brandLogo =
-                    fallbackBrandLogos[index % fallbackBrandLogos.length];
+            // Indian brands/models
+            if (lowerName.includes('alto') || lowerName.includes('800')) {
+              brandLogo = logo2; // Maruti/Toyota logo for Alto
+              displayName = 'Maruti Suzuki';
+            } else if (lowerName.includes('xuv') || lowerName.includes('500')) {
+              brandLogo = logo9; // Mahindra logo for XUV
+              displayName = 'Mahindra';
+            } else if (lowerName.includes('swift') || lowerName.includes('dzire')) {
+              brandLogo = logo2; // Maruti logo for Swift/Dzire
+              displayName = 'Maruti Suzuki';
+            } else if (lowerName.includes('hyundai')) {
+              brandLogo = logo6; // Hyundai logo (different from KIA)
+              displayName = 'Hyundai';
+            } else if (lowerName.includes('kia')) {
+              brandLogo = logo1; // KIA logo
+              displayName = 'Kia';
+            } else if (lowerName.includes('toyota')) {
+              brandLogo = logo2; // Toyota logo
+              displayName = 'Toyota';
+            } else if (lowerName.includes('mahindra')) {
+              brandLogo = logo9; // Mahindra logo
+              displayName = 'Mahindra';
+            } else if (lowerName.includes('maruti')) {
+              brandLogo = logo2; // Maruti logo
+              displayName = 'Maruti Suzuki';
+            } else if (lowerName.includes('tata')) {
+              brandLogo = logo3; // Tata logo
+              displayName = 'Tata';
+            } else if (lowerName.includes('honda')) {
+              brandLogo = logo8; // Honda logo
+              displayName = 'Honda';
+            } else if (lowerName.includes('nissan')) {
+              brandLogo = logo11; // Nissan logo
+              displayName = 'Nissan';
+            } else if (lowerName.includes('ford')) {
+              brandLogo = logo4; // Ford logo
+              displayName = 'Ford';
+            } else if (lowerName.includes('chevrolet')) {
+              brandLogo = logo5; // Chevrolet logo
+              displayName = 'Chevrolet';
+            } else if (lowerName.includes('ferrari')) {
+              brandLogo = logo10; // Ferrari logo
+              displayName = 'Ferrari';
+            } else if (lowerName.includes('lamborghini')) {
+              brandLogo = logo5; // Lamborghini logo
+              displayName = 'Lamborghini';
+            } else if (lowerName.includes('bmw')) {
+              brandLogo = logo11; // BMW logo
+              displayName = 'BMW';
+            } else if (lowerName.includes('audi')) {
+              brandLogo = logo10; // Audi logo
+              displayName = 'Audi';
+            } else if (lowerName.includes('tesla')) {
+              brandLogo = logo4; // Tesla logo
+              displayName = 'Tesla';
+            } else {
+              // Try exact match from brandLogos map
+              brandLogo = brandLogos[normalizedName];
+              
+              // Try case-insensitive match
+              if (!brandLogo) {
+                const brandKey = Object.keys(brandLogos).find(
+                  key => key.toLowerCase() === normalizedName.toLowerCase()
+                );
+                if (brandKey) {
+                  brandLogo = brandLogos[brandKey];
+                  displayName = brandKey;
                 }
               }
+              
+              // Use fallback brand logo if still not found
+              if (!brandLogo) {
+                brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
+              }
             }
+          }
 
             return {
               id: index + 1,
-              name: brandName,
+              name: displayName,
               logo: brandLogo,
               count: brand.count || 0,
             };
@@ -638,117 +686,142 @@ const ModuleTestPage = () => {
     setIsFilterOpen(false);
   };
 
-  // Filter cars based on applied filters
-  const filteredCars = useMemo(() => {
-    let filtered = [...allCars];
+  // Apply filters to any car list
+  const filterCars = useCallback(
+    (list) => {
+      let filtered = [...list];
 
-    // Filter by brand
-    if (appliedFilters.brand) {
-      filtered = filtered.filter(
-        (car) => car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
-      );
-    }
-
-    // Filter by model
-    if (appliedFilters.model) {
-      const modelQuery = appliedFilters.model.toLowerCase().trim();
-      filtered = filtered.filter(
-        (car) =>
-          car.model?.toLowerCase().includes(modelQuery) ||
-          car.name?.toLowerCase().includes(modelQuery)
-      );
-    }
-
-    // Filter by fuel type
-    if (appliedFilters.fuelType) {
-      filtered = filtered.filter((car) => {
-        const carFuelType = car.fuelType || "";
-        return (
-          carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase()
+      // Filter by brand
+      if (appliedFilters.brand) {
+        filtered = filtered.filter(
+          (car) => car.brand?.toLowerCase() === appliedFilters.brand.toLowerCase()
         );
-      });
-    }
+      }
 
-    // Filter by transmission
-    if (appliedFilters.transmission) {
-      filtered = filtered.filter((car) => {
-        const carTransmission = car.transmission || "";
-        return (
-          carTransmission.toLowerCase() ===
-          appliedFilters.transmission.toLowerCase()
+      // Filter by model
+      if (appliedFilters.model) {
+        const modelQuery = appliedFilters.model.toLowerCase().trim();
+        filtered = filtered.filter(
+          (car) =>
+            car.model?.toLowerCase().includes(modelQuery) ||
+            car.name?.toLowerCase().includes(modelQuery)
         );
-      });
-    }
+      }
 
-    // Filter by car type
-    if (appliedFilters.carType) {
-      filtered = filtered.filter((car) => {
-        const carType = car.carType || "";
-        return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
-      });
-    }
+      // Filter by fuel type
+      if (appliedFilters.fuelType) {
+        filtered = filtered.filter((car) => {
+          const carFuelType = car.fuelType || "";
+          return carFuelType.toLowerCase() === appliedFilters.fuelType.toLowerCase();
+        });
+      }
 
-    // Filter by color
-    if (appliedFilters.color) {
-      filtered = filtered.filter((car) => {
-        const carColor = car.color || "";
-        return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
-      });
-    }
+      // Filter by transmission
+      if (appliedFilters.transmission) {
+        filtered = filtered.filter((car) => {
+          const carTransmission = car.transmission || "";
+          return (
+            carTransmission.toLowerCase() === appliedFilters.transmission.toLowerCase()
+          );
+        });
+      }
 
-    // Filter by seats
-    if (appliedFilters.seats) {
-      filtered = filtered.filter((car) => {
-        const carSeats = String(car.seatingCapacity || "");
-        return carSeats === appliedFilters.seats;
-      });
-    }
+      // Filter by car type
+      if (appliedFilters.carType) {
+        filtered = filtered.filter((car) => {
+          const carType = car.carType || "";
+          return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
+        });
+      }
 
-    // Filter by features (all selected features must be present)
-    if (appliedFilters.features && appliedFilters.features.length > 0) {
-      filtered = filtered.filter((car) => {
-        const carFeatures = car.features || [];
-        return appliedFilters.features.every((feature) =>
-          carFeatures.some(
-            (carFeature) => carFeature.toLowerCase() === feature.toLowerCase()
-          )
-        );
-      });
-    }
+      // Filter by color
+      if (appliedFilters.color) {
+        filtered = filtered.filter((car) => {
+          const carColor = car.color || "";
+          return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
+        });
+      }
 
-    // Filter by price range
-    if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
-      filtered = filtered.filter((car) => {
-        const carPrice = parseFloat(
-          car.price?.replace(/[^0-9.]/g, "") || car.pricePerDay || 0
-        );
-        const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
-        const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
-        return carPrice >= minPrice && carPrice <= maxPrice;
-      });
-    }
+      // Filter by seats
+      if (appliedFilters.seats) {
+        filtered = filtered.filter((car) => {
+          const carSeats = String(
+            (car.seats ?? car.seatingCapacity ?? car.seatingCapacity) || ""
+          );
+          return carSeats === appliedFilters.seats;
+        });
+      }
 
-    // Filter by rating
-    if (appliedFilters.rating) {
-      filtered = filtered.filter((car) => {
-        const carRating = parseFloat(car.rating) || 0;
-        const minRating =
-          parseFloat(appliedFilters.rating.replace("+", "")) || 0;
-        return carRating >= minRating;
-      });
-    }
+      // Filter by features (all selected features must be present)
+      if (appliedFilters.features && appliedFilters.features.length > 0) {
+        filtered = filtered.filter((car) => {
+          const carFeatures = car.features || [];
+          return appliedFilters.features.every((feature) =>
+            carFeatures.some(
+              (carFeature) => carFeature.toLowerCase() === feature.toLowerCase()
+            )
+          );
+        });
+      }
 
-    // Filter by location
-    if (appliedFilters.location) {
-      filtered = filtered.filter((car) => {
-        return car.location
-          ?.toLowerCase()
-          .includes(appliedFilters.location.toLowerCase());
-      });
-    }
+      // Filter by price range
+      if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
+        filtered = filtered.filter((car) => {
+          const carPrice = parseFloat(
+            car.price?.replace(/[^0-9.]/g, "") || car.pricePerDay || 0
+          );
+          const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
+          const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
+          return carPrice >= minPrice && carPrice <= maxPrice;
+        });
+      }
 
-    return filtered;
-  }, [allCars, appliedFilters]);
+      // Filter by rating
+      if (appliedFilters.rating) {
+        filtered = filtered.filter((car) => {
+          const carRating = parseFloat(car.rating) || 0;
+          const minRating = parseFloat(appliedFilters.rating.replace("+", "")) || 0;
+          return carRating >= minRating;
+        });
+      }
+
+      // Filter by location
+      if (appliedFilters.location) {
+        filtered = filtered.filter((car) => {
+          return car.location
+            ?.toLowerCase()
+            .includes(appliedFilters.location.toLowerCase());
+        });
+      }
+
+      return filtered;
+    },
+    [appliedFilters]
+  );
+
+  const filteredCars = useMemo(() => filterCars(allCars), [allCars, filterCars]);
+  const filteredBestCars = useMemo(
+    () => filterCars(bestCars),
+    [bestCars, filterCars]
+  );
+  const filteredNearbyCars = useMemo(
+    () => filterCars(nearbyCars),
+    [nearbyCars, filterCars]
+  );
+  const activeFeaturedCar = useMemo(
+    () => filteredBestCars[0] || filteredCars[0] || featuredCar,
+    [filteredBestCars, filteredCars, featuredCar]
+  );
+
+  // Tap brand pills at the top to set brand filter immediately
+  const handleQuickBrandFilter = (brandName) => {
+    setAppliedFilters((prev) => ({
+      ...prev,
+      brand: brandName || "",
+    }));
+    // Also close filters if open and refresh featured car selection
+    setIsFilterOpen(false);
+  };
 
   return (
     <div
@@ -909,6 +982,8 @@ const ModuleTestPage = () => {
                 initial={{ rotate: -90 }}
                 animate={{ rotate: 0 }}
                 transition={{ duration: 0.3 }}
+                onClick={performSearch}
+                style={{ cursor: "pointer" }}
               >
                 <path
                   strokeLinecap="round"
@@ -926,7 +1001,7 @@ const ModuleTestPage = () => {
                 className="flex-1 bg-transparent text-gray-300 placeholder-gray-400 outline-none text-[11px]"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    navigate("/search");
+                    performSearch();
                   }
                   if (e.key === "Escape") {
                     setIsSearchActive(false);
@@ -1060,7 +1135,7 @@ const ModuleTestPage = () => {
                     : colors.textSecondary,
                 border: "1px solid #e5e7eb",
               }}
-              onClick={() => setActiveFilter("$200–$1,000 / day")}
+              onClick={() => handleFilterNavigate("$200–$1,000 / day")}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1081,7 +1156,7 @@ const ModuleTestPage = () => {
                   color:
                     activeFilter === label ? "#ffffff" : colors.textSecondary,
                 }}
-                onClick={() => setActiveFilter(label)}
+                onClick={() => handleFilterNavigate(label)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -1102,10 +1177,8 @@ const ModuleTestPage = () => {
                 <motion.button
                   key={cat.id}
                   type="button"
-                  className="flex-shrink-0 w-24"
-                  onClick={() =>
-                    navigate(`/category/${cat.label.toLowerCase()}`)
-                  }
+                className="flex-shrink-0 w-24"
+                onClick={() => handleQuickBrandFilter(cat.label)}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
@@ -1147,7 +1220,7 @@ const ModuleTestPage = () => {
                     key={`${brand.id}-${index}`}
                     type="button"
                     className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
-                    onClick={() => navigate(`/brand/${brand.name}`)}
+                    onClick={() => handleQuickBrandFilter(brand.name)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -1215,7 +1288,7 @@ const ModuleTestPage = () => {
           </div>
 
           {/* FEATURED CAR CARD */}
-          {featuredCar && (
+          {activeFeaturedCar && (
             <motion.div
               className="px-1"
               initial={{ opacity: 0, y: 20 }}
@@ -1229,12 +1302,12 @@ const ModuleTestPage = () => {
                   boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
                 }}
                 transition={{ duration: 0.3 }}
-                onClick={() => navigate(`/car-details/${featuredCar.id}`)}
+                onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
               >
                 <div className="w-full h-48 bg-gray-100 overflow-hidden">
                   <motion.img
-                    src={featuredCar.image}
-                    alt={featuredCar.name}
+                    src={activeFeaturedCar.image}
+                    alt={activeFeaturedCar.name}
                     className="w-full h-full object-cover"
                     whileHover={{ scale: 1.1 }}
                     transition={{ duration: 0.4 }}
@@ -1244,10 +1317,10 @@ const ModuleTestPage = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-gray-900">
-                        {featuredCar.name}
+                        {activeFeaturedCar.name}
                       </h3>
                       <p className="mt-1 text-xs font-semibold text-gray-700">
-                        {featuredCar.price}
+                        {activeFeaturedCar.price}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1262,7 +1335,7 @@ const ModuleTestPage = () => {
                         >
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                         </svg>
-                        <span>{featuredCar.rating}</span>
+                        <span>{activeFeaturedCar.rating}</span>
                       </span>
                     </div>
                   </div>
@@ -1377,7 +1450,7 @@ const ModuleTestPage = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              {bestCars.map((car, index) => (
+              {(filteredBestCars.length ? filteredBestCars : bestCars).map((car, index) => (
                 <motion.div
                   key={car.id}
                   className="w-full rounded-xl overflow-hidden cursor-pointer"
@@ -1551,7 +1624,7 @@ const ModuleTestPage = () => {
               </motion.button>
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {nearbyCars.map((car, index) => (
+              {(filteredNearbyCars.length ? filteredNearbyCars : nearbyCars).map((car, index) => (
                 <motion.div
                   key={car.id}
                   className="min-w-[280px] flex-shrink-0"

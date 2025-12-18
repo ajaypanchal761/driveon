@@ -14,3 +14,4 @@ export { default as pricingService } from "./pricing.service";
 export { adminService } from "./admin.service";
 export * as locationService from "./location.service";
 export { couponService } from "./coupon.service";
+export { referralService } from "./referral.service";

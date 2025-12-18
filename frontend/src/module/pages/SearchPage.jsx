@@ -13,8 +13,6 @@ import { useLocation } from '../../hooks/useLocation';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
-import carImg2 from '../../assets/car_banImg2.jpg';
-import carImg3 from '../../assets/car_banImg3.jpg';
 import carImg4 from '../../assets/car_img4-removebg-preview.png';
 import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
@@ -124,6 +122,41 @@ const SearchPage = () => {
     availableTo: '',
   });
 
+  // Track if filters should auto-open (e.g., when coming from home pills)
+  const [shouldOpenFilters, setShouldOpenFilters] = useState(false);
+
+  // Sync state when query params change (e.g., from home pills)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    setSearchQuery(q);
+
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    if (minPrice || maxPrice) {
+      setAppliedFilters((prev) => ({
+        ...prev,
+        priceRange: {
+          min: minPrice || '',
+          max: maxPrice || '',
+        },
+      }));
+      setShouldOpenFilters(true);
+    }
+
+    const filterParam = searchParams.get('filter');
+    if (filterParam) {
+      setShouldOpenFilters(true);
+    }
+  }, [searchParams]);
+
+  // Open filters when requested by URL params
+  useEffect(() => {
+    if (shouldOpenFilters) {
+      setIsFilterOpen(true);
+      setShouldOpenFilters(false);
+    }
+  }, [shouldOpenFilters]);
+
   // Filter options extracted from cars data
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
@@ -139,6 +172,17 @@ const SearchPage = () => {
 
   // Fallback images for cars when API images missing
   const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
+
+  // Helper: case-insensitive partial match for multi-word queries
+  const matchesQuery = (car, query) => {
+    const trimmed = (query || '').trim().toLowerCase();
+    if (!trimmed) return true;
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    const haystack = `${car.name || ''} ${car.brand || ''} ${car.model || ''}`.toLowerCase();
+    return tokens.every((token) => haystack.includes(token));
+  };
+
+  const norm = (val) => (val || '').toString().toLowerCase().trim();
 
   // Transform API car data to SearchCarCard format
   const transformCarData = (car, index = 0) => {
@@ -481,22 +525,34 @@ const SearchPage = () => {
   const filteredRecommendCars = useMemo(() => {
     let filtered = allRecommendCars;
     
-    // Filter by brand (from brand filter buttons)
+    // Filter by brand (from brand filter buttons) - case-insensitive
     if (selectedBrand !== 'all') {
-      filtered = filtered.filter((car) => car.brand === selectedBrand);
+      const target = norm(selectedBrand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by brand from FilterDropdown
     if (appliedFilters.brand) {
-      filtered = filtered.filter((car) => car.brand === appliedFilters.brand);
+      const target = norm(appliedFilters.brand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by model from FilterDropdown
     if (appliedFilters.model) {
-      const modelQuery = appliedFilters.model.toLowerCase().trim();
+      const modelQuery = norm(appliedFilters.model);
       filtered = filtered.filter((car) => 
-        car.model?.toLowerCase().includes(modelQuery) ||
-        car.name?.toLowerCase().includes(modelQuery)
+        norm(car.model).includes(modelQuery) ||
+        norm(car.name).includes(modelQuery)
       );
     }
     
@@ -562,14 +618,9 @@ const SearchPage = () => {
       });
     }
     
-    // Filter by search query
+    // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((car) => 
-        car.name?.toLowerCase().includes(query) ||
-        car.brand?.toLowerCase().includes(query) ||
-        car.model?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((car) => matchesQuery(car, searchQuery));
     }
     
     return filtered;
@@ -578,22 +629,34 @@ const SearchPage = () => {
   const filteredPopularCars = useMemo(() => {
     let filtered = allPopularCars;
     
-    // Filter by brand (from brand filter buttons)
+    // Filter by brand (from brand filter buttons) - case-insensitive
     if (selectedBrand !== 'all') {
-      filtered = filtered.filter((car) => car.brand === selectedBrand);
+      const target = norm(selectedBrand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by brand from FilterDropdown
     if (appliedFilters.brand) {
-      filtered = filtered.filter((car) => car.brand === appliedFilters.brand);
+      const target = norm(appliedFilters.brand);
+      filtered = filtered.filter((car) => {
+        const b = norm(car.brand);
+        const m = norm(car.model);
+        const n = norm(car.name);
+        return b === target || m.includes(target) || n.includes(target);
+      });
     }
     
     // Filter by model from FilterDropdown
     if (appliedFilters.model) {
-      const modelQuery = appliedFilters.model.toLowerCase().trim();
+      const modelQuery = norm(appliedFilters.model);
       filtered = filtered.filter((car) => 
-        car.model?.toLowerCase().includes(modelQuery) ||
-        car.name?.toLowerCase().includes(modelQuery)
+        norm(car.model).includes(modelQuery) ||
+        norm(car.name).includes(modelQuery)
       );
     }
     
@@ -659,14 +722,9 @@ const SearchPage = () => {
       });
     }
     
-    // Filter by search query
+    // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((car) => 
-        car.name?.toLowerCase().includes(query) ||
-        car.brand?.toLowerCase().includes(query) ||
-        car.model?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((car) => matchesQuery(car, searchQuery));
     }
     
     return filtered;
@@ -676,59 +734,6 @@ const SearchPage = () => {
   const allFilteredCars = useMemo(() => {
     return [...filteredRecommendCars, ...filteredPopularCars];
   }, [filteredRecommendCars, filteredPopularCars]);
-
-  // Calculate dynamic price ranges from car data
-  const priceRanges = useMemo(() => {
-    const prices = [...allRecommendCars, ...allPopularCars]
-      .map(car => car.pricePerDay || 0)
-      .filter(price => price > 0);
-    
-    if (prices.length === 0) return [];
-    
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    
-    // Create price range options - show up to 3 ranges dynamically
-    const ranges = [];
-    if (maxPrice > 0) {
-      const range1 = Math.floor(minPrice);
-      const range2 = Math.floor((minPrice + maxPrice) / 3);
-      const range3 = Math.floor((minPrice + maxPrice) / 2);
-      const range4 = Math.floor(maxPrice);
-      
-      // Create meaningful price ranges
-      if (range2 > range1) {
-        ranges.push({ label: `Rs. ${range1}-${range2} / day`, min: range1, max: range2 });
-      }
-      if (range3 > range2) {
-        ranges.push({ label: `Rs. ${range2}-${range3} / day`, min: range2, max: range3 });
-      }
-      if (range4 > range3) {
-        ranges.push({ label: `Rs. ${range3}-${range4} / day`, min: range3, max: range4 });
-      }
-      
-      // If no ranges created, create a single range
-      if (ranges.length === 0) {
-        ranges.push({ label: `Rs. ${range1}-${range4} / day`, min: range1, max: range4 });
-      }
-    }
-    
-    return ranges.slice(0, 3); // Show up to 3 price ranges dynamically
-  }, [allRecommendCars, allPopularCars]);
-
-  // Category images map
-  const categoryImages = {
-    Sports: carImg1,
-    Electric: carImg2,
-    SUV: carImg4,
-    Sedan: carImg5,
-    Hatchback: carImg6,
-    Coupe: carImg8,
-    Luxury: carImg1,
-    MUV: carImg2,
-    'Legends': carImg3,
-    'Classic': carImg4,
-  };
 
   return (
     <>
@@ -856,6 +861,7 @@ const SearchPage = () => {
             />
           </div>
           <button 
+            aria-label="Open filters"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
             style={{ 
@@ -894,8 +900,6 @@ const SearchPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          {/* Mobile-only promo strip removed to simplify top section */}
-
           {/* Brand Filters */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1011,7 +1015,11 @@ const SearchPage = () => {
         onApplyFilters={(filters) => {
           console.log('Applied filters:', filters);
           setAppliedFilters(filters);
+          // Keep pills in sync with brand filter
+          setSelectedBrand(filters.brand ? filters.brand : 'all');
           setIsFilterOpen(false);
+          // Scroll to top to reveal filtered results
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         brands={filterOptions.brands}
         fuelTypes={filterOptions.fuelTypes}
@@ -1060,27 +1068,27 @@ const SearchPage = () => {
                 >
                   Home
                 </Link>
-                <Link
-                  to="#"
-                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
-                  style={{ color: colors.textWhite }}
-                >
-                  About
-                </Link>
-                <Link
-                  to="#"
-                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
-                  style={{ color: colors.textWhite }}
-                >
-                  Contact
-                </Link>
-                <Link
-                  to="/faq"
-                  className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
-                  style={{ color: colors.textWhite }}
-                >
-                  FAQs
-                </Link>
+              <Link
+                to="/about"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite }}
+              >
+                About
+              </Link>
+              <Link
+                to="/contact"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite }}
+              >
+                Contact
+              </Link>
+              <Link
+                to="/faq"
+                className="text-xs md:text-sm lg:text-base xl:text-lg font-medium transition-all hover:opacity-80 flex items-center h-full"
+                style={{ color: colors.textWhite }}
+              >
+                FAQs
+              </Link>
               </nav>
 
               {/* Right - Login/Signup and Profile Icon */}
@@ -1175,6 +1183,7 @@ const SearchPage = () => {
                   />
                 </div>
                 <button 
+                  aria-label="Open filters"
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                   className="px-6 py-2 rounded-xl text-base font-medium text-white hover:opacity-90 transition-opacity"
                   style={{ 

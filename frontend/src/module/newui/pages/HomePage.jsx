@@ -13,6 +13,7 @@ import '../styles/index.css';
  */
 const HomePage = () => {
   const [selectedBodyType, setSelectedBodyType] = useState('All');
+  const [selectedBrand, setSelectedBrand] = useState(null);
 
   return (
     <div className="min-h-screen w-full bg-black">
@@ -31,12 +32,18 @@ const HomePage = () => {
 
         {/* Top Brands Section - Black Background */}
         <div className="bg-black px-4 py-1">
-          <TopBrands />
+          <TopBrands 
+            selectedBrand={selectedBrand}
+            onSelectBrand={setSelectedBrand}
+          />
         </div>
 
         {/* Available Near You Section - Black Background */}
         <div className="bg-black px-4 py-1">
-          <AvailableCars />
+          <AvailableCars 
+            selectedBodyType={selectedBodyType}
+            selectedBrand={selectedBrand}
+          />
         </div>
       </main>
 

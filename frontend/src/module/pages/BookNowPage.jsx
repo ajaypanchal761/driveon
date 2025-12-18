@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import CarDetailsHeader from '../components/layout/CarDetailsHeader';
-import BookingConfirmationModal from '../components/common/BookingConfirmationModal';
-import CustomSelect from '../components/common/CustomSelect';
-import { colors } from '../theme/colors';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import razorpayService from "../../services/razorpay.service";
+import bookingService from "../../services/booking.service";
+import { useAppSelector } from "../../hooks/redux";
+import CarDetailsHeader from "../components/layout/CarDetailsHeader";
+import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
+import CustomSelect from "../components/common/CustomSelect";
+import { colors } from "../theme/colors";
+import { motion } from "framer-motion";
 
 // Import car images for mock data
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -17,8 +20,8 @@ import carImg8 from "../../assets/car_img8.png";
  * Helper function to extract numeric price from price string or number
  */
 const extractPrice = (price) => {
-  if (typeof price === 'number') return price;
-  if (typeof price === 'string') {
+  if (typeof price === "number") return price;
+  if (typeof price === "string") {
     // Extract number from strings like "Rs. 200" or "200" or "Rs.200"
     const match = price.match(/\d+/);
     return match ? parseInt(match[0], 10) : 0;
@@ -35,15 +38,21 @@ const BookNowPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get car data from navigation state or use mock data as fallback
+  const { isAuthenticated, user } = useAppSelector((state) => ({
+    isAuthenticated: state.auth?.isAuthenticated,
+    user: state.auth?.user || state.user?.user || state.user,
+  }));
+
+  // Get car data from navigation state, session cache, or use mock data as fallback
   const getCarData = () => {
     // First, try to get car from navigation state (when coming from search or car details)
     if (location.state?.car) {
       const stateCar = location.state.car;
       return {
         id: stateCar.id || stateCar._id || id,
-        name: stateCar.name || `${stateCar.brand || ''} ${stateCar.model || ''}`.trim(),
+        name:
+          stateCar.name ||
+          `${stateCar.brand || ""} ${stateCar.model || ""}`.trim(),
         brand: stateCar.brand,
         model: stateCar.model,
         image: stateCar.image || stateCar.images?.[0] || carImg1,
@@ -51,13 +60,48 @@ const BookNowPage = () => {
         price: extractPrice(stateCar.price || stateCar.pricePerDay || 0),
         pricePerDay: extractPrice(stateCar.pricePerDay || stateCar.price || 0),
         seats: stateCar.seats || 4,
-        transmission: stateCar.transmission || 'Automatic',
-        fuelType: stateCar.fuelType || 'Petrol',
+        transmission: stateCar.transmission || "Automatic",
+        fuelType: stateCar.fuelType || "Petrol",
         rating: stateCar.rating || stateCar.averageRating || 5.0,
-        location: stateCar.location || 'Location',
+        location: stateCar.location || "Location",
       };
     }
-    
+
+    // Next, try to get cached car from sessionStorage (set in CarCard/CarDetails)
+    if (typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem("driveon:selectedCar");
+        if (raw) {
+          const cached = JSON.parse(raw);
+          const matchesRoute =
+            cached && (cached.id === id || cached._id === id);
+          if (cached && (matchesRoute || !id)) {
+            return {
+              id: cached.id || cached._id || id,
+              name:
+                cached.name ||
+                `${cached.brand || ""} ${cached.model || ""}`.trim(),
+              brand: cached.brand,
+              model: cached.model,
+              image: cached.image || cached.images?.[0] || carImg1,
+              images: cached.images || [cached.image || carImg1],
+              price: extractPrice(cached.price || cached.pricePerDay || 0),
+              pricePerDay: extractPrice(
+                cached.pricePerDay || cached.price || 0
+              ),
+              seats: cached.seats || 4,
+              transmission: cached.transmission || "Automatic",
+              fuelType: cached.fuelType || "Petrol",
+              rating: cached.rating || cached.averageRating || 5.0,
+              location: cached.location || "Location",
+            };
+          }
+        }
+      } catch (err) {
+        // ignore cache errors
+      }
+    }
+
     // Fallback to mock data if no state car
     const cars = {
       1: {
@@ -152,11 +196,11 @@ const BookNowPage = () => {
         setDropTime(location.state.dropTime);
       }
     }
-    
+
     // Also check localStorage for dates (in case dates were selected in filter)
     // This allows dates to persist across navigation
     try {
-      const storedDates = localStorage.getItem('selectedBookingDates');
+      const storedDates = localStorage.getItem("selectedBookingDates");
       if (storedDates) {
         const dates = JSON.parse(storedDates);
         if (dates.pickupDate && !location.state?.pickupDate) {
@@ -173,7 +217,7 @@ const BookNowPage = () => {
         }
       }
     } catch (error) {
-      console.error('Error reading dates from localStorage:', error);
+      console.error("Error reading dates from localStorage:", error);
     }
   }, [location.state]);
   const [paymentOption, setPaymentOption] = useState("advance"); // Only 'advance' option available
@@ -184,11 +228,11 @@ const BookNowPage = () => {
   const [bookingPurpose, setBookingPurpose] = useState(""); // 'job', 'business', 'student'
   const [isPersonal, setIsPersonal] = useState(false); // Separate checkbox for personal
   const [personalDetails, setPersonalDetails] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    age: '',
-    gender: '',
+    name: "",
+    phone: "",
+    email: "",
+    age: "",
+    gender: "",
   });
   const [currentAddress, setCurrentAddress] = useState("");
   const [jobDetails, setJobDetails] = useState("");
@@ -204,9 +248,12 @@ const BookNowPage = () => {
     bouncer: 0,
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [submitWarning, setSubmitWarning] = useState("");
 
   // Booking confirmation modal state
-  const [showBookingConfirmationModal, setShowBookingConfirmationModal] = useState(false);
+  const [showBookingConfirmationModal, setShowBookingConfirmationModal] =
+    useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState(null);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
 
@@ -245,6 +292,17 @@ const BookNowPage = () => {
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
+
+  // Helper: format time as HH:mm (24h) from Date
+  const formatLocalTime = (date) => {
+    if (!date) return "";
+    return `${String(date.getHours()).padStart(2, "0")}:${String(
+      date.getMinutes()
+    ).padStart(2, "0")}`;
+  };
+
+  // Helper: basic ObjectId validation
+  const isValidObjectId = (val) => /^[0-9a-fA-F]{24}$/.test(val || "");
 
   // Calculate dynamic price based on document.txt requirements
   const calculatePrice = () => {
@@ -473,17 +531,80 @@ const BookNowPage = () => {
     }
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
+  // Handle form submission with backend + Razorpay
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isProcessing) return;
+    setSubmitWarning("");
+
+    // Helper: build a local Date object from date (YYYY-MM-DD) and time (HH:mm)
+    const buildLocalDateTime = (dateStr, timeStr) => {
+      if (!dateStr) return null;
+      const base = parseLocalDate(dateStr) || new Date(dateStr);
+      const [h = "0", m = "0"] = (timeStr || "00:00").split(":");
+      base.setHours(parseInt(h, 10) || 0, parseInt(m, 10) || 0, 0, 0);
+      return base;
+    };
+
+    const now = new Date();
+    now.setSeconds(0, 0);
+    let startDateObj = buildLocalDateTime(pickupDate, pickupTime);
+    let endDateObj = buildLocalDateTime(dropDate, dropTime);
 
     if (!pickupDate || !dropDate || !pickupTime || !dropTime) {
       alert("Please select pickup and drop date & time");
+      setSubmitWarning("Pickup and drop date/time are required.");
       return;
+    }
+
+    if (!startDateObj || !endDateObj) {
+      alert("Please select valid pickup and drop date & time");
+      setSubmitWarning("Invalid pickup/drop date or time.");
+      return;
+    }
+
+    let adjusted = false;
+
+    if (startDateObj < now) {
+      // Auto-adjust pickup to next 30 minutes
+      const adjustedStart = new Date(now.getTime() + 30 * 60 * 1000);
+      startDateObj = adjustedStart;
+      adjusted = true;
+    }
+
+    if (endDateObj <= startDateObj) {
+      // Ensure drop is at least 2 hours after pickup
+      const adjustedEnd = new Date(startDateObj.getTime() + 2 * 60 * 60 * 1000);
+      endDateObj = adjustedEnd;
+      adjusted = true;
+    }
+
+    if (adjusted) {
+      const newPickupDate = formatLocalDate(startDateObj);
+      const newPickupTime = formatLocalTime(startDateObj);
+      const newDropDate = formatLocalDate(endDateObj);
+      const newDropTime = formatLocalTime(endDateObj);
+
+      setPickupDate(newPickupDate);
+      setPickupTime(newPickupTime);
+      setDropDate(newDropDate);
+      setDropTime(newDropTime);
+
+      alert(
+        "Pickup or drop time was in the past/invalid. We've adjusted it to the next available time."
+      );
     }
 
     if (!agreeToTerms) {
       alert("Please agree to terms and conditions");
+      setSubmitWarning("You must accept Terms & Conditions to continue.");
+      return;
+    }
+
+    // Ensure user is logged in before proceeding to payment
+    if (!isAuthenticated) {
+      alert("Please login to continue with payment");
+      navigate("/login");
       return;
     }
 
@@ -495,21 +616,19 @@ const BookNowPage = () => {
 
     // At least one mode must be selected: Personal OR specific purpose
     if (!isPersonal && !bookingPurpose) {
-      alert("Please select Personal or a booking purpose (Job/Business/Student)");
+      alert(
+        "Please select Personal or a booking purpose (Job/Business/Student)"
+      );
       return;
     }
 
     // If Personal is selected, all personal details are required
     if (isPersonal) {
       const { name, phone, email, age, gender } = personalDetails;
-      if (
-        !name.trim() ||
-        !phone.trim() ||
-        !email.trim() ||
-        !age ||
-        !gender
-      ) {
-        alert("Please fill all Personal Details (Name, Phone, Email, Age, Gender)");
+      if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
+        alert(
+          "Please fill all Personal Details (Name, Phone, Email, Age, Gender)"
+        );
         return;
       }
     }
@@ -550,82 +669,115 @@ const BookNowPage = () => {
       }
     }
 
-    // Generate unique booking ID
-    const bookingId = `BK${Date.now().toString().slice(-6)}`;
-
     // Parse car name to extract brand and model
     let brand = car.name;
     let model = "";
     if (car.name.includes("-")) {
-      // Format: "Ferrari-FF"
       const parts = car.name.split("-");
       brand = parts[0];
       model = parts.slice(1).join(" ");
     } else if (car.name.includes(" ")) {
-      // Format: "Tesla Model S" or "BMW GTS3 M2"
       const parts = car.name.split(" ");
       brand = parts[0];
       model = parts.slice(1).join(" ");
     }
-    // If no separator, use full name as brand (e.g., "BMW")
 
-    // Create booking object matching BookingsPage structure
-    const newBooking = {
-      id: `booking_${Date.now()}`,
-      bookingId: bookingId,
-      car: {
-        id: car.id.toString(),
-        brand: brand,
-        model: model || brand,
-        image: car.image,
-        seats: car.seats,
-        transmission: car.transmission,
-        fuelType: car.fuelType,
+    const pickupDateStr = formatLocalDate(startDateObj);
+    const pickupTimeStr = formatLocalTime(startDateObj);
+    const dropDateStr = formatLocalDate(endDateObj);
+    const dropTimeStr = formatLocalTime(endDateObj);
+
+    const effectiveCarId = car.id || car._id || id;
+    if (!isValidObjectId(effectiveCarId)) {
+      alert("This car cannot be booked right now. Please select another car.");
+      setSubmitWarning(
+        "This demo car cannot be booked. Please choose another car."
+      );
+      return;
+    }
+
+    // Build booking payload for API (use effective adjusted values)
+    const bookingPayload = {
+      carId: effectiveCarId,
+      tripStart: {
+        location: car.location || "Pickup location",
+        coordinates: {},
+        date: pickupDateStr,
+        time: pickupTimeStr || "10:00",
       },
-      // Booking status is initially pending until physical document verification at office
-      status: "pending",
-      tripStatus: "not_started",
-      paymentStatus: "partial",
-      pickupDate: pickupDate,
-      pickupTime: pickupTime,
-      dropDate: dropDate,
-      dropTime: dropTime,
-      totalPrice: priceDetails.finalPrice,
-      paidAmount: priceDetails.advancePayment,
-      remainingAmount: priceDetails.remainingPayment,
-      isTrackingActive: false,
-      createdAt: new Date().toISOString().split("T")[0],
-      paymentOption: paymentOption,
-      specialRequests: specialRequests,
+      tripEnd: {
+        location: car.location || "Drop location",
+        coordinates: {},
+        date: dropDateStr,
+        time: dropTimeStr || "18:00",
+      },
+      paymentOption: paymentOption || "advance",
+      specialRequests: specialRequests || "",
       couponCode: appliedCoupon?.code || null,
       couponDiscount: couponDiscount,
-      // Additional details
-      bookingPurpose: isPersonal ? 'personal' : (bookingPurpose || null),
+      // Additional details for verification and reporting
+      bookingPurpose: isPersonal ? "personal" : bookingPurpose || null,
       personalDetails: isPersonal ? personalDetails : null,
       currentAddress: currentAddress || null,
-      jobDetails: bookingPurpose === 'job' ? jobDetails : null,
-      businessDetails: bookingPurpose === 'business' ? businessDetails : null,
-      studentId: bookingPurpose === 'student' ? studentId : null,
-      documentPhoto: documentPhoto ? documentPhotoPreview : null, // Store as base64 for now
-      // Add-on services
-      addOnServices: addOnServices,
+      jobDetails: bookingPurpose === "job" ? jobDetails : null,
+      businessDetails: bookingPurpose === "business" ? businessDetails : null,
+      studentId: bookingPurpose === "student" ? studentId : null,
+      documentPhoto: documentPhoto ? documentPhotoPreview : null,
+      addOnServices,
     };
 
-    // Save to localStorage
-    try {
-      const existingBookings = JSON.parse(
-        localStorage.getItem("localBookings") || "[]"
-      );
-        existingBookings.unshift(newBooking); // Add to beginning
-        localStorage.setItem("localBookings", JSON.stringify(existingBookings));
+    const amountToPay =
+      paymentOption === "advance"
+        ? priceDetails.advancePayment
+        : priceDetails.finalPrice;
 
-        // Show booking confirmation modal with document verification message
-        setConfirmedBookingId(bookingId);
-        setConfirmedBookingData(newBooking);
-        setShowBookingConfirmationModal(true);
+    setIsProcessing(true);
+
+    try {
+      const bookingResponse = await bookingService.createBooking(
+        bookingPayload
+      );
+      const booking = bookingResponse?.data?.booking || bookingResponse?.data;
+      const bookingId =
+        booking?._id ||
+        booking?.id ||
+        booking?.bookingId ||
+        bookingResponse?.bookingId;
+
+      if (!bookingId) {
+        throw new Error("Booking ID missing from server response");
+      }
+
+      await razorpayService.processBookingPayment({
+        bookingId: bookingId.toString(),
+        amount: amountToPay,
+        description: `Car booking payment - ${brand} ${model}`.trim(),
+        name: user?.name || user?.fullName || "",
+        email: user?.email || "",
+        phone: user?.phone || user?.mobile || user?.phoneNumber || "",
+        onSuccess: () => {
+          setIsProcessing(false);
+          alert("Payment successful! Your booking has been confirmed.");
+          navigate("/bookings", { replace: true });
+        },
+        onError: (error) => {
+          console.error("Payment error:", error);
+          setIsProcessing(false);
+          if (error?.message === "PAYMENT_CANCELLED") return;
+          alert(error?.message || "Payment failed. Please try again.");
+        },
+      });
     } catch (error) {
-      console.error("Error saving booking to localStorage:", error);
-      alert("Error saving booking. Please try again.");
+      console.error("Error during booking/payment:", error);
+      setIsProcessing(false);
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message;
+      const friendly =
+        serverMessage || "Failed to process booking. Please try again.";
+      setSubmitWarning(friendly);
+      alert(friendly);
     }
   };
 
@@ -1075,9 +1227,15 @@ const BookNowPage = () => {
             >
               Additional Details
             </h2>
-            
+
             {/* Personal Purpose Checkbox */}
-            <div className="flex items-start gap-2 p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+            <div
+              className="flex items-start gap-2 p-3 rounded-lg border-2"
+              style={{
+                borderColor: colors.borderMedium,
+                backgroundColor: colors.backgroundSecondary,
+              }}
+            >
               <input
                 type="checkbox"
                 id="personal-purpose"
@@ -1095,116 +1253,169 @@ const BookNowPage = () => {
                   } else {
                     // Clear personal details if unchecked
                     setPersonalDetails({
-                      name: '',
-                      phone: '',
-                      email: '',
-                      age: '',
-                      gender: '',
+                      name: "",
+                      phone: "",
+                      email: "",
+                      age: "",
+                      gender: "",
                     });
                   }
                 }}
                 className="mt-0.5 w-4 h-4 rounded border-2"
-                style={{ borderColor: isPersonal ? colors.backgroundTertiary : colors.borderCheckbox }}
+                style={{
+                  borderColor: isPersonal
+                    ? colors.backgroundTertiary
+                    : colors.borderCheckbox,
+                }}
               />
-              <label htmlFor="personal-purpose" className="text-sm font-semibold cursor-pointer" style={{ color: colors.textPrimary }}>
+              <label
+                htmlFor="personal-purpose"
+                className="text-sm font-semibold cursor-pointer"
+                style={{ color: colors.textPrimary }}
+              >
                 Personal
               </label>
             </div>
 
             {/* Personal Details Fields */}
             {isPersonal && (
-              <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                <h4 className="text-xs font-bold mb-2" style={{ color: colors.textPrimary }}>Personal Details</h4>
-                
+              <div
+                className="space-y-3 p-3 rounded-lg"
+                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
+              >
+                <h4
+                  className="text-xs font-bold mb-2"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Personal Details
+                </h4>
+
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Name
                   </label>
                   <input
                     type="text"
                     value={personalDetails.name}
-                    onChange={(e) => setPersonalDetails(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) =>
+                      setPersonalDetails((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
                     placeholder="Enter your name"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Phone Number
                   </label>
                   <input
                     type="tel"
                     value={personalDetails.phone}
-                    onChange={(e) => setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))}
+                    onChange={(e) =>
+                      setPersonalDetails((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
                     placeholder="Enter your phone number"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Email
                   </label>
                   <input
                     type="email"
                     value={personalDetails.email}
-                    onChange={(e) => setPersonalDetails(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) =>
+                      setPersonalDetails((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
                     placeholder="Enter your email"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                 </div>
 
                 {/* Age */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Age
                   </label>
                   <input
                     type="number"
                     value={personalDetails.age}
-                    onChange={(e) => setPersonalDetails(prev => ({ ...prev, age: e.target.value }))}
+                    onChange={(e) =>
+                      setPersonalDetails((prev) => ({
+                        ...prev,
+                        age: e.target.value,
+                      }))
+                    }
                     placeholder="Enter your age"
                     min="18"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                 </div>
 
                 {/* Gender */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Gender
                   </label>
                   <CustomSelect
                     value={personalDetails.gender}
-                    onChange={(value) => setPersonalDetails(prev => ({ ...prev, gender: value }))}
+                    onChange={(value) =>
+                      setPersonalDetails((prev) => ({ ...prev, gender: value }))
+                    }
                     options={[
-                      { label: 'Male', value: 'male' },
-                      { label: 'Female', value: 'female' },
-                      { label: 'Other', value: 'other' },
+                      { label: "Male", value: "male" },
+                      { label: "Female", value: "female" },
+                      { label: "Other", value: "other" },
                     ]}
                     placeholder="Select gender"
                   />
@@ -1230,9 +1441,9 @@ const BookNowPage = () => {
                   setDocumentPhotoPreview(null);
                 }}
                 options={[
-                  { label: 'Job', value: 'job' },
-                  { label: 'Business', value: 'business' },
-                  { label: 'Student', value: 'student' },
+                  { label: "Job", value: "job" },
+                  { label: "Business", value: "business" },
+                  { label: "Student", value: "student" },
                 ]}
                 placeholder="Select purpose (Job/Business/Student)"
               />
@@ -1240,7 +1451,10 @@ const BookNowPage = () => {
 
             {/* Current Address */}
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+              <label
+                className="block text-xs font-semibold mb-1.5"
+                style={{ color: colors.textPrimary }}
+              >
                 Current Address
               </label>
               <textarea
@@ -1252,15 +1466,21 @@ const BookNowPage = () => {
                 style={{
                   borderColor: colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
-                  color: colors.textPrimary
+                  color: colors.textPrimary,
                 }}
               />
             </div>
 
             {/* Conditional Fields based on Purpose */}
-            {bookingPurpose === 'job' && (
-              <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                <label className="block text-xs font-semibold" style={{ color: colors.textPrimary }}>
+            {bookingPurpose === "job" && (
+              <div
+                className="space-y-3 p-3 rounded-lg"
+                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
+              >
+                <label
+                  className="block text-xs font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
                   Job Details
                 </label>
                 <input
@@ -1272,11 +1492,14 @@ const BookNowPage = () => {
                   style={{
                     borderColor: colors.borderMedium,
                     backgroundColor: colors.backgroundSecondary,
-                    color: colors.textPrimary
+                    color: colors.textPrimary,
                   }}
                 />
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Job Document Photo
                   </label>
                   <input
@@ -1297,7 +1520,7 @@ const BookNowPage = () => {
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                   {documentPhotoPreview && (
@@ -1324,9 +1547,15 @@ const BookNowPage = () => {
               </div>
             )}
 
-            {bookingPurpose === 'business' && (
-              <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                <label className="block text-xs font-semibold" style={{ color: colors.textPrimary }}>
+            {bookingPurpose === "business" && (
+              <div
+                className="space-y-3 p-3 rounded-lg"
+                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
+              >
+                <label
+                  className="block text-xs font-semibold"
+                  style={{ color: colors.textPrimary }}
+                >
                   Business Details
                 </label>
                 <input
@@ -1338,11 +1567,14 @@ const BookNowPage = () => {
                   style={{
                     borderColor: colors.borderMedium,
                     backgroundColor: colors.backgroundSecondary,
-                    color: colors.textPrimary
+                    color: colors.textPrimary,
                   }}
                 />
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Business Document Photo
                   </label>
                   <input
@@ -1363,7 +1595,7 @@ const BookNowPage = () => {
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                   {documentPhotoPreview && (
@@ -1390,10 +1622,16 @@ const BookNowPage = () => {
               </div>
             )}
 
-            {bookingPurpose === 'student' && (
-              <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
+            {bookingPurpose === "student" && (
+              <div
+                className="space-y-3 p-3 rounded-lg"
+                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
+              >
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Student ID
                   </label>
                   <input
@@ -1405,12 +1643,15 @@ const BookNowPage = () => {
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                  <label
+                    className="block text-xs font-semibold mb-1.5"
+                    style={{ color: colors.textPrimary }}
+                  >
                     Student ID Document Photo
                   </label>
                   <input
@@ -1431,7 +1672,7 @@ const BookNowPage = () => {
                     style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
+                      color: colors.textPrimary,
                     }}
                   />
                   {documentPhotoPreview && (
@@ -1469,158 +1710,453 @@ const BookNowPage = () => {
             className="rounded-2xl p-3 shadow-lg space-y-3"
             style={{ backgroundColor: colors.backgroundSecondary }}
           >
-            <h2 className="text-base font-bold" style={{ color: colors.textPrimary }}>
+            <h2
+              className="text-base font-bold"
+              style={{ color: colors.textPrimary }}
+            >
               Add-on Services (Optional)
             </h2>
-            
+
             <div className="space-y-3">
               {/* Driver */}
-              <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+              <div
+                className="flex items-center justify-between p-3 rounded-lg border-2"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                    <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: `${colors.backgroundTertiary}15`,
+                    }}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      style={{ color: colors.backgroundTertiary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Driver</p>
-                    <p className="text-xs" style={{ color: colors.textSecondary }}>Professional driver service</p>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Driver
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Professional driver service
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, driver: Math.max(0, prev.driver - 1) }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        driver: Math.max(0, prev.driver - 1),
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 12H4"
+                      />
                     </svg>
                   </button>
-                  <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.driver}</span>
+                  <span
+                    className="w-8 text-center text-sm font-semibold"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    {addOnServices.driver}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, driver: prev.driver + 1 }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        driver: prev.driver + 1,
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
                   </button>
                 </div>
               </div>
 
               {/* Bodyguard */}
-              <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+              <div
+                className="flex items-center justify-between p-3 rounded-lg border-2"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                    <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: `${colors.backgroundTertiary}15`,
+                    }}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      style={{ color: colors.backgroundTertiary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Bodyguard</p>
-                    <p className="text-xs" style={{ color: colors.textSecondary }}>Security personnel</p>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Bodyguard
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Security personnel
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, bodyguard: Math.max(0, prev.bodyguard - 1) }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        bodyguard: Math.max(0, prev.bodyguard - 1),
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 12H4"
+                      />
                     </svg>
                   </button>
-                  <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.bodyguard}</span>
+                  <span
+                    className="w-8 text-center text-sm font-semibold"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    {addOnServices.bodyguard}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, bodyguard: prev.bodyguard + 1 }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        bodyguard: prev.bodyguard + 1,
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
                   </button>
                 </div>
               </div>
 
               {/* Gun men */}
-              <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+              <div
+                className="flex items-center justify-between p-3 rounded-lg border-2"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                    <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: `${colors.backgroundTertiary}15`,
+                    }}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      style={{ color: colors.backgroundTertiary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Gun men</p>
-                    <p className="text-xs" style={{ color: colors.textSecondary }}>Armed security personnel</p>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Gun men
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Armed security personnel
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, gunmen: Math.max(0, prev.gunmen - 1) }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        gunmen: Math.max(0, prev.gunmen - 1),
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 12H4"
+                      />
                     </svg>
                   </button>
-                  <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.gunmen}</span>
+                  <span
+                    className="w-8 text-center text-sm font-semibold"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    {addOnServices.gunmen}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, gunmen: prev.gunmen + 1 }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        gunmen: prev.gunmen + 1,
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
                   </button>
                 </div>
               </div>
 
               {/* Bouncer */}
-              <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+              <div
+                className="flex items-center justify-between p-3 rounded-lg border-2"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                    <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: `${colors.backgroundTertiary}15`,
+                    }}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      style={{ color: colors.backgroundTertiary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Bouncer</p>
-                    <p className="text-xs" style={{ color: colors.textSecondary }}>Event security personnel</p>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      Bouncer
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Event security personnel
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, bouncer: Math.max(0, prev.bouncer - 1) }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        bouncer: Math.max(0, prev.bouncer - 1),
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 12H4"
+                      />
                     </svg>
                   </button>
-                  <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.bouncer}</span>
+                  <span
+                    className="w-8 text-center text-sm font-semibold"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    {addOnServices.bouncer}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setAddOnServices(prev => ({ ...prev, bouncer: prev.bouncer + 1 }))}
+                    onClick={() =>
+                      setAddOnServices((prev) => ({
+                        ...prev,
+                        bouncer: prev.bouncer + 1,
+                      }))
+                    }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                    style={{
+                      borderColor: colors.borderMedium,
+                      color: colors.textPrimary,
+                    }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -1679,11 +2215,17 @@ const BookNowPage = () => {
             }
             transition={{ duration: 0.5, delay: 0.7 }}
             type="submit"
-            className="w-full py-3 rounded-xl text-white font-bold text-base shadow-xl"
+            className="w-full py-3 rounded-xl text-white font-bold text-base shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ backgroundColor: colors.backgroundTertiary }}
+            disabled={isProcessing}
           >
-            Proceed to Payment
+            {isProcessing ? "Processing..." : "Proceed to Payment"}
           </motion.button>
+          {submitWarning && (
+            <p className="mt-3 text-sm text-red-500 text-center">
+              {submitWarning}
+            </p>
+          )}
         </form>
       </div>
 
