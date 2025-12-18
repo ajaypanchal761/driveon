@@ -262,6 +262,16 @@ const BookNowPage = () => {
   const [confirmedBookingId, setConfirmedBookingId] = useState(null);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
 
+  // Debug: Log when booking confirmation modal state changes
+  useEffect(() => {
+    if (showBookingConfirmationModal) {
+      console.log("🎉 Booking Confirmation Modal is now OPEN!", {
+        bookingId: confirmedBookingId,
+        hasBookingData: !!confirmedBookingData,
+      });
+    }
+  }, [showBookingConfirmationModal, confirmedBookingId, confirmedBookingData]);
+
   // Combined date-time picker modal state
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false);
   const [dateTimePickerTarget, setDateTimePickerTarget] = useState(null); // 'pickup' or 'drop'
@@ -760,7 +770,12 @@ const BookNowPage = () => {
         name: user?.name || user?.fullName || "",
         email: user?.email || "",
         phone: user?.phone || user?.mobile || user?.phoneNumber || "",
-        onSuccess: () => {
+        onSuccess: (verificationResult) => {
+          console.log(
+            "✅ Payment success callback triggered!",
+            verificationResult
+          );
+
           // Build a rich booking payload for the confirmation modal / PDF
           const bookingDataForPdf = {
             // Booking core
@@ -811,10 +826,21 @@ const BookNowPage = () => {
             tripStatus: booking?.tripStatus || "pending",
           };
 
+          console.log("📋 Booking data prepared for modal:", {
+            bookingId: bookingId.toString(),
+            hasBookingData: !!bookingDataForPdf,
+          });
+
+          // Stop processing state
           setIsProcessing(false);
-          setConfirmationBookingId(bookingId.toString());
-          setConfirmationBookingData(bookingDataForPdf);
-          setShowConfirmationModal(true);
+
+          // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
+          setTimeout(() => {
+            console.log("🎉 Showing booking confirmation modal now!");
+            setConfirmedBookingId(bookingId.toString());
+            setConfirmedBookingData(bookingDataForPdf);
+            setShowBookingConfirmationModal(true);
+          }, 500); // 500ms delay to ensure Razorpay modal is closed
         },
         onError: (error) => {
           console.error("Payment error:", error);
@@ -1306,6 +1332,17 @@ const BookNowPage = () => {
                     setStudentId("");
                     setDocumentPhoto(null);
                     setDocumentPhotoPreview(null);
+
+                    // Auto-fill personal details from user profile
+                    if (user) {
+                      setPersonalDetails({
+                        name: user.name || "",
+                        phone: user.phone || "",
+                        email: user.email || "",
+                        age: user.age ? String(user.age) : "",
+                        gender: user.gender || "",
+                      });
+                    }
                   } else {
                     // Clear personal details if unchecked
                     setPersonalDetails({

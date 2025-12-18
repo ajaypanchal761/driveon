@@ -20,11 +20,71 @@ import carImg8 from '../../assets/car_img8.png';
 const carImages = [carImg1, carImg2, carImg4, carImg5, carImg6, carImg8];
 
 /**
+ * Helper function to check if trip is overdue and calculate additional charges
+ */
+const calculateOverdueDetails = (dropDate, dropTime, basePrice) => {
+  if (!dropDate) return null;
+  
+  try {
+    // Parse drop date and time
+    const dropDateTime = new Date(dropDate);
+    if (dropTime) {
+      const [hours, minutes] = dropTime.split(':').map(Number);
+      dropDateTime.setHours(hours || 0, minutes || 0, 0, 0);
+    }
+    
+    const now = new Date();
+    
+    // Check if trip end date has passed
+    if (now > dropDateTime) {
+      const diffMs = now - dropDateTime;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      const remainingHours = diffHours % 24;
+      
+      // Calculate additional charges
+      // For demo: 1.5x base price per day for overdue days + hourly rate for remaining hours
+      const hourlyRate = (basePrice || 1000) / 24; // Hourly rate based on daily price
+      const dailyOverdueCharge = (basePrice || 1000) * 1.5; // 1.5x daily rate for overdue days
+      
+      let additionalCharge = 0;
+      if (diffDays > 0) {
+        additionalCharge += diffDays * dailyOverdueCharge;
+      }
+      if (remainingHours > 0) {
+        additionalCharge += remainingHours * hourlyRate * 1.5; // 1.5x hourly rate
+      }
+      
+      return {
+        isOverdue: true,
+        overdueDays: diffDays,
+        overdueHours: remainingHours,
+        totalOverdueHours: diffHours,
+        additionalCharge: Math.round(additionalCharge),
+        overdueTimeText: diffDays > 0 
+          ? `${diffDays} day${diffDays > 1 ? 's' : ''} ${remainingHours > 0 ? `${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}`.trim()
+          : `${remainingHours} hour${remainingHours > 1 ? 's' : ''}`
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error calculating overdue details:', error);
+    return null;
+  }
+};
+
+/**
  * BookingCard Component - Individual booking card with scroll-based animation
  */
 const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDetailsModal, setCancellationBooking, setShowCancellationModal, getStatusColor, getStatusLabel, calculateDays, colors }) => {
   const [cardRef, isCardInView] = useInViewAnimation({ threshold: 0.1 });
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
+  
+  // Check if trip is overdue (dummy check - for active trips)
+  const overdueDetails = (booking.status === 'active' || booking.status === 'confirmed') 
+    ? calculateOverdueDetails(booking.dropDate, booking.dropTime, booking.car?.pricePerDay || booking.totalPrice / (calculateDays(booking.pickupDate, booking.dropDate) || 1))
+    : null;
   
   return (
     <div
@@ -86,6 +146,53 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
             Booking ID: <span className="font-semibold" style={{ color: colors.textPrimary }}>{booking.bookingId}</span>
           </p>
         </div>
+
+        {/* Overdue Warning - Show if trip end date has passed */}
+        {overdueDetails && overdueDetails.isOverdue && (
+          <div 
+            className="mb-3 p-3 rounded-xl border-l-4"
+            style={{ 
+              backgroundColor: '#FEF3C7',
+              borderLeftColor: '#F59E0B'
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <svg 
+                className="w-5 h-5 flex-shrink-0 mt-0.5" 
+                style={{ color: '#F59E0B' }}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold mb-1" style={{ color: '#92400E' }}>
+                  Trip End Date Exceeded
+                </p>
+                <p className="text-xs leading-relaxed mb-2" style={{ color: '#78350F' }}>
+                  Your trip end date has exceeded by <span className="font-bold">{overdueDetails.overdueTimeText}</span>.
+                </p>
+                <div className="mt-2 pt-2 border-t" style={{ borderColor: '#FCD34D' }}>
+                  <p className="text-xs font-semibold mb-1" style={{ color: '#92400E' }}>
+                    Additional Charges:
+                  </p>
+                  <p className="text-sm font-bold" style={{ color: '#B45309' }}>
+                    ₹{overdueDetails.additionalCharge.toLocaleString('en-IN')}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: '#78350F' }}>
+                    This amount will be added to your final bill.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Duration & Price */}
         <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: colors.backgroundPrimary }}>
@@ -230,9 +337,65 @@ const BookingsPage = () => {
     'Other'
   ];
 
+  // Add dummy overdue booking for testing (only in development)
+  const addDummyOverdueBooking = () => {
+    try {
+      const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
+      
+      // Check if dummy booking already exists
+      const hasDummyBooking = localBookings.some(b => b.bookingId === 'BK-OVERDUE-DEMO');
+      
+      if (!hasDummyBooking) {
+        // Create a booking with past drop date (2 days ago)
+        const now = new Date();
+        const twoDaysAgo = new Date(now);
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        twoDaysAgo.setHours(18, 0, 0, 0); // 6 PM
+        
+        const pickupDate = new Date(twoDaysAgo);
+        pickupDate.setDate(pickupDate.getDate() - 3); // 3 days before drop date
+        
+        const dummyBooking = {
+          id: 'dummy_overdue_booking',
+          bookingId: 'BK-OVERDUE-DEMO',
+          car: {
+            id: 'dummy_car_1',
+            brand: 'Honda',
+            model: 'City',
+            image: carImg1,
+            seats: 5,
+            transmission: 'Automatic',
+            fuelType: 'Petrol',
+            pricePerDay: 2000,
+          },
+          status: 'active', // Active status so overdue warning shows
+          tripStatus: 'in_progress',
+          paymentStatus: 'partial',
+          pickupDate: pickupDate.toISOString().split('T')[0],
+          pickupTime: '10:00',
+          dropDate: twoDaysAgo.toISOString().split('T')[0], // 2 days ago - OVERDUE
+          dropTime: '18:00',
+          totalPrice: 6000,
+          paidAmount: 2100,
+          remainingAmount: 3900,
+          createdAt: pickupDate.toISOString().split('T')[0],
+        };
+        
+        localBookings.unshift(dummyBooking);
+        localStorage.setItem('localBookings', JSON.stringify(localBookings));
+        console.log('✅ Dummy overdue booking added for testing');
+      }
+    } catch (error) {
+      console.error('Error adding dummy booking:', error);
+    }
+  };
+
   // Function to fetch bookings from API
   const fetchBookings = async () => {
     setLoading(true);
+    
+    // Add dummy overdue booking for testing
+    addDummyOverdueBooking();
     
     // Check authentication
     const authToken = token || localStorage.getItem('authToken');

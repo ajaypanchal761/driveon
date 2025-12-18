@@ -375,35 +375,32 @@ export const generateBookingPDF = (bookingData) => {
   
   // Format currency with proper Indian number formatting (manual formatting for jsPDF compatibility)
   const formatCurrency = (amount) => {
-    if (amount === null || amount === undefined || amount === '') return 'N/A';
-    const numAmount = Number(amount);
-    if (isNaN(numAmount)) return 'N/A';
+    // Handle null, undefined, empty string
+    if (amount === null || amount === undefined || amount === '') return '0';
     
-    // Round to 2 decimal places if needed
-    const roundedAmount = Math.round(numAmount * 100) / 100;
+    // Convert to number, handle string numbers
+    let numAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^0-9.-]/g, '')) : Number(amount);
+    if (isNaN(numAmount)) return '0';
     
-    // Convert to string and split by decimal point
-    const amountStr = Math.abs(roundedAmount).toString();
-    const parts = amountStr.split('.');
-    let integerPart = parts[0];
-    const decimalPart = parts[1] || '';
+    // Round to nearest integer (no decimals for currency)
+    const roundedAmount = Math.round(Math.abs(numAmount));
+    
+    // Convert to string
+    const amountStr = roundedAmount.toString();
     
     // Add commas for Indian numbering system (every 3 digits from right)
-    // For example: 1100 -> 1,100, 1234567 -> 12,34,567
     let formattedInteger = '';
     let count = 0;
-    for (let i = integerPart.length - 1; i >= 0; i--) {
-      if (count === 3 && i !== integerPart.length - 1) {
+    for (let i = amountStr.length - 1; i >= 0; i--) {
+      if (count === 3 && i !== amountStr.length - 1) {
         formattedInteger = ',' + formattedInteger;
         count = 0;
       }
-      formattedInteger = integerPart[i] + formattedInteger;
+      formattedInteger = amountStr[i] + formattedInteger;
       count++;
     }
     
-    // Combine with decimal part if exists
-    const formatted = decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
-    return `₹${formatted}`;
+    return formattedInteger;
   };
 
   // Calculate box height based on content
@@ -420,36 +417,86 @@ export const generateBookingPDF = (bookingData) => {
   doc.setFillColor(...lightGray);
   doc.roundedRect(margin, pricingBoxY - 3, contentWidth, pricingBoxHeight, 2, 2, 'F');
   
-  yPosition += 3;
+  yPosition += 5;
   
-  // Total Price - Bold and larger
+  // Get and format amounts properly - ensure they are numbers
+  const totalPrice = Number(bookingData.totalPrice || 0);
+  const paidAmount = Number(bookingData.paidAmount || bookingData.advancePayment || 0);
+  const calculatedRemaining = totalPrice - paidAmount;
+  const remainingAmount = Number(bookingData.remainingAmount || calculatedRemaining || 0);
+  
+  // Format amounts with ₹ symbol included
+  const totalPriceFormatted = `₹${formatCurrency(totalPrice)}`;
+  const paidAmountFormatted = `₹${formatCurrency(paidAmount)}`;
+  const remainingAmountFormatted = `₹${formatCurrency(remainingAmount)}`;
+  
+  // Calculate right alignment position (right margin - 5)
+  const valueX = pageWidth - margin - 5;
+  
+  // Total Price - Bold and larger, highlighted
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  const totalPriceText = `Total Price: ${formatCurrency(bookingData.totalPrice)}`;
-  doc.text(totalPriceText, margin + 2, yPosition);
-  yPosition += lineHeight + 3;
+  doc.setTextColor(60, 60, 60);
+  doc.text('Total Price:', margin + 2, yPosition);
+  // Value - right aligned, bold, blue
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...accentColor);
+  doc.text(totalPriceFormatted, valueX, yPosition, { align: 'right' });
+  yPosition += lineHeight + 4;
   
-  // Reset font
+  // Paid Amount
   doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60, 60, 60);
+  doc.text('Paid Amount:', margin + 2, yPosition);
+  // Value - right aligned
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
+  doc.text(paidAmountFormatted, valueX, yPosition, { align: 'right' });
+  yPosition += lineHeight + 2;
   
-  yPosition += addKeyValue('Paid Amount', formatCurrency(bookingData.paidAmount || bookingData.advancePayment), margin + 2, yPosition, contentWidth - 4);
-  yPosition += lineHeight;
-  yPosition += addKeyValue('Remaining Amount', formatCurrency(bookingData.remainingAmount), margin + 2, yPosition, contentWidth - 4);
-  yPosition += lineHeight;
+  // Remaining Amount
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60, 60, 60);
+  doc.text('Remaining Amount:', margin + 2, yPosition);
+  // Value - right aligned
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(remainingAmountFormatted, valueX, yPosition, { align: 'right' });
+  yPosition += lineHeight + 2;
   
   if (bookingData.couponCode) {
-    yPosition += addKeyValue('Coupon Code', bookingData.couponCode, margin + 2, yPosition, contentWidth - 4);
-    yPosition += lineHeight;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Coupon Code:', margin + 2, yPosition);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(bookingData.couponCode || 'N/A', valueX, yPosition, { align: 'right' });
+    yPosition += lineHeight + 2;
+    
     if (bookingData.couponDiscount) {
-      yPosition += addKeyValue('Discount', formatCurrency(bookingData.couponDiscount), margin + 2, yPosition, contentWidth - 4);
-      yPosition += lineHeight;
+      const discountFormatted = `₹${formatCurrency(bookingData.couponDiscount)}`;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Discount:', margin + 2, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(discountFormatted, valueX, yPosition, { align: 'right' });
+      yPosition += lineHeight + 2;
     }
   }
   
-  yPosition += addKeyValue('Payment Option', bookingData.paymentOption === 'advance' ? '35% Advance' : bookingData.paymentOption || 'N/A', margin + 2, yPosition, contentWidth - 4);
+  // Payment Option
+  const paymentOptionText = bookingData.paymentOption === 'advance' ? '35% Advance' : (bookingData.paymentOption || 'N/A');
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60, 60, 60);
+  doc.text('Payment Option:', margin + 2, yPosition);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(paymentOptionText, valueX, yPosition, { align: 'right' });
   yPosition = pricingBoxY + pricingBoxHeight + 2;
   
   yPosition += sectionSpacing;

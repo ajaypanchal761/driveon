@@ -31,20 +31,20 @@ const CustomSelect = ({ value, onChange, options, placeholder = 'Select...' }) =
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-2.5 py-1.5 rounded-lg border text-xs flex items-center justify-between"
+        className="w-full px-0 py-0 rounded-lg border-0 text-sm flex items-center justify-between bg-transparent"
         style={{ 
-          borderColor: '#E5E7EB',
-          backgroundColor: colors.backgroundSecondary,
-          color: colors.textPrimary
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          color: value ? colors.textPrimary : colors.textTertiary
         }}
       >
-        <span>{selectedOption.label}</span>
+        <span className="text-sm">{selectedOption.label}</span>
         <svg
-          className={`w-4 h-4 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+          className={`w-4 h-4 transition-transform flex-shrink-0 ml-2 ${isOpen ? 'transform rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          style={{ color: colors.textPrimary }}
+          style={{ color: colors.backgroundTertiary }}
         >
           <path
             strokeLinecap="round"

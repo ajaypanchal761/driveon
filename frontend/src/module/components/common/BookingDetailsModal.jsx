@@ -41,6 +41,55 @@ const BookingDetailsModal = ({ booking, onClose }) => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
 
+  // Calculate overdue details
+  const calculateOverdueDetails = (dropDate, dropTime, basePrice) => {
+    if (!dropDate) return null;
+    
+    try {
+      const dropDateTime = new Date(dropDate);
+      if (dropTime) {
+        const [hours, minutes] = dropTime.split(':').map(Number);
+        dropDateTime.setHours(hours || 0, minutes || 0, 0, 0);
+      }
+      
+      const now = new Date();
+      
+      if (now > dropDateTime) {
+        const diffMs = now - dropDateTime;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+        const remainingHours = diffHours % 24;
+        
+        const hourlyRate = (basePrice || 1000) / 24;
+        const dailyOverdueCharge = (basePrice || 1000) * 1.5;
+        
+        let additionalCharge = 0;
+        if (diffDays > 0) {
+          additionalCharge += diffDays * dailyOverdueCharge;
+        }
+        if (remainingHours > 0) {
+          additionalCharge += remainingHours * hourlyRate * 1.5;
+        }
+        
+        return {
+          isOverdue: true,
+          overdueDays: diffDays,
+          overdueHours: remainingHours,
+          totalOverdueHours: diffHours,
+          additionalCharge: Math.round(additionalCharge),
+          overdueTimeText: diffDays > 0 
+            ? `${diffDays} day${diffDays > 1 ? 's' : ''} ${remainingHours > 0 ? `${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}`.trim()
+            : `${remainingHours} hour${remainingHours > 1 ? 's' : ''}`
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error calculating overdue details:', error);
+      return null;
+    }
+  };
+
   // Get status badge color
   const getStatusColor = (status) => {
     switch (status) {
@@ -98,6 +147,12 @@ const BookingDetailsModal = ({ booking, onClose }) => {
   if (!booking) return null;
 
   const days = calculateDays(booking.pickupDate, booking.dropDate);
+  
+  // Check if trip is overdue (for active/confirmed trips)
+  const basePrice = booking.car?.pricePerDay || booking.totalPrice / (days || 1);
+  const overdueDetails = (booking.status === 'active' || booking.status === 'confirmed') 
+    ? calculateOverdueDetails(booking.dropDate, booking.dropTime, basePrice)
+    : null;
 
   return (
     <div
@@ -293,6 +348,53 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Overdue Warning */}
+              {overdueDetails && overdueDetails.isOverdue && (
+                <div 
+                  className="p-4 rounded-xl border-l-4"
+                  style={{ 
+                    backgroundColor: '#FEF3C7',
+                    borderLeftColor: '#F59E0B'
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <svg 
+                      className="w-6 h-6 flex-shrink-0 mt-0.5" 
+                      style={{ color: '#F59E0B' }}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold mb-2" style={{ color: '#92400E' }}>
+                        ⚠️ Trip End Date Exceeded
+                      </h4>
+                      <p className="text-xs leading-relaxed mb-3" style={{ color: '#78350F' }}>
+                        Your trip end date has exceeded by <span className="font-bold">{overdueDetails.overdueTimeText}</span>.
+                      </p>
+                      <div className="mt-3 pt-3 border-t" style={{ borderColor: '#FCD34D' }}>
+                        <p className="text-xs font-semibold mb-1" style={{ color: '#92400E' }}>
+                          Additional Charges:
+                        </p>
+                        <p className="text-lg font-bold mb-2" style={{ color: '#B45309' }}>
+                          ₹{overdueDetails.additionalCharge.toLocaleString('en-IN')}
+                        </p>
+                        <p className="text-xs leading-relaxed" style={{ color: '#78350F' }}>
+                          This amount will be added to your final bill. Please return the car as soon as possible.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Duration */}
               <div className="p-3 rounded-lg" style={{ backgroundColor: colors.backgroundPrimary }}>

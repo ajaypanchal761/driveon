@@ -14,6 +14,8 @@ import { useAppSelector } from '../../hooks/redux';
 import reviewService from '../../services/review.service';
 import carService from '../../services/car.service';
 import commonService from '../../services/common.service';
+import razorpayService from '../../services/razorpay.service';
+import bookingService from '../../services/booking.service';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -700,7 +702,11 @@ const CarDetailsPage = () => {
   const [storedCar] = useState(() => getStoredCar());
   const normalizedStoredCar = storedCar ? normalizeCarFromState(storedCar) : null;
   const effectiveInitialCar = normalizedInitialCar || normalizedStoredCar;
-  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id || '');
+  // Helper function to validate MongoDB ObjectId
+  const isValidObjectId = (carId) => {
+    if (!carId) return false;
+    return /^[0-9a-fA-F]{24}$/.test(carId.toString());
+  };
   
   // Always ensure we have a valid baseCar (fallback to mock data if needed)
   const getBaseCarData = () => {
@@ -1243,11 +1249,22 @@ const CarDetailsPage = () => {
     bouncer: 0,
   });
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [submitWarning, setSubmitWarning] = useState('');
 
   // Booking confirmation modal state
   const [showBookingConfirmationModal, setShowBookingConfirmationModal] = useState(false);
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
   const [confirmedBookingId, setConfirmedBookingId] = useState(null);
+
+  // Debug: Log modal state changes
+  useEffect(() => {
+    console.log('🔍 Modal state changed:', {
+      showBookingConfirmationModal,
+      confirmedBookingId,
+      hasBookingData: !!confirmedBookingData,
+    });
+  }, [showBookingConfirmationModal, confirmedBookingId, confirmedBookingData]);
 
   // Combined date-time picker modal state
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false);
@@ -1434,9 +1451,12 @@ const CarDetailsPage = () => {
       return;
     }
     
+    // Initialize dateStr variable outside the if block
+    let dateStr = '';
+    
     if (calendarSelectedDate) {
       // Use local date components instead of toISOString to avoid timezone shift
-      const dateStr = formatLocalDate(calendarSelectedDate);
+      dateStr = formatLocalDate(calendarSelectedDate);
       if (dateTimePickerTarget === 'pickup') {
         setPickupDate(dateStr);
         // Compare dates properly
@@ -1469,9 +1489,9 @@ const CarDetailsPage = () => {
     // Save dates to localStorage for auto-fill in book-now page
     try {
       const dates = {
-        pickupDate: dateTimePickerTarget === 'pickup' ? dateStr : pickupDate,
+        pickupDate: dateTimePickerTarget === 'pickup' ? (dateStr || pickupDate) : pickupDate,
         pickupTime: dateTimePickerTarget === 'pickup' ? timeStr : pickupTime,
-        dropDate: dateTimePickerTarget === 'drop' ? dateStr : dropDate,
+        dropDate: dateTimePickerTarget === 'drop' ? (dateStr || dropDate) : dropDate,
         dropTime: dateTimePickerTarget === 'drop' ? timeStr : dropTime,
       };
       localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
@@ -1501,121 +1521,333 @@ const CarDetailsPage = () => {
     }
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
+  // Helper: Convert Date object to time string (HH:mm) in local timezone
+  const formatLocalTime = (date) => {
+    if (!date) return '';
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Handle form submission with backend + Razorpay (same for both web and mobile)
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (isProcessing) return;
+    setSubmitWarning('');
+
+    // Helper: build a local Date object from date (YYYY-MM-DD) and time (HH:mm)
+    const buildLocalDateTime = (dateStr, timeStr) => {
+      if (!dateStr) return null;
+      const base = parseLocalDate(dateStr) || new Date(dateStr);
+      const [h = '0', m = '0'] = (timeStr || '00:00').split(':');
+      base.setHours(parseInt(h, 10) || 0, parseInt(m, 10) || 0, 0, 0);
+      return base;
+    };
+
+    const now = new Date();
+    now.setSeconds(0, 0);
+    let startDateObj = buildLocalDateTime(pickupDate, pickupTime);
+    let endDateObj = buildLocalDateTime(dropDate, dropTime);
+
     if (!pickupDate || !dropDate || !pickupTime || !dropTime) {
       alert('Please select pickup and drop date & time');
+      setSubmitWarning('Pickup and drop date/time are required.');
       return;
+    }
+
+    if (!startDateObj || !endDateObj) {
+      alert('Please select valid pickup and drop date & time');
+      setSubmitWarning('Invalid pickup/drop date or time.');
+      return;
+    }
+
+    let adjusted = false;
+
+    if (startDateObj < now) {
+      // Auto-adjust pickup to next 30 minutes
+      const adjustedStart = new Date(now.getTime() + 30 * 60 * 1000);
+      startDateObj = adjustedStart;
+      adjusted = true;
+    }
+
+    if (endDateObj <= startDateObj) {
+      // Ensure drop is at least 2 hours after pickup
+      const adjustedEnd = new Date(startDateObj.getTime() + 2 * 60 * 60 * 1000);
+      endDateObj = adjustedEnd;
+      adjusted = true;
+    }
+
+    if (adjusted) {
+      const newPickupDate = formatLocalDate(startDateObj);
+      const newPickupTime = formatLocalTime(startDateObj);
+      const newDropDate = formatLocalDate(endDateObj);
+      const newDropTime = formatLocalTime(endDateObj);
+
+      setPickupDate(newPickupDate);
+      setPickupTime(newPickupTime);
+      setDropDate(newDropDate);
+      setDropTime(newDropTime);
+
+      alert(
+        "Pickup or drop time was in the past/invalid. We've adjusted it to the next available time."
+      );
     }
 
     if (!agreeToTerms) {
       alert('Please agree to terms and conditions');
+      setSubmitWarning('You must accept Terms & Conditions to continue.');
       return;
     }
 
-    // Check if it's web view (lg breakpoint and above)
-    const isWebView = window.innerWidth >= 1024;
+    // Ensure user is logged in before proceeding to payment
+    if (!isAuthenticated) {
+      alert('Please login to continue with payment');
+      navigate('/login');
+      return;
+    }
 
-    if (isWebView) {
-      // Web view: Directly confirm booking (like mobile flow)
-      if (!car || (!car.id && !car._id)) return;
+    // Validate Additional Details section (now mandatory)
+    if (!currentAddress || !currentAddress.trim()) {
+      alert('Please enter your current address');
+      return;
+    }
 
-      // Generate unique booking ID
-      const bookingId = `BK${Date.now().toString().slice(-6)}`;
+    // At least one mode must be selected: Personal OR specific purpose
+    if (!isPersonal && !bookingPurpose) {
+      alert('Please select Personal or a booking purpose (Job/Business/Student)');
+      return;
+    }
 
-      // Parse car name to extract brand and model
-      let brand = car.name;
-      let model = "";
-      if (car.name && car.name.includes("-")) {
-        // Format: "Ferrari-FF"
-        const parts = car.name.split("-");
-        brand = parts[0];
-        model = parts.slice(1).join(" ");
-      } else if (car.name && car.name.includes(" ")) {
-        // Format: "Tesla Model S" or "BMW GTS3 M2"
-        const parts = car.name.split(" ");
-        brand = parts[0];
-        model = parts.slice(1).join(" ");
+    // If Personal is selected, all personal details are required
+    if (isPersonal) {
+      const { name, phone, email, age, gender } = personalDetails;
+      if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
+        alert('Please fill all Personal Details (Name, Phone, Email, Age, Gender)');
+        return;
       }
-      // If no separator, use full name as brand (e.g., "BMW")
+    }
 
-      // Create booking object matching BookingsPage structure
-      const newBooking = {
-        id: `booking_${Date.now()}`,
-        bookingId: bookingId,
-        car: {
-          id: (car.id || car._id).toString(),
-          brand: brand,
-          model: model || brand,
-          image: car.image,
-          seats: car.seats,
-          transmission: car.transmission,
-          fuelType: car.fuelType,
+    // If a specific purpose is selected (Job/Business/Student), validate its fields
+    if (!isPersonal && bookingPurpose) {
+      if (bookingPurpose === 'job') {
+        if (!jobDetails.trim()) {
+          alert('Please enter your job details');
+          return;
+        }
+        if (!documentPhotoPreview) {
+          alert('Please upload your job document photo');
+          return;
+        }
+      }
+
+      if (bookingPurpose === 'business') {
+        if (!businessDetails.trim()) {
+          alert('Please enter your business details');
+          return;
+        }
+        if (!documentPhotoPreview) {
+          alert('Please upload your business document photo');
+          return;
+        }
+      }
+
+      if (bookingPurpose === 'student') {
+        if (!studentId.trim()) {
+          alert('Please enter your student ID');
+          return;
+        }
+        if (!documentPhotoPreview) {
+          alert('Please upload your student ID / document photo');
+          return;
+        }
+      }
+    }
+
+    // Parse car name to extract brand and model
+    let brand = car.name;
+    let model = '';
+    if (car.name && car.name.includes('-')) {
+      const parts = car.name.split('-');
+      brand = parts[0];
+      model = parts.slice(1).join(' ');
+    } else if (car.name && car.name.includes(' ')) {
+      const parts = car.name.split(' ');
+      brand = parts[0];
+      model = parts.slice(1).join(' ');
+    }
+
+    const pickupDateStr = formatLocalDate(startDateObj);
+    const pickupTimeStr = formatLocalTime(startDateObj);
+    const dropDateStr = formatLocalDate(endDateObj);
+    const dropTimeStr = formatLocalTime(endDateObj);
+
+    const effectiveCarId = car.id || car._id || id;
+    if (!isValidObjectId(effectiveCarId)) {
+      alert('This car cannot be booked right now. Please select another car.');
+      setSubmitWarning('This demo car cannot be booked. Please choose another car.');
+      return;
+    }
+
+    // Build booking payload for API
+    const bookingPayload = {
+      carId: effectiveCarId,
+      tripStart: {
+        location: car.location || 'Pickup location',
+        coordinates: {},
+        date: pickupDateStr,
+        time: pickupTimeStr || '10:00',
+      },
+      tripEnd: {
+        location: car.location || 'Drop location',
+        coordinates: {},
+        date: dropDateStr,
+        time: dropTimeStr || '18:00',
+      },
+      paymentOption: paymentOption || 'advance',
+      specialRequests: specialRequests || '',
+      couponCode: appliedCoupon?.code || null,
+      couponDiscount: couponDiscount,
+      // Additional details for verification and reporting
+      bookingPurpose: isPersonal ? 'personal' : bookingPurpose || null,
+      personalDetails: isPersonal ? personalDetails : null,
+      currentAddress: currentAddress || null,
+      jobDetails: bookingPurpose === 'job' ? jobDetails : null,
+      businessDetails: bookingPurpose === 'business' ? businessDetails : null,
+      studentId: bookingPurpose === 'student' ? studentId : null,
+      documentPhoto: documentPhoto ? documentPhotoPreview : null,
+      addOnServices,
+    };
+
+    const amountToPay =
+      paymentOption === 'advance'
+        ? priceDetails.advancePayment
+        : priceDetails.finalPrice;
+
+    setIsProcessing(true);
+
+    try {
+      const bookingResponse = await bookingService.createBooking(bookingPayload);
+      const booking = bookingResponse?.data?.booking || bookingResponse?.data;
+      const bookingId =
+        booking?._id ||
+        booking?.id ||
+        booking?.bookingId ||
+        bookingResponse?.bookingId;
+
+      if (!bookingId) {
+        throw new Error('Booking ID missing from server response');
+      }
+
+      await razorpayService.processBookingPayment({
+        bookingId: bookingId.toString(),
+        amount: amountToPay,
+        description: `Car booking payment - ${brand} ${model}`.trim(),
+        name: user?.name || user?.fullName || '',
+        email: user?.email || '',
+        phone: user?.phone || user?.mobile || user?.phoneNumber || '',
+        onSuccess: (verificationResult) => {
+          console.log('✅ Payment success callback triggered!', verificationResult);
+
+          // Build a rich booking payload for the confirmation modal / PDF
+          const bookingDataForPdf = {
+            // Booking core
+            bookingId: bookingId.toString(),
+            createdAt: booking?.createdAt || new Date().toISOString(),
+
+            // Car information
+            car: {
+              brand: brand || car.brand,
+              model: model || car.model,
+              seats: car.seats,
+              seatingCapacity: car.seats,
+              transmission: car.transmission,
+              fuelType: car.fuelType,
+              registrationNumber: car.registrationNumber,
+            },
+
+            // Trip details
+            pickupDate: pickupDateStr,
+            pickupTime: pickupTimeStr,
+            dropDate: dropDateStr,
+            dropTime: dropTimeStr,
+
+            // Additional details
+            bookingPurpose: bookingPayload.bookingPurpose,
+            personalDetails: bookingPayload.personalDetails,
+            currentAddress: bookingPayload.currentAddress,
+            jobDetails: bookingPayload.jobDetails,
+            businessDetails: bookingPayload.businessDetails,
+            studentId: bookingPayload.studentId,
+            addOnServices: bookingPayload.addOnServices,
+            specialRequests: bookingPayload.specialRequests,
+
+            // Pricing details
+            totalPrice: priceDetails.totalPrice,
+            paidAmount: amountToPay,
+            remainingAmount: (priceDetails.finalPrice || 0) - (amountToPay || 0),
+            couponCode: bookingPayload.couponCode,
+            couponDiscount: bookingPayload.couponDiscount,
+            paymentOption: bookingPayload.paymentOption,
+
+            // Status information
+            status: booking?.status || 'pending',
+            paymentStatus:
+              booking?.paymentStatus ||
+              (paymentOption === 'advance' ? 'partial' : 'full'),
+            tripStatus: booking?.tripStatus || 'pending',
+          };
+
+          console.log('📋 Booking data prepared for modal:', {
+            bookingId: bookingId.toString(),
+            hasBookingData: !!bookingDataForPdf,
+          });
+
+          // Stop processing state
+          setIsProcessing(false);
+
+          // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
+          // Use a combination of requestAnimationFrame and setTimeout for better reliability
+          const showModal = () => {
+            try {
+              console.log('🎉 Showing booking confirmation modal now!');
+              console.log('Booking ID:', bookingId.toString());
+              console.log('Booking Data:', bookingDataForPdf);
+              
+              // Set all states together to ensure modal opens
+              setConfirmedBookingId(bookingId.toString());
+              setConfirmedBookingData(bookingDataForPdf);
+              setShowBookingConfirmationModal(true);
+              
+              // Verify state was set
+              console.log('✅ Modal state set. Should be visible now.');
+            } catch (error) {
+              console.error('❌ Error showing modal:', error);
+            }
+          };
+
+          // Use requestAnimationFrame to ensure DOM is ready, then setTimeout for Razorpay cleanup
+          requestAnimationFrame(() => {
+            setTimeout(showModal, 1000); // 1000ms delay to ensure Razorpay modal is fully closed
+          });
         },
-        // Booking status is initially pending until physical document verification at office
-        status: "pending",
-        tripStatus: "not_started",
-        paymentStatus: "partial",
-        pickupDate: pickupDate,
-        pickupTime: pickupTime,
-        dropDate: dropDate,
-        dropTime: dropTime,
-        totalPrice: priceDetails.finalPrice,
-        paidAmount: priceDetails.advancePayment,
-        remainingAmount: priceDetails.remainingPayment,
-        isTrackingActive: false,
-        createdAt: new Date().toISOString().split("T")[0],
-        paymentOption: paymentOption,
-        specialRequests: specialRequests,
-        couponCode: appliedCoupon?.code || null,
-        couponDiscount: couponDiscount,
-        // Additional details
-        bookingPurpose: isPersonal ? 'personal' : (bookingPurpose || null),
-        personalDetails: isPersonal ? personalDetails : null,
-        currentAddress: currentAddress || null,
-        jobDetails: bookingPurpose === 'job' ? jobDetails : null,
-        businessDetails: bookingPurpose === 'business' ? businessDetails : null,
-        studentId: bookingPurpose === 'student' ? studentId : null,
-        documentPhoto: documentPhoto ? documentPhotoPreview : null, // Store as base64 for now
-        // Add-on services
-        addOnServices: addOnServices,
-      };
-
-      // Save to localStorage
-      try {
-        const existingBookings = JSON.parse(
-          localStorage.getItem("localBookings") || "[]"
-        );
-        existingBookings.unshift(newBooking); // Add to beginning
-        localStorage.setItem("localBookings", JSON.stringify(existingBookings));
-
-        // Show booking confirmation modal with document verification message
-        setConfirmedBookingId(bookingId);
-        setConfirmedBookingData(newBooking);
-        setShowBookingConfirmationModal(true);
-      } catch (error) {
-        console.error("Error saving booking to localStorage:", error);
-        alert("Error saving booking. Please try again.");
-      }
-    } else {
-      // Mobile view: Navigate to payment page (unchanged)
-      if (!car || (!car.id && !car._id)) return;
-      navigate(`/book-now/${car.id || car._id}`, { 
-        state: { 
-          car, 
-          pickupDate, 
-          pickupTime, 
-          dropDate, 
-          dropTime, 
-          paymentOption, 
-          specialRequests, 
-          couponCode: appliedCoupon?.code, 
-          couponDiscount, 
-          priceDetails 
-        } 
+        onError: (error) => {
+          console.error('Payment error:', error);
+          setIsProcessing(false);
+          if (error?.message === 'PAYMENT_CANCELLED') return;
+          alert(error?.message || 'Payment failed. Please try again.');
+        },
       });
+    } catch (error) {
+      console.error('Error during booking/payment:', error);
+      setIsProcessing(false);
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message;
+      const friendly =
+        serverMessage || 'Failed to process booking. Please try again.';
+      setSubmitWarning(friendly);
+      alert(friendly);
     }
   };
 
@@ -2266,6 +2498,17 @@ const CarDetailsPage = () => {
                         setStudentId('');
                         setDocumentPhoto(null);
                         setDocumentPhotoPreview(null);
+                        
+                        // Auto-fill personal details from user profile
+                        if (user) {
+                          setPersonalDetails({
+                            name: user.name || '',
+                            phone: user.phone || '',
+                            email: user.email || '',
+                            age: user.age ? String(user.age) : '',
+                            gender: user.gender || '',
+                          });
+                        }
                       } else {
                         // Clear personal details if unchecked
                         setPersonalDetails({
@@ -2810,10 +3053,11 @@ const CarDetailsPage = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl text-white font-bold text-base shadow-xl"
+                disabled={isProcessing}
+                className="w-full py-3 rounded-xl text-white font-bold text-base shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: colors.backgroundTertiary }}
               >
-                Proceed to Payment
+                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
               </button>
             </form>
           </div>

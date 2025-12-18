@@ -47,9 +47,17 @@ const BookingConfirmationModal = ({ bookingId, bookingData, onClose }) => {
     }
   };
 
+  // Debug log when modal renders
+  useEffect(() => {
+    console.log('📦 BookingConfirmationModal rendered with:', {
+      bookingId,
+      hasBookingData: !!bookingData,
+    });
+  }, [bookingId, bookingData]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >

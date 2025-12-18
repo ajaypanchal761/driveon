@@ -6,6 +6,7 @@ import { setUser } from '../../store/slices/userSlice';
 import { colors } from '../theme/colors';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
+import CustomSelect from '../components/common/CustomSelect';
 
 /**
  * ModuleRegisterPage Component
@@ -550,6 +551,50 @@ const ModuleRegisterPage = () => {
                 )}
               </div>
 
+              {/* How did you hear about DriveOn? (Optional) */}
+              <div className="mb-3">
+                <div 
+                  className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
+                  style={{ 
+                    borderColor: colors.backgroundTertiary + '40',
+                    backgroundColor: colors.backgroundPrimary
+                  }}
+                >
+                  {/* Info/Question Icon */}
+                  <svg 
+                    className="w-5 h-5 mr-3 flex-shrink-0" 
+                    style={{ color: colors.backgroundTertiary }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                  </svg>
+                  
+                  {/* CustomSelect wrapped to match other inputs */}
+                  <div className="flex-1">
+                    <CustomSelect
+                      value={heardAbout}
+                      onChange={(value) => setHeardAbout(value)}
+                      options={[
+                        { label: 'Friend / Family', value: 'friend_family' },
+                        { label: 'Social Media (Instagram, Facebook, etc.)', value: 'social_media' },
+                        { label: 'Google / Online Search', value: 'google_search' },
+                        { label: 'Online Ads', value: 'ads' },
+                        { label: 'Visited DriveOn Office', value: 'office_visit' },
+                        { label: 'Other', value: 'other' },
+                      ]}
+                      placeholder="How did you hear about DriveOn? (Optional)"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Referral Code Input Field (Optional) */}
               <div className="mb-3">
                 <div 
@@ -704,7 +749,7 @@ const ModuleRegisterPage = () => {
                 (!showOTP && (!fullName || !email || !phoneNumber || phoneNumber.length !== 10 || !termsAccepted)) ||
                 (showOTP && otp.length !== 6)
               }
-              className="w-full py-3 rounded-xl font-bold text-sm shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+              className="w-full py-2.5 rounded-lg font-bold text-sm shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
               style={{ 
                 backgroundColor: colors.backgroundTertiary,
                 color: colors.backgroundSecondary,
@@ -720,7 +765,7 @@ const ModuleRegisterPage = () => {
             </button>
 
             {/* Sign In Link */}
-            <div className="text-center mt-4">
+            <div className="text-center mt-3">
             <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
               Already have an account?{' '}
               <Link
@@ -813,7 +858,7 @@ const ModuleRegisterPage = () => {
 
         {/* Main Content Area - White Background */}
         <div 
-          className="flex-1 bg-white rounded-t-3xl px-6 py-6 overflow-y-auto"
+          className="flex-1 bg-white rounded-t-3xl px-4 py-4 overflow-y-auto"
           style={{ 
             backgroundColor: colors.backgroundSecondary,
             minHeight: '65%'
@@ -821,16 +866,16 @@ const ModuleRegisterPage = () => {
         >
           <form onSubmit={showOTP ? handleVerifyOTP : handleSendOTP} className="max-w-md mx-auto">
             {/* Title */}
-            <h2 className="text-xl font-bold mb-4" style={{ color: colors.backgroundTertiary }}>
+            <h2 className="text-lg font-bold mb-3" style={{ color: colors.backgroundTertiary }}>
               Sign up
             </h2>
 
             {!showOTP ? (
               <>
                 {/* Full Name Input Field */}
-                <div className="mb-3">
+                <div className="mb-2">
                   <div 
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
+                    className="relative flex items-center px-3 py-2 rounded-lg border-2 transition-all"
                     style={{ 
                       borderColor: error && error.includes('name') ? colors.error : colors.backgroundTertiary + '40',
                       backgroundColor: colors.backgroundPrimary
@@ -881,9 +926,9 @@ const ModuleRegisterPage = () => {
                 </div>
 
                 {/* Email Input Field */}
-                <div className="mb-3">
+                <div className="mb-2">
                   <div 
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
+                    className="relative flex items-center px-3 py-2 rounded-lg border-2 transition-all"
                     style={{ 
                       borderColor: error && error.includes('Email') ? colors.error : colors.backgroundTertiary + '40',
                       backgroundColor: colors.backgroundPrimary
@@ -934,9 +979,9 @@ const ModuleRegisterPage = () => {
                 </div>
 
                 {/* Phone Number Input Field */}
-                <div className="mb-3">
+                <div className="mb-2">
                   <div 
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
+                    className="relative flex items-center px-3 py-2 rounded-lg border-2 transition-all"
                     style={{ 
                       borderColor: error && error.includes('phone') ? colors.error : colors.backgroundTertiary + '40',
                       backgroundColor: colors.backgroundPrimary
@@ -989,60 +1034,53 @@ const ModuleRegisterPage = () => {
                 </div>
 
                 {/* How did you hear about DriveOn? (Optional) */}
-                <div className="mb-3">
-                  <div
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
-                    style={{
+                <div className="mb-2">
+                  <div 
+                    className="relative flex items-center px-3 py-2 rounded-lg border-2 transition-all"
+                    style={{ 
                       borderColor: colors.backgroundTertiary + '40',
-                      backgroundColor: colors.backgroundPrimary,
+                      backgroundColor: colors.backgroundPrimary
                     }}
                   >
-                    {/* Icon */}
-                    <svg
-                      className="w-5 h-5 mr-3 flex-shrink-0"
+                    {/* Info/Question Icon */}
+                    <svg 
+                      className="w-5 h-5 mr-3 flex-shrink-0" 
                       style={{ color: colors.backgroundTertiary }}
-                      fill="none"
-                      stroke="currentColor"
+                      fill="none" 
+                      stroke="currentColor" 
                       viewBox="0 0 24 24"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5.882V19a1 1 0 001.447.894l4-2A1 1 0 0017 17V7a1 1 0 00-.553-.894l-4-2A1 1 0 0011 5.882zM7 8h.01M7 12h.01M7 16h.01"
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
                       />
                     </svg>
-
-                    {/* Select */}
-                    <select
-                      value={heardAbout}
-                      onChange={(e) => setHeardAbout(e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none text-sm"
-                      style={{ color: colors.backgroundTertiary }}
-                      onFocus={(e) => {
-                        e.target.parentElement.style.borderColor = colors.backgroundTertiary;
-                        e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
-                      }}
-                      onBlur={(e) => {
-                        e.target.parentElement.style.borderColor = colors.backgroundTertiary + '40';
-                        e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
-                      }}
-                    >
-                      <option value="">How did you hear about DriveOn? (Optional)</option>
-                      <option value="friend_family">Friend / Family</option>
-                      <option value="social_media">Social Media (Instagram, Facebook, etc.)</option>
-                      <option value="google_search">Google / Online Search</option>
-                      <option value="ads">Online Ads</option>
-                      <option value="office_visit">Visited DriveOn Office</option>
-                      <option value="other">Other</option>
-                    </select>
+                    
+                    {/* CustomSelect wrapped to match other inputs */}
+                    <div className="flex-1">
+                      <CustomSelect
+                        value={heardAbout}
+                        onChange={(value) => setHeardAbout(value)}
+                        options={[
+                          { label: 'Friend / Family', value: 'friend_family' },
+                          { label: 'Social Media (Instagram, Facebook, etc.)', value: 'social_media' },
+                          { label: 'Google / Online Search', value: 'google_search' },
+                          { label: 'Online Ads', value: 'ads' },
+                          { label: 'Visited DriveOn Office', value: 'office_visit' },
+                          { label: 'Other', value: 'other' },
+                        ]}
+                        placeholder="How did you hear about DriveOn? (Optional)"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Referral Code Input Field (Optional) */}
-                <div className="mb-3">
+                <div className="mb-2">
                   <div 
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
+                    className="relative flex items-center px-3 py-2 rounded-lg border-2 transition-all"
                     style={{ 
                       borderColor: colors.backgroundTertiary + '40',
                       backgroundColor: colors.backgroundPrimary
@@ -1087,7 +1125,7 @@ const ModuleRegisterPage = () => {
                 </div>
 
                 {/* Terms & Conditions */}
-                <div className="mb-4">
+                <div className="mb-3">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -1113,9 +1151,9 @@ const ModuleRegisterPage = () => {
             ) : (
               <>
                 {/* OTP Input Field (shown after registration details are submitted) */}
-                <div className="mb-3">
+                <div className="mb-2">
                   <div 
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
+                    className="relative flex items-center px-3 py-2 rounded-lg border-2 transition-all"
                     style={{ 
                       borderColor: error ? colors.error : colors.backgroundTertiary + '40',
                       backgroundColor: colors.backgroundPrimary
@@ -1171,7 +1209,7 @@ const ModuleRegisterPage = () => {
                 </div>
 
                 {/* Resend OTP */}
-                <div className="mb-4 flex justify-end">
+                <div className="mb-3 flex justify-end">
                   <button
                     type="button"
                     onClick={handleResendOTP}
@@ -1193,7 +1231,7 @@ const ModuleRegisterPage = () => {
                 (!showOTP && (!fullName || !email || !phoneNumber || phoneNumber.length !== 10 || !termsAccepted)) ||
                 (showOTP && otp.length !== 6)
               }
-              className="w-full py-3 rounded-xl font-bold text-sm shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+              className="w-full py-2.5 rounded-lg font-bold text-sm shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
               style={{ 
                 backgroundColor: colors.backgroundTertiary,
                 color: colors.backgroundSecondary,
@@ -1209,7 +1247,7 @@ const ModuleRegisterPage = () => {
             </button>
 
             {/* Sign In Link */}
-            <div className="text-center mt-4">
+            <div className="text-center mt-3">
               <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
                 Already have an account?{' '}
                 <Link
