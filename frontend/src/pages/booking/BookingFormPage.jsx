@@ -8,6 +8,7 @@ import carImg4 from '../../assets/car_img4-removebg-preview.png';
 import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg7 from '../../assets/car_img7-removebg-preview.png';
+import toastUtils from '../../config/toast';
 
 /**
  * BookingFormPage Component
@@ -146,7 +147,7 @@ const BookingFormPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!agreeToTerms) {
-      alert('Please agree to terms and conditions');
+      toastUtils.error('Please agree to terms and conditions');
       return;
     }
     // Navigate to payment page with booking data

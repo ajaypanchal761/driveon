@@ -4,6 +4,7 @@ import { theme } from '../../theme/theme.constants';
 import razorpayService from '../../services/razorpay.service';
 import bookingService from '../../services/booking.service';
 import { useSelector } from 'react-redux';
+import toastUtils from '../../config/toast';
 
 /**
  * BookingPaymentPage Component
@@ -201,7 +202,7 @@ const BookingPaymentPage = () => {
           setIsProcessing(false);
           
           // Show success message briefly, then redirect to My Bookings
-          alert('Payment successful! Your booking has been confirmed.');
+          toastUtils.success('Payment successful! Your booking has been confirmed.');
           
           // Navigate to My Bookings page
           navigate('/bookings', {
@@ -221,7 +222,7 @@ const BookingPaymentPage = () => {
           console.error('❌ Payment error:', error);
           
           // Show error message for actual payment failures
-          alert(error.message || 'Payment failed. Please try again.');
+          toastUtils.error(error.message || 'Payment failed. Please try again.');
         },
       });
     } catch (error) {
@@ -276,8 +277,8 @@ const BookingPaymentPage = () => {
         errorMessage = error.message;
       }
       
-      // Show alert with error message
-      alert(errorMessage);
+      // Show toast with error message
+      toastUtils.error(errorMessage);
     }
   };
 
