@@ -1645,19 +1645,27 @@ const CarDetailsPage = () => {
         phone: user?.phone || user?.mobile || user?.phoneNumber || "",
         onSuccess: () => {
           // Build a rich booking payload for the confirmation modal / PDF
+          const bookingIdFormatted = booking?.bookingId || booking?.bookingNumber || `BK${bookingId.toString().slice(-6).toUpperCase()}`;
           const bookingDataForPdf = {
             // Booking core
-            bookingId: bookingId.toString(),
+            bookingId: bookingIdFormatted,
+            _id: bookingId.toString(),
+            id: bookingId.toString(),
             createdAt: booking?.createdAt || new Date().toISOString(),
 
             // Car information
             car: {
+              id: car.id || car._id,
+              _id: car.id || car._id,
               brand: brand || car.brand,
               model: model || car.model,
-              seats: car.seats,
-              seatingCapacity: car.seats,
-              transmission: car.transmission,
-              fuelType: car.fuelType,
+              name: car.name || `${brand || car.brand} ${model || car.model}`,
+              image: car.image || car.images?.[0] || (carImages && carImages.length > 0 ? carImages[0] : carImg1),
+              images: car.images || (car.image ? [car.image] : (carImages && carImages.length > 0 ? carImages : [carImg1])),
+              seats: car.seats || car.seatingCapacity || 4,
+              seatingCapacity: car.seats || car.seatingCapacity || 4,
+              transmission: car.transmission || 'Automatic',
+              fuelType: car.fuelType || 'Petrol',
               registrationNumber: car.registrationNumber,
             },
 
@@ -1695,6 +1703,22 @@ const CarDetailsPage = () => {
           };
 
           setIsProcessing(false);
+          
+          // Save booking to localStorage so it shows up immediately on bookings page
+          try {
+            const existingBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
+            const newBooking = {
+              ...bookingDataForPdf,
+              // Ensure all required fields for bookings page
+              id: bookingId.toString(),
+              _id: bookingId.toString(),
+            };
+            existingBookings.unshift(newBooking); // Add to beginning
+            localStorage.setItem('localBookings', JSON.stringify(existingBookings));
+            console.log('✅ Booking saved to localStorage');
+          } catch (error) {
+            console.error('Error saving booking to localStorage:', error);
+          }
           
           // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
           setTimeout(() => {

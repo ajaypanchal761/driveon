@@ -24,6 +24,9 @@ const ModuleGuarantorPage = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [requestDetails, setRequestDetails] = useState(null);
+  const [guarantorPoints, setGuarantorPoints] = useState(0);
+  const [pointsHistory, setPointsHistory] = useState([]);
+  const [loadingPoints, setLoadingPoints] = useState(false);
 
   // Fetch requests from API
   useEffect(() => {
@@ -44,6 +47,52 @@ const ModuleGuarantorPage = () => {
     };
     fetchRequests();
   }, []);
+
+  // Fetch guarantor points and history
+  useEffect(() => {
+    const fetchGuarantorPoints = async () => {
+      if (!user?.guarantorId) return;
+      
+      try {
+        setLoadingPoints(true);
+        // TODO: Replace with actual API call
+        // const response = await userService.getGuarantorPoints();
+        // setGuarantorPoints(response?.data?.points || 0);
+        // setPointsHistory(response?.data?.history || []);
+        
+        // Mock data for now - replace with actual API
+        const mockPoints = 1250; // Example: 10% of various trips
+        const mockHistory = [
+          {
+            id: '1',
+            bookingId: 'BK001234',
+            userName: 'Rajesh Kumar',
+            tripAmount: 5000,
+            pointsEarned: 500, // 10% of 5000
+            date: new Date('2024-01-15'),
+            status: 'completed'
+          },
+          {
+            id: '2',
+            bookingId: 'BK001235',
+            userName: 'Priya Sharma',
+            tripAmount: 7500,
+            pointsEarned: 750, // 10% of 7500
+            date: new Date('2024-01-20'),
+            status: 'completed'
+          }
+        ];
+        setGuarantorPoints(mockPoints);
+        setPointsHistory(mockHistory);
+      } catch (error) {
+        console.error('Error fetching guarantor points:', error);
+        toastUtils.error('Failed to load points');
+      } finally {
+        setLoadingPoints(false);
+      }
+    };
+    fetchGuarantorPoints();
+  }, [user?.guarantorId]);
 
   // Calculate pending requests count
   const pendingRequestsCount = requests.filter(req => req.status === 'pending').length;
@@ -251,6 +300,164 @@ const ModuleGuarantorPage = () => {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Points Wallet Section - Show if user is a guarantor */}
+          {user?.guarantorId && (
+            <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-2 md:pt-4 pb-2 md:pb-4">
+              <div className="bg-gradient-to-br rounded-2xl p-5 shadow-lg overflow-hidden relative" style={{
+                background: `linear-gradient(135deg, ${colors.backgroundTertiary} 0%, ${colors.backgroundDark || colors.backgroundTertiary} 100%)`
+              }}>
+                {/* Decorative background pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <svg className="w-full h-full" viewBox="0 0 200 200" fill="none">
+                    <circle cx="50" cy="50" r="2" fill="white" />
+                    <circle cx="150" cy="50" r="2" fill="white" />
+                    <circle cx="50" cy="150" r="2" fill="white" />
+                    <circle cx="150" cy="150" r="2" fill="white" />
+                    <path d="M0 100 Q50 50, 100 100 T200 100" stroke="white" strokeWidth="0.5" opacity="0.3" />
+                    <path d="M0 100 Q50 150, 100 100 T200 100" stroke="white" strokeWidth="0.5" opacity="0.3" />
+                  </svg>
+                </div>
+
+                {/* Wallet Content */}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}>
+                        <svg className="w-6 h-6" style={{ color: colors.backgroundSecondary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium mb-1" style={{ color: colors.backgroundSecondary, opacity: 0.9 }}>
+                          Guarantor Points Wallet
+                        </p>
+                        <p className="text-xs" style={{ color: colors.backgroundSecondary, opacity: 0.7 }}>
+                          Earn 10% points from each trip
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Points Balance */}
+                  <div className="mb-4">
+                    {loadingPoints ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2" style={{ borderColor: colors.backgroundSecondary }}></div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-3xl font-bold mb-1" style={{ color: colors.backgroundSecondary }}>
+                          {guarantorPoints.toLocaleString()}
+                        </p>
+                        <p className="text-sm font-medium" style={{ color: colors.backgroundSecondary, opacity: 0.8 }}>
+                          Points Available
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Use Points Button */}
+                  <button
+                    onClick={() => {
+                      toastUtils.info('Points can be used during booking checkout');
+                      navigate('/search');
+                    }}
+                    className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-98"
+                    style={{
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.backgroundTertiary,
+                      boxShadow: `0 4px 12px rgba(0, 0, 0, 0.15)`
+                    }}
+                  >
+                    Use Points for Booking
+                  </button>
+                </div>
+              </div>
+
+              {/* Transaction History */}
+              <div className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold" style={{ color: colors.textPrimary }}>
+                    Points History
+                  </h3>
+                  {pointsHistory.length > 0 && (
+                    <span className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+                      {pointsHistory.length} transactions
+                    </span>
+                  )}
+                </div>
+
+                {loadingPoints ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2" style={{ borderColor: colors.backgroundTertiary }}></div>
+                  </div>
+                ) : pointsHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {pointsHistory.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: colors.backgroundPrimary }}>
+                          <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
+                                Points from {transaction.userName}
+                              </p>
+                              <p className="text-xs font-mono" style={{ color: colors.textSecondary }}>
+                                Booking: {transaction.bookingId}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-bold" style={{ color: colors.success }}>
+                                +{transaction.pointsEarned.toLocaleString()}
+                              </p>
+                              <p className="text-xs" style={{ color: colors.textSecondary }}>
+                                ₹{transaction.tripAmount.toLocaleString()} trip
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs" style={{ color: colors.textTertiary }}>
+                              {new Date(transaction.date).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </p>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
+                              backgroundColor: transaction.status === 'completed' ? colors.success + '20' : colors.warning + '20',
+                              color: transaction.status === 'completed' ? colors.success : colors.warning
+                            }}>
+                              {transaction.status === 'completed' ? 'Completed' : 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 mx-auto mb-3" style={{ color: colors.textTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <p className="text-sm font-medium" style={{ color: colors.textSecondary }}>
+                      No points earned yet
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>
+                      You'll earn 10% points when users complete trips
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
