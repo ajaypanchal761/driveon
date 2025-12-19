@@ -388,6 +388,70 @@ const ActiveBookingPage = () => {
           </div>
         )}
 
+        {/* Delay Message - Show if trip end date has passed */}
+        {(() => {
+          if (!booking.dropDate) return null;
+          
+          // Combine date and time to get exact end datetime
+          const dropDateTime = new Date(booking.dropDate);
+          if (booking.dropTime) {
+            const [hours, minutes] = booking.dropTime.split(':');
+            dropDateTime.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
+          }
+          
+          const now = new Date();
+          const delayMs = now - dropDateTime;
+          
+          // Only show delay if trip end date has passed and booking is not completed/cancelled
+          if (delayMs <= 0 || booking.status === 'completed' || booking.status === 'cancelled') return null;
+          
+          const delayHours = Math.floor(delayMs / (1000 * 60 * 60));
+          const delayDays = Math.floor(delayHours / 24);
+          const remainingHours = delayHours % 24;
+          
+          // Calculate additional charges (dummy data)
+          let additionalCharges = 0;
+          if (delayDays === 0) {
+            additionalCharges = delayHours * 500;
+          } else {
+            additionalCharges = 24 * 500;
+            additionalCharges += delayDays * 1000;
+            if (remainingHours > 0) {
+              additionalCharges += remainingHours * 500;
+            }
+          }
+          
+          const delayText = delayDays > 0 
+            ? `${delayDays} day${delayDays > 1 ? 's' : ''} ${remainingHours > 0 ? `and ${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}`
+            : `${delayHours} hour${delayHours > 1 ? 's' : ''}`;
+          
+          return (
+            <div className="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 md:p-6 mb-4 md:mb-6">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 flex-shrink-0 mt-0.5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-base md:text-lg font-semibold text-orange-900 mb-1">
+                    Trip End Date Passed
+                  </h3>
+                  <p className="text-sm md:text-base text-orange-800 mb-3">
+                    Your trip end date has passed by {delayText}. Additional charges will be applied.
+                  </p>
+                  <div className="flex items-center justify-between pt-3 border-t border-orange-200">
+                    <span className="text-sm md:text-base font-medium text-orange-900">
+                      Additional Charges:
+                    </span>
+                    <span className="text-lg md:text-xl font-bold text-orange-600">
+                      ₹{additionalCharges.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Trip Information */}
         <div className="bg-white rounded-lg md:rounded-xl border border-gray-200 p-4 md:p-6 shadow-md hover:shadow-lg transition-shadow">
           <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4" style={{ color: theme.colors.primary }}>

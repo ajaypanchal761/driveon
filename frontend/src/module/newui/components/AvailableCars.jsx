@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CarCard from './CarCard';
-import { carService } from '../../../../services/car.service';
+import { carService } from '../../../services/car.service';
 import carImg1 from '../../../assets/car_img1-removebg-preview.png';
 
 /**
@@ -130,4 +130,5 @@ const AvailableCars = ({ selectedBodyType, selectedBrand }) => {
 };
 
 export default AvailableCars;
+
 
