@@ -22,10 +22,22 @@ const ModuleRegisterPage = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [heardAbout, setHeardAbout] = useState(''); // How user heard about DriveOn (optional)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [otp, setOtp] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Options for "How did you hear about DriveOn?"
+  const heardAboutOptions = [
+    { value: '', label: 'How did you hear about DriveOn? (Optional)' },
+    { value: 'friend_family', label: 'Friend / Family' },
+    { value: 'social_media', label: 'Social Media (Instagram, Facebook, etc.)' },
+    { value: 'google_search', label: 'Google / Online Search' },
+    { value: 'ads', label: 'Online Ads' },
+    { value: 'office_visit', label: 'Visited DriveOn Office' },
+    { value: 'other', label: 'Other' },
+  ];
 
   // Prevent body scroll when component mounts
   useEffect(() => {
@@ -37,6 +49,25 @@ const ModuleRegisterPage = () => {
       document.documentElement.style.overflow = '';
     };
   }, []);
+
+  // Handle clicking outside dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isDropdownOpen && !event.target.closest('.dropdown-container')) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   // Validate full name
   const validateFullName = (value) => {
@@ -115,7 +146,7 @@ const ModuleRegisterPage = () => {
         email: email.trim(),
         phone: cleanedPhone,
         referralCode: referralCode.trim() || undefined,
-        heardAbout: heardAbout.trim() || undefined,
+        heardAbout: heardAbout.trim() || '', // Send empty string if not selected
       });
 
       console.log('Register Response:', response);
@@ -547,6 +578,102 @@ const ModuleRegisterPage = () => {
                   <p className="text-xs mt-1 ml-1" style={{ color: colors.error }}>
                     {error}
                   </p>
+                )}
+              </div>
+
+              {/* How did you hear about DriveOn? Custom Dropdown */}
+              <div className="mb-3 relative dropdown-container">
+                <div 
+                  className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all cursor-pointer"
+                  style={{ 
+                    borderColor: isDropdownOpen ? colors.backgroundTertiary : colors.backgroundTertiary + '40',
+                    backgroundColor: isDropdownOpen ? colors.backgroundSecondary : colors.backgroundPrimary
+                  }}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  tabIndex={0}
+                >
+                  {/* Info/Question Icon */}
+                  <svg 
+                    className="w-5 h-5 mr-3 flex-shrink-0" 
+                    style={{ color: colors.backgroundTertiary }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                    />
+                  </svg>
+                  
+                  {/* Selected Value or Placeholder */}
+                  <span 
+                    className="flex-1 bg-transparent border-none outline-none text-sm cursor-pointer"
+                    style={{ 
+                      color: heardAbout ? colors.backgroundTertiary : colors.backgroundTertiary + '80'
+                    }}
+                  >
+                    {heardAboutOptions.find(opt => opt.value === heardAbout)?.label || 'How did you hear about DriveOn? (Optional)'}
+                  </span>
+
+                  {/* Dropdown Arrow */}
+                  <svg
+                    className={`w-5 h-5 flex-shrink-0 transition-transform ${isDropdownOpen ? 'transform rotate-180' : ''}`}
+                    style={{ color: colors.backgroundTertiary }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+
+                {/* Dropdown Options */}
+                {isDropdownOpen && (
+                  <div
+                    className="absolute z-50 w-full mt-1 rounded-xl border-2 shadow-lg overflow-hidden"
+                    style={{
+                      backgroundColor: colors.backgroundSecondary,
+                      borderColor: colors.backgroundTertiary + '40',
+                      maxHeight: '200px',
+                      overflowY: 'auto'
+                    }}
+                  >
+                    {heardAboutOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setHeardAbout(option.value);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-opacity-10"
+                        style={{
+                          backgroundColor: heardAbout === option.value ? colors.backgroundTertiary + '20' : 'transparent',
+                          color: heardAbout === option.value ? colors.backgroundTertiary : colors.backgroundTertiary,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (heardAbout !== option.value) {
+                            e.currentTarget.style.backgroundColor = colors.backgroundPrimary;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (heardAbout !== option.value) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -988,18 +1115,46 @@ const ModuleRegisterPage = () => {
                   )}
                 </div>
 
-                {/* How did you hear about DriveOn? (Optional) */}
-                <div className="mb-3">
-                  <div
-                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all"
-                    style={{
-                      borderColor: colors.backgroundTertiary + '40',
-                      backgroundColor: colors.backgroundPrimary,
+                {/* How did you hear about DriveOn? Custom Dropdown */}
+                <div className="mb-3 relative dropdown-container">
+                  <div 
+                    className="relative flex items-center px-3 py-2.5 rounded-xl border-2 transition-all cursor-pointer"
+                    style={{ 
+                      borderColor: isDropdownOpen ? colors.backgroundTertiary : colors.backgroundTertiary + '40',
+                      backgroundColor: isDropdownOpen ? colors.backgroundSecondary : colors.backgroundPrimary
                     }}
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    tabIndex={0}
                   >
-                    {/* Icon */}
+                    {/* Info/Question Icon */}
+                    <svg 
+                      className="w-5 h-5 mr-3 flex-shrink-0" 
+                      style={{ color: colors.backgroundTertiary }}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                      />
+                    </svg>
+                    
+                    {/* Selected Value or Placeholder */}
+                    <span 
+                      className="flex-1 bg-transparent border-none outline-none text-sm cursor-pointer"
+                      style={{ 
+                        color: heardAbout ? colors.backgroundTertiary : colors.backgroundTertiary + '80'
+                      }}
+                    >
+                      {heardAboutOptions.find(opt => opt.value === heardAbout)?.label || 'How did you hear about DriveOn? (Optional)'}
+                    </span>
+
+                    {/* Dropdown Arrow */}
                     <svg
-                      className="w-5 h-5 mr-3 flex-shrink-0"
+                      className={`w-5 h-5 flex-shrink-0 transition-transform ${isDropdownOpen ? 'transform rotate-180' : ''}`}
                       style={{ color: colors.backgroundTertiary }}
                       fill="none"
                       stroke="currentColor"
@@ -1009,34 +1164,51 @@ const ModuleRegisterPage = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M11 5.882V19a1 1 0 001.447.894l4-2A1 1 0 0017 17V7a1 1 0 00-.553-.894l-4-2A1 1 0 0011 5.882zM7 8h.01M7 12h.01M7 16h.01"
+                        d="M19 9l-7 7-7-7"
                       />
                     </svg>
+                  </div>
 
-                    {/* Select */}
-                    <select
-                      value={heardAbout}
-                      onChange={(e) => setHeardAbout(e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none text-sm"
-                      style={{ color: colors.backgroundTertiary }}
-                      onFocus={(e) => {
-                        e.target.parentElement.style.borderColor = colors.backgroundTertiary;
-                        e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
-                      }}
-                      onBlur={(e) => {
-                        e.target.parentElement.style.borderColor = colors.backgroundTertiary + '40';
-                        e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
+                  {/* Dropdown Options */}
+                  {isDropdownOpen && (
+                    <div
+                      className="absolute z-50 w-full mt-1 rounded-xl border-2 shadow-lg overflow-hidden"
+                      style={{
+                        backgroundColor: colors.backgroundSecondary,
+                        borderColor: colors.backgroundTertiary + '40',
+                        maxHeight: '200px',
+                        overflowY: 'auto'
                       }}
                     >
-                      <option value="">How did you hear about DriveOn? (Optional)</option>
-                      <option value="friend_family">Friend / Family</option>
-                      <option value="social_media">Social Media (Instagram, Facebook, etc.)</option>
-                      <option value="google_search">Google / Online Search</option>
-                      <option value="ads">Online Ads</option>
-                      <option value="office_visit">Visited DriveOn Office</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
+                      {heardAboutOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setHeardAbout(option.value);
+                            setIsDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-opacity-10"
+                          style={{
+                            backgroundColor: heardAbout === option.value ? colors.backgroundTertiary + '20' : 'transparent',
+                            color: heardAbout === option.value ? colors.backgroundTertiary : colors.backgroundTertiary,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (heardAbout !== option.value) {
+                              e.currentTarget.style.backgroundColor = colors.backgroundPrimary;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (heardAbout !== option.value) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Referral Code Input Field (Optional) */}

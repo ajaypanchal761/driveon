@@ -437,23 +437,47 @@ const GuarantorListPage = () => {
   };
 
   const handleSendGuarantorRequest = async () => {
+    console.log('handleSendGuarantorRequest called', {
+      guarantorIdInput,
+      selectedBookingForGuarantor,
+    });
+
     if (!guarantorIdInput.trim()) {
-      alert('Please enter a Guarantor ID');
+      toastUtils.error('Please enter a Guarantor ID');
       return;
     }
 
     if (!selectedBookingForGuarantor) {
-      alert('Booking information not found');
+      toastUtils.error('Booking information not found');
       return;
     }
 
     try {
       setIsSendingRequest(true);
-      // Use bookingMongoId (MongoDB _id) for API call, fallback to id
-      const bookingId = selectedBookingForGuarantor.bookingMongoId || selectedBookingForGuarantor.id;
+      
+      // Get bookingMongoId (MongoDB _id) - fetch if missing
+      let bookingId = selectedBookingForGuarantor.bookingMongoId || selectedBookingForGuarantor.id;
+      
+      // If bookingMongoId is missing but we have bookingId string, fetch the booking
+      if (!bookingId && selectedBookingForGuarantor.bookingId) {
+        try {
+          console.log('Fetching booking by bookingId:', selectedBookingForGuarantor.bookingId);
+          const bookingResponse = await adminService.getBookingById(selectedBookingForGuarantor.bookingId);
+          if (bookingResponse?.success && bookingResponse?.data?.booking) {
+            bookingId = bookingResponse.data.booking._id || bookingResponse.data.booking.id;
+            console.log('Fetched booking MongoDB ID:', bookingId);
+          }
+        } catch (fetchError) {
+          console.error('Error fetching booking:', fetchError);
+          toastUtils.error('Failed to fetch booking details. Please try again.');
+          setIsSendingRequest(false);
+          return;
+        }
+      }
       
       if (!bookingId) {
-        alert('Invalid booking ID. Please try selecting the booking again.');
+        toastUtils.error('Invalid booking ID. Please try selecting the booking again.');
+        setIsSendingRequest(false);
         return;
       }
 
@@ -468,15 +492,17 @@ const GuarantorListPage = () => {
         guarantorId: guarantorIdInput.trim(),
       });
 
+      console.log('Response received:', response);
+
       if (response.success) {
-        alert('Guarantor request sent successfully!');
+        toastUtils.success('Guarantor request sent successfully!');
         setShowAddGuarantorModal(false);
         setGuarantorIdInput('');
         setSelectedBookingForGuarantor(null);
         // Refresh guarantors list
         window.location.reload();
       } else {
-        alert(response.message || 'Failed to send guarantor request');
+        toastUtils.error(response.message || 'Failed to send guarantor request');
       }
     } catch (error) {
       console.error('Error sending guarantor request:', error);
@@ -484,7 +510,7 @@ const GuarantorListPage = () => {
                            error.response?.data?.error || 
                            error.message || 
                            'Failed to send guarantor request. Please try again.';
-      alert(errorMessage);
+      toastUtils.error(errorMessage);
     } finally {
       setIsSendingRequest(false);
     }
@@ -880,6 +906,7 @@ const GuarantorListPage = () => {
 
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => {
                   setShowAddGuarantorModal(false);
                   setGuarantorIdInput('');
@@ -891,8 +918,18 @@ const GuarantorListPage = () => {
                 Cancel
               </button>
               <button
-                onClick={handleSendGuarantorRequest}
-                className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Send Request button clicked', {
+                    guarantorIdInput,
+                    selectedBookingForGuarantor,
+                    isSendingRequest,
+                  });
+                  handleSendGuarantorRequest();
+                }}
+                className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: colors.backgroundTertiary }}
                 disabled={isSendingRequest || !guarantorIdInput.trim()}
               >

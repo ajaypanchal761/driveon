@@ -188,20 +188,36 @@ const BookingDetailsModal = ({ booking, onClose }) => {
             {/* Pending Status Note for Physical Verification */}
             {booking.status === 'pending' && (
               <div
-                className="p-3 rounded-lg space-y-1"
+                className="p-4 rounded-lg space-y-2"
                 style={{
-                  backgroundColor: `${colors.warning}15`,
-                  border: `1px solid ${colors.warning}40`,
+                  backgroundColor: '#FFF3E0',
+                  borderLeft: '4px solid #FF9800',
                 }}
               >
-                <p className="text-xs font-semibold" style={{ color: colors.warning }}>
-                  Booking Status: Pending Physical Verification
-                </p>
-                <p className="text-xs leading-relaxed" style={{ color: colors.textSecondary }}>
-                  Your booking is currently marked as <span className="font-semibold">Pending</span> because physical
-                  document verification at our office is still remaining. Once your documents are verified at the office,
-                  your booking status will be updated to <span className="font-semibold">Confirmed</span>.
-                </p>
+                <div className="flex items-start gap-2">
+                  <svg 
+                    className="w-5 h-5 flex-shrink-0 mt-0.5" 
+                    style={{ color: '#FF9800' }}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold mb-1" style={{ color: '#FF9800' }}>
+                      Booking Status: Pending
+                    </p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#333' }}>
+                      Your booking is currently showing as <span className="font-semibold">Pending</span> because physical document verification at the office is still pending. Once your documents are verified at the office, your booking status will be updated to <span className="font-semibold">Confirmed</span>.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -7,6 +7,7 @@ import {
   getGuarantorRequestDetails,
   acceptGuarantorRequest,
   rejectGuarantorRequest,
+  getGuarantorPoints,
 } from '../controllers/user.guarantor.controller.js';
 import { validateCoupon } from '../controllers/admin.coupon.controller.js';
 
@@ -82,6 +83,9 @@ router.post('/user/guarantor-requests/:id/accept', acceptGuarantorRequest);
 // Reject Guarantor Request - PROTECTED
 // Route: POST /api/user/guarantor-requests/:id/reject
 router.post('/user/guarantor-requests/:id/reject', rejectGuarantorRequest);
+
+// Route: GET /api/user/guarantor-points
+router.get('/user/guarantor-points', getGuarantorPoints);
 
 // ============================================
 // COUPON ROUTES - PROTECTED

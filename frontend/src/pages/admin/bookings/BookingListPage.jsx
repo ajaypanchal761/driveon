@@ -273,22 +273,35 @@ const BookingListPage = () => {
   };
 
   const handleCancel = async (bookingId) => {
+    console.log('🔄 handleCancel called with bookingId:', bookingId);
+    
+    if (!bookingId) {
+      console.error('❌ No booking ID provided');
+      alert('Error: Booking ID is missing');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to cancel this booking?')) {
       return;
     }
 
     try {
+      console.log('🔄 Cancelling booking:', bookingId);
       // Call backend API to update booking status to cancelled
       const response = await adminService.updateBooking(bookingId, {
         status: 'cancelled',
         cancellationReason: 'Cancelled by admin',
       });
 
-      if (response.success) {
-        // Update local state
-        setBookings((prevList) =>
-          prevList.map((booking) => {
-            if (booking.id === bookingId) {
+      console.log('📊 Cancel booking response:', response);
+      console.log('📊 Response success:', response?.success);
+
+      if (response && response.success) {
+        // Update local state for both bookings and filteredBookings
+        setBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in bookings state:', booking.id);
               return {
                 ...booking,
                 status: 'cancelled',
@@ -297,17 +310,43 @@ const BookingListPage = () => {
               };
             }
             return booking;
-          })
-        );
+          });
+          return updated;
+        });
+        
+        // Also update filteredBookings to reflect the change immediately
+        setFilteredBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in filteredBookings state:', booking.id);
+              return {
+                ...booking,
+                status: 'cancelled',
+                cancellationReason: 'Cancelled by admin',
+                cancelledDate: new Date().toISOString(),
+              };
+            }
+            return booking;
+          });
+          return updated;
+        });
         
         // Show success message
         alert('Booking cancelled successfully!');
+        
+        // Refresh bookings list to get updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
-        alert('Failed to cancel booking. Please try again.');
+        console.error('❌ API returned success: false');
+        alert(response?.message || 'Failed to cancel booking. Please try again.');
       }
     } catch (error) {
-      console.error('Error cancelling booking:', error);
-      alert(error.response?.data?.message || 'Failed to cancel booking. Please try again.');
+      console.error('❌ Error cancelling booking:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      alert(error.response?.data?.message || error.message || 'Failed to cancel booking. Please try again.');
     }
   };
 
@@ -354,21 +393,34 @@ const BookingListPage = () => {
   };
 
   const handleMarkAsComplete = async (bookingId) => {
+    console.log('🔄 handleMarkAsComplete called with bookingId:', bookingId);
+    
+    if (!bookingId) {
+      console.error('❌ No booking ID provided');
+      alert('Error: Booking ID is missing');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to mark this booking as completed?')) {
       return;
     }
 
     try {
+      console.log('🔄 Marking booking as complete:', bookingId);
       // Call backend API to update booking status to completed
       const response = await adminService.updateBooking(bookingId, {
         status: 'completed',
       });
 
-      if (response.success) {
-        // Update local state
-        setBookings((prevList) =>
-          prevList.map((booking) => {
-            if (booking.id === bookingId) {
+      console.log('📊 Mark complete response:', response);
+      console.log('📊 Response success:', response?.success);
+
+      if (response && response.success) {
+        // Update local state for both bookings and filteredBookings
+        setBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in bookings state:', booking.id);
               return {
                 ...booking,
                 status: 'completed',
@@ -376,17 +428,42 @@ const BookingListPage = () => {
               };
             }
             return booking;
-          })
-        );
+          });
+          return updated;
+        });
+        
+        // Also update filteredBookings to reflect the change immediately
+        setFilteredBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in filteredBookings state:', booking.id);
+              return {
+                ...booking,
+                status: 'completed',
+                completedDate: new Date().toISOString(),
+              };
+            }
+            return booking;
+          });
+          return updated;
+        });
         
         // Show success message
         alert('Booking marked as completed! User will see it in completed bookings.');
+        
+        // Refresh bookings list to get updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
-        alert('Failed to mark booking as completed. Please try again.');
+        console.error('❌ API returned success: false');
+        alert(response?.message || 'Failed to mark booking as completed. Please try again.');
       }
     } catch (error) {
-      console.error('Error marking booking as complete:', error);
-      alert(error.response?.data?.message || 'Failed to mark booking as completed. Please try again.');
+      console.error('❌ Error marking booking as complete:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      alert(error.response?.data?.message || error.message || 'Failed to mark booking as completed. Please try again.');
     }
   };
 
@@ -816,6 +893,7 @@ const BookingListPage = () => {
                 {/* Actions */}
                 <div className="flex flex-col gap-2 md:w-40">
                   <button
+                    type="button"
                     onClick={() => handleViewBooking(booking)}
                     className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: colors.backgroundTertiary }}
@@ -825,6 +903,7 @@ const BookingListPage = () => {
                   
                   {booking.status === 'active' && (
                     <button
+                      type="button"
                       onClick={() => navigate(`/admin/bookings/${booking.id}/tracking`)}
                       className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                     >
@@ -835,12 +914,14 @@ const BookingListPage = () => {
                   {booking.status === 'pending' && (
                     <>
                       <button
+                        type="button"
                         onClick={() => handleApprove(booking.id)}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Approve
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleReject(booking.id)}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
@@ -852,13 +933,25 @@ const BookingListPage = () => {
                   {(booking.status === 'confirmed' || booking.status === 'active') && (
                     <>
                       <button
-                        onClick={() => handleCancel(booking.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('🖱️ Cancel button clicked for booking:', booking.id);
+                          handleCancel(booking.id);
+                        }}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
                         Cancel Booking
                       </button>
                       <button
-                        onClick={() => handleMarkAsComplete(booking.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('🖱️ Mark complete button clicked for booking:', booking.id);
+                          handleMarkAsComplete(booking.id);
+                        }}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         Mark as Complete
@@ -868,6 +961,7 @@ const BookingListPage = () => {
                   
                   {booking.status === 'cancelled' && booking.paymentStatus !== 'refunded' && (
                     <button
+                      type="button"
                       onClick={() => handleProcessRefund(booking.id)}
                       className="w-full px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                     >

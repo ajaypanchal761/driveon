@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 import { colors } from '../../../module/theme/colors';
@@ -93,16 +93,23 @@ const TrackingPage = () => {
         );
         
         if (existingIndex >= 0) {
-          // Update existing location
+          // Update existing location - create new object to ensure state change
           const updated = [...prev];
           updated[existingIndex] = {
             ...updated[existingIndex],
             ...locationData,
+            // Ensure timestamp is updated to trigger re-render
+            timestamp: locationData.timestamp || new Date().toISOString(),
           };
+          console.log('📍 Updated location for user:', locationData.userId, updated[existingIndex]);
           return updated;
         } else {
           // Add new location
-          return [...prev, locationData];
+          console.log('📍 Added new location for user:', locationData.userId);
+          return [...prev, {
+            ...locationData,
+            timestamp: locationData.timestamp || new Date().toISOString(),
+          }];
         }
       });
     });
@@ -247,21 +254,23 @@ const TrackingPage = () => {
     return loc.userType === filterType;
   });
 
-  // Convert locations to map markers
-  const mapMarkers = filteredLocations
-    .filter((loc) => loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng))
-    .map((loc) => ({
-      userId: loc.userId,
-      name: loc.name || 'Unknown',
-      lat: loc.lat,
-      lng: loc.lng,
-      userType: loc.userType,
-      accuracy: loc.accuracy,
-      speed: loc.speed,
-      timestamp: loc.timestamp,
-      email: loc.email,
-      phone: loc.phone,
-    }));
+  // Convert locations to map markers - use useMemo to ensure updates trigger re-renders
+  const mapMarkers = useMemo(() => {
+    return filteredLocations
+      .filter((loc) => loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng))
+      .map((loc) => ({
+        userId: loc.userId,
+        name: loc.name || 'Unknown',
+        lat: parseFloat(loc.lat),
+        lng: parseFloat(loc.lng),
+        userType: loc.userType,
+        accuracy: loc.accuracy,
+        speed: loc.speed,
+        timestamp: loc.timestamp,
+        email: loc.email,
+        phone: loc.phone,
+      }));
+  }, [filteredLocations]);
 
   // Resolve human-readable addresses on admin side for locations that don't have address
   useEffect(() => {
@@ -536,29 +545,20 @@ const TrackingPage = () => {
               )}
               {GOOGLE_MAPS_API_KEY ? (
                 <div style={{ height: '600px', width: '100%' }}>
-                  {mapMarkers.length > 0 ? (
-                    <GoogleMap
-                      apiKey={GOOGLE_MAPS_API_KEY}
-                      markers={mapMarkers}
-                      center={
-                        mapMarkers.length === 1
-                          ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
-                          : { lat: 20.5937, lng: 78.9629 }
-                      }
-                      zoom={mapMarkers.length === 1 ? 15 : 5}
-                      onMarkerClick={handleMarkerClick}
-                      height="600px"
-                    />
-                  ) : (
-                    <GoogleMap
-                      apiKey={GOOGLE_MAPS_API_KEY}
-                      markers={mapMarkers}
-                      center={{ lat: 20.5937, lng: 78.9629 }}
-                      zoom={5}
-                      onMarkerClick={handleMarkerClick}
-                      height="600px"
-                    />
-                  )}
+                  <GoogleMap
+                    apiKey={GOOGLE_MAPS_API_KEY}
+                    markers={mapMarkers}
+                    center={
+                      mapMarkers.length === 1
+                        ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
+                        : mapMarkers.length > 0
+                        ? { lat: 20.5937, lng: 78.9629 }
+                        : { lat: 20.5937, lng: 78.9629 }
+                    }
+                    zoom={mapMarkers.length === 1 ? 15 : 5}
+                    onMarkerClick={handleMarkerClick}
+                    height="600px"
+                  />
                 </div>
               ) : (
                 <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">

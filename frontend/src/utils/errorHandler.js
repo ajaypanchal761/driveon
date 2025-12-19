@@ -3,7 +3,7 @@
  * Suppresses browser extension errors and handles application errors
  */
 
-// Suppress browser extension errors
+// Suppress browser extension errors and font loading errors
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   // Catch and suppress extension errors
   const originalError = console.error;
@@ -13,15 +13,32 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
     if (
       errorMessage.includes('runtime.lastError') ||
       errorMessage.includes('Receiving end does not exist') ||
-      errorMessage.includes('Could not establish connection')
+      errorMessage.includes('Could not establish connection') ||
+      errorMessage.includes('NS_ERROR_CORRUPTED_CONTENT') ||
+      errorMessage.includes('MIME type') ||
+      errorMessage.includes('fonts.googleapis.com')
     ) {
-      // Silently ignore browser extension errors
+      // Silently ignore browser extension errors and font loading errors
       return;
     }
     // Log other errors normally
     originalError.apply(console, args);
   };
 }
+
+// Suppress font loading errors globally
+window.addEventListener('error', (event) => {
+  // Suppress Google Fonts errors for non-existent fonts
+  if (
+    event.message?.includes('fonts.googleapis.com') ||
+    event.message?.includes('NS_ERROR_CORRUPTED_CONTENT') ||
+    event.message?.includes('MIME type') ||
+    event.filename?.includes('fonts.googleapis.com')
+  ) {
+    event.preventDefault();
+    return false;
+  }
+}, true);
 
 // Suppress warnings for extension errors
 if (typeof chrome !== 'undefined' && chrome.runtime) {

@@ -3,6 +3,7 @@ import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
 import { processReferralTripCompletion } from './referral.controller.js';
+import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
 
 /**
  * @desc    Create new booking
@@ -579,6 +580,14 @@ export const updateBookingStatus = async (req, res) => {
       booking.cancellationReason = cancellationReason || '';
       booking.isTrackingActive = false;
       booking.tripStatus = 'cancelled';
+      
+      // Reverse guarantor points for cancelled booking
+      try {
+        await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled');
+      } catch (pointsError) {
+        console.error('Error reversing guarantor points:', pointsError);
+        // Don't fail booking cancellation if points reversal fails
+      }
     } else if (status === 'confirmed') {
       booking.confirmedAt = new Date();
     } else if (status === 'completed') {

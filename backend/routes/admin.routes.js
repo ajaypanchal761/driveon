@@ -44,6 +44,7 @@ import {
   getAllGuarantorRequests,
   getGuarantorRequestById,
   deleteGuarantorRequest,
+  getBookingGuarantorPoints,
 } from '../controllers/admin.guarantor.controller.js';
 import {
   getLatestLocations,
@@ -259,6 +260,9 @@ router.get('/guarantor-requests/:id', authenticateAdmin, getGuarantorRequestById
 // Delete Guarantor Request - PROTECTED
 // Route: DELETE /api/admin/guarantor-requests/:id
 router.delete('/guarantor-requests/:id', authenticateAdmin, deleteGuarantorRequest);
+
+// Route: GET /api/admin/bookings/:bookingId/guarantor-points
+router.get('/bookings/:bookingId/guarantor-points', authenticateAdmin, getBookingGuarantorPoints);
 
 // ============================================
 // LOCATION TRACKING ROUTES - PROTECTED

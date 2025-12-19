@@ -70,6 +70,12 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    heardAbout: {
+      type: String,
+      trim: true,
+      enum: ['', 'friend_family', 'social_media', 'google_search', 'ads', 'office_visit', 'other'],
+      default: '',
+    },
     points: {
       type: Number,
       default: 0,

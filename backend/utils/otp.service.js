@@ -8,14 +8,9 @@ import smsIndiaHubService from '../services/smsIndiaHubService.js';
 /**
  * Test phone numbers for development/testing
  * These numbers will receive default OTP without sending SMS
- * Note: 7610416911 removed - will receive real SMS via SMSIndia Hub
  */
 const TEST_PHONE_NUMBERS = {
   '9993911855': '123456', // Default test OTP
-  '9685974247': '123456', // Default test OTP
-  // '7610416911': '110211', // Removed - now receives real SMS
-  '6268455485': '110211', // Custom OTP for this number
-  '9755262071': '110211', // Custom OTP for this number
 };
 
 /**
@@ -65,7 +60,7 @@ export const generateOTP = (phone = null) => {
     return '123456';
   }
   
-  // Generate random 6-digit OTP
+  // Generate random 6-digit OTP for all other users
   const length = 6;
   const min = Math.pow(10, length - 1);
   const max = Math.pow(10, length) - 1;

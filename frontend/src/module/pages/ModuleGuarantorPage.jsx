@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { setGuarantor } from '../../store/slices/userSlice';
+import { setGuarantor, setUser } from '../../store/slices/userSlice';
 import toastUtils from '../../config/toast';
 import { userService } from '../../services/user.service';
 import ProfileHeader from '../components/layout/ProfileHeader';
@@ -24,6 +24,11 @@ const ModuleGuarantorPage = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [requestDetails, setRequestDetails] = useState(null);
+  const [guarantorPoints, setGuarantorPoints] = useState(0);
+  const [pointsHistory, setPointsHistory] = useState([]);
+  const [loadingPoints, setLoadingPoints] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
   // Fetch requests from API
   useEffect(() => {
@@ -44,6 +49,99 @@ const ModuleGuarantorPage = () => {
     };
     fetchRequests();
   }, []);
+
+  // Fetch user profile if not loaded (for login scenarios)
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated || user) return; // Skip if already loaded
+      
+      try {
+        const response = await userService.getProfile();
+        const userData = response?.data?.user || response?.user || response?.data;
+        if (userData) {
+          dispatch(setUser(userData));
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [isAuthenticated, user, dispatch]);
+
+  // Fetch guarantor points and history
+  useEffect(() => {
+    const fetchGuarantorPoints = async () => {
+      // Wait for authentication
+      if (!isAuthenticated) {
+        console.log('⚠️ Not authenticated, skipping guarantor points fetch');
+        return;
+      }
+      
+      console.log('🔄 Fetching guarantor points...');
+      try {
+        setLoadingPoints(true);
+        const response = await userService.getGuarantorPoints();
+        console.log('📊 Guarantor Points API Response:', response);
+        console.log('📊 Response type:', typeof response);
+        console.log('📊 Response keys:', response ? Object.keys(response) : 'null');
+        
+        // Backend returns: { success: true, data: { points, history, ... } }
+        // userService.getGuarantorPoints() returns: response.data = { success: true, data: { points, history, ... } }
+        // So response = { success: true, data: { points, history, ... } }
+        // We need: response.data.points
+        const pointsData = response?.data || response || {};
+        console.log('📊 Extracted Points Data:', pointsData);
+        console.log('📊 Points value:', pointsData.points);
+        console.log('📊 History length:', pointsData.history?.length || 0);
+        
+        if (response.success === false) {
+          console.error('❌ API returned success: false');
+          throw new Error(response.message || 'Failed to fetch guarantor points');
+        }
+        
+        const pointsValue = pointsData.points || 0;
+        console.log('✅ Setting guarantor points to:', pointsValue);
+        setGuarantorPoints(pointsValue);
+        
+        // Format history data
+        const history = (pointsData.history || []).map((item) => ({
+          id: item.id,
+          bookingId: item.bookingId,
+          userName: item.userName,
+          userEmail: item.userEmail,
+          bookingAmount: item.bookingAmount,
+          totalPoolAmount: item.totalPoolAmount,
+          totalGuarantors: item.totalGuarantors,
+          pointsEarned: item.pointsEarned,
+          date: new Date(item.date),
+          status: item.status,
+          bookingStatus: item.bookingStatus,
+          reversedAt: item.reversedAt ? new Date(item.reversedAt) : null,
+          reversalReason: item.reversalReason,
+        }));
+        console.log('✅ Setting history with', history.length, 'items');
+        setPointsHistory(history);
+      } catch (error) {
+        console.error('❌ Error fetching guarantor points:', error);
+        console.error('❌ Error response:', error.response?.data);
+        console.error('❌ Error message:', error.message);
+        toastUtils.error('Failed to load points');
+        // Set defaults on error
+        setGuarantorPoints(0);
+        setPointsHistory([]);
+      } finally {
+        setLoadingPoints(false);
+      }
+    };
+    
+    // Fetch points when authenticated (API uses token to identify user, doesn't need guarantorId)
+    if (isAuthenticated) {
+      fetchGuarantorPoints();
+    }
+  }, [isAuthenticated]); // Re-fetch when authentication status changes
 
   // Calculate pending requests count
   const pendingRequestsCount = requests.filter(req => req.status === 'pending').length;
@@ -234,6 +332,227 @@ const ModuleGuarantorPage = () => {
             </div>
           )}
 
+          {/* KYC Verification Notice - Always show for guarantors */}
+          {user?.guarantorId && (
+            <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-2 md:pt-4 pb-2 md:pb-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-1 text-blue-900">
+                      KYC Verification Required
+                    </p>
+                    <p className="text-xs leading-relaxed text-blue-800">
+                      As a guarantor, you must complete KYC verification physically at the office. Please visit our office with valid identification documents to complete the verification process.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Points Wallet Section - Show if user is a guarantor */}
+          {user?.guarantorId && (
+            <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-2 md:pt-4 pb-2 md:pb-4">
+              <div className="bg-gradient-to-br rounded-2xl p-5 shadow-lg overflow-hidden relative" style={{
+                background: `linear-gradient(135deg, ${colors.backgroundTertiary} 0%, ${colors.backgroundDark || colors.backgroundTertiary} 100%)`
+              }}>
+                {/* Decorative background pattern */}
+                <div className="absolute inset-0 opacity-10">
+                  <svg className="w-full h-full" viewBox="0 0 200 200" fill="none">
+                    <circle cx="50" cy="50" r="2" fill="white" />
+                    <circle cx="150" cy="50" r="2" fill="white" />
+                    <circle cx="50" cy="150" r="2" fill="white" />
+                    <circle cx="150" cy="150" r="2" fill="white" />
+                    <path d="M0 100 Q50 50, 100 100 T200 100" stroke="white" strokeWidth="0.5" opacity="0.3" />
+                    <path d="M0 100 Q50 150, 100 100 T200 100" stroke="white" strokeWidth="0.5" opacity="0.3" />
+                  </svg>
+                </div>
+
+                {/* Wallet Content */}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}>
+                        <svg className="w-6 h-6" style={{ color: colors.backgroundSecondary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium mb-1" style={{ color: colors.backgroundSecondary, opacity: 0.9 }}>
+                          Guarantor Points Wallet
+                        </p>
+                        <p className="text-xs" style={{ color: colors.backgroundSecondary, opacity: 0.7 }}>
+                          Earn 10% points from each trip
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Points Balance */}
+                  <div className="mb-4">
+                    {loadingPoints ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2" style={{ borderColor: colors.backgroundSecondary }}></div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-3xl font-bold mb-1" style={{ color: colors.backgroundSecondary }}>
+                          {(() => {
+                            const pts = Number(guarantorPoints);
+                            if (pts % 1 === 0) return pts.toLocaleString();
+                            // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
+                            const decimals = pts.toString().split('.')[1]?.length || 0;
+                            return decimals <= 3 ? pts.toFixed(decimals) : pts.toFixed(3);
+                          })()}
+                        </p>
+                        <p className="text-sm font-medium" style={{ color: colors.backgroundSecondary, opacity: 0.8 }}>
+                          Points Available
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Use Points Button */}
+                  <button
+                    onClick={() => {
+                      toastUtils.info('Points can be used during booking checkout');
+                      navigate('/search');
+                    }}
+                    className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-98"
+                    style={{
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.backgroundTertiary,
+                      boxShadow: `0 4px 12px rgba(0, 0, 0, 0.15)`
+                    }}
+                  >
+                    Use Points for Booking
+                  </button>
+                </div>
+              </div>
+
+              {/* Transaction History */}
+              <div className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold" style={{ color: colors.textPrimary }}>
+                    Points History
+                  </h3>
+                  {pointsHistory.length > 0 && (
+                    <span className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+                      {pointsHistory.length} transactions
+                    </span>
+                  )}
+                </div>
+
+                {loadingPoints ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2" style={{ borderColor: colors.backgroundTertiary }}></div>
+                  </div>
+                ) : pointsHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {pointsHistory.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        onClick={() => {
+                          setSelectedTransaction(transaction);
+                          setShowTransactionModal(true);
+                        }}
+                        className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: colors.backgroundPrimary }}>
+                          <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
+                                Points from {transaction.userName} guarantor
+                              </p>
+                              <p className="text-xs font-mono" style={{ color: colors.textSecondary }}>
+                                Booking: {transaction.bookingId}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className={`text-sm font-bold ${transaction.status === 'reversed' ? 'line-through' : ''}`} 
+                                 style={{ color: transaction.status === 'reversed' ? colors.error : colors.success }}>
+                                {(() => {
+                                  const pts = Number(transaction.pointsEarned);
+                                  const sign = transaction.status === 'reversed' ? '-' : '+';
+                                  if (pts % 1 === 0) return `${sign}${pts.toLocaleString()}`;
+                                  // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
+                                  const decimals = pts.toString().split('.')[1]?.length || 0;
+                                  return `${sign}${decimals <= 3 ? pts.toFixed(decimals) : pts.toFixed(3)}`;
+                                })()}
+                              </p>
+                              <p className="text-xs" style={{ color: colors.textSecondary }}>
+                                ₹{transaction.bookingAmount.toLocaleString()} booking
+                              </p>
+                              {transaction.totalGuarantors > 1 && (
+                                <p className="text-xs" style={{ color: colors.textTertiary }}>
+                                  {transaction.totalGuarantors} guarantors
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs" style={{ color: colors.textTertiary }}>
+                              {new Date(transaction.date).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              {transaction.status === 'reversed' && transaction.reversalReason && (
+                                <p className="text-xs" style={{ color: colors.error }}>
+                                  Reversed: {transaction.reversalReason}
+                                </p>
+                              )}
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
+                                backgroundColor: transaction.status === 'reversed' 
+                                  ? colors.error + '20' 
+                                  : transaction.bookingStatus === 'completed' 
+                                    ? colors.success + '20' 
+                                    : colors.warning + '20',
+                                color: transaction.status === 'reversed' 
+                                  ? colors.error 
+                                  : transaction.bookingStatus === 'completed' 
+                                    ? colors.success 
+                                    : colors.warning
+                              }}>
+                                {transaction.status === 'reversed' 
+                                  ? 'Reversed' 
+                                  : transaction.bookingStatus === 'completed' 
+                                    ? 'Completed' 
+                                    : transaction.bookingStatus || 'Active'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 mx-auto mb-3" style={{ color: colors.textTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <p className="text-sm font-medium" style={{ color: colors.textSecondary }}>
+                      No points earned yet
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>
+                      You'll earn 10% points when users complete trips
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Status Card - Show if guarantor is added */}
           {guarantor.added && (
             <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6 lg:pt-8 pb-2 md:pb-4">
@@ -307,6 +626,19 @@ const ModuleGuarantorPage = () => {
             
             {!guarantor.verified && (
               <div className="mt-3 pt-3 border-t-2 border-gray-200">
+                <div className="flex items-start gap-2 mb-2.5 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-1 text-blue-900">
+                      KYC Verification Required
+                    </p>
+                    <p className="text-xs leading-relaxed text-blue-800">
+                      The guarantor must complete KYC verification physically at the office. Please visit our office with valid identification documents to complete the verification process.
+                    </p>
+                  </div>
+                </div>
                 <div className="flex items-start gap-2 mb-2.5 p-2 rounded-lg bg-yellow-50">
                   <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -368,6 +700,181 @@ const ModuleGuarantorPage = () => {
       {!showDetailsModal && !showRequestsPage && (
         <div className="md:hidden">
           <BottomNavbar />
+        </div>
+      )}
+
+      {/* Transaction Details Modal */}
+      {showTransactionModal && selectedTransaction && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowTransactionModal(false);
+            setSelectedTransaction(null);
+          }}
+        >
+          <div
+            className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Transaction Details</h2>
+              <button
+                onClick={() => {
+                  setShowTransactionModal(false);
+                  setSelectedTransaction(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {/* Points Info */}
+              <div className="bg-gradient-to-br rounded-xl p-4" style={{
+                background: `linear-gradient(135deg, ${colors.backgroundTertiary} 0%, ${colors.backgroundDark || colors.backgroundTertiary} 100%)`
+              }}>
+                <div className="text-center">
+                  <p className="text-xs font-medium mb-1" style={{ color: colors.backgroundSecondary, opacity: 0.9 }}>
+                    Points Earned
+                  </p>
+                  <p className="text-3xl font-bold mb-1" style={{ color: colors.backgroundSecondary }}>
+                    {(() => {
+                      const pts = Number(selectedTransaction.pointsEarned);
+                      if (pts % 1 === 0) return pts.toLocaleString();
+                      // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
+                      const decimals = pts.toString().split('.')[1]?.length || 0;
+                      return decimals <= 3 ? pts.toFixed(decimals) : pts.toFixed(3);
+                    })()}
+                  </p>
+                  <p className="text-xs" style={{ color: colors.backgroundSecondary, opacity: 0.7 }}>
+                    {selectedTransaction.status === 'reversed' ? 'Reversed' : 'Active Points'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Transaction Details */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">User Name</span>
+                  <span className="text-sm font-semibold text-gray-900">{selectedTransaction.userName}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">User Email</span>
+                  <span className="text-sm text-gray-900">{selectedTransaction.userEmail || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">Booking ID</span>
+                  <span className="text-sm font-mono font-semibold text-gray-900">{selectedTransaction.bookingId}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">Booking Amount</span>
+                  <span className="text-sm font-semibold text-gray-900">₹{selectedTransaction.bookingAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">10% Pool Amount</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {(() => {
+                      const amt = Number(selectedTransaction.totalPoolAmount);
+                      if (amt % 1 === 0) return `₹${amt.toLocaleString()}`;
+                      // Show exact decimals: 10.5, 10.25, 10.125 (up to 3 decimal places for exact values)
+                      const decimals = amt.toString().split('.')[1]?.length || 0;
+                      return `₹${decimals <= 3 ? amt.toFixed(decimals) : amt.toFixed(3)}`;
+                    })()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">Total Guarantors</span>
+                  <span className="text-sm font-semibold text-gray-900">{selectedTransaction.totalGuarantors}</span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">Points Per Guarantor</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {(() => {
+                      const pts = selectedTransaction.totalPoolAmount && selectedTransaction.totalGuarantors
+                        ? selectedTransaction.totalPoolAmount / selectedTransaction.totalGuarantors
+                        : selectedTransaction.pointsEarned;
+                      const numPts = Number(pts);
+                      if (numPts % 1 === 0) return numPts.toLocaleString();
+                      // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
+                      const decimals = numPts.toString().split('.')[1]?.length || 0;
+                      return decimals <= 3 ? numPts.toFixed(decimals) : numPts.toFixed(3);
+                    })()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">Transaction Date</span>
+                  <span className="text-sm text-gray-900">
+                    {new Date(selectedTransaction.date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm font-medium text-gray-600">Status</span>
+                  <span className="text-xs px-3 py-1 rounded-full font-medium" style={{
+                    backgroundColor: selectedTransaction.status === 'reversed' 
+                      ? colors.error + '20' 
+                      : selectedTransaction.bookingStatus === 'completed' 
+                        ? colors.success + '20' 
+                        : colors.warning + '20',
+                    color: selectedTransaction.status === 'reversed' 
+                      ? colors.error 
+                      : selectedTransaction.bookingStatus === 'completed' 
+                        ? colors.success 
+                        : colors.warning
+                  }}>
+                    {selectedTransaction.status === 'reversed' 
+                      ? 'Reversed' 
+                      : selectedTransaction.bookingStatus === 'completed' 
+                        ? 'Completed' 
+                        : selectedTransaction.bookingStatus || 'Active'}
+                  </span>
+                </div>
+                {selectedTransaction.status === 'reversed' && selectedTransaction.reversedAt && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm font-medium text-gray-600">Reversed Date</span>
+                    <span className="text-sm text-gray-900">
+                      {new Date(selectedTransaction.reversedAt).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                )}
+                {selectedTransaction.status === 'reversed' && selectedTransaction.reversalReason && (
+                  <div className="py-2">
+                    <span className="text-sm font-medium text-gray-600 block mb-1">Reversal Reason</span>
+                    <span className="text-sm text-gray-900">{selectedTransaction.reversalReason}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+              <button
+                onClick={() => {
+                  setShowTransactionModal(false);
+                  setSelectedTransaction(null);
+                }}
+                className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -707,6 +1214,25 @@ const GuarantorRequestsPage = ({ requests, loadingRequests, pendingRequestsCount
               </p>
             </div>
             <div className="w-10"></div>
+          </div>
+        </div>
+
+        {/* KYC Verification Notice */}
+        <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold mb-1 text-blue-900">
+                  KYC Verification Required
+                </p>
+                <p className="text-xs leading-relaxed text-blue-800">
+                  As a guarantor, you must complete KYC verification physically at the office. Please visit our office with valid identification documents to complete the verification process.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

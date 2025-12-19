@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import razorpayService from "../../services/razorpay.service";
 import bookingService from "../../services/booking.service";
+import { userService } from "../../services/user.service";
 import { useAppSelector } from "../../hooks/redux";
 import CarDetailsHeader from "../components/layout/CarDetailsHeader";
 import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
@@ -42,11 +43,6 @@ const BookNowPage = () => {
     isAuthenticated: state.auth?.isAuthenticated,
     user: state.auth?.user || state.user?.user || state.user,
   }));
-
-  // Booking confirmation modal state (shown after successful Razorpay payment)
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [confirmationBookingId, setConfirmationBookingId] = useState(null);
-  const [confirmationBookingData, setConfirmationBookingData] = useState(null);
 
   // Get car data from navigation state, session cache, or use mock data as fallback
   const getCarData = () => {
@@ -245,6 +241,57 @@ const BookNowPage = () => {
   const [studentId, setStudentId] = useState("");
   const [documentPhoto, setDocumentPhoto] = useState(null);
   const [documentPhotoPreview, setDocumentPhotoPreview] = useState(null);
+
+  // Fetch user profile and auto-fill personal details
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+
+      try {
+        const response = await userService.getProfile();
+        const userProfile = response?.data?.user || response?.user || user;
+
+        if (userProfile) {
+          // Auto-fill personal details from user profile
+          setPersonalDetails((prev) => ({
+            name: userProfile.name || userProfile.fullName || prev.name || "",
+            phone:
+              userProfile.phone ||
+              userProfile.mobile ||
+              userProfile.phoneNumber ||
+              prev.phone ||
+              "",
+            email: userProfile.email || prev.email || "",
+            age: userProfile.age ? String(userProfile.age) : prev.age || "",
+            gender: userProfile.gender || prev.gender || "",
+          }));
+
+          // Auto-fill current address if available
+          if (userProfile.address) {
+            setCurrentAddress(userProfile.address);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Fallback to Redux user data if API fails
+        if (user) {
+          setPersonalDetails((prev) => ({
+            name: user.name || user.fullName || prev.name || "",
+            phone:
+              user.phone || user.mobile || user.phoneNumber || prev.phone || "",
+            email: user.email || prev.email || "",
+            age: user.age ? String(user.age) : prev.age || "",
+            gender: user.gender || prev.gender || "",
+          }));
+          if (user.address) {
+            setCurrentAddress(user.address);
+          }
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, user]);
   // Add-on services with quantities
   const [addOnServices, setAddOnServices] = useState({
     driver: 0,
@@ -762,19 +809,30 @@ const BookNowPage = () => {
         phone: user?.phone || user?.mobile || user?.phoneNumber || "",
         onSuccess: () => {
           // Build a rich booking payload for the confirmation modal / PDF
+          const bookingIdFormatted =
+            booking?.bookingId ||
+            booking?.bookingNumber ||
+            `BK${bookingId.toString().slice(-6).toUpperCase()}`;
           const bookingDataForPdf = {
             // Booking core
-            bookingId: bookingId.toString(),
+            bookingId: bookingIdFormatted,
+            _id: bookingId.toString(),
+            id: bookingId.toString(),
             createdAt: booking?.createdAt || new Date().toISOString(),
 
             // Car information
             car: {
+              id: car.id || car._id,
+              _id: car.id || car._id,
               brand: brand || car.brand,
               model: model || car.model,
-              seats: car.seats,
-              seatingCapacity: car.seats,
-              transmission: car.transmission,
-              fuelType: car.fuelType,
+              name: car.name || `${brand || car.brand} ${model || car.model}`,
+              image: car.image || car.images?.[0] || carImg1,
+              images: car.images || (car.image ? [car.image] : [carImg1]),
+              seats: car.seats || 4,
+              seatingCapacity: car.seats || 4,
+              transmission: car.transmission || "Automatic",
+              fuelType: car.fuelType || "Petrol",
               registrationNumber: car.registrationNumber,
             },
 
@@ -812,9 +870,35 @@ const BookNowPage = () => {
           };
 
           setIsProcessing(false);
-          setConfirmationBookingId(bookingId.toString());
-          setConfirmationBookingData(bookingDataForPdf);
-          setShowConfirmationModal(true);
+
+          // Save booking to localStorage so it shows up immediately on bookings page
+          try {
+            const existingBookings = JSON.parse(
+              localStorage.getItem("localBookings") || "[]"
+            );
+            const newBooking = {
+              ...bookingDataForPdf,
+              // Ensure all required fields for bookings page
+              id: bookingId.toString(),
+              _id: bookingId.toString(),
+            };
+            existingBookings.unshift(newBooking); // Add to beginning
+            localStorage.setItem(
+              "localBookings",
+              JSON.stringify(existingBookings)
+            );
+            console.log("✅ Booking saved to localStorage");
+          } catch (error) {
+            console.error("Error saving booking to localStorage:", error);
+          }
+
+          // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
+          setTimeout(() => {
+            console.log("🎉 Showing booking confirmation modal now!");
+            setConfirmedBookingId(bookingId.toString());
+            setConfirmedBookingData(bookingDataForPdf);
+            setShowBookingConfirmationModal(true);
+          }, 500); // 500ms delay to ensure Razorpay modal is closed
         },
         onError: (error) => {
           console.error("Payment error:", error);
@@ -1364,6 +1448,7 @@ const BookNowPage = () => {
                       }))
                     }
                     placeholder="Enter your name"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1391,6 +1476,7 @@ const BookNowPage = () => {
                       }))
                     }
                     placeholder="Enter your phone number"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1418,6 +1504,7 @@ const BookNowPage = () => {
                       }))
                     }
                     placeholder="Enter your email"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1446,6 +1533,7 @@ const BookNowPage = () => {
                     }
                     placeholder="Enter your age"
                     min="18"
+                    autoComplete="off"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,

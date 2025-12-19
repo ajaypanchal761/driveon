@@ -28,7 +28,6 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
   
   return (
     <div
-      key={booking.id}
       ref={cardRef}
       className="rounded-2xl overflow-hidden shadow-lg md:max-w-none"
       style={{ 
@@ -431,21 +430,43 @@ const BookingsPage = () => {
           })
         );
         
-        console.log('✅ Transformed bookings:', transformedBookings);
-        console.log('✅ Transformed bookings count:', transformedBookings.length);
+        // Remove duplicates from transformed bookings (in case API returns duplicates)
+        const uniqueTransformedBookings = [];
+        const seenIds = new Set();
+        for (const booking of transformedBookings) {
+          const bookingId = booking.id || booking._id;
+          if (bookingId && !seenIds.has(bookingId)) {
+            seenIds.add(bookingId);
+            uniqueTransformedBookings.push(booking);
+          }
+        }
+        
+        console.log('✅ Transformed bookings:', uniqueTransformedBookings);
+        console.log('✅ Transformed bookings count:', uniqueTransformedBookings.length);
+        console.log('✅ Duplicates removed:', transformedBookings.length - uniqueTransformedBookings.length);
         
         // Also get bookings from localStorage (for local bookings created before API integration)
         try {
           const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
           console.log('📦 Local bookings from storage:', localBookings.length);
-          // Merge local bookings with API bookings (local bookings first)
-          const finalBookings = [...localBookings, ...transformedBookings];
+          
+          // Remove duplicates: API bookings take priority, filter out local bookings that exist in API
+          const apiBookingIds = new Set(uniqueTransformedBookings.map(b => b.id));
+          const uniqueLocalBookings = localBookings.filter(b => {
+            const localId = b.id || b._id;
+            return localId && !apiBookingIds.has(localId);
+          });
+          
+          // Merge: unique local bookings + API bookings (API bookings take priority)
+          const finalBookings = [...uniqueLocalBookings, ...uniqueTransformedBookings];
           console.log('✅ Final bookings to set:', finalBookings.length);
+          console.log('✅ Unique local bookings:', uniqueLocalBookings.length);
+          console.log('✅ API bookings:', uniqueTransformedBookings.length);
           setBookings(finalBookings);
         } catch (error) {
           console.error('❌ Error reading bookings from localStorage:', error);
-          console.log('✅ Setting only transformed bookings:', transformedBookings.length);
-          setBookings(transformedBookings);
+          console.log('✅ Setting only transformed bookings:', uniqueTransformedBookings.length);
+          setBookings(uniqueTransformedBookings);
         }
       } else {
         console.log('⚠️ No bookings found in API response or empty array');
@@ -718,7 +739,7 @@ const BookingsPage = () => {
         <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 lg:gap-6 pb-4 md:pb-6">
           {filteredBookings.map((booking, index) => (
             <BookingCard
-              key={booking.id}
+              key={`${booking.id}-${booking.bookingId}-${index}`}
               booking={booking}
               index={index}
               navigate={navigate}

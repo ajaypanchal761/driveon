@@ -32,14 +32,24 @@ const ModuleReferralDashboardPage = () => {
   const pointsForSignup = 50;
   const pointsForTrip = 50;
 
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+
   // Fetch referral dashboard data from API
   useEffect(() => {
     const fetchReferralDashboard = async () => {
+      if (!isAuthenticated) return; // Don't fetch if not authenticated
+      
       try {
         setLoading(true);
         const response = await referralService.getReferralDashboard();
+        console.log('📊 Referral Dashboard API Response:', response);
         
+        // Backend returns: { success: true, data: { referralCode, points, referrals, ... } }
+        // referralService.getReferralDashboard() returns: response.data = { success: true, data: { ... } }
+        // So response = { success: true, data: { referralCode, points, referrals, ... } }
         if (response.success && response.data) {
+          console.log('📊 Referral Data:', response.data);
+          console.log('📊 Points:', response.data.points);
           setReferralCode(response.data.referralCode || '');
           setPoints(response.data.points || 0);
           setReferrals(response.data.referrals || []);
@@ -48,6 +58,8 @@ const ModuleReferralDashboardPage = () => {
             activeReferrals: 0,
             totalPointsFromReferrals: 0,
           });
+        } else {
+          console.warn('⚠️ Invalid response structure:', response);
         }
       } catch (error) {
         console.error('Error fetching referral dashboard:', error);
@@ -65,7 +77,7 @@ const ModuleReferralDashboardPage = () => {
     };
 
     fetchReferralDashboard();
-  }, []);
+  }, [isAuthenticated]); // Re-fetch when authentication status changes
 
   // Use statistics from API or calculate from referrals
   const totalReferrals = statistics.totalReferrals || referrals.length;
@@ -102,6 +114,14 @@ const ModuleReferralDashboardPage = () => {
   // Display values
   const displayReferralCode = referralCode || reduxReferralCode || 'DRIVE123';
   const displayPoints = points || reduxPoints || 0;
+  // Format points to show exact decimals (5.25, 2.625, 10.5 - up to 3 decimal places)
+  const formatPoints = (pts) => {
+    if (typeof pts !== 'number') return pts;
+    if (pts % 1 === 0) return pts.toLocaleString();
+    // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
+    const decimals = pts.toString().split('.')[1]?.length || 0;
+    return decimals <= 3 ? Number(pts).toFixed(decimals) : Number(pts).toFixed(3);
+  };
 
   // Light version of dark background for profile section
   const profileSectionBg = colors.backgroundPrimary || colors.backgroundPrimary;
@@ -198,7 +218,7 @@ const ModuleReferralDashboardPage = () => {
             <div>
               <h2 className="text-sm font-semibold text-gray-600 mb-1">Total Points</h2>
               <p className="text-2xl font-bold text-black">
-                {loading ? '...' : displayPoints}
+                {loading ? '...' : formatPoints(displayPoints)}
               </p>
             </div>
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: iconBgColor }}>
@@ -226,7 +246,7 @@ const ModuleReferralDashboardPage = () => {
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 text-center">
             <p className="text-xs mb-1 text-gray-600">Points</p>
-            <p className="text-lg font-bold text-black">{totalPointsFromReferrals === 300 ? 200 : totalPointsFromReferrals}</p>
+            <p className="text-lg font-bold text-black">{formatPoints(totalPointsFromReferrals === 300 ? 200 : totalPointsFromReferrals)}</p>
           </div>
         </div>
       </div>
@@ -339,7 +359,7 @@ const ModuleReferralDashboardPage = () => {
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs text-gray-600 mb-0.5">Points Earned</p>
                     <p className="text-base font-bold text-black">
-                      +{referral.pointsEarned}
+                      +{formatPoints(referral.pointsEarned)}
                     </p>
                   </div>
                 </div>

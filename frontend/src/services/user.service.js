@@ -259,6 +259,22 @@ export const userService = {
   },
 
   /**
+   * Get Guarantor Points and History
+   * @returns {Promise}
+   */
+  getGuarantorPoints: async () => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.get(API_ENDPOINTS.USER.GUARANTOR_POINTS || '/user/guarantor-points');
+      return response.data;
+    } catch (error) {
+      console.error('Get guarantor points error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Change user password
    * @param {Object} data - Password data (currentPassword, newPassword)
    * @returns {Promise}
