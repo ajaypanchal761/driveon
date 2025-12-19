@@ -3819,6 +3819,7 @@ const CarDetailsPage = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
                 <button 
+                  onClick={() => navigate('/faq')}
                   className="text-sm font-medium hover:opacity-80 transition-opacity"
                   style={{ color: colors.textSecondary }}
                 >
@@ -4336,6 +4337,7 @@ const CarDetailsPage = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg md:text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
               <button 
+                onClick={() => navigate('/faq')}
                 className="text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ color: colors.textSecondary }}
               >
