@@ -22,7 +22,7 @@ const carImages = [carImg1, carImg2, carImg4, carImg5, carImg6, carImg8];
 /**
  * BookingCard Component - Individual booking card with scroll-based animation
  */
-const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDetailsModal, setCancellationBooking, setShowCancellationModal, getStatusColor, getStatusLabel, calculateDays, colors }) => {
+const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDetailsModal, setCancellationBooking, setShowCancellationModal, getStatusColor, getStatusLabel, calculateDays, calculateDelay, colors }) => {
   const [cardRef, isCardInView] = useInViewAnimation({ threshold: 0.1 });
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
   
@@ -86,6 +86,41 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
             Booking ID: <span className="font-semibold" style={{ color: colors.textPrimary }}>{booking.bookingId}</span>
           </p>
         </div>
+
+        {/* Delay Message - Show if trip end date has passed */}
+        {(() => {
+          const delayInfo = calculateDelay(booking.dropDate, booking.dropTime);
+          if (!delayInfo || booking.status === 'completed' || booking.status === 'cancelled') return null;
+          
+          return (
+            <div className="mb-3 p-3 rounded-xl border-2" style={{
+              backgroundColor: colors.warning + '15',
+              borderColor: colors.warning + '40'
+            }}>
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: colors.warning }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold mb-1" style={{ color: colors.textPrimary }}>
+                    Trip End Date Passed
+                  </p>
+                  <p className="text-xs leading-relaxed mb-2" style={{ color: colors.textSecondary }}>
+                    Your trip end date has passed by {delayInfo.delayText}. Additional charges will be applied.
+                  </p>
+                  <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.warning + '30' }}>
+                    <span className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+                      Additional Charges:
+                    </span>
+                    <span className="text-sm font-bold" style={{ color: colors.warning }}>
+                      ₹{delayInfo.additionalCharges.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Duration & Price */}
         <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: colors.backgroundPrimary }}>
@@ -192,6 +227,19 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
               color: colors.textPrimary,
               border: `1px solid ${colors.error}40`
             }}
+          >
+            View Details
+          </button>
+        )}
+        {booking.status === 'pending' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedBooking(booking);
+              setShowDetailsModal(true);
+            }}
+            className="w-full mt-3 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
+            style={{ backgroundColor: colors.backgroundTertiary }}
           >
             View Details
           </button>
@@ -632,6 +680,55 @@ const BookingsPage = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
 
+  // Calculate delay and additional charges
+  const calculateDelay = (dropDate, dropTime) => {
+    if (!dropDate) return null;
+    
+    // Combine date and time to get exact end datetime
+    const dropDateTime = new Date(dropDate);
+    if (dropTime) {
+      const [hours, minutes] = dropTime.split(':');
+      dropDateTime.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
+    }
+    
+    const now = new Date();
+    const delayMs = now - dropDateTime;
+    
+    // Only show delay if trip end date has passed
+    if (delayMs <= 0) return null;
+    
+    const delayHours = Math.floor(delayMs / (1000 * 60 * 60));
+    const delayDays = Math.floor(delayHours / 24);
+    const remainingHours = delayHours % 24;
+    
+    // Calculate additional charges (dummy data)
+    // Base rate: ₹500 per hour for first 24 hours, then ₹1000 per day
+    let additionalCharges = 0;
+    if (delayDays === 0) {
+      // Less than 24 hours: ₹500 per hour
+      additionalCharges = delayHours * 500;
+    } else {
+      // First 24 hours: ₹500 per hour
+      additionalCharges = 24 * 500;
+      // After 24 hours: ₹1000 per day
+      additionalCharges += delayDays * 1000;
+      // Remaining hours: ₹500 per hour
+      if (remainingHours > 0) {
+        additionalCharges += remainingHours * 500;
+      }
+    }
+    
+    return {
+      delayHours,
+      delayDays,
+      remainingHours,
+      additionalCharges,
+      delayText: delayDays > 0 
+        ? `${delayDays} day${delayDays > 1 ? 's' : ''} ${remainingHours > 0 ? `and ${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}`
+        : `${delayHours} hour${delayHours > 1 ? 's' : ''}`
+    };
+  };
+
   return (
     <div 
       className="min-h-screen w-full pb-20 md:pb-8"
@@ -729,6 +826,7 @@ const BookingsPage = () => {
               getStatusColor={getStatusColor}
               getStatusLabel={getStatusLabel}
               calculateDays={calculateDays}
+              calculateDelay={calculateDelay}
               colors={colors}
             />
           ))}

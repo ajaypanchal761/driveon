@@ -245,6 +245,8 @@ const AdminLoginPage = () => {
                     autoComplete="email"
                     autoFocus
                     {...register('email')}
+                    value={emailValue}
+                    onChange={(e) => setValue('email', e.target.value)}
                     onFocus={(e) => {
                       e.target.parentElement.style.borderColor = colors.backgroundTertiary;
                       e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
@@ -295,6 +297,8 @@ const AdminLoginPage = () => {
                     style={{ color: colors.backgroundTertiary }}
                     autoComplete="current-password"
                     {...register('password')}
+                    value={passwordValue}
+                    onChange={(e) => setValue('password', e.target.value)}
                     onFocus={(e) => {
                       e.target.parentElement.style.borderColor = colors.backgroundTertiary;
                       e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
