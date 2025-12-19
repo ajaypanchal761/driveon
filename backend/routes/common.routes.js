@@ -6,6 +6,7 @@ import {
   getBannerOverlay,
   searchPlaces,
 } from '../controllers/common.controller.js';
+import { getAddOnServicesPrices } from '../controllers/addonServices.controller.js';
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.get('/banners/promotional', getPromotionalBanner);
 router.get('/banners/overlay', getBannerOverlay);
 router.get('/faqs', getFAQs);
 router.get('/places/search', searchPlaces);
+router.get('/addon-services/prices', getAddOnServicesPrices);
 
 export default router;
 

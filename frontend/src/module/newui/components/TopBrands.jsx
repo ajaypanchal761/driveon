@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { carService } from '../../../../services/car.service';
+import { carService } from '../../../services/car.service';
 import logo1 from '../../../assets/car_logo1_PNG1.png';
 import logo2 from '../../../assets/car_logo2_PNG.png';
 import logo3 from '../../../assets/car_logo3_PNG.png';

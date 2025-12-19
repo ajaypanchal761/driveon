@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Keyboard, Mousewheel } from 'swiper/modules';
@@ -18,7 +18,6 @@ import { userService } from '../../services/user.service';
 import { setUser, updateUser } from '../../store/slices/userSlice';
 import razorpayService from '../../services/razorpay.service';
 import bookingService from '../../services/booking.service';
-import { getAddOnServicesPrices, calculateAddOnServicesTotal } from '../../utils/addOnServices';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -1158,15 +1157,15 @@ const CarDetailsPage = () => {
   }, [dispatch, isAuthenticated]);
   
   // Extract numeric price from car.price (format: "Rs. 200" or just number)
-  const getCarPrice = () => {
-    if (typeof car.price === 'number') return car.price;
-    if (typeof car.pricePerDay) return car.pricePerDay;
-    if (typeof car.price === 'string') {
+  const getCarPrice = useCallback(() => {
+    if (typeof car?.price === 'number') return car.price;
+    if (typeof car?.pricePerDay === 'number') return car.pricePerDay;
+    if (typeof car?.price === 'string') {
       const match = car.price.match(/\d+/);
       return match ? parseInt(match[0], 10) : 0;
     }
     return 0;
-  };
+  }, [car]);
 
   // Get car display name (Brand + Model or name)
   const getCarDisplayName = () => {
@@ -1339,30 +1338,32 @@ const CarDetailsPage = () => {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Load add-on services prices
+  // Load add-on services prices from API
   useEffect(() => {
-    const prices = getAddOnServicesPrices();
-    setAddOnServicesPrices(prices);
-    
-    // Listen for storage changes (when admin updates prices)
-    const handleStorageChange = (e) => {
-      if (e.key === 'addon_services_prices') {
-        const newPrices = getAddOnServicesPrices();
-        setAddOnServicesPrices(newPrices);
+    const fetchPrices = async () => {
+      try {
+        const response = await commonService.getAddOnServicesPrices();
+        if (response.success && response.data) {
+          setAddOnServicesPrices({
+            driver: response.data.driver || 500,
+            bodyguard: response.data.bodyguard || 1000,
+            gunmen: response.data.gunmen || 1500,
+            bouncer: response.data.bouncer || 800,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching add-on services prices:', error);
+        // Fallback to default prices
+        setAddOnServicesPrices({
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        });
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(() => {
-      const currentPrices = getAddOnServicesPrices();
-      setAddOnServicesPrices(currentPrices);
-    }, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+
+    fetchPrices();
   }, []);
 
   // Booking confirmation modal state
@@ -1427,7 +1428,7 @@ const CarDetailsPage = () => {
 
   // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
   // Use noon (12:00) to avoid timezone shift issues
-  const parseLocalDate = (dateStr) => {
+  const parseLocalDate = useCallback((dateStr) => {
     if (!dateStr) return null;
     const parts = dateStr.split('-');
     if (parts.length === 3) {
@@ -1438,7 +1439,7 @@ const CarDetailsPage = () => {
       return new Date(year, month, day, 12, 0, 0);
     }
     return null;
-  };
+  }, []);
 
   // Helper: Convert Date object to date string (YYYY-MM-DD) in local timezone
   const formatLocalDate = (date) => {
@@ -1449,17 +1450,35 @@ const CarDetailsPage = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Calculate dynamic price
-  const calculatePrice = () => {
+  // Helper function to format decimal values (remove trailing zeros)
+  const formatDecimal = (value) => {
+    if (value == null || isNaN(value)) return '0';
+    // Always show 2 decimal places for payment amounts
+    const numValue = typeof value === 'number' ? value : parseFloat(value);
+    if (isNaN(numValue)) return '0';
+    // Show exact decimal value, remove trailing zeros
+    return numValue.toFixed(2).replace(/\.?0+$/, '');
+  };
+
+  // Memoize price calculation to update when dependencies change
+  const priceDetails = useMemo(() => {
+    // Calculate add-on services total FIRST (even if dates not set)
+    const addOnServicesTotal = 
+      (addOnServices.driver * (addOnServicesPrices.driver || 0)) +
+      (addOnServices.bodyguard * (addOnServicesPrices.bodyguard || 0)) +
+      (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
+      (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
+
     if (!pickupDate || !dropDate || !car) {
       return {
         basePrice: 0,
         totalDays: 0,
-        totalPrice: 0,
+        totalPrice: addOnServicesTotal,
+        addOnServicesTotal: Math.round(addOnServicesTotal),
         advancePayment: 0,
         remainingPayment: 0,
         discount: 0,
-        finalPrice: 0,
+        finalPrice: Math.round(addOnServicesTotal),
       };
     }
 
@@ -1478,26 +1497,51 @@ const CarDetailsPage = () => {
     const weekendMultiplier = isWeekend ? 1.2 : 1.0;
     totalPrice = totalPrice * weekendMultiplier;
 
+    // Add add-on services to total price
+    totalPrice = totalPrice + addOnServicesTotal;
+
     // Apply coupon discount
     const discount = couponDiscount || 0;
-    const finalPrice = Math.max(0, totalPrice - discount);
+    const finalPriceBeforeRound = Math.max(0, totalPrice - discount);
+    const finalPrice = Math.round(finalPriceBeforeRound);
 
-    // Payment options
-    const advancePayment = Math.round(finalPrice * 0.35);
-    const remainingPayment = finalPrice - advancePayment;
+    // Payment options - Calculate from unrounded finalPrice to get exact decimal values
+    const advancePayment = finalPriceBeforeRound * 0.35;
+    const remainingPayment = finalPriceBeforeRound - advancePayment;
 
     return {
       basePrice,
       totalDays,
       totalPrice: Math.round(totalPrice),
+      addOnServicesTotal: Math.round(addOnServicesTotal),
       discount: Math.round(discount),
-      finalPrice: Math.round(finalPrice),
-      advancePayment,
-      remainingPayment: Math.round(remainingPayment),
+      finalPrice: finalPrice,
+      advancePayment: advancePayment, // Keep exact decimal value (calculated from unrounded finalPrice)
+      remainingPayment: remainingPayment, // Keep exact decimal value (calculated from unrounded finalPrice)
     };
-  };
+  }, [
+    pickupDate,
+    dropDate,
+    car,
+    addOnServices.driver,
+    addOnServices.bodyguard,
+    addOnServices.gunmen,
+    addOnServices.bouncer,
+    addOnServicesPrices.driver,
+    addOnServicesPrices.bodyguard,
+    addOnServicesPrices.gunmen,
+    addOnServicesPrices.bouncer,
+    couponDiscount,
+    paymentOption,
+    getCarPrice,
+    parseLocalDate,
+  ]);
 
-  const priceDetails = calculatePrice();
+  // Ensure addOnServicesTotal is always included (default to 0 if not calculated)
+  const finalPriceDetails = useMemo(() => ({
+    ...priceDetails,
+    addOnServicesTotal: priceDetails.addOnServicesTotal || 0,
+  }), [priceDetails]);
 
   // Get minimum date (today) - using local timezone
   const getMinDate = () => {
@@ -1655,7 +1699,7 @@ const CarDetailsPage = () => {
     }
 
     if (couponCode.toUpperCase() === 'SAVE10') {
-      const discount = priceDetails.totalPrice * 0.1;
+      const discount = finalPriceDetails.totalPrice * 0.1;
       setAppliedCoupon({ code: 'SAVE10', discount: discount });
       setCouponDiscount(discount);
       alert('Coupon applied successfully!');
@@ -1731,8 +1775,8 @@ const CarDetailsPage = () => {
 
     const amountToPay =
       paymentOption === "advance"
-        ? priceDetails.advancePayment
-        : priceDetails.finalPrice;
+        ? finalPriceDetails.advancePayment
+        : finalPriceDetails.finalPrice;
 
     setIsProcessing(true);
 
@@ -1801,10 +1845,10 @@ const CarDetailsPage = () => {
             specialRequests: bookingPayload.specialRequests,
 
             // Pricing details
-            totalPrice: priceDetails.totalPrice,
+            totalPrice: finalPriceDetails.totalPrice,
             paidAmount: amountToPay,
             remainingAmount:
-              (priceDetails.finalPrice || 0) - (amountToPay || 0),
+              (finalPriceDetails.finalPrice || 0) - (amountToPay || 0),
             couponCode: bookingPayload.couponCode,
             couponDiscount: bookingPayload.couponDiscount,
             paymentOption: bookingPayload.paymentOption,
@@ -2163,7 +2207,7 @@ const CarDetailsPage = () => {
       {/* Web container - max-width and centered on larger screens */}
       <div className="max-w-7xl mx-auto">
         {/* Desktop: Two-column layout (Image Gallery Left + Booking Form Right) */}
-        <div className="hidden lg:grid lg:grid-cols-[65%_35%] lg:gap-6 lg:px-6 xl:px-8 lg:mt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-4 lg:gap-6 px-4 lg:px-6 xl:px-8 mt-4 lg:mt-4">
           {/* Left Column: Car Image Gallery */}
           <div className="relative w-full">
             <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
@@ -2327,7 +2371,7 @@ const CarDetailsPage = () => {
           </div>
 
           {/* Right Column: Booking Form Card (Sticky) */}
-          <div className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <div className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto order-2 lg:order-none">
             <form onSubmit={handleSubmit} className="rounded-2xl p-4 xl:p-6 shadow-lg space-y-4"
               style={{ backgroundColor: colors.backgroundSecondary }}
             >
@@ -2339,9 +2383,9 @@ const CarDetailsPage = () => {
                   </span>
                   <span className="text-sm" style={{ color: colors.textSecondary }}>/day</span>
                 </div>
-                {priceDetails.totalDays > 0 && (
+                {finalPriceDetails.totalDays > 0 && (
                   <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    {priceDetails.totalDays} {priceDetails.totalDays === 1 ? 'day' : 'days'} • Total: Rs. {priceDetails.finalPrice}
+                    {finalPriceDetails.totalDays} {finalPriceDetails.totalDays === 1 ? 'day' : 'days'} • Total: Rs. {finalPriceDetails.finalPrice}
                   </div>
                 )}
               </div>
@@ -2452,35 +2496,43 @@ const CarDetailsPage = () => {
               </div>
 
               {/* Price Summary */}
-              {priceDetails.totalDays > 0 && (
+              {(finalPriceDetails.totalDays > 0 || finalPriceDetails.addOnServicesTotal > 0) && (
                 <div className="rounded-xl p-4" style={{ backgroundColor: colors.backgroundPrimary }}>
                   <h3 className="text-sm font-bold mb-2" style={{ color: colors.textPrimary }}>Price Summary</h3>
                   <div className="space-y-1.5 mb-3">
-                    <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
-                      <span>Base Price ({priceDetails.totalDays} days)</span>
-                      <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {priceDetails.totalPrice}</span>
-                    </div>
-                    {priceDetails.discount > 0 && (
+                    {finalPriceDetails.totalDays > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
+                        <span>Base Price ({finalPriceDetails.totalDays} days)</span>
+                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {finalPriceDetails.totalPrice - (finalPriceDetails.addOnServicesTotal || 0)}</span>
+                      </div>
+                    )}
+                    {finalPriceDetails.addOnServicesTotal > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
+                        <span>Add-on Services</span>
+                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {finalPriceDetails.addOnServicesTotal}</span>
+                      </div>
+                    )}
+                    {finalPriceDetails.discount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
                         <span>Discount</span>
-                        <span className="font-semibold" style={{ color: colors.success }}>-Rs. {priceDetails.discount}</span>
+                        <span className="font-semibold" style={{ color: colors.success }}>-Rs. {finalPriceDetails.discount}</span>
                       </div>
                     )}
                     <div className="border-t pt-1.5 mt-1.5" style={{ borderColor: colors.borderMedium }}>
                       <div className="flex justify-between font-bold" style={{ color: colors.textPrimary }}>
                         <span className="text-base">Total Amount</span>
-                        <span className="text-base">Rs. {priceDetails.finalPrice}</span>
+                        <span className="text-base">Rs. {finalPriceDetails.finalPrice}</span>
                       </div>
                     </div>
-                    {paymentOption === 'advance' && (
+                    {paymentOption === 'advance' && finalPriceDetails.totalDays > 0 && (
                       <div className="mt-2 pt-2 border-t" style={{ borderColor: colors.borderMedium }}>
                         <div className="flex justify-between mb-0.5 text-xs" style={{ color: colors.textSecondary }}>
                           <span>Advance Payment (35%)</span>
-                          <span className="font-semibold">Rs. {priceDetails.advancePayment}</span>
+                          <span className="font-semibold">Rs. {formatDecimal(finalPriceDetails.advancePayment)}</span>
                         </div>
                         <div className="flex justify-between text-xs" style={{ color: colors.textSecondary }}>
                           <span>Remaining Amount</span>
-                          <span className="font-semibold">Rs. {priceDetails.remainingPayment}</span>
+                          <span className="font-semibold">Rs. {formatDecimal(finalPriceDetails.remainingPayment)}</span>
                         </div>
                       </div>
                     )}

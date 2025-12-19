@@ -57,8 +57,8 @@ const GuarantorListPage = () => {
         const bookingsData = bookingsResponse?.data?.bookings || bookingsResponse?.bookings || [];
         const guarantorRequestsData = guarantorRequestsResponse?.data?.requests || guarantorRequestsResponse?.requests || [];
 
-        // Create a map to store all guarantors per user
-        const userGuarantorsMap = new Map();
+        // Create a map to store all guarantors per booking ID
+        const bookingGuarantorsMap = new Map();
 
         // Process bookings (for backward compatibility)
         // First, get all guarantor requests to map them to bookings
@@ -88,54 +88,53 @@ const GuarantorListPage = () => {
         bookingsData.forEach((booking) => {
           const user = booking.user || {};
           const guarantor = booking.guarantor || null;
-          const userId = user._id || booking.userId || 'unknown-user';
+          const bookingId = booking.bookingId || booking._id?.toString() || 'N/A';
+          const bookingMongoId = booking._id?.toString() || booking.id?.toString();
 
-          if (!userGuarantorsMap.has(userId)) {
-            userGuarantorsMap.set(userId, {
-              linkedUserId: userId,
+          // Skip if no valid booking ID
+          if (bookingId === 'N/A' && !bookingMongoId) return;
+
+          // Create or get booking group
+          if (!bookingGuarantorsMap.has(bookingId)) {
+            bookingGuarantorsMap.set(bookingId, {
+              bookingId: bookingId,
+              bookingMongoId: bookingMongoId,
+              linkedUserId: user._id || booking.userId || 'unknown-user',
               linkedUserName: user.name || booking.userName || 'N/A',
               linkedUserEmail: user.email || booking.userEmail || 'N/A',
               avatar: user.profilePhoto || null,
               guarantors: [],
-              bookings: new Set(),
-              bookingIds: new Set(),
             });
           }
 
-          const userData = userGuarantorsMap.get(userId);
-          if (booking.bookingId) {
-            userData.bookings.add(booking.bookingId);
-            userData.bookingIds.add(booking.bookingId);
-          } else if (booking._id) {
-            userData.bookings.add(booking._id);
-          }
+          const bookingData = bookingGuarantorsMap.get(bookingId);
 
           if (guarantor) {
-            // Check if this guarantor already exists for this user
-            const existingGuarantor = userData.guarantors.find(
-              (g) => g.guarantorId === guarantor._id?.toString()
+            // Check if this guarantor already exists for this booking
+            const existingGuarantor = bookingData.guarantors.find(
+              (g) => g.guarantorId === guarantor._id?.toString() && g.bookingId === bookingId
             );
 
             if (!existingGuarantor) {
               // Try to find the request ID for this booking+guarantor combination
-              const bookingId = booking._id?.toString() || booking.id?.toString();
               const guarantorId = guarantor._id?.toString();
-              const requestKey = `${bookingId}-${guarantorId}`;
+              const requestKey = `${bookingMongoId}-${guarantorId}`;
               const requestId = allRequestsMap.get(requestKey) || null;
 
               console.log('🔍 Looking for request:', {
                 bookingId,
+                bookingMongoId,
                 guarantorId,
                 requestKey,
                 found: !!requestId,
                 requestId,
               });
 
-              userData.guarantors.push({
-                id: requestId || `${userId}-${guarantor._id}-${booking._id}`,
+              bookingData.guarantors.push({
+                id: requestId || `${bookingId}-${guarantor._id}-${booking._id}`,
                 requestId: requestId, // Store the actual request ID if found
-                bookingId: booking.bookingId,
-                bookingMongoId: booking._id?.toString() || booking.id?.toString(),
+                bookingId: bookingId,
+                bookingMongoId: bookingMongoId,
                 guarantorId: guarantor._id?.toString() || null,
                 guarantorName: guarantor.name || 'N/A',
                 guarantorEmail: guarantor.email || '',
@@ -155,37 +154,38 @@ const GuarantorListPage = () => {
         guarantorRequestsData.forEach((request) => {
           const user = request.user || {};
           const guarantor = request.guarantor || {};
-          const userId = user._id?.toString() || 'unknown-user';
+          const bookingId = request.booking?.bookingId || request.booking?._id?.toString() || 'N/A';
+          const bookingMongoId = request.booking?._id || request.booking?.id || null;
 
-          if (!userGuarantorsMap.has(userId)) {
-            userGuarantorsMap.set(userId, {
-              linkedUserId: userId,
+          // Skip if no valid booking ID
+          if (bookingId === 'N/A' && !bookingMongoId) return;
+
+          // Create or get booking group
+          if (!bookingGuarantorsMap.has(bookingId)) {
+            bookingGuarantorsMap.set(bookingId, {
+              bookingId: bookingId,
+              bookingMongoId: bookingMongoId,
+              linkedUserId: user._id?.toString() || 'unknown-user',
               linkedUserName: user.name || 'N/A',
               linkedUserEmail: user.email || 'N/A',
               avatar: user.profilePhoto || null,
               guarantors: [],
-              bookings: new Set(),
-              bookingIds: new Set(),
             });
           }
 
-          const userData = userGuarantorsMap.get(userId);
-          if (request.booking?.bookingId) {
-            userData.bookings.add(request.booking.bookingId);
-            userData.bookingIds.add(request.booking.bookingId);
-          }
+          const bookingData = bookingGuarantorsMap.get(bookingId);
 
-          // Check if this guarantor already exists for this user
-          const existingGuarantor = userData.guarantors.find(
-            (g) => g.guarantorId === guarantor._id?.toString()
+          // Check if this guarantor already exists for this booking
+          const existingGuarantor = bookingData.guarantors.find(
+            (g) => g.guarantorId === guarantor._id?.toString() && g.bookingId === bookingId
           );
 
           if (!existingGuarantor) {
-            userData.guarantors.push({
-              id: request._id?.toString() || `${userId}-${guarantor._id}`,
+            bookingData.guarantors.push({
+              id: request._id?.toString() || `${bookingId}-${guarantor._id}`,
               requestId: request._id?.toString() || null, // Store request ID separately
-              bookingId: request.booking?.bookingId || 'N/A',
-              bookingMongoId: request.booking?._id || request.booking?.id || null,
+              bookingId: bookingId,
+              bookingMongoId: bookingMongoId,
               guarantorId: guarantor._id?.toString() || null,
               guarantorName: guarantor.name || 'N/A',
               guarantorEmail: guarantor.email || '',
@@ -200,16 +200,16 @@ const GuarantorListPage = () => {
           }
         });
 
-        // Convert map to array format for display
-        const guarantorList = Array.from(userGuarantorsMap.values()).map((userData) => ({
-          id: userData.linkedUserId,
-          linkedUserId: userData.linkedUserId,
-          linkedUserName: userData.linkedUserName,
-          linkedUserEmail: userData.linkedUserEmail,
-          avatar: userData.avatar,
-          linkedBookings: userData.bookings.size,
-          bookingIds: Array.from(userData.bookingIds),
-          guarantors: userData.guarantors,
+        // Convert map to array format for display - grouped by booking ID
+        const guarantorList = Array.from(bookingGuarantorsMap.values()).map((bookingData) => ({
+          id: bookingData.bookingId,
+          bookingId: bookingData.bookingId,
+          bookingMongoId: bookingData.bookingMongoId,
+          linkedUserId: bookingData.linkedUserId,
+          linkedUserName: bookingData.linkedUserName,
+          linkedUserEmail: bookingData.linkedUserEmail,
+          avatar: bookingData.avatar,
+          guarantors: bookingData.guarantors,
         }));
 
         setGuarantors(guarantorList);
@@ -234,46 +234,49 @@ const GuarantorListPage = () => {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((userGroup) => {
+      filtered = filtered.filter((bookingGroup) => {
+        // Check booking ID
+        const matchesBookingId = bookingGroup.bookingId?.toLowerCase().includes(query);
+        
         // Check linked user info
         const matchesLinkedUser = 
-          userGroup.linkedUserName?.toLowerCase().includes(query) ||
-          userGroup.linkedUserEmail?.toLowerCase().includes(query);
+          bookingGroup.linkedUserName?.toLowerCase().includes(query) ||
+          bookingGroup.linkedUserEmail?.toLowerCase().includes(query);
         
         // Check guarantors info
-        const matchesGuarantor = userGroup.guarantors?.some((guarantor) =>
+        const matchesGuarantor = bookingGroup.guarantors?.some((guarantor) =>
           guarantor.guarantorName?.toLowerCase().includes(query) ||
           guarantor.guarantorEmail?.toLowerCase().includes(query) ||
           guarantor.guarantorPhone?.includes(query)
         );
         
-        return matchesLinkedUser || matchesGuarantor;
+        return matchesBookingId || matchesLinkedUser || matchesGuarantor;
       });
     }
 
     // Verification status filter
     if (filters.verificationStatus !== 'all') {
-      filtered = filtered.map((userGroup) => {
-        const filteredGuarantors = userGroup.guarantors?.filter(
+      filtered = filtered.map((bookingGroup) => {
+        const filteredGuarantors = bookingGroup.guarantors?.filter(
           (guarantor) => guarantor.verificationStatus === filters.verificationStatus
         ) || [];
-        return { ...userGroup, guarantors: filteredGuarantors };
-      }).filter((userGroup) => userGroup.guarantors?.length > 0);
+        return { ...bookingGroup, guarantors: filteredGuarantors };
+      }).filter((bookingGroup) => bookingGroup.guarantors?.length > 0);
     }
 
     // Invitation status filter
     if (filters.invitationStatus !== 'all') {
-      filtered = filtered.map((userGroup) => {
-        const filteredGuarantors = userGroup.guarantors?.filter(
+      filtered = filtered.map((bookingGroup) => {
+        const filteredGuarantors = bookingGroup.guarantors?.filter(
           (guarantor) => guarantor.invitationStatus === filters.invitationStatus
         ) || [];
-        return { ...userGroup, guarantors: filteredGuarantors };
-      }).filter((userGroup) => userGroup.guarantors?.length > 0);
+        return { ...bookingGroup, guarantors: filteredGuarantors };
+      }).filter((bookingGroup) => bookingGroup.guarantors?.length > 0);
     }
 
     // Linked user filter
     if (filters.linkedUser !== 'all') {
-      filtered = filtered.filter((userGroup) => userGroup.linkedUserId === filters.linkedUser);
+      filtered = filtered.filter((bookingGroup) => bookingGroup.linkedUserId === filters.linkedUser);
     }
 
     setFilteredGuarantors(filtered);
@@ -378,20 +381,20 @@ const GuarantorListPage = () => {
         // Update state - remove guarantor from the nested structure
         const guarantorIdToRemove = guarantor.id;
         setGuarantors((prevList) => {
-          return prevList.map((userGroup) => {
-            // Filter out the deleted guarantor from this user's guarantors array
-            const updatedGuarantors = userGroup.guarantors?.filter(
+          return prevList.map((bookingGroup) => {
+            // Filter out the deleted guarantor from this booking's guarantors array
+            const updatedGuarantors = bookingGroup.guarantors?.filter(
               (g) => g.id !== guarantorIdToRemove && g.requestId !== requestId
             ) || [];
             
-            // If no guarantors left, we can either keep the user group or remove it
+            // If no guarantors left, we can either keep the booking group or remove it
             // For now, keep it but with empty guarantors array
             return {
-              ...userGroup,
+              ...bookingGroup,
               guarantors: updatedGuarantors,
             };
-          }).filter((userGroup) => {
-            // Optionally remove user groups with no guarantors
+          }).filter((bookingGroup) => {
+            // Optionally remove booking groups with no guarantors
             // For now, keep them so user can add new guarantors
             return true;
           });
@@ -399,12 +402,12 @@ const GuarantorListPage = () => {
         
         // Also update filtered guarantors
         setFilteredGuarantors((prevList) => {
-          return prevList.map((userGroup) => {
-            const updatedGuarantors = userGroup.guarantors?.filter(
+          return prevList.map((bookingGroup) => {
+            const updatedGuarantors = bookingGroup.guarantors?.filter(
               (g) => g.id !== guarantorIdToRemove && g.requestId !== requestId
             ) || [];
             return {
-              ...userGroup,
+              ...bookingGroup,
               guarantors: updatedGuarantors,
             };
           });
@@ -659,10 +662,10 @@ const GuarantorListPage = () => {
               options={[
                 { value: 'all', label: 'All Users' },
                 ...Array.from(new Set(guarantors.map((g) => g.linkedUserId))).map((userId) => {
-                  const guarantor = guarantors.find((g) => g.linkedUserId === userId);
+                  const bookingGroup = guarantors.find((g) => g.linkedUserId === userId);
                   return {
                     value: userId,
-                    label: guarantor?.linkedUserName || 'Unknown',
+                    label: bookingGroup?.linkedUserName || 'Unknown',
                   };
                 }),
               ]}
@@ -682,9 +685,9 @@ const GuarantorListPage = () => {
         </div>
 
         <div className="space-y-4">
-          {filteredGuarantors.map((userGroup, groupIndex) => (
-            <Card key={userGroup.linkedUserId || groupIndex} className="p-4 hover:shadow-lg transition-all">
-              {/* Linked User Header */}
+          {filteredGuarantors.map((bookingGroup, groupIndex) => (
+            <Card key={bookingGroup.bookingId || groupIndex} className="p-4 hover:shadow-lg transition-all">
+              {/* Booking ID Header */}
               <div className="mb-4 pb-4 border-b border-gray-200">
                 <div className="flex items-start gap-4">
                     {/* Avatar */}
@@ -692,68 +695,64 @@ const GuarantorListPage = () => {
                       className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                       style={{ backgroundColor: colors.backgroundTertiary }}
                     >
-                    {userGroup.avatar ? (
-                      <img src={userGroup.avatar} alt={userGroup.linkedUserName} className="w-full h-full rounded-full object-cover" />
+                    {bookingGroup.avatar ? (
+                      <img src={bookingGroup.avatar} alt={bookingGroup.linkedUserName} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                      <span>{userGroup.linkedUserName?.charAt(0).toUpperCase() || 'U'}</span>
+                      <span>{bookingGroup.linkedUserName?.charAt(0).toUpperCase() || 'U'}</span>
                       )}
                     </div>
                     <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{userGroup.linkedUserName}</h3>
-                        <p className="text-xs text-gray-500 mb-1">{userGroup.linkedUserEmail}</p>
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-gray-600">Total Bookings: </span>
-                          <span className="text-xs font-semibold text-gray-900">{userGroup.linkedBookings}</span>
-                          {userGroup.bookingIds && userGroup.bookingIds.length > 0 && (
-                            <>
-                              <span className="text-xs text-gray-600">|</span>
-                              <span className="text-xs text-gray-600">Booking IDs: </span>
-                              {userGroup.bookingIds.map((bookingId, idx) => (
-                                <span key={idx} className="text-xs font-mono text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-                                  {bookingId}
-                        </span>
-                              ))}
-                            </>
-                          )}
+                      {/* Booking ID and Add Button Row */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <span className="text-xs text-gray-500">Booking ID: </span>
+                          <span className="text-sm font-mono font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                            {bookingGroup.bookingId}
+                          </span>
+                        </div>
+                        {/* Add Guarantor Button - Top Right Corner */}
+                        <button
+                          onClick={() => {
+                            // Use booking info for adding guarantor
+                            const firstGuarantor = bookingGroup.guarantors?.[0];
+                            if (firstGuarantor) {
+                              handleAddGuarantor({
+                                ...firstGuarantor,
+                                linkedUserName: bookingGroup.linkedUserName,
+                                linkedUserEmail: bookingGroup.linkedUserEmail,
+                                bookingId: bookingGroup.bookingId,
+                                bookingMongoId: bookingGroup.bookingMongoId,
+                              });
+                            } else {
+                              // If no guarantors, create a booking object
+                              handleAddGuarantor({
+                                linkedUserName: bookingGroup.linkedUserName,
+                                linkedUserEmail: bookingGroup.linkedUserEmail,
+                                bookingId: bookingGroup.bookingId,
+                                bookingMongoId: bookingGroup.bookingMongoId,
+                              });
+                            }
+                          }}
+                          className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                          style={{ backgroundColor: colors.backgroundTertiary }}
+                        >
+                          + Add Guarantor
+                        </button>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 mb-1">{bookingGroup.linkedUserName}</h3>
+                      <p className="text-xs text-gray-500 mb-1">{bookingGroup.linkedUserEmail}</p>
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-gray-600">Guarantors: </span>
+                        <span className="text-xs font-semibold text-gray-900">{bookingGroup.guarantors?.length || 0}</span>
                       </div>
                     </div>
-                       {/* Add Guarantor Button - Top Right */}
-                       <button
-                         onClick={() => {
-                           // Find the first booking to use for adding guarantor
-                           const firstGuarantor = userGroup.guarantors?.[0];
-                           if (firstGuarantor) {
-                             handleAddGuarantor({
-                               ...firstGuarantor,
-                               linkedUserName: userGroup.linkedUserName,
-                               linkedUserEmail: userGroup.linkedUserEmail,
-                             });
-                           } else {
-                             // If no guarantors, create a dummy booking object
-                             handleAddGuarantor({
-                               linkedUserName: userGroup.linkedUserName,
-                               linkedUserEmail: userGroup.linkedUserEmail,
-                               bookingId: userGroup.bookingIds?.[0] || 'N/A',
-                               bookingMongoId: null,
-                             });
-                           }
-                         }}
-                         className="px-4 py-2 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
-                         style={{ backgroundColor: colors.backgroundTertiary }}
-                       >
-                         + Add Guarantor
-                       </button>
                   </div>
-                      </div>
-                      </div>
-                    </div>
+                </div>
 
               {/* Guarantors List - Horizontal Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {userGroup.guarantors && userGroup.guarantors.length > 0 ? (
-                  userGroup.guarantors.map((guarantor, guarantorIndex) => (
+                {bookingGroup.guarantors && bookingGroup.guarantors.length > 0 ? (
+                  bookingGroup.guarantors.map((guarantor, guarantorIndex) => (
                     <div key={guarantor.id || guarantorIndex} className="bg-gray-50 border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow relative">
                       {/* Delete Button - Top Right Corner */}
                       <button

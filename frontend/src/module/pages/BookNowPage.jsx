@@ -3,13 +3,13 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import razorpayService from "../../services/razorpay.service";
 import bookingService from "../../services/booking.service";
 import { userService } from "../../services/user.service";
+import { commonService } from "../../services/common.service";
 import { useAppSelector } from "../../hooks/redux";
 import CarDetailsHeader from "../components/layout/CarDetailsHeader";
 import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
 import CustomSelect from "../components/common/CustomSelect";
 import { colors } from "../theme/colors";
 import { motion } from "framer-motion";
-import { getAddOnServicesPrices, calculateAddOnServicesTotal } from "../../utils/addOnServices";
 
 // Import car images for mock data
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -310,30 +310,32 @@ const BookNowPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [submitWarning, setSubmitWarning] = useState("");
 
-  // Load add-on services prices
+  // Load add-on services prices from API
   useEffect(() => {
-    const prices = getAddOnServicesPrices();
-    setAddOnServicesPrices(prices);
-    
-    // Listen for storage changes (when admin updates prices)
-    const handleStorageChange = (e) => {
-      if (e.key === 'addon_services_prices') {
-        const newPrices = getAddOnServicesPrices();
-        setAddOnServicesPrices(newPrices);
+    const fetchPrices = async () => {
+      try {
+        const response = await commonService.getAddOnServicesPrices();
+        if (response.success && response.data) {
+          setAddOnServicesPrices({
+            driver: response.data.driver || 500,
+            bodyguard: response.data.bodyguard || 1000,
+            gunmen: response.data.gunmen || 1500,
+            bouncer: response.data.bouncer || 800,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching add-on services prices:', error);
+        // Fallback to default prices
+        setAddOnServicesPrices({
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        });
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(() => {
-      const currentPrices = getAddOnServicesPrices();
-      setAddOnServicesPrices(currentPrices);
-    }, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+
+    fetchPrices();
   }, []);
 
   // Booking confirmation modal state (shown after successful Razorpay payment)
@@ -1318,9 +1320,20 @@ const BookNowPage = () => {
                 >
                   <span>Base Price ({priceDetails.totalDays} days)</span>
                   <span className="font-semibold">
-                    Rs. {priceDetails.totalPrice}
+                    Rs. {priceDetails.totalPrice - (priceDetails.addOnServicesTotal || 0)}
                   </span>
                 </div>
+                {priceDetails.addOnServicesTotal > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
+                  >
+                    <span>Add-on Services</span>
+                    <span className="font-semibold">
+                      Rs. {priceDetails.addOnServicesTotal}
+                    </span>
+                  </div>
+                )}
                 {priceDetails.discount > 0 && (
                   <div
                     className="flex justify-between text-sm"

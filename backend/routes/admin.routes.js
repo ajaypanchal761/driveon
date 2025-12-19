@@ -59,6 +59,10 @@ import {
   toggleCouponStatus,
   getCouponUsage,
 } from '../controllers/admin.coupon.controller.js';
+import {
+  getAdminAddOnServicesPrices,
+  updateAddOnServicesPrices,
+} from '../controllers/addonServices.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 
 const router = express.Router();
@@ -307,6 +311,18 @@ router.patch('/coupons/:id/toggle', authenticateAdmin, toggleCouponStatus);
 // Get Coupon Usage Statistics - PROTECTED
 // Route: GET /api/admin/coupons/:id/usage
 router.get('/coupons/:id/usage', authenticateAdmin, getCouponUsage);
+
+// ============================================
+// ADD-ON SERVICES MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Get Add-On Services Prices - PROTECTED
+// Route: GET /api/admin/addon-services/prices
+router.get('/addon-services/prices', authenticateAdmin, getAdminAddOnServicesPrices);
+
+// Update Add-On Services Prices - PROTECTED
+// Route: PUT /api/admin/addon-services/prices
+router.put('/addon-services/prices', authenticateAdmin, updateAddOnServicesPrices);
 
 // ============================================
 // REFERRAL MANAGEMENT ROUTES - PROTECTED

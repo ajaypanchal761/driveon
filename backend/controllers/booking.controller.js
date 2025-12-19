@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
+import AddOnServices from '../models/AddOnServices.js';
 import { processReferralTripCompletion } from './referral.controller.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
 
@@ -19,6 +20,7 @@ export const createBooking = async (req, res) => {
       paymentOption,
       specialRequests,
       couponCode,
+      addOnServices, // Optional: { driver: 0, bodyguard: 0, gunmen: 0, bouncer: 0 }
     } = req.body;
 
     const userId = req.user._id;
@@ -204,6 +206,56 @@ export const createBooking = async (req, res) => {
     // Apply multipliers
     totalPrice = totalPrice * (1 + weekendMultiplier);
 
+    // Calculate add-on services total
+    let addOnServicesTotal = 0;
+    let addOnServicesData = {
+      driver: 0,
+      bodyguard: 0,
+      gunmen: 0,
+      bouncer: 0,
+    };
+
+    if (addOnServices && typeof addOnServices === 'object') {
+      try {
+        // Get current prices from database
+        const prices = await AddOnServices.getPrices();
+        
+        // Validate and calculate add-on services
+        const quantities = {
+          driver: Math.max(0, parseInt(addOnServices.driver) || 0),
+          bodyguard: Math.max(0, parseInt(addOnServices.bodyguard) || 0),
+          gunmen: Math.max(0, parseInt(addOnServices.gunmen) || 0),
+          bouncer: Math.max(0, parseInt(addOnServices.bouncer) || 0),
+        };
+
+        // Calculate total for add-on services
+        addOnServicesTotal = 
+          (quantities.driver * prices.driver) +
+          (quantities.bodyguard * prices.bodyguard) +
+          (quantities.gunmen * prices.gunmen) +
+          (quantities.bouncer * prices.bouncer);
+
+        addOnServicesData = quantities;
+
+        console.log('✅ Add-on services calculated:', {
+          quantities,
+          prices: {
+            driver: prices.driver,
+            bodyguard: prices.bodyguard,
+            gunmen: prices.gunmen,
+            bouncer: prices.bouncer,
+          },
+          total: addOnServicesTotal,
+        });
+      } catch (addOnError) {
+        console.error('❌ Error calculating add-on services:', addOnError);
+        // Continue without add-on services if there's an error
+      }
+    }
+
+    // Add add-on services to total price
+    totalPrice = totalPrice + addOnServicesTotal;
+
     // Handle coupon discount if provided
     let couponDiscount = 0;
     let appliedCoupon = null;
@@ -311,7 +363,9 @@ export const createBooking = async (req, res) => {
         discount: Math.round(couponDiscount),
         finalPrice: Math.round(finalPrice),
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        addOnServicesTotal: Math.round(addOnServicesTotal),
       },
+      addOnServices: addOnServicesData,
       paymentOption: paymentOption || 'full',
       paymentStatus: 'pending',
       paidAmount: 0,

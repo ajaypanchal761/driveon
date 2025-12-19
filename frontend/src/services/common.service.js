@@ -61,6 +61,20 @@ export const commonService = {
       throw error;
     }
   },
+
+  /**
+   * Get add-on services prices
+   * @returns {Promise}
+   */
+  getAddOnServicesPrices: async () => {
+    try {
+      const response = await api.get('/common/addon-services/prices');
+      return response.data;
+    } catch (error) {
+      console.error('Get add-on services prices error:', error);
+      throw error;
+    }
+  },
 };
 
 export default commonService;

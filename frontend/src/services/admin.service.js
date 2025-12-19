@@ -353,6 +353,50 @@ export const adminService = {
   },
 
   /**
+   * Get Guarantor Points for a Booking (Admin)
+   * @param {String} bookingId - Booking ID
+   * @returns {Promise}
+   */
+  getBookingGuarantorPoints: async (bookingId) => {
+    try {
+      const response = await api.get(`/admin/bookings/${bookingId}/guarantor-points`);
+      return response.data;
+    } catch (error) {
+      console.error('Get booking guarantor points error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Add-On Services Prices (Admin)
+   * @returns {Promise}
+   */
+  getAddOnServicesPrices: async () => {
+    try {
+      const response = await api.get('/admin/addon-services/prices');
+      return response.data;
+    } catch (error) {
+      console.error('Get add-on services prices error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update Add-On Services Prices (Admin)
+   * @param {Object} prices - Prices object { driver, bodyguard, gunmen, bouncer }
+   * @returns {Promise}
+   */
+  updateAddOnServicesPrices: async (prices) => {
+    try {
+      const response = await api.put('/admin/addon-services/prices', prices);
+      return response.data;
+    } catch (error) {
+      console.error('Update add-on services prices error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get Booking Statistics (Admin)
    * @param {Object} params - Query parameters (dateFrom, dateTo)
    * @returns {Promise}

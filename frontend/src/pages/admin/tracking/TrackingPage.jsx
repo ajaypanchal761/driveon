@@ -652,7 +652,39 @@ const TrackingPage = () => {
                           <p className="text-xs text-gray-600">Last Update</p>
                           <p className="text-sm font-semibold text-gray-900">
                             {loc.timestamp
-                              ? new Date(loc.timestamp).toLocaleTimeString()
+                              ? (() => {
+                                  const updateDate = new Date(loc.timestamp);
+                                  const now = new Date();
+                                  const diffMs = now - updateDate;
+                                  const diffMins = Math.floor(diffMs / 60000);
+                                  
+                                  // If updated within last 5 minutes, show "Live" indicator
+                                  if (diffMins < 5) {
+                                    return (
+                                      <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                        {updateDate.toLocaleString('en-IN', { 
+                                          day: '2-digit', 
+                                          month: '2-digit', 
+                                          year: 'numeric',
+                                          hour: '2-digit', 
+                                          minute: '2-digit',
+                                          hour12: true 
+                                        })}
+                                      </span>
+                                    );
+                                  }
+                                  
+                                  // Otherwise show full date and time
+                                  return updateDate.toLocaleString('en-IN', { 
+                                    day: '2-digit', 
+                                    month: '2-digit', 
+                                    year: 'numeric',
+                                    hour: '2-digit', 
+                                    minute: '2-digit',
+                                    hour12: true 
+                                  });
+                                })()
                               : 'N/A'}
                           </p>
                         </div>
@@ -788,7 +820,41 @@ const LocationDetailModal = ({ location, onClose }) => {
                   <label className="text-xs font-medium text-gray-700">Last Update</label>
                   <p className="text-sm text-gray-900">
                     {location.timestamp
-                      ? new Date(location.timestamp).toLocaleString()
+                      ? (() => {
+                          const updateDate = new Date(location.timestamp);
+                          const now = new Date();
+                          const diffMs = now - updateDate;
+                          const diffMins = Math.floor(diffMs / 60000);
+                          
+                          // If updated within last 5 minutes, show "Live" indicator
+                          if (diffMins < 5) {
+                            return (
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                {updateDate.toLocaleString('en-IN', { 
+                                  day: '2-digit', 
+                                  month: '2-digit', 
+                                  year: 'numeric',
+                                  hour: '2-digit', 
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                  hour12: true 
+                                })}
+                              </span>
+                            );
+                          }
+                          
+                          // Otherwise show full date and time
+                          return updateDate.toLocaleString('en-IN', { 
+                            day: '2-digit', 
+                            month: '2-digit', 
+                            year: 'numeric',
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true 
+                          });
+                        })()
                       : 'N/A'}
                   </p>
                 </div>

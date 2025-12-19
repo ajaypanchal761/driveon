@@ -1006,11 +1006,35 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
   const [activeTab, setActiveTab] = useState('details');
   const [paymentStatus, setPaymentStatus] = useState(booking.paymentStatus || 'pending');
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+  const [guarantorPoints, setGuarantorPoints] = useState(null);
+  const [loadingGuarantorPoints, setLoadingGuarantorPoints] = useState(false);
 
   // Update payment status when booking prop changes
   useEffect(() => {
     setPaymentStatus(booking.paymentStatus || 'pending');
   }, [booking.paymentStatus]);
+
+  // Fetch guarantor points when modal opens
+  useEffect(() => {
+    const fetchGuarantorPoints = async () => {
+      if (!booking?.id) return;
+      
+      try {
+        setLoadingGuarantorPoints(true);
+        const response = await adminService.getBookingGuarantorPoints(booking.id);
+        if (response.success && response.data) {
+          setGuarantorPoints(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching guarantor points:', error);
+        // Don't show error to user, just log it
+      } finally {
+        setLoadingGuarantorPoints(false);
+      }
+    };
+
+    fetchGuarantorPoints();
+  }, [booking?.id]);
 
   // Calculate remaining amount
   const remainingAmount = (booking.totalAmount || 0) - (booking.paidAmount || 0);
@@ -1209,7 +1233,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 {booking.guarantorName && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Guarantor Information</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="text-xs font-medium text-gray-700">Name</label>
                         <p className="text-sm text-gray-900">{booking.guarantorName}</p>
@@ -1219,6 +1243,79 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                         <p className="text-sm text-gray-900">{booking.guarantorId}</p>
                       </div>
                     </div>
+
+                    {/* Guarantor Points Section */}
+                    {loadingGuarantorPoints ? (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600">Loading guarantor points...</p>
+                      </div>
+                    ) : guarantorPoints && guarantorPoints.guarantors && guarantorPoints.guarantors.length > 0 ? (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Guarantor Points Allocation</h4>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <span className="text-gray-600">Booking Amount:</span>
+                              <p className="font-semibold text-gray-900">₹{guarantorPoints.bookingAmount?.toLocaleString() || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">10% Pool Amount:</span>
+                              <p className="font-semibold text-gray-900">
+                                ₹{(() => {
+                                  const amt = Number(guarantorPoints.totalPoolAmount);
+                                  if (amt % 1 === 0) return amt.toLocaleString();
+                                  const decimals = amt.toString().split('.')[1]?.length || 0;
+                                  return decimals <= 3 ? amt.toFixed(decimals) : amt.toFixed(3);
+                                })()}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Total Guarantors:</span>
+                              <p className="font-semibold text-gray-900">{guarantorPoints.totalGuarantors || 0}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Active Guarantors:</span>
+                              <p className="font-semibold text-green-600">{guarantorPoints.activeGuarantors || 0}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 pt-3 border-t border-blue-200">
+                            <h5 className="text-xs font-semibold text-gray-900 mb-2">Points Per Guarantor:</h5>
+                            <div className="space-y-2">
+                              {guarantorPoints.guarantors.map((guarantor, index) => (
+                                <div key={guarantor.id || index} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
+                                  <div className="flex-1">
+                                    <p className="text-xs font-medium text-gray-900">{guarantor.guarantorName}</p>
+                                    <p className="text-xs text-gray-500">{guarantor.guarantorEmail}</p>
+                                    {guarantor.guarantorGuarantorId && (
+                                      <p className="text-xs text-gray-500">ID: {guarantor.guarantorGuarantorId}</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <p className={`text-sm font-bold ${guarantor.status === 'active' ? 'text-green-600' : 'text-red-600 line-through'}`}>
+                                      {(() => {
+                                        const pts = Number(guarantor.pointsAllocated);
+                                        if (pts % 1 === 0) return pts.toLocaleString();
+                                        const decimals = pts.toString().split('.')[1]?.length || 0;
+                                        return decimals <= 3 ? pts.toFixed(decimals) : pts.toFixed(3);
+                                      })()}
+                                    </p>
+                                    <p className={`text-xs ${guarantor.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                                      {guarantor.status === 'active' ? 'Active' : 'Reversed'}
+                                    </p>
+                                    {guarantor.reversedAt && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(guarantor.reversedAt).toLocaleDateString()}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
