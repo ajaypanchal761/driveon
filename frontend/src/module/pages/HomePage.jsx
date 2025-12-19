@@ -9,6 +9,7 @@ import BottomNavbar from "../components/layout/BottomNavbar";
 import BrandCard from "../components/common/BrandCard";
 import CarCard from "../components/common/CarCard";
 import BannerAd from "../../components/common/BannerAd";
+import ReturningCarBanner from "../../components/common/ReturningCarBanner";
 import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
@@ -1123,6 +1124,11 @@ const HomePage = () => {
           `}</style>
           </div>
 
+          {/* Returning Car Banner - Shows cars returning soon - Mobile Only */}
+          <div className="md:hidden">
+            <ReturningCarBanner />
+          </div>
+
           {/* Brands Section - Hidden on web view */}
           {brands.length > 0 && (
             <div className="mb-6 md:mb-8 lg:mb-12 xl:mb-16 md:-mt-24 md:hidden">
@@ -1423,6 +1429,7 @@ const HomePage = () => {
                 </div>
               </div>
             </div>
+
 
             {/* Web View - Best Cars Section (No white card background) */}
             <div className="hidden md:block mb-8 md:mb-12 lg:mb-16 xl:mb-20">
@@ -1840,7 +1847,158 @@ const HomePage = () => {
 
       {/* Web View Sections - Why Choose DriveOn, FAQ, Download App, Footer - Only visible on web */}
       <div className="hidden md:block w-full">
-        {/* BannerAd Section */}
+        {/* Why Choose DriveOn Section - Web View Only */}
+        <section className="py-8 md:py-12 lg:py-16 xl:py-20" style={{ backgroundColor: colors.backgroundSecondary }}>
+          <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16">
+            <div className="text-center mb-8 md:mb-10 lg:mb-12">
+              <h2
+                className="text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold mb-2 md:mb-3 lg:mb-4"
+                style={{ color: colors.textPrimary }}
+              >
+                Why Choose DriveOn?
+              </h2>
+              <p
+                className="text-sm md:text-base lg:text-lg xl:text-xl max-w-2xl mx-auto px-2"
+                style={{ color: colors.textSecondary }}
+              >
+                Experience seamless car rental with our trusted platform
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6 lg:gap-8">
+              {[
+                {
+                  icon: (
+                    <svg
+                      className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                  ),
+                  title: "Verified KYC",
+                  description:
+                    "Secure DigiLocker integration for verified identity",
+                },
+                {
+                  icon: (
+                    <svg
+                      className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  ),
+                  title: "Live Tracking",
+                  description:
+                    "Real-time GPS tracking for safety and security",
+                },
+                {
+                  icon: (
+                    <svg
+                      className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  ),
+                  title: "Flexible Payment",
+                  description:
+                    "Pay full or 35% advance - choose what works for you",
+                },
+                {
+                  icon: (
+                    <svg
+                      className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                      />
+                    </svg>
+                  ),
+                  title: "Referral Rewards",
+                  description:
+                    "Earn points and discounts with our referral program",
+                },
+              ].map((feature, index) => (
+                <div
+                  key={`feature-${index}`}
+                  className="group relative rounded-2xl p-6 md:p-7 lg:p-8 text-center transition-all duration-300 ease-in-out cursor-default"
+                  style={{
+                    backgroundColor: colors.backgroundPrimary,
+                    boxShadow: `0 2px 8px ${colors.shadowLight}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-8px)';
+                    e.currentTarget.style.boxShadow = `0 12px 24px ${colors.shadowLight}`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = `0 2px 8px ${colors.shadowLight}`;
+                  }}
+                >
+                  <div className="flex flex-col items-center">
+                    <div
+                      className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 lg:w-[72px] lg:h-[72px] rounded-xl mb-4 md:mb-5 lg:mb-6 transition-all duration-300 group-hover:scale-110"
+                      style={{
+                        backgroundColor: `${colors.backgroundTertiary}20`,
+                        color: colors.backgroundTertiary,
+                      }}
+                    >
+                      {feature.icon}
+                    </div>
+                    <h3
+                      className="text-lg md:text-xl lg:text-2xl font-bold mb-2 md:mb-3 transition-colors duration-300"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      {feature.title}
+                    </h3>
+                    <p
+                      className="text-sm md:text-base leading-relaxed transition-colors duration-300"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* BannerAd Section - Our Trusted Partners */}
         <BannerAd />
 
         {/* FAQ Section - Hidden on web view */}

@@ -6,6 +6,7 @@ import BottomNavbar from '../components/layout/BottomNavbar';
 import BrandFilter from '../components/common/BrandFilter';
 import SearchCarCard from '../components/common/SearchCarCard';
 import FilterDropdown from '../components/common/FilterDropdown';
+import ReturningCarBanner from '../../components/common/ReturningCarBanner';
 import { colors } from '../theme/colors';
 import { useAppSelector } from '../../hooks/redux';
 import { carService } from '../../services/car.service';
@@ -913,6 +914,9 @@ const SearchPage = () => {
             />
           </motion.div>
 
+          {/* Returning Car Banner */}
+          <ReturningCarBanner />
+
           {/* Main Content */}
           <div className="mt-4">
           {/* Show "No cars found" message if no cars match the filter - only after loading is complete */}
@@ -1202,6 +1206,11 @@ const SearchPage = () => {
                 selectedBrand={selectedBrand}
                 onSelectBrand={setSelectedBrand}
               />
+            </div>
+
+            {/* Returning Car Banner - Web */}
+            <div className="mb-8 md:mb-10 lg:mb-12">
+              <ReturningCarBanner />
             </div>
 
             {/* Main Content - Web */}
