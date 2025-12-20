@@ -36,14 +36,14 @@ export const generateBookingPDF = (bookingData) => {
     // Background rectangle
     doc.setFillColor(...primaryColor);
     doc.roundedRect(margin, y - 6, contentWidth, 10, 2, 2, 'F');
-    
+
     // White text
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
     doc.text(title, margin + 5, y + 1);
     doc.setTextColor(0, 0, 0);
-    
+
     return y + 8;
   };
 
@@ -51,17 +51,17 @@ export const generateBookingPDF = (bookingData) => {
   const addKeyValue = (key, value, x, y, maxWidth, keyBold = true) => {
     const keyWidth = 60;
     const valueWidth = maxWidth - keyWidth - 5;
-    
+
     // Key
     addText(`${key}:`, x, y, keyWidth, 9, keyBold, [60, 60, 60]);
-    
+
     // Value
     const valueLines = doc.splitTextToSize(value || 'N/A', valueWidth);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text(valueLines, x + keyWidth + 5, y);
-    
+
     return valueLines.length * 4;
   };
 
@@ -118,27 +118,27 @@ export const generateBookingPDF = (bookingData) => {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
-  const bookingDate = bookingData.createdAt 
-    ? new Date(bookingData.createdAt).toLocaleDateString('en-IN', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    : new Date().toLocaleDateString('en-IN', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+  const bookingDate = bookingData.createdAt
+    ? new Date(bookingData.createdAt).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    : new Date().toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   doc.text(`Generated on: ${bookingDate}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += sectionSpacing;
 
   // ========== USER INFORMATION SECTION ==========
   yPosition = addSectionHeader('USER INFORMATION', yPosition);
-  
+
   const user = bookingData.user || {};
   yPosition += addKeyValue('Name', user.name || user.fullName || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
@@ -146,7 +146,7 @@ export const generateBookingPDF = (bookingData) => {
   yPosition += lineHeight;
   yPosition += addKeyValue('Phone', user.phone ? `+91 ${user.phone}` : 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
-  
+
   if (user.age) {
     yPosition += addKeyValue('Age', String(user.age), margin, yPosition, contentWidth);
     yPosition += lineHeight;
@@ -160,7 +160,7 @@ export const generateBookingPDF = (bookingData) => {
     yPosition += addKeyValue('Address', address, margin, yPosition, contentWidth);
     yPosition += lineHeight;
   }
-  
+
   yPosition += sectionSpacing;
   drawLine(yPosition);
   yPosition += sectionSpacing;
@@ -173,13 +173,13 @@ export const generateBookingPDF = (bookingData) => {
 
   // ========== CAR INFORMATION SECTION ==========
   yPosition = addSectionHeader('CAR INFORMATION', yPosition);
-  
+
   const car = bookingData.car || {};
   yPosition += addKeyValue('Brand', car.brand || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
   yPosition += addKeyValue('Model', car.model || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
-  
+
   if (car.year) {
     yPosition += addKeyValue('Year', String(car.year), margin, yPosition, contentWidth);
     yPosition += lineHeight;
@@ -200,7 +200,7 @@ export const generateBookingPDF = (bookingData) => {
     yPosition += addKeyValue('Registration', car.registrationNumber, margin, yPosition, contentWidth);
     yPosition += lineHeight;
   }
-  
+
   yPosition += sectionSpacing;
   drawLine(yPosition);
   yPosition += sectionSpacing;
@@ -213,16 +213,16 @@ export const generateBookingPDF = (bookingData) => {
 
   // ========== BOOKING DETAILS SECTION ==========
   yPosition = addSectionHeader('BOOKING DETAILS', yPosition);
-  
+
   // Format dates
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-IN', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      return date.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
     } catch {
       return dateStr;
@@ -237,7 +237,7 @@ export const generateBookingPDF = (bookingData) => {
   yPosition += lineHeight;
   yPosition += addKeyValue('Drop Time', bookingData.dropTime || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
-  
+
   // Calculate total days
   if (bookingData.pickupDate && bookingData.dropDate) {
     try {
@@ -251,7 +251,7 @@ export const generateBookingPDF = (bookingData) => {
       console.error('Error calculating days:', e);
     }
   }
-  
+
   yPosition += sectionSpacing;
   drawLine(yPosition);
   yPosition += sectionSpacing;
@@ -263,10 +263,10 @@ export const generateBookingPDF = (bookingData) => {
   }
 
   // ========== ADDITIONAL DETAILS SECTION ==========
-  if (bookingData.bookingPurpose || bookingData.personalDetails || bookingData.currentAddress || 
-      bookingData.jobDetails || bookingData.businessDetails || bookingData.studentId) {
+  if (bookingData.bookingPurpose || bookingData.personalDetails || bookingData.currentAddress ||
+    bookingData.jobDetails || bookingData.businessDetails || bookingData.studentId) {
     yPosition = addSectionHeader('ADDITIONAL DETAILS', yPosition);
-    
+
     if (bookingData.bookingPurpose) {
       const purposeLabels = {
         'personal': 'Personal',
@@ -321,7 +321,7 @@ export const generateBookingPDF = (bookingData) => {
       yPosition += addKeyValue('Current Address', bookingData.currentAddress, margin, yPosition, contentWidth);
       yPosition += lineHeight;
     }
-    
+
     yPosition += sectionSpacing;
     drawLine(yPosition);
     yPosition += sectionSpacing;
@@ -337,10 +337,10 @@ export const generateBookingPDF = (bookingData) => {
   if (bookingData.addOnServices) {
     const addOns = bookingData.addOnServices;
     const hasAddOns = Object.values(addOns).some(qty => qty > 0);
-    
+
     if (hasAddOns) {
       yPosition = addSectionHeader('ADD-ON SERVICES', yPosition);
-      
+
       if (addOns.driver > 0) {
         yPosition += addKeyValue('Driver', `${addOns.driver}`, margin, yPosition, contentWidth);
         yPosition += lineHeight;
@@ -357,7 +357,7 @@ export const generateBookingPDF = (bookingData) => {
         yPosition += addKeyValue('Bouncer', `${addOns.bouncer}`, margin, yPosition, contentWidth);
         yPosition += lineHeight;
       }
-      
+
       yPosition += sectionSpacing;
       drawLine(yPosition);
       yPosition += sectionSpacing;
@@ -372,22 +372,22 @@ export const generateBookingPDF = (bookingData) => {
 
   // ========== PRICING DETAILS SECTION ==========
   yPosition = addSectionHeader('PRICING DETAILS', yPosition);
-  
+
   // Format currency with proper Indian number formatting (manual formatting for jsPDF compatibility)
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined || amount === '') return 'N/A';
     const numAmount = Number(amount);
     if (isNaN(numAmount)) return 'N/A';
-    
+
     // Round to 2 decimal places if needed
     const roundedAmount = Math.round(numAmount * 100) / 100;
-    
+
     // Convert to string and split by decimal point
     const amountStr = Math.abs(roundedAmount).toString();
     const parts = amountStr.split('.');
     let integerPart = parts[0];
     const decimalPart = parts[1] || '';
-    
+
     // Add commas for Indian numbering system (every 3 digits from right)
     // For example: 1100 -> 1,100, 1234567 -> 12,34,567
     let formattedInteger = '';
@@ -400,18 +400,21 @@ export const generateBookingPDF = (bookingData) => {
       formattedInteger = integerPart[i] + formattedInteger;
       count++;
     }
-    
+
     // Combine with decimal part if exists
     const formatted = decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
-    return `₹${formatted}`;
+    return `Rs. ${formatted}`;
   };
 
   // Calculate box height based on content
-  let pricingBoxHeight = 35;
+  // Base height needs to accommodate: Total Price, Paid Amount, Remaining Amount, Payment Option
+  // Each line is approx 10 units. Total Price header is larger.
+  // 12 (Total) + 10 (Paid) + 10 (Remaining) + 10 (Payment) = ~42 units minimum
+  let pricingBoxHeight = 50;
   if (bookingData.couponCode) {
     pricingBoxHeight += 12;
     if (bookingData.couponDiscount) {
-      pricingBoxHeight += 6;
+      pricingBoxHeight += 8;
     }
   }
 
@@ -419,39 +422,39 @@ export const generateBookingPDF = (bookingData) => {
   const pricingBoxY = yPosition;
   doc.setFillColor(...lightGray);
   doc.roundedRect(margin, pricingBoxY - 3, contentWidth, pricingBoxHeight, 2, 2, 'F');
-  
+
   yPosition += 3;
-  
+
   // Total Price - Bold and larger
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryColor);
   const totalPriceText = `Total Price: ${formatCurrency(bookingData.totalPrice)}`;
   doc.text(totalPriceText, margin + 2, yPosition);
-  yPosition += lineHeight + 3;
-  
+  yPosition += lineHeight + 4; // Increased spacing
+
   // Reset font
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
-  
+
   yPosition += addKeyValue('Paid Amount', formatCurrency(bookingData.paidAmount || bookingData.advancePayment), margin + 2, yPosition, contentWidth - 4);
-  yPosition += lineHeight;
+  yPosition += lineHeight + 2;
   yPosition += addKeyValue('Remaining Amount', formatCurrency(bookingData.remainingAmount), margin + 2, yPosition, contentWidth - 4);
-  yPosition += lineHeight;
-  
+  yPosition += lineHeight + 2;
+
   if (bookingData.couponCode) {
     yPosition += addKeyValue('Coupon Code', bookingData.couponCode, margin + 2, yPosition, contentWidth - 4);
-    yPosition += lineHeight;
+    yPosition += lineHeight + 2;
     if (bookingData.couponDiscount) {
       yPosition += addKeyValue('Discount', formatCurrency(bookingData.couponDiscount), margin + 2, yPosition, contentWidth - 4);
-      yPosition += lineHeight;
+      yPosition += lineHeight + 2;
     }
   }
-  
+
   yPosition += addKeyValue('Payment Option', bookingData.paymentOption === 'advance' ? '35% Advance' : bookingData.paymentOption || 'N/A', margin + 2, yPosition, contentWidth - 4);
-  yPosition = pricingBoxY + pricingBoxHeight + 2;
-  
+  yPosition = pricingBoxY + pricingBoxHeight + 5; // Add extra padding after box
+
   yPosition += sectionSpacing;
   drawLine(yPosition);
   yPosition += sectionSpacing;
@@ -464,21 +467,21 @@ export const generateBookingPDF = (bookingData) => {
 
   // ========== BOOKING STATUS SECTION ==========
   yPosition = addSectionHeader('BOOKING STATUS', yPosition);
-  
+
   const statusLabels = {
     'pending': 'Pending',
     'confirmed': 'Confirmed',
     'cancelled': 'Cancelled',
     'completed': 'Completed'
   };
-  
+
   const paymentStatusLabels = {
     'partial': 'Partial Payment',
     'full': 'Full Payment',
     'pending': 'Pending',
     'completed': 'Completed'
   };
-  
+
   yPosition += addKeyValue('Status', statusLabels[bookingData.status] || bookingData.status || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
   yPosition += addKeyValue('Payment Status', paymentStatusLabels[bookingData.paymentStatus] || bookingData.paymentStatus || 'N/A', margin, yPosition, contentWidth);
@@ -506,29 +509,29 @@ export const generateBookingPDF = (bookingData) => {
 
   // ========== FOOTER SECTION ==========
   const footerY = pageHeight - 25;
-  
+
   // Top border for footer
   doc.setDrawColor(...borderGray);
   doc.setLineWidth(0.5);
   doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
-  
+
   // Company Information
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryColor);
   doc.text('DRIVE ON', pageWidth / 2, footerY, { align: 'center' });
-  
+
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
   doc.text('Anjaneya Techno Park, First Floor, No. 147, HAL Old Airport Road,', pageWidth / 2, footerY + 4, { align: 'center' });
   doc.text('ISRO Colony, Kodihalli, Bangalore, Karnataka 560008', pageWidth / 2, footerY + 7, { align: 'center' });
-  
+
   // Important Notice
   doc.setFontSize(7);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(200, 0, 0);
-  doc.text('⚠️ This is a computer-generated receipt. Physical document verification at office is mandatory.', 
+  doc.text('⚠️ This is a computer-generated receipt. Physical document verification at office is mandatory.',
     pageWidth / 2, footerY + 12, { align: 'center' });
 
   // Page numbers

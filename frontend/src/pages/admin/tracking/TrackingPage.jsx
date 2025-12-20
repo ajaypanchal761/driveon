@@ -93,14 +93,24 @@ const TrackingPage = () => {
         );
         
         if (existingIndex >= 0) {
-          // Update existing location - create new object to ensure state change
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            ...locationData,
-            // Ensure timestamp is updated to trigger re-render
-            timestamp: locationData.timestamp || new Date().toISOString(),
-          };
+          // Update existing location - create completely new object to ensure React detects change
+          const updated = prev.map((loc, index) => {
+            if (index === existingIndex) {
+              // Create new object with all updated data
+              return {
+                ...locationData,
+                // Ensure all fields are updated, especially timestamp
+                timestamp: locationData.timestamp || new Date().toISOString(),
+                lat: parseFloat(locationData.lat),
+                lng: parseFloat(locationData.lng),
+                accuracy: locationData.accuracy ? parseFloat(locationData.accuracy) : null,
+                speed: locationData.speed ? parseFloat(locationData.speed) : null,
+                heading: locationData.heading ? parseFloat(locationData.heading) : null,
+                address: locationData.address || '',
+              };
+            }
+            return loc;
+          });
           console.log('📍 Updated location for user:', locationData.userId, updated[existingIndex]);
           return updated;
         } else {
@@ -109,8 +119,23 @@ const TrackingPage = () => {
           return [...prev, {
             ...locationData,
             timestamp: locationData.timestamp || new Date().toISOString(),
+            lat: parseFloat(locationData.lat),
+            lng: parseFloat(locationData.lng),
+            accuracy: locationData.accuracy ? parseFloat(locationData.accuracy) : null,
+            speed: locationData.speed ? parseFloat(locationData.speed) : null,
+            heading: locationData.heading ? parseFloat(locationData.heading) : null,
+            address: locationData.address || '',
           }];
         }
+      });
+      
+      // Clear address cache for this location to force refresh
+      const locationKey = `${locationData.userId}-${locationData.userType}`;
+      setAddressCache((prev) => {
+        const newCache = { ...prev };
+        // Remove cached address so it gets refreshed with new location
+        delete newCache[locationKey];
+        return newCache;
       });
     });
 
@@ -597,8 +622,11 @@ const TrackingPage = () => {
                     ? loc.address
                     : addressCache[locationKey] || '';
 
+                // Create unique key that includes timestamp to force re-render on updates
+                const uniqueKey = `${loc.userId}-${loc.userType}-${loc.timestamp || Date.now()}`;
+
                 return (
-                <Card key={`${loc.userId}-${loc.userType}`} className="p-4 hover:shadow-lg transition-all">
+                <Card key={uniqueKey} className="p-4 hover:shadow-lg transition-all">
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Location Info */}
                     <div className="flex-1">
@@ -650,7 +678,7 @@ const TrackingPage = () => {
                         )}
                         <div>
                           <p className="text-xs text-gray-600">Last Update</p>
-                          <p className="text-sm font-semibold text-gray-900">
+                          <p className="text-sm font-semibold text-gray-900" key={`timestamp-${loc.timestamp}`}>
                             {loc.timestamp
                               ? (() => {
                                   const updateDate = new Date(loc.timestamp);
@@ -669,6 +697,7 @@ const TrackingPage = () => {
                                           year: 'numeric',
                                           hour: '2-digit', 
                                           minute: '2-digit',
+                                          second: '2-digit',
                                           hour12: true 
                                         })}
                                       </span>
@@ -682,6 +711,7 @@ const TrackingPage = () => {
                                     year: 'numeric',
                                     hour: '2-digit', 
                                     minute: '2-digit',
+                                    second: '2-digit',
                                     hour12: true 
                                   });
                                 })()

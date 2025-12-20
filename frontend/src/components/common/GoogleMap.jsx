@@ -113,13 +113,22 @@ const GoogleMap = ({
         const currentPos = existingMarker.getPosition();
         const newPos = new window.google.maps.LatLng(position.lat, position.lng);
         
-        // Only update if position actually changed (to avoid unnecessary updates)
+        // Always update position (even if same) to ensure marker is refreshed
+        existingMarker.setPosition(newPos);
+        
+        // Only log if position actually changed
         if (currentPos.lat() !== position.lat || currentPos.lng() !== position.lng) {
-          existingMarker.setPosition(newPos);
           console.log(`📍 Updated marker position for ${name || userId}:`, position);
         }
         
-        // Always update info window content with latest data
+        // Always update info window content with latest data (including timestamp)
+        const updateTime = timestamp ? new Date(timestamp).toLocaleTimeString('en-IN', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit',
+          hour12: true 
+        }) : 'Unknown';
+        
         const infoContent = `
           <div style="padding: 8px; min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #333;">
@@ -130,7 +139,7 @@ const GoogleMap = ({
             </p>
             ${accuracy ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Accuracy:</strong> ${Math.round(accuracy)}m</p>` : ''}
             ${speed ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Speed:</strong> ${Math.round(speed)} km/h</p>` : ''}
-            ${timestamp ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Updated:</strong> ${new Date(timestamp).toLocaleTimeString()}</p>` : ''}
+            <p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Updated:</strong> ${updateTime}</p>
           </div>
         `;
         existingMarker.infoWindow.setContent(infoContent);

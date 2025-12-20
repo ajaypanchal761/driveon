@@ -398,6 +398,7 @@ const BookNowPage = () => {
         basePrice: 0,
         totalDays: 0,
         totalPrice: 0,
+        addOnServicesTotal: 0,
         advancePayment: 0,
         remainingPayment: 0,
         discount: 0,
@@ -422,6 +423,16 @@ const BookNowPage = () => {
 
     totalPrice = totalPrice * weekendMultiplier;
 
+    // Calculate add-on services total
+    const addOnServicesTotal =
+      (addOnServices.driver * (addOnServicesPrices.driver || 0)) +
+      (addOnServices.bodyguard * (addOnServicesPrices.bodyguard || 0)) +
+      (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
+      (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
+
+    // Add add-on services to total price
+    totalPrice += addOnServicesTotal;
+
     // Apply coupon discount if available
     const discount = couponDiscount || 0;
     const finalPrice = Math.max(0, totalPrice - discount);
@@ -434,6 +445,7 @@ const BookNowPage = () => {
       basePrice,
       totalDays,
       totalPrice: Math.round(totalPrice),
+      addOnServicesTotal,
       discount: Math.round(discount),
       finalPrice: Math.round(finalPrice),
       advancePayment,
@@ -1090,8 +1102,8 @@ const BookNowPage = () => {
                 >
                   {pickupDate && pickupTime
                     ? `${formatDisplayDate(pickupDate)} • ${formatDisplayTime(
-                        pickupTime
-                      )}`
+                      pickupTime
+                    )}`
                     : "Select Date & Time"}
                 </div>
               </button>
@@ -1126,8 +1138,8 @@ const BookNowPage = () => {
                 >
                   {dropDate && dropTime
                     ? `${formatDisplayDate(dropDate)} • ${formatDisplayTime(
-                        dropTime
-                      )}`
+                      dropTime
+                    )}`
                     : "Select Date & Time"}
                 </div>
               </button>
@@ -1154,9 +1166,8 @@ const BookNowPage = () => {
               <button
                 type="button"
                 onClick={() => setPaymentOption("advance")}
-                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                  paymentOption === "advance" ? "shadow-md" : ""
-                }`}
+                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${paymentOption === "advance" ? "shadow-md" : ""
+                  }`}
                 style={{
                   borderColor:
                     paymentOption === "advance"
@@ -2738,15 +2749,14 @@ const BookNowPage = () => {
                           }
                         }}
                         disabled={isPast && !isMinDate}
-                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          isSelected
+                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
                             ? "text-white"
                             : isPast && !isMinDate
-                            ? "cursor-not-allowed"
-                            : !isCurrentMonth
-                            ? "opacity-40"
-                            : "hover:bg-gray-100"
-                        }`}
+                              ? "cursor-not-allowed"
+                              : !isCurrentMonth
+                                ? "opacity-40"
+                                : "hover:bg-gray-100"
+                          }`}
                         style={{
                           backgroundColor: isSelected
                             ? colors.backgroundTertiary
@@ -2754,8 +2764,8 @@ const BookNowPage = () => {
                           color: isSelected
                             ? colors.backgroundSecondary
                             : isPast && !isMinDate
-                            ? colors.borderCheckbox
-                            : colors.textPrimary,
+                              ? colors.borderCheckbox
+                              : colors.textPrimary,
                         }}
                       >
                         {date.getDate()}
@@ -2829,9 +2839,8 @@ const BookNowPage = () => {
                         key={hour}
                         type="button"
                         onClick={() => setSelectedHour(hour)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          selectedHour === hour ? "text-white" : ""
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === hour ? "text-white" : ""
+                          }`}
                         style={{
                           backgroundColor:
                             selectedHour === hour
@@ -2870,9 +2879,8 @@ const BookNowPage = () => {
                         key={minute}
                         type="button"
                         onClick={() => setSelectedMinute(minute)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                          selectedMinute === minute ? "text-white" : ""
-                        }`}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === minute ? "text-white" : ""
+                          }`}
                         style={{
                           backgroundColor:
                             selectedMinute === minute
@@ -2902,9 +2910,8 @@ const BookNowPage = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedPeriod("am")}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        selectedPeriod === "am" ? "text-white" : ""
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === "am" ? "text-white" : ""
+                        }`}
                       style={{
                         backgroundColor:
                           selectedPeriod === "am"
@@ -2921,9 +2928,8 @@ const BookNowPage = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedPeriod("pm")}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        selectedPeriod === "pm" ? "text-white" : ""
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === "pm" ? "text-white" : ""
+                        }`}
                       style={{
                         backgroundColor:
                           selectedPeriod === "pm"
