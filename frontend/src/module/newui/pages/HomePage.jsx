@@ -1,11 +1,10 @@
-
-import { useState } from 'react';
-import Header from '../components/Header';
-import BodyTypeFilter from '../components/BodyTypeFilter';
-import TopBrands from '../components/TopBrands';
-import AvailableCars from '../components/AvailableCars';
-import BottomNavbar from '../components/BottomNavbar';
-import '../styles/index.css';
+import { useState } from "react";
+import Header from "../components/Header";
+import BodyTypeFilter from "../components/BodyTypeFilter";
+import TopBrands from "../components/TopBrands";
+import AvailableCars from "../components/AvailableCars";
+import BottomNavbar from "../components/BottomNavbar";
+import "../styles/index.css";
 
 /**
  * HomePage Component
@@ -13,7 +12,7 @@ import '../styles/index.css';
  * Red header, white content area, car listings
  */
 const HomePage = () => {
-  const [selectedBodyType, setSelectedBodyType] = useState('All');
+  const [selectedBodyType, setSelectedBodyType] = useState("All");
   const [selectedBrand, setSelectedBrand] = useState(null);
 
   return (
@@ -25,15 +24,15 @@ const HomePage = () => {
       <main className="pb-20 bg-white">
         {/* Body Type Section - Above Top Brands, Compact - Black Background */}
         <div className="bg-black px-4 py-1 pt-44">
-          <BodyTypeFilter 
-            selected={selectedBodyType} 
-            onSelect={setSelectedBodyType} 
+          <BodyTypeFilter
+            selected={selectedBodyType}
+            onSelect={setSelectedBodyType}
           />
         </div>
 
         {/* Top Brands Section - Black Background */}
         <div className="bg-black px-4 py-1">
-          <TopBrands 
+          <TopBrands
             selectedBrand={selectedBrand}
             onSelectBrand={setSelectedBrand}
           />
@@ -41,7 +40,7 @@ const HomePage = () => {
 
         {/* Available Near You Section - Black Background */}
         <div className="bg-black px-4 py-1">
-          <AvailableCars 
+          <AvailableCars
             selectedBodyType={selectedBodyType}
             selectedBrand={selectedBrand}
           />
@@ -55,4 +54,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

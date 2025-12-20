@@ -179,6 +179,101 @@ export const getBannerOverlay = async (req, res) => {
 };
 
 /**
+ * @desc    Get returning cars (cars with active bookings ending soon)
+ * @route   GET /api/common/returning-cars
+ * @access  Public
+ */
+export const getReturningCars = async (req, res) => {
+  try {
+    // Import models dynamically to avoid circular dependencies
+    const Booking = (await import('../models/Booking.js')).default;
+    
+    // Get current time
+    const now = new Date();
+    
+    // Find active bookings that are ending within the next 6 hours
+    const sixHoursFromNow = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+    
+    const activeBookings = await Booking.find({
+      status: 'confirmed',
+      tripStatus: 'active',
+      $or: [
+        { 'tripEnd.date': { $lte: sixHoursFromNow, $gte: now } },
+        { dropDate: { $lte: sixHoursFromNow, $gte: now } },
+        { endDate: { $lte: sixHoursFromNow, $gte: now } },
+      ],
+    })
+      .populate('car', 'brand model pricePerDay images location')
+      .sort({ 'tripEnd.date': 1, dropDate: 1, endDate: 1 })
+      .limit(10);
+
+    // Transform bookings to car data with return time
+    const returningCars = activeBookings
+      .map((booking) => {
+        const car = booking.car;
+        if (!car) return null;
+
+        // Calculate return time
+        let returnDate = null;
+        if (booking.tripEnd?.date) {
+          returnDate = new Date(booking.tripEnd.date);
+        } else if (booking.dropDate) {
+          returnDate = new Date(booking.dropDate);
+        } else if (booking.endDate) {
+          returnDate = new Date(booking.endDate);
+        }
+
+        if (!returnDate || returnDate <= now) return null;
+
+        // Calculate time until return
+        const diffMs = returnDate - now;
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        let returningIn = '';
+        if (hours > 0) {
+          returningIn = `${hours} hour${hours > 1 ? 's' : ''}`;
+          if (minutes > 0) {
+            returningIn += ` ${minutes} min${minutes > 1 ? 's' : ''}`;
+          }
+        } else if (minutes > 0) {
+          returningIn = `${minutes} min${minutes > 1 ? 's' : ''}`;
+        } else {
+          returningIn = 'Very soon';
+        }
+
+        return {
+          _id: car._id || car.id,
+          brand: car.brand,
+          model: car.model,
+          pricePerDay: car.pricePerDay || 0,
+          images: car.images || [],
+          location: car.location || {},
+          returningIn,
+          returningDate: returnDate.toISOString(),
+        };
+      })
+      .filter((car) => car !== null);
+
+    res.json({
+      success: true,
+      data: {
+        cars: returningCars.length > 0 ? returningCars : [],
+      },
+    });
+  } catch (error) {
+    console.error('Get returning cars error:', error);
+    // Return empty array on error - frontend will use dummy data fallback
+    res.json({
+      success: true,
+      data: {
+        cars: [],
+      },
+    });
+  }
+};
+
+/**
  * @desc    Search places using Google Places API (Proxy to avoid CORS)
  * @route   GET /api/common/places/search
  * @access  Public
