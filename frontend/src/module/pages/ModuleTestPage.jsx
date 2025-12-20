@@ -334,6 +334,7 @@ const ModuleTestPage = () => {
             (type, index) => ({
               id: index + 1,
               label: type.name || type.carType || type,
+              carType: type.carType || type.name?.toLowerCase() || type?.toLowerCase() || '',
               count: type.count || 0,
               image:
                 categoryImages[type.name || type.carType || type] ||
@@ -1178,7 +1179,14 @@ const ModuleTestPage = () => {
                   key={cat.id}
                   type="button"
                 className="flex-shrink-0 w-24"
-                onClick={() => handleQuickBrandFilter(cat.label)}
+                onClick={() => {
+                  // Navigate to category page
+                  // Use carType if available, otherwise convert label to lowercase
+                  const categoryName = cat.carType 
+                    ? cat.carType.toLowerCase() 
+                    : (cat.label || '').toLowerCase().replace(/\s+/g, '-');
+                  navigate(`/category/${categoryName}`);
+                }}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
@@ -1220,7 +1228,12 @@ const ModuleTestPage = () => {
                     key={`${brand.id}-${index}`}
                     type="button"
                     className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
-                    onClick={() => handleQuickBrandFilter(brand.name)}
+                    onClick={() => {
+                      // Navigate to brand page
+                      // Use displayName if available, otherwise use name
+                      const brandName = brand.displayName || brand.name || '';
+                      navigate(`/brand/${encodeURIComponent(brandName)}`);
+                    }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
