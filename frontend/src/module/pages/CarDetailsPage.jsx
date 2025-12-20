@@ -1399,6 +1399,8 @@ const CarDetailsPage = () => {
       return;
     }
 
+
+
     // Create a stable key from user data to detect changes
     const userDataKey = `${user.name || ''}_${user.phone || ''}_${user.email || ''}_${user.age || ''}_${user.gender || ''}`;
 
@@ -1491,11 +1493,8 @@ const CarDetailsPage = () => {
     const basePrice = getCarPrice();
     let totalPrice = basePrice * totalDays;
 
-    // Apply dynamic pricing multipliers
-    const dayOfWeek = pickup.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 1.2 : 1.0;
-    totalPrice = totalPrice * weekendMultiplier;
+    // No dynamic pricing multiplier needed
+    totalPrice = totalPrice;
 
     // Add add-on services to total price
     totalPrice = totalPrice + addOnServicesTotal;
@@ -1503,21 +1502,21 @@ const CarDetailsPage = () => {
     // Apply coupon discount
     const discount = couponDiscount || 0;
     const finalPriceBeforeRound = Math.max(0, totalPrice - discount);
-    const finalPrice = Math.round(finalPriceBeforeRound);
+    const finalPrice = finalPriceBeforeRound;
 
-    // Payment options - Calculate from unrounded finalPrice to get exact decimal values
+    // Payment options - Round to avoid decimals
     const advancePayment = finalPriceBeforeRound * 0.35;
-    const remainingPayment = finalPriceBeforeRound - advancePayment;
+    const remainingPayment = finalPrice - advancePayment;
 
     return {
       basePrice,
       totalDays,
-      totalPrice: Math.round(totalPrice),
-      addOnServicesTotal: Math.round(addOnServicesTotal),
-      discount: Math.round(discount),
+      totalPrice: totalPrice,
+      addOnServicesTotal: addOnServicesTotal,
+      discount: discount,
       finalPrice: finalPrice,
-      advancePayment: advancePayment, // Keep exact decimal value (calculated from unrounded finalPrice)
-      remainingPayment: remainingPayment, // Keep exact decimal value (calculated from unrounded finalPrice)
+      advancePayment: advancePayment,
+      remainingPayment: remainingPayment,
     };
   }, [
     pickupDate,
@@ -1879,8 +1878,11 @@ const CarDetailsPage = () => {
             console.error('Error saving booking to localStorage:', error);
           }
 
+          console.log("outside set timeout")
+
           // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
           setTimeout(() => {
+            console.log("inside set timeout")
             console.log('🎉 Showing booking confirmation modal now!');
             setConfirmedBookingId(bookingId.toString());
             setConfirmedBookingData(bookingDataForPdf);
@@ -2337,8 +2339,8 @@ const CarDetailsPage = () => {
                         <div
                           key={`thumbnail-${imageKey}-${index}`}
                           className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${currentImageIndex === index
-                              ? ''
-                              : 'hover:opacity-80 opacity-70'
+                            ? ''
+                            : 'hover:opacity-80 opacity-70'
                             }`}
                           style={{
                             backgroundColor: colors.backgroundPrimary,
@@ -2501,25 +2503,25 @@ const CarDetailsPage = () => {
                     {finalPriceDetails.totalDays > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
                         <span>Base Price ({finalPriceDetails.totalDays} days)</span>
-                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {finalPriceDetails.totalPrice - (finalPriceDetails.addOnServicesTotal || 0)}</span>
+                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {formatDecimal(finalPriceDetails.totalPrice - (finalPriceDetails.addOnServicesTotal || 0))}</span>
                       </div>
                     )}
                     {finalPriceDetails.addOnServicesTotal > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
                         <span>Add-on Services</span>
-                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {finalPriceDetails.addOnServicesTotal}</span>
+                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {formatDecimal(finalPriceDetails.addOnServicesTotal)}</span>
                       </div>
                     )}
                     {finalPriceDetails.discount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
                         <span>Discount</span>
-                        <span className="font-semibold" style={{ color: colors.success }}>-Rs. {finalPriceDetails.discount}</span>
+                        <span className="font-semibold" style={{ color: colors.success }}>-Rs. {formatDecimal(finalPriceDetails.discount)}</span>
                       </div>
                     )}
                     <div className="border-t pt-1.5 mt-1.5" style={{ borderColor: colors.borderMedium }}>
                       <div className="flex justify-between font-bold" style={{ color: colors.textPrimary }}>
                         <span className="text-base">Total Amount</span>
-                        <span className="text-base">Rs. {finalPriceDetails.finalPrice}</span>
+                        <span className="text-base">Rs. {formatDecimal(finalPriceDetails.finalPrice)}</span>
                       </div>
                     </div>
                     {paymentOption === 'advance' && finalPriceDetails.totalDays > 0 && (
@@ -3562,8 +3564,8 @@ const CarDetailsPage = () => {
                           <div
                             key={`tablet-thumbnail-${imageKey}-${index}`}
                             className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${currentImageIndex === index
-                                ? 'scale-105 shadow-lg border-2'
-                                : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
+                              ? 'scale-105 shadow-lg border-2'
+                              : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
                               }`}
                             style={{
                               backgroundColor: colors.backgroundPrimary,
@@ -4733,12 +4735,12 @@ const CarDetailsPage = () => {
                         }}
                         disabled={isPast && !isMinDate}
                         className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
-                            ? 'text-white'
-                            : isPast && !isMinDate
-                              ? 'cursor-not-allowed'
-                              : !isCurrentMonth
-                                ? 'opacity-40'
-                                : 'hover:bg-gray-100'
+                          ? 'text-white'
+                          : isPast && !isMinDate
+                            ? 'cursor-not-allowed'
+                            : !isCurrentMonth
+                              ? 'opacity-40'
+                              : 'hover:bg-gray-100'
                           }`}
                         style={{
                           backgroundColor: isSelected ? colors.backgroundTertiary : 'transparent',
@@ -4911,6 +4913,7 @@ const CarDetailsPage = () => {
           bookingId={confirmedBookingId}
           bookingData={confirmedBookingData}
           onClose={() => {
+            console.log("close booking confirmation modal")
             setShowBookingConfirmationModal(false);
             setConfirmedBookingId(null);
             setConfirmedBookingData(null);

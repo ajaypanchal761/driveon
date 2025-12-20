@@ -391,6 +391,15 @@ const BookNowPage = () => {
   // Helper: basic ObjectId validation
   const isValidObjectId = (val) => /^[0-9a-fA-F]{24}$/.test(val || "");
 
+  // Helper to format decimal values
+  const formatDecimal = (value) => {
+    if (value == null || isNaN(value)) return '0';
+    const numValue = typeof value === 'number' ? value : parseFloat(value);
+    if (isNaN(numValue)) return '0';
+    // Show 2 decimal places, remove trailing zeros if integer
+    return numValue.toFixed(2).replace(/\.?0+$/, '');
+  };
+
   // Calculate dynamic price based on document.txt requirements
   const calculatePrice = () => {
     if (!pickupDate || !dropDate || !car) {
@@ -416,12 +425,8 @@ const BookNowPage = () => {
     const basePrice = extractPrice(car.price || car.pricePerDay || 0);
     let totalPrice = basePrice * totalDays;
 
-    // Apply dynamic pricing multipliers (from document.txt)
-    const dayOfWeek = pickup.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 1.2 : 1.0; // 20% increase on weekends
-
-    totalPrice = totalPrice * weekendMultiplier;
+    // No dynamic pricing multiplier needed
+    totalPrice = totalPrice;
 
     // Calculate add-on services total
     const addOnServicesTotal =
@@ -438,18 +443,18 @@ const BookNowPage = () => {
     const finalPrice = Math.max(0, totalPrice - discount);
 
     // Payment options
-    const advancePayment = Math.round(finalPrice * 0.35); // 35% advance
+    const advancePayment = finalPrice * 0.35; // 35% advance (exact)
     const remainingPayment = finalPrice - advancePayment;
 
     return {
       basePrice,
       totalDays,
-      totalPrice: Math.round(totalPrice),
+      totalPrice,
       addOnServicesTotal,
-      discount: Math.round(discount),
-      finalPrice: Math.round(finalPrice),
+      discount,
+      finalPrice,
       advancePayment,
-      remainingPayment: Math.round(remainingPayment),
+      remainingPayment,
     };
   };
 
@@ -554,6 +559,10 @@ const BookNowPage = () => {
     }
     return days;
   };
+
+  useEffect(() => {
+    console.log(showBookingConfirmationModal, [showBookingConfirmationModal])
+  }, [showBookingConfirmationModal])
 
   const formatDisplayTime = (timeStr) => {
     if (!timeStr) return "Select Time";
@@ -1331,7 +1340,7 @@ const BookNowPage = () => {
                 >
                   <span>Base Price ({priceDetails.totalDays} days)</span>
                   <span className="font-semibold">
-                    Rs. {priceDetails.totalPrice - (priceDetails.addOnServicesTotal || 0)}
+                    Rs. {formatDecimal(priceDetails.totalPrice - (priceDetails.addOnServicesTotal || 0))}
                   </span>
                 </div>
                 {priceDetails.addOnServicesTotal > 0 && (
@@ -1369,7 +1378,7 @@ const BookNowPage = () => {
                   >
                     <span className="text-base">Total Amount</span>
                     <span className="text-base">
-                      Rs. {priceDetails.finalPrice}
+                      Rs. {formatDecimal(priceDetails.finalPrice)}
                     </span>
                   </div>
                 </div>
@@ -1387,7 +1396,7 @@ const BookNowPage = () => {
                     >
                       <span>Advance Payment (35%)</span>
                       <span className="font-semibold">
-                        Rs. {priceDetails.advancePayment}
+                        Rs. {formatDecimal(priceDetails.advancePayment)}
                       </span>
                     </div>
                     <div
@@ -1399,7 +1408,7 @@ const BookNowPage = () => {
                     >
                       <span>Remaining Amount</span>
                       <span className="font-semibold">
-                        Rs. {priceDetails.remainingPayment}
+                        Rs. {formatDecimal(priceDetails.remainingPayment)}
                       </span>
                     </div>
                   </div>
@@ -2750,12 +2759,12 @@ const BookNowPage = () => {
                         }}
                         disabled={isPast && !isMinDate}
                         className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
-                            ? "text-white"
-                            : isPast && !isMinDate
-                              ? "cursor-not-allowed"
-                              : !isCurrentMonth
-                                ? "opacity-40"
-                                : "hover:bg-gray-100"
+                          ? "text-white"
+                          : isPast && !isMinDate
+                            ? "cursor-not-allowed"
+                            : !isCurrentMonth
+                              ? "opacity-40"
+                              : "hover:bg-gray-100"
                           }`}
                         style={{
                           backgroundColor: isSelected
@@ -2993,6 +3002,7 @@ const BookNowPage = () => {
           bookingId={confirmedBookingId}
           bookingData={confirmedBookingData}
           onClose={() => {
+            console.log("onclose function called")
             setShowBookingConfirmationModal(false);
             setConfirmedBookingId(null);
             setConfirmedBookingData(null);

@@ -24,6 +24,7 @@ const BookingConfirmationModal = ({ bookingId, bookingData, onClose }) => {
 
   const handleViewBookings = () => {
     onClose();
+    console.log("onclose function called")
     navigate('/bookings');
   };
 
@@ -32,7 +33,7 @@ const BookingConfirmationModal = ({ bookingId, bookingData, onClose }) => {
       alert('Booking data not available');
       return;
     }
-
+    console.log("download pdf function called")
     // Merge user data with booking data for PDF
     const pdfData = {
       ...bookingData,
@@ -49,23 +50,23 @@ const BookingConfirmationModal = ({ bookingId, bookingData, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        transition={{ type: "spring", damping: 25, stiffness: 500 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto bg-white"
         style={{ backgroundColor: colors.backgroundSecondary }}
       >
         {/* Success Icon and Header */}
-        <div className="px-6 pt-8 pb-6 text-center">
+        <div className="px-4 pt-6 pb-4 sm:px-6 sm:pt-8 sm:pb-6 text-center">
           {/* Success Checkmark Icon */}
-          <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"
+          <div className="mx-auto mb-3 sm:mb-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center"
             style={{ backgroundColor: `${colors.success}20` }}
           >
             <svg
