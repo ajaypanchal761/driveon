@@ -908,7 +908,7 @@ const ModuleTestPage = () => {
               type="button"
               className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
               style={{
-                backgroundColor: "#21292b",
+                backgroundColor: "#0B4DAF",
                 color: "#ffffff",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
@@ -967,7 +967,7 @@ const ModuleTestPage = () => {
             <motion.div
               className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
               style={{
-                backgroundColor: "#21292b",
+                backgroundColor: "#0B4DAF",
                 color: "#ffffff",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
@@ -1820,8 +1820,8 @@ const ModuleTestPage = () => {
                     type="button"
                     className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
                     style={{
-                      borderColor: "#21292b",
-                      backgroundColor: "#21292b",
+                      borderColor: "#0B4DAF",
+                      backgroundColor: "#0B4DAF",
                       color: "#ffffff",
                     }}
                     onClick={() => setIsTimeOpen(true)}
@@ -1946,7 +1946,7 @@ const ModuleTestPage = () => {
                   className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
                   type="button"
                   style={{
-                    borderColor: "#21292b",
+                    borderColor: "#0B4DAF",
                     backgroundColor: "#ffffff",
                     color: "#000000",
                   }}
@@ -1957,7 +1957,7 @@ const ModuleTestPage = () => {
                 <button
                   className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
                   type="button"
-                  style={{ backgroundColor: "#21292b" }}
+                  style={{ backgroundColor: "#0B4DAF" }}
                   onClick={() => setIsCalendarOpen(false)}
                 >
                   Done
@@ -2010,7 +2010,7 @@ const ModuleTestPage = () => {
                         }`}
                         style={
                           selectedHour === hour
-                            ? { backgroundColor: "#21292b", color: "#ffffff" }
+                            ? { backgroundColor: "#0B4DAF", color: "#ffffff" }
                             : { backgroundColor: "transparent" }
                         }
                         onClick={() => setSelectedHour(hour)}
@@ -2042,7 +2042,7 @@ const ModuleTestPage = () => {
                         }`}
                         style={
                           selectedMinute === minute
-                            ? { backgroundColor: "#21292b", color: "#ffffff" }
+                            ? { backgroundColor: "#0B4DAF", color: "#ffffff" }
                             : { backgroundColor: "transparent" }
                         }
                         onClick={() => setSelectedMinute(minute)}
@@ -2068,7 +2068,7 @@ const ModuleTestPage = () => {
                         }`}
                         style={
                           selectedPeriod === p
-                            ? { backgroundColor: "#21292b", color: "#ffffff" }
+                            ? { backgroundColor: "#0B4DAF", color: "#ffffff" }
                             : { backgroundColor: "transparent" }
                         }
                         onClick={() => setSelectedPeriod(p)}
@@ -2083,7 +2083,7 @@ const ModuleTestPage = () => {
               {/* Preview */}
               <div
                 className="mb-4 p-3 rounded-lg text-center"
-                style={{ backgroundColor: "#f8f8f8" }}
+                style={{ backgroundColor: "#F1F2F4" }}
               >
                 <span className="text-lg font-bold text-black">
                   {formatTimeDisplay()}
@@ -2095,7 +2095,7 @@ const ModuleTestPage = () => {
                   className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
                   type="button"
                   style={{
-                    borderColor: "#21292b",
+                    borderColor: "#0B4DAF",
                     backgroundColor: "#ffffff",
                     color: "#000000",
                   }}
@@ -2106,7 +2106,7 @@ const ModuleTestPage = () => {
                 <button
                   className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
                   type="button"
-                  style={{ backgroundColor: "#21292b" }}
+                  style={{ backgroundColor: "#0B4DAF" }}
                   onClick={() => setIsTimeOpen(false)}
                 >
                   Done

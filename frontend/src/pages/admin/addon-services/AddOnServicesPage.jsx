@@ -163,7 +163,7 @@ const AddOnServicesPage = () => {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: colors.backgroundPrimary }}>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 pt-24 pb-8 lg:py-8">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2" style={{ color: colors.textPrimary }}>
@@ -180,13 +180,13 @@ const AddOnServicesPage = () => {
             {services.map((service) => (
               <div
                 key={service.key}
-                className="flex items-center justify-between p-4 rounded-lg border-2"
+                className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg border-2 gap-4 md:gap-0"
                 style={{
                   borderColor: colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
-                <div className="flex items-center gap-4 flex-1">
+                <div className="flex items-center gap-4 flex-1 w-full md:w-auto">
                   <div
                     className="w-12 h-12 rounded-lg flex items-center justify-center"
                     style={{
@@ -205,8 +205,8 @@ const AddOnServicesPage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
+                  <div className="flex items-center gap-2 flex-1 md:flex-none">
                     <span className="text-sm font-medium" style={{ color: colors.textSecondary }}>
                       ₹
                     </span>
@@ -216,7 +216,7 @@ const AddOnServicesPage = () => {
                       step="10"
                       value={prices[service.key]}
                       onChange={(e) => handlePriceChange(service.key, e.target.value)}
-                      className="w-32 px-3 py-2 rounded-lg border-2 text-base font-semibold"
+                      className="w-full md:w-32 px-3 py-2 rounded-lg border-2 text-base font-semibold"
                       style={{
                         borderColor: colors.borderMedium,
                         backgroundColor: colors.backgroundPrimary,

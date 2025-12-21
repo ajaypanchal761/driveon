@@ -242,7 +242,7 @@ const ModuleSupportPage = () => {
     { value: 'other', label: 'Other' },
   ];
 
-  const iconBgColor = colors.backgroundPrimary || '#f8f8f8';
+  const iconBgColor = colors.backgroundPrimary || '#F1F2F4';
 
   // Scroll-based animation refs
   const [formRef, isFormInView] = useInViewAnimation({ threshold: 0.1 });

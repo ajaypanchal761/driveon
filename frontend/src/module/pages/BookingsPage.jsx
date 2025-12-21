@@ -29,12 +29,10 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl overflow-hidden shadow-lg md:max-w-none"
+      className="rounded-2xl overflow-hidden shadow-sm md:max-w-none h-full flex flex-col transition-all duration-300 hover:shadow-xl"
       style={{ 
         backgroundColor: colors.backgroundSecondary,
-        opacity: isCardInView ? 1 : 0,
-        transform: isCardInView ? 'translateY(0)' : 'translateY(30px)',
-        transition: `opacity 0.5s ease-out ${index * 0.1}s, transform 0.5s ease-out ${index * 0.1}s`,
+        border: `1px solid ${colors.backgroundTertiary}15`,
       }}
       onClick={() => {
         setSelectedBooking(booking);
@@ -42,7 +40,7 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
       }}
     >
       {/* Car Image and Status Badge */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative aspect-[16/10] flex-shrink-0 overflow-hidden bg-gray-50">
         <img
           ref={imageRef}
           src={booking.car.image}
@@ -50,201 +48,134 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
           className="w-full h-full object-cover"
           style={{
             opacity: isImageInView ? 1 : 0,
-            transform: isImageInView ? 'scale(1)' : 'scale(1.1)',
-            transition: `opacity 0.6s ease-out ${index * 0.1 + 0.2}s, transform 0.6s ease-out ${index * 0.1 + 0.2}s`,
+            transform: isImageInView ? 'scale(1) translateY(0)' : 'scale(1.05) translateY(10px)',
+            transition: `opacity 0.4s ease-out ${index * 0.05}s, transform 0.4s ease-out ${index * 0.05}s`,
           }}
         />
         {/* Status Badge */}
         <div 
-          className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold text-white shadow-lg"
+          className="absolute top-3 right-3 px-3 py-1 rounded-lg text-[10px] font-bold text-white shadow-lg uppercase tracking-wider"
           style={{ backgroundColor: getStatusColor(booking.status) }}
         >
           {getStatusLabel(booking.status)}
         </div>
       </div>
 
-      {/* Booking Details */}
-      <div className="p-4">
-        {/* Car Info */}
-        <div className="mb-3">
-          <h3 className="text-lg font-bold mb-1" style={{ color: colors.textPrimary }}>
-            {booking.car.brand} {booking.car.model}
-          </h3>
-          <div className="flex items-center gap-3 text-xs" style={{ color: colors.textSecondary }}>
-            <span>{booking.car.seats} Seats</span>
-            <span>•</span>
-            <span>{booking.car.transmission}</span>
-            <span>•</span>
-            <span>{booking.car.fuelType}</span>
-          </div>
-        </div>
-
-        {/* Booking ID */}
-        <div className="mb-3 pb-3 border-b" style={{ borderColor: colors.backgroundPrimary }}>
-          <p className="text-xs" style={{ color: colors.textSecondary }}>
-            Booking ID: <span className="font-semibold" style={{ color: colors.textPrimary }}>{booking.bookingId}</span>
-          </p>
-        </div>
-
-        {/* Delay Message - Show if trip end date has passed */}
-        {(() => {
-          const delayInfo = calculateDelay(booking.dropDate, booking.dropTime);
-          if (!delayInfo || booking.status === 'completed' || booking.status === 'cancelled') return null;
-          
-          return (
-            <div className="mb-3 p-3 rounded-xl border-2" style={{
-              backgroundColor: colors.warning + '15',
-              borderColor: colors.warning + '40'
-            }}>
-              <div className="flex items-start gap-2">
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: colors.warning }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold mb-1" style={{ color: colors.textPrimary }}>
-                    Trip End Date Passed
-                  </p>
-                  <p className="text-xs leading-relaxed mb-2" style={{ color: colors.textSecondary }}>
-                    Your trip end date has passed by {delayInfo.delayText}. Additional charges will be applied.
-                  </p>
-                  <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.warning + '30' }}>
-                    <span className="text-xs font-medium" style={{ color: colors.textSecondary }}>
-                      Additional Charges:
-                    </span>
-                    <span className="text-sm font-bold" style={{ color: colors.warning }}>
-                      ₹{delayInfo.additionalCharges.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-              </div>
+      {/* Booking Details Container */}
+      <div className="flex-1 flex flex-col p-4 md:p-5">
+        {/* Main Content Area */}
+        <div className="flex-1">
+          {/* Header Row: Title & Booking ID */}
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="text-lg font-bold leading-tight" style={{ color: colors.textPrimary }}>
+                {booking.car.brand} {booking.car.model}
+              </h3>
+              <p className="text-[10px] uppercase tracking-widest font-semibold mt-1" style={{ color: colors.textSecondary }}>
+                ID: {booking.bookingId}
+              </p>
             </div>
-          );
-        })()}
-
-        {/* Duration & Price */}
-        <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: colors.backgroundPrimary }}>
-          <div>
-            <p className="text-xs" style={{ color: colors.textSecondary }}>
-              {calculateDays(booking.pickupDate, booking.dropDate)} {calculateDays(booking.pickupDate, booking.dropDate) === 1 ? 'day' : 'days'}
-            </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs" style={{ color: colors.textSecondary }}>Total Amount</p>
-            <p className="text-lg font-bold" style={{ color: colors.backgroundTertiary }}>
-              ₹{booking.totalPrice.toLocaleString('en-IN')}
-            </p>
+
+          {/* Features Row: Chips */}
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {[booking.car.seats + ' Seats', booking.car.transmission, booking.car.fuelType].map((feat, i) => (
+              <span 
+                key={i} 
+                className="px-2 py-0.5 rounded-md text-[10px] font-medium"
+                style={{ backgroundColor: colors.backgroundPrimary, color: colors.textSecondary }}
+              >
+                {feat}
+              </span>
+            ))}
+          </div>
+
+          {/* Delay Message - Slimmer Version */}
+          {(() => {
+            const delayInfo = calculateDelay(booking.dropDate, booking.dropTime);
+            if (!delayInfo || booking.status === 'completed' || booking.status === 'cancelled') return null;
+            
+            return (
+              <div className="mb-4 p-2.5 rounded-xl border" style={{
+                backgroundColor: colors.warning + '08',
+                borderColor: colors.warning + '30'
+              }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4" style={{ color: colors.warning }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-[11px] font-bold" style={{ color: colors.textPrimary }}>Overdue</span>
+                  <span className="text-[10px] ml-auto font-bold" style={{ color: colors.warning }}>
+                    +₹{delayInfo.additionalCharges.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <p className="text-[10px]" style={{ color: colors.textSecondary }}>
+                  Passed by {delayInfo.delayText}. Extra charges applied.
+                </p>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Footer Area: Price & Action */}
+        <div className="mt-auto pt-4 border-t flex items-end justify-between" style={{ borderColor: colors.backgroundPrimary }}>
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black" style={{ color: colors.backgroundTertiary }}>
+                ₹{booking.totalPrice.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] font-medium" style={{ color: colors.textSecondary }}>
+                / {calculateDays(booking.pickupDate, booking.dropDate)}d
+              </span>
+            </div>
             {booking.paymentStatus === 'partial' && booking.status !== 'confirmed' && (
-              <p className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
-                Paid: ₹{booking.paidAmount.toLocaleString('en-IN')} | Remaining: ₹{booking.remainingAmount.toLocaleString('en-IN')}
+              <p className="text-[9px] font-bold mt-0.5" style={{ color: colors.textSecondary }}>
+                Bal: ₹{booking.remainingAmount.toLocaleString('en-IN')}
               </p>
             )}
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        {booking.status === 'confirmed' && (
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedBooking(booking);
-                setShowDetailsModal(true);
-              }}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-              style={{ backgroundColor: colors.backgroundTertiary }}
-            >
-              View Details
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCancellationBooking(booking);
-                setShowCancellationModal(true);
-              }}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-              style={{ backgroundColor: colors.error }}
-            >
-              Cancel
-            </button>
+          {/* Action Button - Compact & Premium */}
+          <div className="w-1/2">
+            {booking.status === 'confirmed' ? (
+              <div className="flex gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); setShowDetailsModal(true); }}
+                  className="flex-1 py-2 rounded-lg font-bold text-[10px] text-white transition-all active:scale-95"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCancellationBooking(booking); setShowCancellationModal(true); }}
+                  className="flex-1 py-2 rounded-lg font-bold text-[10px] text-white transition-all active:scale-95"
+                  style={{ backgroundColor: colors.error }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : booking.status === 'completed' ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate(`/write-review/${booking.id}`, { state: { booking } }); }}
+                className="w-full py-2 rounded-lg font-bold text-[10px] text-white transition-all active:scale-95"
+                style={{ backgroundColor: colors.backgroundTertiary }}
+              >
+                Review
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); setShowDetailsModal(true); }}
+                className="w-full py-2 rounded-lg font-bold text-[10px] text-white transition-all active:scale-95"
+                style={{ backgroundColor: colors.backgroundTertiary }}
+              >
+                View Details
+              </button>
+            )}
           </div>
-        )}
-        {booking.status === 'active' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedBooking(booking);
-              setShowDetailsModal(true);
-            }}
-            className="w-full mt-3 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-            style={{ backgroundColor: colors.backgroundTertiary }}
-          >
-            View Details
-          </button>
-        )}
-        {booking.status === 'completed' && (
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedBooking(booking);
-                setShowDetailsModal(true);
-              }}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-              style={{ 
-                backgroundColor: colors.backgroundPrimary,
-                color: colors.textPrimary,
-                border: `1px solid ${colors.backgroundTertiary}40`
-              }}
-            >
-              View Details
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/write-review/${booking.id}`, { state: { booking } });
-              }}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-              style={{ 
-                backgroundColor: colors.backgroundTertiary,
-                boxShadow: `0 2px 8px ${colors.backgroundTertiary}40`
-              }}
-            >
-              Write Review
-            </button>
-          </div>
-        )}
-        {booking.status === 'cancelled' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedBooking(booking);
-              setShowDetailsModal(true);
-            }}
-            className="w-full mt-3 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-95"
-            style={{ 
-              backgroundColor: colors.backgroundPrimary,
-              color: colors.textPrimary,
-              border: `1px solid ${colors.error}40`
-            }}
-          >
-            View Details
-          </button>
-        )}
-        {booking.status === 'pending' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedBooking(booking);
-              setShowDetailsModal(true);
-            }}
-            className="w-full mt-3 py-2.5 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-            style={{ backgroundColor: colors.backgroundTertiary }}
-          >
-            View Details
-          </button>
-        )}
+        </div>
       </div>
     </div>
+
   );
 };
 
@@ -759,7 +690,7 @@ const BookingsPage = () => {
       <SearchHeader title="Bookings" />
 
       {/* Web container - max-width and centered on larger screens */}
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Page Title */}
         <div className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-3 md:pb-4">
         <h1 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
@@ -833,7 +764,7 @@ const BookingsPage = () => {
           </p>
         </div>
       ) : (
-        <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 lg:gap-6 pb-4 md:pb-6">
+        <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 lg:gap-8 pb-4 md:pb-8">
           {filteredBookings.map((booking, index) => (
             <BookingCard
               key={`${booking.id}-${booking.bookingId}-${index}`}

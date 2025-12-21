@@ -27,23 +27,36 @@
   }
 
   /* Mobile-first typography */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold;
   }
 
   /* Ensure touch targets are at least 44x44px on mobile */
-  button, a, input[type="button"], input[type="submit"] {
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
     @apply min-h-[44px] min-w-[44px];
   }
 
   /* Mobile-friendly form inputs - Prevent zoom on iOS */
-  input, textarea, select {
-    @apply text-base; /* 16px minimum prevents zoom on iOS */
-    font-size: 16px !important; /* Force 16px to prevent zoom */
+  input,
+  textarea,
+  select {
+    @apply text-base;
+    /* 16px minimum prevents zoom on iOS */
+    font-size: 16px !important;
+    /* Force 16px to prevent zoom */
   }
-  
+
   /* Ensure all form inputs maintain 16px on mobile */
   @media (max-width: 767px) {
+
     input[type="text"],
     input[type="email"],
     input[type="tel"],
@@ -78,6 +91,7 @@
 
 /* Mobile-First Responsive Utilities */
 @layer utilities {
+
   /* Container with mobile-first padding */
   .container-mobile {
     @apply w-full px-4 mx-auto;
@@ -128,25 +142,30 @@
 /* Mobile Bottom Navbar Spacing */
 @media (max-width: 767px) {
   body {
-    padding-bottom: 64px; /* Space for bottom navbar */
+    padding-bottom: 64px;
+    /* Space for bottom navbar */
   }
 }
 
 /* Mobile Header Spacing */
 @media (max-width: 767px) {
   main {
-    padding-top: 0; /* Header handles its own spacing */
+    padding-top: 0;
+    /* Header handles its own spacing */
   }
 }
 
 /* Hide scrollbar utility */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Prevent horizontal scroll on mobile */
@@ -166,6 +185,7 @@ body {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -200,6 +220,7 @@ body {
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-33.333%);
   }
