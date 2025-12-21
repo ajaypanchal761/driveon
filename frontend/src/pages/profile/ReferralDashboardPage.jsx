@@ -97,6 +97,14 @@ const ReferralDashboardPage = () => {
   // Display referral code
   const displayReferralCode = referralCode || reduxReferralCode || 'DRIVE123';
   const displayPoints = points || reduxPoints || 0;
+  // Format points to show exact decimals (5.25, 2.625, 10.5 - up to 3 decimal places)
+  const formatPoints = (pts) => {
+    if (typeof pts !== 'number') return pts;
+    if (pts % 1 === 0) return pts.toLocaleString();
+    // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
+    const decimals = pts.toString().split('.')[1]?.length || 0;
+    return decimals <= 3 ? Number(pts).toFixed(decimals) : Number(pts).toFixed(3);
+  };
 
   return (
     <div className="min-h-screen pb-24 bg-gray-50">
@@ -137,7 +145,7 @@ const ReferralDashboardPage = () => {
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div>
                 <p className="text-xs md:text-sm text-white/80 mb-1 md:mb-2">Total Points</p>
-                <h2 className="text-3xl md:text-5xl font-bold">{loading ? '...' : displayPoints}</h2>
+                <h2 className="text-3xl md:text-5xl font-bold">{loading ? '...' : formatPoints(displayPoints)}</h2>
               </div>
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/20 flex items-center justify-center">
                 <svg className="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +232,7 @@ const ReferralDashboardPage = () => {
             </div>
             <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm border text-center hover:shadow-md transition-shadow" style={{ borderColor: theme.colors.borderLight }}>
               <p className="text-xs md:text-sm mb-1 md:mb-2" style={{ color: theme.colors.textSecondary }}>Points</p>
-              <p className="text-lg md:text-2xl font-bold" style={{ color: theme.colors.primary }}>{totalPointsFromReferrals}</p>
+              <p className="text-lg md:text-2xl font-bold" style={{ color: theme.colors.primary }}>{formatPoints(totalPointsFromReferrals)}</p>
             </div>
           </div>
         </div>
@@ -362,7 +370,7 @@ const ReferralDashboardPage = () => {
                         Points Earned
                       </p>
                       <p className="text-base md:text-xl font-bold" style={{ color: theme.colors.primary }}>
-                        +{referral.pointsEarned}
+                        +{formatPoints(referral.pointsEarned)}
                       </p>
                     </div>
                   </div>

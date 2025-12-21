@@ -13,6 +13,7 @@ const ProtectedRoute = () => {
   const { isAuthenticated, isLoading, isInitializing } = useSelector((state) => state.auth);
 
   // Show loading spinner while checking auth or initializing
+  // IMPORTANT: Wait for initialization to complete before checking authentication
   if (isLoading || isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -24,6 +25,8 @@ const ProtectedRoute = () => {
     );
   }
 
+  // Only check authentication AFTER initialization is complete
+  // This prevents redirecting to login during token verification on page refresh
   if (!isAuthenticated) {
     // Redirect to login with return URL
     return <Navigate to="/login" state={{ from: location }} replace />;

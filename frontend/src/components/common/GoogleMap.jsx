@@ -77,11 +77,16 @@ const GoogleMap = ({
   useEffect(() => {
     if (!isLoaded || !mapInstance.current) return;
 
+    // Create unique key for each marker (userId + userType to handle edge cases)
+    const getMarkerKey = (markerData) => {
+      return `${markerData.userId}-${markerData.userType || 'user'}`;
+    };
+
     // Remove markers that are no longer in the list
-    Object.keys(markersRef.current).forEach((userId) => {
-      if (!markers.find((m) => m.userId === userId)) {
-        markersRef.current[userId].setMap(null);
-        delete markersRef.current[userId];
+    Object.keys(markersRef.current).forEach((key) => {
+      if (!markers.find((m) => getMarkerKey(m) === key)) {
+        markersRef.current[key].setMap(null);
+        delete markersRef.current[key];
       }
     });
 
@@ -92,6 +97,7 @@ const GoogleMap = ({
       if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
 
       const position = { lat: parseFloat(lat), lng: parseFloat(lng) };
+      const markerKey = getMarkerKey(markerData);
 
       // Use custom location icon from public folder
       const markerIcon = {
@@ -101,11 +107,28 @@ const GoogleMap = ({
         origin: new window.google.maps.Point(0, 0),
       };
 
-      if (markersRef.current[userId]) {
-        // Update existing marker
-        markersRef.current[userId].setPosition(position);
+      if (markersRef.current[markerKey]) {
+        // Update existing marker position
+        const existingMarker = markersRef.current[markerKey];
+        const currentPos = existingMarker.getPosition();
+        const newPos = new window.google.maps.LatLng(position.lat, position.lng);
         
-        // Update info window content
+        // Always update position (even if same) to ensure marker is refreshed
+        existingMarker.setPosition(newPos);
+        
+        // Only log if position actually changed
+        if (currentPos.lat() !== position.lat || currentPos.lng() !== position.lng) {
+          console.log(`📍 Updated marker position for ${name || userId}:`, position);
+        }
+        
+        // Always update info window content with latest data (including timestamp)
+        const updateTime = timestamp ? new Date(timestamp).toLocaleTimeString('en-IN', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit',
+          hour12: true 
+        }) : 'Unknown';
+        
         const infoContent = `
           <div style="padding: 8px; min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #333;">
@@ -116,10 +139,10 @@ const GoogleMap = ({
             </p>
             ${accuracy ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Accuracy:</strong> ${Math.round(accuracy)}m</p>` : ''}
             ${speed ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Speed:</strong> ${Math.round(speed)} km/h</p>` : ''}
-            ${timestamp ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Updated:</strong> ${new Date(timestamp).toLocaleTimeString()}</p>` : ''}
+            <p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Updated:</strong> ${updateTime}</p>
           </div>
         `;
-        markersRef.current[userId].infoWindow.setContent(infoContent);
+        existingMarker.infoWindow.setContent(infoContent);
       } else {
         // Create new marker
         const marker = new window.google.maps.Marker({
@@ -164,7 +187,8 @@ const GoogleMap = ({
         });
 
         marker.infoWindow = infoWindow;
-        markersRef.current[userId] = marker;
+        markersRef.current[markerKey] = marker;
+        console.log(`📍 Created new marker for ${name || userId}:`, position);
       }
     });
   }, [isLoaded, markers, onMarkerClick]);

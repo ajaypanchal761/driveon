@@ -47,7 +47,7 @@ const ModuleLayout = () => {
       {/* Background Location Tracking for Authenticated Users */}
       {/* Disabled by default - enable only when needed to avoid Socket.IO connection errors */}
       {/* To enable: set VITE_ENABLE_LOCATION_TRACKING=true in .env */}
-      {isAuthenticated && user && import.meta.env.VITE_ENABLE_LOCATION_TRACKING === 'true' && (
+      {isAuthenticated && user && (
         <LocationTracker
           userId={user._id || user.id}
           userType={user.role === 'guarantor' ? 'guarantor' : 'user'}

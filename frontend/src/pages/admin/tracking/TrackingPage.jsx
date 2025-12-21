@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 import { colors } from '../../../module/theme/colors';
@@ -15,7 +15,7 @@ const TrackingPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const socketRef = useRef(null);
-  
+
   // Get initial view from URL
   const getInitialView = () => {
     if (location.pathname.includes('/active')) return 'active';
@@ -37,7 +37,7 @@ const TrackingPage = () => {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState(null);
   const [addressCache, setAddressCache] = useState({});
-  
+
   // Google Maps API Key (should be in environment variable)
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -45,7 +45,7 @@ const TrackingPage = () => {
   useEffect(() => {
     // Get admin token from localStorage
     const adminToken = localStorage.getItem('adminToken');
-    
+
     if (!adminToken) {
       setError('Admin authentication required');
       setLoading(false);
@@ -67,7 +67,7 @@ const TrackingPage = () => {
     socketRef.current.on('connect', () => {
       console.log('✅ Admin socket connected:', socketRef.current.id);
       setIsConnected(true);
-      
+
       // Register as admin
       socketRef.current.emit('register', {
         role: 'admin',
@@ -77,7 +77,7 @@ const TrackingPage = () => {
 
     socketRef.current.on('registered', (data) => {
       console.log('✅ Admin registered:', data);
-      
+
       // Request latest locations
       socketRef.current.emit('location:request');
     });
@@ -85,25 +85,57 @@ const TrackingPage = () => {
     // Receive location updates
     socketRef.current.on('location:update', (locationData) => {
       console.log('📍 Location update received:', locationData);
-      
+
       setLocations((prev) => {
         // Update or add location
         const existingIndex = prev.findIndex(
           (loc) => loc.userId === locationData.userId && loc.userType === locationData.userType
         );
-        
+
         if (existingIndex >= 0) {
-          // Update existing location
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            ...locationData,
-          };
+          // Update existing location - create completely new object to ensure React detects change
+          const updated = prev.map((loc, index) => {
+            if (index === existingIndex) {
+              // Create new object with all updated data
+              return {
+                ...locationData,
+                // Ensure all fields are updated, especially timestamp
+                timestamp: locationData.timestamp || new Date().toISOString(),
+                lat: parseFloat(locationData.lat),
+                lng: parseFloat(locationData.lng),
+                accuracy: locationData.accuracy ? parseFloat(locationData.accuracy) : null,
+                speed: locationData.speed ? parseFloat(locationData.speed) : null,
+                heading: locationData.heading ? parseFloat(locationData.heading) : null,
+                address: locationData.address || '',
+              };
+            }
+            return loc;
+          });
+          console.log('📍 Updated location for user:', locationData.userId, updated[existingIndex]);
           return updated;
         } else {
           // Add new location
-          return [...prev, locationData];
+          console.log('📍 Added new location for user:', locationData.userId);
+          return [...prev, {
+            ...locationData,
+            timestamp: locationData.timestamp || new Date().toISOString(),
+            lat: parseFloat(locationData.lat),
+            lng: parseFloat(locationData.lng),
+            accuracy: locationData.accuracy ? parseFloat(locationData.accuracy) : null,
+            speed: locationData.speed ? parseFloat(locationData.speed) : null,
+            heading: locationData.heading ? parseFloat(locationData.heading) : null,
+            address: locationData.address || '',
+          }];
         }
+      });
+
+      // Clear address cache for this location to force refresh
+      const locationKey = `${locationData.userId}-${locationData.userType}`;
+      setAddressCache((prev) => {
+        const newCache = { ...prev };
+        // Remove cached address so it gets refreshed with new location
+        delete newCache[locationKey];
+        return newCache;
       });
     });
 
@@ -152,12 +184,12 @@ const TrackingPage = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const params = {};
         if (filterType !== 'all') {
           params.userType = filterType;
         }
-        
+
         const response = await adminService.getLatestLocations(params);
         setLocations(response.data?.locations || []);
       } catch (err) {
@@ -174,55 +206,54 @@ const TrackingPage = () => {
   }, [viewMode, filterType]);
 
 
-  // Function to search user by ID
-  const handleSearchUser = async () => {
-    if (!userId || userId.trim() === '') {
-      setUserError('Please enter a User ID');
-      setUserDetails(null);
-      return;
-    }
+
+
+  // Function to fetch user details (reusable)
+  const fetchUserDetails = async (idOfUser) => {
+    if (!idOfUser || idOfUser.trim() === '') return;
 
     try {
       setUserLoading(true);
       setUserError(null);
-      
-      const trimmedId = userId.trim();
+
+      const trimmedId = idOfUser.trim();
       const response = await adminService.getUserById(trimmedId);
-      
+
       if (response && response.success && response.data?.user) {
         setUserDetails(response.data.user);
         setUserError(null);
+        // Persist successful search - REMOVED per user request
+        // localStorage.setItem('admin_tracking_search_userId', trimmedId);
       } else {
         setUserError('User not found');
         setUserDetails(null);
+        // Don't clear storage on transient errors, but maybe if definitely not found?
+        // Let's keep it for now so they can correct it
       }
     } catch (err) {
       console.error('Error fetching user:', err);
-      
-      let errorMessage = 'User not found';
-      
-      if (err.response) {
-        if (err.response.status === 404) {
-          errorMessage = 'User not found. Please check the User ID.';
-        } else if (err.response.status === 401 || err.response.status === 403) {
-          errorMessage = 'Unauthorized. Please login again.';
-        } else if (err.response.data?.message) {
-          errorMessage = err.response.data.message;
-        } else {
-          errorMessage = `Server error (${err.response.status}). Please try again.`;
-        }
-      } else if (err.request) {
-        errorMessage = 'Network error. Please check your connection.';
-      } else {
-        errorMessage = err.message || 'An error occurred. Please try again.';
-      }
-      
-      setUserError(errorMessage);
+      setUserError(err.response?.data?.message || 'User not found');
       setUserDetails(null);
     } finally {
       setUserLoading(false);
     }
   };
+
+  // Function to search user by ID (triggered by button)
+  const handleSearchUser = () => {
+    fetchUserDetails(userId);
+  };
+
+  // Restore search from local storage on mount - REMOVED per user request
+  /* 
+  useEffect(() => {
+    const savedUserId = localStorage.getItem('admin_tracking_search_userId');
+    if (savedUserId) {
+      setUserId(savedUserId);
+      fetchUserDetails(savedUserId);
+    }
+  }, []);
+  */
 
   // Handle Enter key press in user input field
   const handleUserKeyPress = (e) => {
@@ -241,27 +272,29 @@ const TrackingPage = () => {
       }
       return false;
     }
-    
-    // Otherwise, filter by type
-    if (filterType === 'all') return true;
-    return loc.userType === filterType;
+
+    // Default: Return false to show NO users until a search is performed
+    // satisfying "active me niche dikhna chiaye jo seach kiya wo user"
+    return false;
   });
 
-  // Convert locations to map markers
-  const mapMarkers = filteredLocations
-    .filter((loc) => loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng))
-    .map((loc) => ({
-      userId: loc.userId,
-      name: loc.name || 'Unknown',
-      lat: loc.lat,
-      lng: loc.lng,
-      userType: loc.userType,
-      accuracy: loc.accuracy,
-      speed: loc.speed,
-      timestamp: loc.timestamp,
-      email: loc.email,
-      phone: loc.phone,
-    }));
+  // Convert locations to map markers - use useMemo to ensure updates trigger re-renders
+  const mapMarkers = useMemo(() => {
+    return filteredLocations
+      .filter((loc) => loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng))
+      .map((loc) => ({
+        userId: loc.userId,
+        name: loc.name || 'Unknown',
+        lat: parseFloat(loc.lat),
+        lng: parseFloat(loc.lng),
+        userType: loc.userType,
+        accuracy: loc.accuracy,
+        speed: loc.speed,
+        timestamp: loc.timestamp,
+        email: loc.email,
+        phone: loc.phone,
+      }));
+  }, [filteredLocations]);
 
   // Resolve human-readable addresses on admin side for locations that don't have address
   useEffect(() => {
@@ -367,33 +400,30 @@ const TrackingPage = () => {
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setFilterType('all')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    filterType === 'all'
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${filterType === 'all'
+                    ? 'text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   style={filterType === 'all' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   All
                 </button>
                 <button
                   onClick={() => setFilterType('user')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    filterType === 'user'
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${filterType === 'user'
+                    ? 'text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   style={filterType === 'user' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Users
                 </button>
                 <button
                   onClick={() => setFilterType('guarantor')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${
-                    filterType === 'guarantor'
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${filterType === 'guarantor'
+                    ? 'text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   style={filterType === 'guarantor' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Guarantors
@@ -455,6 +485,7 @@ const TrackingPage = () => {
                       setUserId('');
                       setUserDetails(null);
                       setUserError(null);
+                      // localStorage.removeItem('admin_tracking_search_userId');
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                   >
@@ -506,205 +537,236 @@ const TrackingPage = () => {
         </Card>
 
         {/* Google Map View */}
-        {viewMode === 'active' && (
-          <>
-            <Card className="p-4 md:p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Live Map View</h2>
-                  {userDetails && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      Showing location for User: <span className="font-semibold">{userDetails.name || userDetails.email || 'N/A'}</span>
-                    </p>
+        {
+          viewMode === 'active' && (
+            <>
+              <Card className="p-4 md:p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Live Map View</h2>
+                    {userDetails && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Showing location for User: <span className="font-semibold">{userDetails.name || userDetails.email || 'N/A'}</span>
+                      </p>
+                    )}
+                  </div>
+                  {!GOOGLE_MAPS_API_KEY && (
+                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                      ⚠️ Google Maps API key not configured
+                    </span>
                   )}
                 </div>
-                {!GOOGLE_MAPS_API_KEY && (
-                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-                    ⚠️ Google Maps API key not configured
-                  </span>
-                )}
-              </div>
-              {userDetails && filteredLocations.length === 0 && (
-                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    ⚠️ No live location found for this user. The user needs to enable location tracking in their app.
-                  </p>
-                  <div className="mt-2 text-xs text-yellow-700">
-                    <p><strong>User:</strong> {userDetails.name || 'N/A'} ({userDetails.email || 'N/A'}) - Location tracking may not be active</p>
+                {userDetails && filteredLocations.length === 0 && (
+                  <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ No live location found for this user. The user needs to enable location tracking in their app.
+                    </p>
+                    <div className="mt-2 text-xs text-yellow-700">
+                      <p><strong>User:</strong> {userDetails.name || 'N/A'} ({userDetails.email || 'N/A'}) - Location tracking may not be active</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {GOOGLE_MAPS_API_KEY ? (
-                <div style={{ height: '600px', width: '100%' }}>
-                  {mapMarkers.length > 0 ? (
+                )}
+                {GOOGLE_MAPS_API_KEY ? (
+                  <div style={{ height: '600px', width: '100%' }}>
                     <GoogleMap
                       apiKey={GOOGLE_MAPS_API_KEY}
                       markers={mapMarkers}
                       center={
                         mapMarkers.length === 1
                           ? { lat: mapMarkers[0].lat, lng: mapMarkers[0].lng }
-                          : { lat: 20.5937, lng: 78.9629 }
+                          : mapMarkers.length > 0
+                            ? { lat: 20.5937, lng: 78.9629 }
+                            : { lat: 20.5937, lng: 78.9629 }
                       }
                       zoom={mapMarkers.length === 1 ? 15 : 5}
                       onMarkerClick={handleMarkerClick}
                       height="600px"
                     />
-                  ) : (
-                    <GoogleMap
-                      apiKey={GOOGLE_MAPS_API_KEY}
-                      markers={mapMarkers}
-                      center={{ lat: 20.5937, lng: 78.9629 }}
-                      zoom={5}
-                      onMarkerClick={handleMarkerClick}
-                      height="600px"
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-gray-600 mb-2">Google Maps API key required</p>
-                    <p className="text-sm text-gray-500">
-                      Set VITE_GOOGLE_MAPS_API_KEY in your .env file
-                    </p>
                   </div>
-                </div>
-              )}
-            </Card>
+                ) : (
+                  <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-gray-500 mb-2">Google Maps API key required</p>
+                      <p className="text-sm text-gray-400">
+                        Set VITE_GOOGLE_MAPS_API_KEY in your .env file
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </Card>
 
-            {/* Locations List */}
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {userDetails
-                  ? `User Location (${filteredLocations.length})`
-                  : `Active Locations (${filteredLocations.length})`}
-              </h2>
-            </div>
+              {/* Locations List */}
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  {userDetails
+                    ? `User Location (${filteredLocations.length})`
+                    : `Active Locations (${filteredLocations.length})`}
+                </h2>
+              </div>
 
-            <div className="space-y-4">
-              {filteredLocations.length === 0 && userDetails && (
+              <div className="space-y-4">
+                {filteredLocations.length === 0 && userDetails && (
+                  <Card className="p-8 text-center">
+                    <p className="text-gray-600 mb-2">No live location available for this user.</p>
+                    <p className="text-sm text-gray-500">
+                      The user needs to enable location tracking in their app.
+                    </p>
+                  </Card>
+                )}
+                {filteredLocations.map((loc) => {
+                  const locationKey = `${loc.userId}-${loc.userType}`;
+                  const displayAddress =
+                    loc.address && loc.address.trim() !== ''
+                      ? loc.address
+                      : addressCache[locationKey] || '';
+
+                  // Create unique key that includes timestamp to force re-render on updates
+                  const uniqueKey = `${loc.userId}-${loc.userType}-${loc.timestamp || Date.now()}`;
+
+                  return (
+                    <Card key={uniqueKey} className="p-4 hover:shadow-lg transition-all">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        {/* Location Info */}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h3 className="font-semibold text-gray-900 mb-1">
+                                {loc.name || 'Unknown'}
+                              </h3>
+                              <p className="text-sm text-gray-500 mb-2">
+                                {loc.userType === 'guarantor' ? '🛡️ Guarantor' : '👤 User'}
+                                {loc.email && ` • ${loc.email}`}
+                                {loc.phone && ` • ${loc.phone}`}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${loc.userType === 'guarantor'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-blue-100 text-blue-800'
+                                }`}
+                            >
+                              {loc.userType === 'guarantor' ? 'Guarantor' : 'User'}
+                            </span>
+                          </div>
+
+                          {/* Location Details Grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                            <div>
+                              <p className="text-xs text-gray-600">Coordinates</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {loc.lat?.toFixed(6)}, {loc.lng?.toFixed(6)}
+                              </p>
+                            </div>
+                            {loc.accuracy && (
+                              <div>
+                                <p className="text-xs text-gray-600">Accuracy</p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {Math.round(loc.accuracy)}m
+                                </p>
+                              </div>
+                            )}
+                            {loc.speed && (
+                              <div>
+                                <p className="text-xs text-gray-600">Speed</p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {Math.round(loc.speed)} km/h
+                                </p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs text-gray-600">Last Update</p>
+                              <p className="text-sm font-semibold text-gray-900" key={`timestamp-${loc.timestamp}`}>
+                                {loc.timestamp
+                                  ? (() => {
+                                    const updateDate = new Date(loc.timestamp);
+                                    const now = new Date();
+                                    const diffMs = now - updateDate;
+                                    const diffMins = Math.floor(diffMs / 60000);
+
+                                    // If updated within last 5 minutes, show "Live" indicator
+                                    if (diffMins < 5) {
+                                      return (
+                                        <span className="flex items-center gap-1">
+                                          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                          {updateDate.toLocaleString('en-IN', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit',
+                                            hour12: true
+                                          })}
+                                        </span>
+                                      );
+                                    }
+
+                                    // Otherwise show full date and time
+                                    return updateDate.toLocaleString('en-IN', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      second: '2-digit',
+                                      hour12: true
+                                    });
+                                  })()
+                                  : 'N/A'}
+                              </p>
+                            </div>
+                            <div className="md:col-span-2">
+                              <p className="text-xs text-gray-600">Current Location</p>
+                              <p className="text-sm font-semibold text-gray-900 whitespace-normal break-words">
+                                {displayAddress || 'Fetching address...'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Address icon row removed to avoid duplication; full address shown above */}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-2 md:w-40">
+                          <button
+                            onClick={() => handleMarkerClick(loc)}
+                            className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                            style={{ backgroundColor: colors.backgroundTertiary }}
+                          >
+                            View on Map
+                          </button>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {filteredLocations.length === 0 && (
                 <Card className="p-8 text-center">
-                  <p className="text-gray-600 mb-2">No live location available for this user.</p>
-                  <p className="text-sm text-gray-500">
-                    The user needs to enable location tracking in their app.
+                  <p className="text-gray-600">Please search for a user to view their live location.</p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Enter User ID, Name, or Phone in the search bar above.
                   </p>
                 </Card>
               )}
-              {filteredLocations.map((loc) => {
-                const locationKey = `${loc.userId}-${loc.userType}`;
-                const displayAddress =
-                  loc.address && loc.address.trim() !== ''
-                    ? loc.address
-                    : addressCache[locationKey] || '';
-
-                return (
-                <Card key={`${loc.userId}-${loc.userType}`} className="p-4 hover:shadow-lg transition-all">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Location Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 mb-1">
-                            {loc.name || 'Unknown'}
-                          </h3>
-                          <p className="text-sm text-gray-500 mb-2">
-                            {loc.userType === 'guarantor' ? '🛡️ Guarantor' : '👤 User'}
-                            {loc.email && ` • ${loc.email}`}
-                            {loc.phone && ` • ${loc.phone}`}
-                          </p>
-                        </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            loc.userType === 'guarantor'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}
-                        >
-                          {loc.userType === 'guarantor' ? 'Guarantor' : 'User'}
-                        </span>
-                      </div>
-
-                      {/* Location Details Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                        <div>
-                          <p className="text-xs text-gray-600">Coordinates</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {loc.lat?.toFixed(6)}, {loc.lng?.toFixed(6)}
-                          </p>
-                        </div>
-                        {loc.accuracy && (
-                          <div>
-                            <p className="text-xs text-gray-600">Accuracy</p>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {Math.round(loc.accuracy)}m
-                            </p>
-                          </div>
-                        )}
-                        {loc.speed && (
-                          <div>
-                            <p className="text-xs text-gray-600">Speed</p>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {Math.round(loc.speed)} km/h
-                            </p>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-xs text-gray-600">Last Update</p>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {loc.timestamp
-                              ? new Date(loc.timestamp).toLocaleTimeString()
-                              : 'N/A'}
-                          </p>
-                        </div>
-                        <div className="md:col-span-2">
-                          <p className="text-xs text-gray-600">Current Location</p>
-                          <p className="text-sm font-semibold text-gray-900 whitespace-normal break-words">
-                            {displayAddress || 'Fetching address...'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Address icon row removed to avoid duplication; full address shown above */}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 md:w-40">
-                      <button
-                        onClick={() => handleMarkerClick(loc)}
-                        className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                        style={{ backgroundColor: colors.backgroundTertiary }}
-                      >
-                        View on Map
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              )})}
-            </div>
-
-            {filteredLocations.length === 0 && (
-              <Card className="p-8 text-center">
-                <p className="text-gray-600">No active locations to display.</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Users and guarantors need to enable location tracking.
-                </p>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+      </div >
 
       {/* Location Detail Modal */}
-      {showLocationDetail && selectedLocation && (
-        <LocationDetailModal
-          location={selectedLocation}
-          onClose={() => {
-            setShowLocationDetail(false);
-            setSelectedLocation(null);
-          }}
-        />
-      )}
-    </div>
+      {
+        showLocationDetail && selectedLocation && (
+          <LocationDetailModal
+            location={selectedLocation}
+            onClose={() => {
+              setShowLocationDetail(false);
+              setSelectedLocation(null);
+            }}
+          />
+        )
+      }
+    </div >
   );
 };
 
@@ -788,7 +850,41 @@ const LocationDetailModal = ({ location, onClose }) => {
                   <label className="text-xs font-medium text-gray-700">Last Update</label>
                   <p className="text-sm text-gray-900">
                     {location.timestamp
-                      ? new Date(location.timestamp).toLocaleString()
+                      ? (() => {
+                        const updateDate = new Date(location.timestamp);
+                        const now = new Date();
+                        const diffMs = now - updateDate;
+                        const diffMins = Math.floor(diffMs / 60000);
+
+                        // If updated within last 5 minutes, show "Live" indicator
+                        if (diffMins < 5) {
+                          return (
+                            <span className="flex items-center gap-1">
+                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                              {updateDate.toLocaleString('en-IN', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: true
+                              })}
+                            </span>
+                          );
+                        }
+
+                        // Otherwise show full date and time
+                        return updateDate.toLocaleString('en-IN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true
+                        });
+                      })()
                       : 'N/A'}
                   </p>
                 </div>

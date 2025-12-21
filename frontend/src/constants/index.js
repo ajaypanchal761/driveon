@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
     KYC_STATUS: '/user/kyc-status',
     UPLOAD_PHOTO: '/user/upload-photo',
     CHANGE_PASSWORD: '/user/change-password',
+    GUARANTOR_REQUESTS: '/user/guarantor-requests',
+    GUARANTOR_POINTS: '/user/guarantor-points',
   },
   ADMIN: {
     SIGNUP: '/admin/signup',

@@ -15,7 +15,7 @@ const BookingPaymentPage = () => {
   const { carId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get booking data from navigation state
   const bookingData = location.state;
 
@@ -56,7 +56,7 @@ const BookingPaymentPage = () => {
   const carImageUrl = getCarImageUrl();
 
   // Calculate payment amount
-  const paymentAmount = paymentOption === 'advance' 
+  const paymentAmount = paymentOption === 'advance'
     ? priceDetails.advancePayment
     : priceDetails.totalPrice;
 
@@ -73,7 +73,7 @@ const BookingPaymentPage = () => {
         // Validate required data
         const pickupDate = bookingData.pickupDate || bookingData.tripStart?.date;
         const dropDate = bookingData.dropDate || bookingData.tripEnd?.date;
-        
+
         if (!pickupDate) {
           throw new Error('Pickup date is required');
         }
@@ -84,11 +84,11 @@ const BookingPaymentPage = () => {
         // Validate dates on frontend before sending
         const pickupTime = bookingData.pickupTime || bookingData.tripStart?.time || '10:00';
         const dropTime = bookingData.dropTime || bookingData.tripEnd?.time || '18:00';
-        
+
         // Create date objects with time
         const startDateObj = new Date(pickupDate);
         const endDateObj = new Date(dropDate);
-        
+
         // Parse and set time for start date
         const startTimeParts = pickupTime.split(':');
         if (startTimeParts.length >= 2) {
@@ -98,7 +98,7 @@ const BookingPaymentPage = () => {
         } else {
           startDateObj.setHours(0, 0, 0, 0);
         }
-        
+
         // Parse and set time for end date
         const endTimeParts = dropTime.split(':');
         if (endTimeParts.length >= 2) {
@@ -108,15 +108,15 @@ const BookingPaymentPage = () => {
         } else {
           endDateObj.setHours(23, 59, 59, 999);
         }
-        
+
         // Check if start date/time is in the past
         const now = new Date();
         now.setSeconds(0, 0); // Remove seconds for comparison
-        
+
         if (startDateObj < now) {
           throw new Error('Trip start date and time cannot be in the past. Please select a future date and time.');
         }
-        
+
         // Check if end date/time is after start date/time
         if (endDateObj <= startDateObj) {
           throw new Error('Trip end date and time must be after start date and time');
@@ -154,7 +154,7 @@ const BookingPaymentPage = () => {
 
         const bookingResponse = await bookingService.createBooking(bookingDataToSend);
         console.log('📦 Booking creation response:', bookingResponse);
-        
+
         if (bookingResponse.success && bookingResponse.data?.booking) {
           booking = bookingResponse.data.booking;
           setBookingId(booking._id);
@@ -181,18 +181,39 @@ const BookingPaymentPage = () => {
       if (!booking || !booking._id) {
         throw new Error('Booking ID is missing. Cannot proceed with payment.');
       }
-      
+
       console.log('💳 Processing payment through Razorpay...');
+
+      // CRITICAL FIX: Use the pricing from the backend booking object to ensure
+      // the paid amount matches the database record exactly.
+      // Frontend calculations can have slight discrepancies.
+      let correctPaymentAmount = paymentAmount;
+
+      if (booking.pricing) {
+        if (booking.paymentOption === 'advance') {
+          correctPaymentAmount = booking.pricing.advancePayment;
+        } else {
+          correctPaymentAmount = booking.pricing.finalPrice || booking.pricing.totalPrice;
+        }
+      }
+
+      console.log('💰 Payment Amount Log:', {
+        frontendCalculated: paymentAmount,
+        backendPricingWithDecimals: booking.pricing,
+        finalAmountToCharge: correctPaymentAmount
+      });
+
       console.log('📦 Payment details:', {
         bookingId: booking._id,
         bookingIdString: booking._id.toString(),
-        amount: paymentAmount,
+        calculatedFrontendAmount: paymentAmount,
+        backendCorrectAmount: correctPaymentAmount,
         car: `${car.brand} ${car.model}`,
       });
-      
+
       await razorpayService.processBookingPayment({
         bookingId: booking._id.toString(),
-        amount: paymentAmount,
+        amount: correctPaymentAmount,
         description: `Car booking payment - ${car.brand} ${car.model}`,
         name: user?.name || '',
         email: user?.email || '',
@@ -200,10 +221,10 @@ const BookingPaymentPage = () => {
         onSuccess: (verificationResult) => {
           console.log('✅ Payment successful:', verificationResult);
           setIsProcessing(false);
-          
+
           // Show success message briefly, then redirect to My Bookings
           toastUtils.success('Payment successful! Your booking has been confirmed.');
-          
+
           // Navigate to My Bookings page
           navigate('/bookings', {
             replace: true, // Replace current history entry
@@ -211,16 +232,16 @@ const BookingPaymentPage = () => {
         },
         onError: (error) => {
           setIsProcessing(false);
-          
+
           // Handle payment cancellation silently (user intentionally closed the modal)
           if (error.message === 'PAYMENT_CANCELLED') {
             console.log('ℹ️ Payment cancelled by user');
             return; // Don't show any error for user cancellation
           }
-          
+
           // Log other errors for debugging
           console.error('❌ Payment error:', error);
-          
+
           // Show error message for actual payment failures
           toastUtils.error(error.message || 'Payment failed. Please try again.');
         },
@@ -233,20 +254,20 @@ const BookingPaymentPage = () => {
         status: error.response?.status,
         stack: error.stack,
       });
-      
+
       // Log full error response for debugging
       if (error.response?.data) {
         console.error('📋 Full error response:', JSON.stringify(error.response.data, null, 2));
       }
-      
+
       setIsProcessing(false);
-      
+
       // Show user-friendly error message
       let errorMessage = 'Failed to process payment. Please try again.';
-      
+
       if (error.response?.data) {
         const errorData = error.response.data;
-        
+
         // Handle validation errors with details
         if (errorData.errors && Array.isArray(errorData.errors)) {
           console.error('🔍 Validation errors:', errorData.errors);
@@ -257,10 +278,10 @@ const BookingPaymentPage = () => {
             return `${field}: ${msg}${value}`;
           }).join('\n');
           errorMessage = `Validation Error:\n${validationErrors}`;
-        } 
+        }
         // Handle error with details object
         else if (errorData.details) {
-          const detailsStr = typeof errorData.details === 'object' 
+          const detailsStr = typeof errorData.details === 'object'
             ? JSON.stringify(errorData.details, null, 2)
             : errorData.details;
           errorMessage = `${errorData.message || 'Validation Error'}\n\nDetails:\n${detailsStr}`;
@@ -276,7 +297,7 @@ const BookingPaymentPage = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       // Show toast with error message
       toastUtils.error(errorMessage);
     }
@@ -308,9 +329,9 @@ const BookingPaymentPage = () => {
       <div className="px-4 pt-4 pb-2">
         <div className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm border" style={{ borderColor: theme.colors.borderLight }}>
           {carImageUrl ? (
-            <img 
-              src={carImageUrl} 
-              alt={`${car.brand} ${car.model}`} 
+            <img
+              src={carImageUrl}
+              alt={`${car.brand} ${car.model}`}
               className="w-16 h-16 object-contain rounded-lg bg-gray-50 p-1 flex-shrink-0"
               onError={(e) => {
                 // Hide image on error and show placeholder
@@ -321,7 +342,7 @@ const BookingPaymentPage = () => {
             />
           ) : null}
           {/* Placeholder icon when image fails or doesn't exist */}
-          <div 
+          <div
             className="w-16 h-16 flex items-center justify-center bg-gray-100 rounded-lg flex-shrink-0"
             style={{ display: carImageUrl ? 'none' : 'flex' }}
           >

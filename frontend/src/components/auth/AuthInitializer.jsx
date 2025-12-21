@@ -32,7 +32,8 @@ const AuthInitializer = () => {
       }
 
       // If already authenticated and user exists, skip
-      if (isAuthenticated && user && token === storedToken) {
+      // But only if token matches and we're not in the middle of initialization
+      if (isAuthenticated && user && token === storedToken && token) {
         // Mark initialization as complete since we're already authenticated
         dispatch(authInitialized());
         return;

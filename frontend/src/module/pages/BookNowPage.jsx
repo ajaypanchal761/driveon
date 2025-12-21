@@ -3,13 +3,13 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import razorpayService from "../../services/razorpay.service";
 import bookingService from "../../services/booking.service";
 import { userService } from "../../services/user.service";
+import { commonService } from "../../services/common.service";
 import { useAppSelector } from "../../hooks/redux";
 import CarDetailsHeader from "../components/layout/CarDetailsHeader";
 import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
 import CustomSelect from "../components/common/CustomSelect";
 import { colors } from "../theme/colors";
 import { motion } from "framer-motion";
-import { getAddOnServicesPrices, calculateAddOnServicesTotal } from "../../utils/addOnServices";
 
 // Import car images for mock data
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -310,30 +310,32 @@ const BookNowPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [submitWarning, setSubmitWarning] = useState("");
 
-  // Load add-on services prices
+  // Load add-on services prices from API
   useEffect(() => {
-    const prices = getAddOnServicesPrices();
-    setAddOnServicesPrices(prices);
-    
-    // Listen for storage changes (when admin updates prices)
-    const handleStorageChange = (e) => {
-      if (e.key === 'addon_services_prices') {
-        const newPrices = getAddOnServicesPrices();
-        setAddOnServicesPrices(newPrices);
+    const fetchPrices = async () => {
+      try {
+        const response = await commonService.getAddOnServicesPrices();
+        if (response.success && response.data) {
+          setAddOnServicesPrices({
+            driver: response.data.driver || 500,
+            bodyguard: response.data.bodyguard || 1000,
+            gunmen: response.data.gunmen || 1500,
+            bouncer: response.data.bouncer || 800,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching add-on services prices:', error);
+        // Fallback to default prices
+        setAddOnServicesPrices({
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        });
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(() => {
-      const currentPrices = getAddOnServicesPrices();
-      setAddOnServicesPrices(currentPrices);
-    }, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+
+    fetchPrices();
   }, []);
 
   // Booking confirmation modal state (shown after successful Razorpay payment)
@@ -389,6 +391,15 @@ const BookNowPage = () => {
   // Helper: basic ObjectId validation
   const isValidObjectId = (val) => /^[0-9a-fA-F]{24}$/.test(val || "");
 
+  // Helper to format decimal values
+  const formatDecimal = (value) => {
+    if (value == null || isNaN(value)) return '0';
+    const numValue = typeof value === 'number' ? value : parseFloat(value);
+    if (isNaN(numValue)) return '0';
+    // Show 2 decimal places, remove trailing zeros if integer
+    return numValue.toFixed(2).replace(/\.?0+$/, '');
+  };
+
   // Calculate dynamic price based on document.txt requirements
   const calculatePrice = () => {
     if (!pickupDate || !dropDate || !car) {
@@ -396,6 +407,7 @@ const BookNowPage = () => {
         basePrice: 0,
         totalDays: 0,
         totalPrice: 0,
+        addOnServicesTotal: 0,
         advancePayment: 0,
         remainingPayment: 0,
         discount: 0,
@@ -413,29 +425,36 @@ const BookNowPage = () => {
     const basePrice = extractPrice(car.price || car.pricePerDay || 0);
     let totalPrice = basePrice * totalDays;
 
-    // Apply dynamic pricing multipliers (from document.txt)
-    const dayOfWeek = pickup.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 1.2 : 1.0; // 20% increase on weekends
+    // No dynamic pricing multiplier needed
+    totalPrice = totalPrice;
 
-    totalPrice = totalPrice * weekendMultiplier;
+    // Calculate add-on services total
+    const addOnServicesTotal =
+      (addOnServices.driver * (addOnServicesPrices.driver || 0)) +
+      (addOnServices.bodyguard * (addOnServicesPrices.bodyguard || 0)) +
+      (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
+      (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
+
+    // Add add-on services to total price
+    totalPrice += addOnServicesTotal;
 
     // Apply coupon discount if available
     const discount = couponDiscount || 0;
     const finalPrice = Math.max(0, totalPrice - discount);
 
     // Payment options
-    const advancePayment = Math.round(finalPrice * 0.35); // 35% advance
+    const advancePayment = finalPrice * 0.35; // 35% advance (exact)
     const remainingPayment = finalPrice - advancePayment;
 
     return {
       basePrice,
       totalDays,
-      totalPrice: Math.round(totalPrice),
-      discount: Math.round(discount),
-      finalPrice: Math.round(finalPrice),
+      totalPrice,
+      addOnServicesTotal,
+      discount,
+      finalPrice,
       advancePayment,
-      remainingPayment: Math.round(remainingPayment),
+      remainingPayment,
     };
   };
 
@@ -540,6 +559,10 @@ const BookNowPage = () => {
     }
     return days;
   };
+
+  useEffect(() => {
+    console.log(showBookingConfirmationModal, [showBookingConfirmationModal])
+  }, [showBookingConfirmationModal])
 
   const formatDisplayTime = (timeStr) => {
     if (!timeStr) return "Select Time";
@@ -1088,8 +1111,8 @@ const BookNowPage = () => {
                 >
                   {pickupDate && pickupTime
                     ? `${formatDisplayDate(pickupDate)} • ${formatDisplayTime(
-                        pickupTime
-                      )}`
+                      pickupTime
+                    )}`
                     : "Select Date & Time"}
                 </div>
               </button>
@@ -1124,8 +1147,8 @@ const BookNowPage = () => {
                 >
                   {dropDate && dropTime
                     ? `${formatDisplayDate(dropDate)} • ${formatDisplayTime(
-                        dropTime
-                      )}`
+                      dropTime
+                    )}`
                     : "Select Date & Time"}
                 </div>
               </button>
@@ -1152,9 +1175,8 @@ const BookNowPage = () => {
               <button
                 type="button"
                 onClick={() => setPaymentOption("advance")}
-                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                  paymentOption === "advance" ? "shadow-md" : ""
-                }`}
+                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${paymentOption === "advance" ? "shadow-md" : ""
+                  }`}
                 style={{
                   borderColor:
                     paymentOption === "advance"
@@ -1318,9 +1340,20 @@ const BookNowPage = () => {
                 >
                   <span>Base Price ({priceDetails.totalDays} days)</span>
                   <span className="font-semibold">
-                    Rs. {priceDetails.totalPrice}
+                    Rs. {formatDecimal(priceDetails.totalPrice - (priceDetails.addOnServicesTotal || 0))}
                   </span>
                 </div>
+                {priceDetails.addOnServicesTotal > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
+                  >
+                    <span>Add-on Services</span>
+                    <span className="font-semibold">
+                      Rs. {priceDetails.addOnServicesTotal}
+                    </span>
+                  </div>
+                )}
                 {priceDetails.discount > 0 && (
                   <div
                     className="flex justify-between text-sm"
@@ -1345,7 +1378,7 @@ const BookNowPage = () => {
                   >
                     <span className="text-base">Total Amount</span>
                     <span className="text-base">
-                      Rs. {priceDetails.finalPrice}
+                      Rs. {formatDecimal(priceDetails.finalPrice)}
                     </span>
                   </div>
                 </div>
@@ -1363,7 +1396,7 @@ const BookNowPage = () => {
                     >
                       <span>Advance Payment (35%)</span>
                       <span className="font-semibold">
-                        Rs. {priceDetails.advancePayment}
+                        Rs. {formatDecimal(priceDetails.advancePayment)}
                       </span>
                     </div>
                     <div
@@ -1375,7 +1408,7 @@ const BookNowPage = () => {
                     >
                       <span>Remaining Amount</span>
                       <span className="font-semibold">
-                        Rs. {priceDetails.remainingPayment}
+                        Rs. {formatDecimal(priceDetails.remainingPayment)}
                       </span>
                     </div>
                   </div>
@@ -2725,15 +2758,14 @@ const BookNowPage = () => {
                           }
                         }}
                         disabled={isPast && !isMinDate}
-                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          isSelected
-                            ? "text-white"
-                            : isPast && !isMinDate
+                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
+                          ? "text-white"
+                          : isPast && !isMinDate
                             ? "cursor-not-allowed"
                             : !isCurrentMonth
-                            ? "opacity-40"
-                            : "hover:bg-gray-100"
-                        }`}
+                              ? "opacity-40"
+                              : "hover:bg-gray-100"
+                          }`}
                         style={{
                           backgroundColor: isSelected
                             ? colors.backgroundTertiary
@@ -2741,8 +2773,8 @@ const BookNowPage = () => {
                           color: isSelected
                             ? colors.backgroundSecondary
                             : isPast && !isMinDate
-                            ? colors.borderCheckbox
-                            : colors.textPrimary,
+                              ? colors.borderCheckbox
+                              : colors.textPrimary,
                         }}
                       >
                         {date.getDate()}
@@ -2816,9 +2848,8 @@ const BookNowPage = () => {
                         key={hour}
                         type="button"
                         onClick={() => setSelectedHour(hour)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          selectedHour === hour ? "text-white" : ""
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === hour ? "text-white" : ""
+                          }`}
                         style={{
                           backgroundColor:
                             selectedHour === hour
@@ -2857,9 +2888,8 @@ const BookNowPage = () => {
                         key={minute}
                         type="button"
                         onClick={() => setSelectedMinute(minute)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                          selectedMinute === minute ? "text-white" : ""
-                        }`}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === minute ? "text-white" : ""
+                          }`}
                         style={{
                           backgroundColor:
                             selectedMinute === minute
@@ -2889,9 +2919,8 @@ const BookNowPage = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedPeriod("am")}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        selectedPeriod === "am" ? "text-white" : ""
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === "am" ? "text-white" : ""
+                        }`}
                       style={{
                         backgroundColor:
                           selectedPeriod === "am"
@@ -2908,9 +2937,8 @@ const BookNowPage = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedPeriod("pm")}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        selectedPeriod === "pm" ? "text-white" : ""
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === "pm" ? "text-white" : ""
+                        }`}
                       style={{
                         backgroundColor:
                           selectedPeriod === "pm"
@@ -2974,6 +3002,7 @@ const BookNowPage = () => {
           bookingId={confirmedBookingId}
           bookingData={confirmedBookingData}
           onClose={() => {
+            console.log("onclose function called")
             setShowBookingConfirmationModal(false);
             setConfirmedBookingId(null);
             setConfirmedBookingData(null);

@@ -146,7 +146,7 @@ const ModuleRegisterPage = () => {
         email: email.trim(),
         phone: cleanedPhone,
         referralCode: referralCode.trim() || undefined,
-        heardAbout: heardAbout.trim() || undefined,
+        heardAbout: heardAbout.trim() || '', // Send empty string if not selected
       });
 
       console.log('Register Response:', response);

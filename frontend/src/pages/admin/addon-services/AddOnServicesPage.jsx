@@ -2,12 +2,7 @@ import { useState, useEffect } from 'react';
 import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import toastUtils from '../../../config/toast';
-import {
-  getAddOnServicesPrices,
-  updateAddOnServicePrice,
-  updateAllAddOnServicesPrices,
-  resetToDefaultPrices,
-} from '../../../utils/addOnServices';
+import { adminService } from '../../../services/admin.service';
 
 /**
  * Add-on Services Management Page
@@ -68,10 +63,36 @@ const AddOnServicesPage = () => {
     },
   ];
 
-  // Load prices on mount
+  // Load prices from API on mount
   useEffect(() => {
-    const loadedPrices = getAddOnServicesPrices();
-    setPrices(loadedPrices);
+    const fetchPrices = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getAddOnServicesPrices();
+        if (response.success && response.data) {
+          setPrices({
+            driver: response.data.driver || 500,
+            bodyguard: response.data.bodyguard || 1000,
+            gunmen: response.data.gunmen || 1500,
+            bouncer: response.data.bouncer || 800,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching add-on services prices:', error);
+        toastUtils.error('Failed to load prices');
+        // Fallback to default prices
+        setPrices({
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrices();
   }, []);
 
   // Handle price change
@@ -85,37 +106,58 @@ const AddOnServicesPage = () => {
   };
 
   // Save all prices
-  const handleSave = () => {
-    setLoading(true);
+  const handleSave = async () => {
     try {
-      const success = updateAllAddOnServicesPrices(prices);
-      if (success) {
+      setLoading(true);
+      const response = await adminService.updateAddOnServicesPrices(prices);
+      if (response.success) {
         toastUtils.success('Add-on services prices updated successfully!');
         setHasChanges(false);
+        // Update local state with response data
+        if (response.data) {
+          setPrices({
+            driver: response.data.driver || prices.driver,
+            bodyguard: response.data.bodyguard || prices.bodyguard,
+            gunmen: response.data.gunmen || prices.gunmen,
+            bouncer: response.data.bouncer || prices.bouncer,
+          });
+        }
       } else {
-        toastUtils.error('Failed to save prices');
+        toastUtils.error(response.message || 'Failed to save prices');
       }
     } catch (error) {
       console.error('Error saving prices:', error);
-      toastUtils.error('Failed to save prices');
+      toastUtils.error(error.response?.data?.message || 'Failed to save prices');
     } finally {
       setLoading(false);
     }
   };
 
   // Reset to defaults
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('Are you sure you want to reset all prices to default values?')) {
-      const defaultPrices = {
-        driver: 500,
-        bodyguard: 1000,
-        gunmen: 1500,
-        bouncer: 800,
-      };
-      setPrices(defaultPrices);
-      resetToDefaultPrices();
-      toastUtils.success('Prices reset to default values');
-      setHasChanges(false);
+      try {
+        setLoading(true);
+        const defaultPrices = {
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        };
+        const response = await adminService.updateAddOnServicesPrices(defaultPrices);
+        if (response.success) {
+          setPrices(defaultPrices);
+          toastUtils.success('Prices reset to default values');
+          setHasChanges(false);
+        } else {
+          toastUtils.error(response.message || 'Failed to reset prices');
+        }
+      } catch (error) {
+        console.error('Error resetting prices:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to reset prices');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

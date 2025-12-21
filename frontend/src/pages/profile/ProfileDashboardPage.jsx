@@ -41,13 +41,13 @@ const ProfileDashboardPage = () => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!isAuthenticated) return;
-      
+
       try {
         const response = await userService.getProfile();
-        
+
         // Extract user data from response (handle different response formats)
         const userData = response.data?.user || response.data?.data?.user || response.user;
-        
+
         if (userData) {
           // Update Redux store with fetched data
           dispatch(updateUser(userData));
@@ -199,14 +199,14 @@ const ProfileDashboardPage = () => {
    */
   const formatUserId = (userId) => {
     if (!userId) return '';
-    
+
     // Extract last 6 characters from ObjectId and convert to number
     const lastChars = userId.slice(-6);
     // Convert hex to decimal, then take modulo to get a number between 0-999
     const num = parseInt(lastChars, 16) % 1000;
     // Pad with zeros to make it 3 digits
     const paddedNum = String(num).padStart(3, '0');
-    
+
     return `USER${paddedNum}`;
   };
 
@@ -304,9 +304,9 @@ const ProfileDashboardPage = () => {
       </header>
 
       {/* Main Content */}
-      <main 
+      <main
         className="px-4 pt-6 pb-6 md:px-3 md:pt-10 md:pb-3 md:px-6 md:pt-14 md:pb-6 w-full max-w-7xl mx-auto"
-        style={{ 
+        style={{
           backgroundColor: `${theme.colors.primary}08`,
         }}
       >
@@ -372,7 +372,7 @@ const ProfileDashboardPage = () => {
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* Icon in rounded square */}
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: `${theme.colors.primary}15` }}
                     >
@@ -573,147 +573,146 @@ const ProfileDashboardPage = () => {
 
           {/* Menu Options */}
           <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 pt-3">
-          {menuOptions.map((option) => (
+            {menuOptions.map((option) => (
               <button
                 key={option.id}
                 onClick={() => navigate(option.path)}
                 className="w-full bg-white rounded-xl p-3.5 md:p-4 flex items-center justify-between shadow-md border border-gray-100/90 hover:shadow-lg md:hover:shadow-xl transition-all touch-target group"
               >
-              <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-                {/* Icon */}
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${theme.colors.primary}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>
+                <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                  {/* Icon */}
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ backgroundColor: `${theme.colors.primary}1A` }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}33`} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `${theme.colors.primary}1A`}>
+                    <svg
+                      className="w-5 h-5 md:w-6 md:h-6"
+                      style={{ color: theme.colors.primary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {option.icon}
+                    </svg>
+                  </div>
+
+                  {/* Label */}
+                  <span className="text-sm md:text-base font-medium text-gray-900 truncate">{option.label}</span>
+                </div>
+
+                {/* Badge and Arrow */}
+                <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                  {option.badge && (
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`${option.badgeColor} text-white text-xs md:text-sm font-semibold px-1.5 md:px-2 py-0.5 md:py-1 rounded-full`}
+                      >
+                        {option.badge}
+                      </span>
+                      {option.id === 'guarantor' && user?.guarantorId && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(user.guarantorId);
+                            toastUtils.success('Guarantor ID copied!');
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors touch-target cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Copy guarantor ID"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(user.guarantorId);
+                              toastUtils.success('Guarantor ID copied!');
+                            }
+                          }}
+                        >
+                          <svg
+                            className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-600 hover:text-gray-900"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <svg
-                    className="w-5 h-5 md:w-6 md:h-6"
-                    style={{ color: theme.colors.primary }}
+                    className="w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.primary}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    {option.icon}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </div>
+              </button>
+            ))}
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="w-full bg-red-50 rounded-lg p-3 md:p-4 flex items-center justify-between shadow-sm border border-red-100 hover:shadow-md md:hover:shadow-lg transition-all touch-target group mt-3 md:mt-4 md:col-span-2"
+            >
+              <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                {/* Icon */}
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 md:w-6 md:h-6 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
                   </svg>
                 </div>
 
                 {/* Label */}
-                <span className="text-sm md:text-base font-medium text-gray-900 truncate">{option.label}</span>
+                <span className="text-sm md:text-base font-medium text-red-600">Logout</span>
               </div>
 
-              {/* Badge and Arrow */}
-              <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-                {option.badge && (
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`${option.badgeColor} text-white text-xs md:text-sm font-semibold px-1.5 md:px-2 py-0.5 md:py-1 rounded-full`}
-                    >
-                      {option.badge}
-                    </span>
-                    {option.id === 'guarantor' && user?.guarantorId && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(user.guarantorId);
-                          toastUtils.success('Guarantor ID copied!');
-                        }}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors touch-target cursor-pointer"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Copy guarantor ID"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(user.guarantorId);
-                            toastUtils.success('Guarantor ID copied!');
-                          }
-                        }}
-                      >
-                        <svg
-                          className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-600 hover:text-gray-900"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <svg
-                  className="w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-colors"
-                  onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.primary}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
+              {/* Arrow */}
+              <svg
+                className="w-4 h-4 md:w-5 md:h-5 text-red-400 group-hover:text-red-600 transition-colors flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </button>
-          ))}
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="w-full bg-red-50 rounded-lg p-3 md:p-4 flex items-center justify-between shadow-sm border border-red-100 hover:shadow-md md:hover:shadow-lg transition-all touch-target group mt-3 md:mt-4 md:col-span-2"
-          >
-            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-              {/* Icon */}
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors flex-shrink-0">
-                <svg
-                  className="w-5 h-5 md:w-6 md:h-6 text-red-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-              </div>
-
-              {/* Label */}
-              <span className="text-sm md:text-base font-medium text-red-600">Logout</span>
-            </div>
-
-            {/* Arrow */}
-            <svg
-              className="w-4 h-4 md:w-5 md:h-5 text-red-400 group-hover:text-red-600 transition-colors flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
+          </div>
 
           {/* Referral Code Display - Desktop Only */}
           {referralCode && (
             <div
               className="mt-3 md:mt-6 rounded-lg p-3 md:p-4 text-white"
               style={{
-                background: `linear-gradient(to right, ${theme.colors.primary}, ${
-                  theme.colors.primaryLight || theme.colors.primary
-                })`,
+                background: `linear-gradient(to right, ${theme.colors.primary}, ${theme.colors.primaryLight || theme.colors.primary
+                  })`,
               }}
             >
               <div className="flex items-center justify-between gap-2 md:gap-4">
@@ -748,15 +747,7 @@ const ProfileDashboardPage = () => {
           )}
         </div>
 
-        {/* Background Location Tracking for User (hidden) */}
-        {user && (
-          <LocationTracker
-            userId={user._id || user.id}
-            userType="user"
-            autoStart={true}
-            hidden={true}
-          />
-        )}
+
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Keyboard, Mousewheel } from 'swiper/modules';
@@ -10,14 +10,14 @@ import BookingConfirmationModal from '../components/common/BookingConfirmationMo
 import CustomSelect from '../components/common/CustomSelect';
 import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
-import { useAppSelector } from '../../hooks/redux';
+import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import reviewService from '../../services/review.service';
 import carService from '../../services/car.service';
 import commonService from '../../services/common.service';
 import { userService } from '../../services/user.service';
+import { setUser, updateUser } from '../../store/slices/userSlice';
 import razorpayService from '../../services/razorpay.service';
 import bookingService from '../../services/booking.service';
-import { getAddOnServicesPrices, calculateAddOnServicesTotal } from '../../utils/addOnServices';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -34,58 +34,58 @@ import carBanImg3 from '../../assets/car_banImg3-removebg-preview.png';
  */
 const getCarFacingDirection = (imageUrl) => {
   if (!imageUrl) return 'right'; // Default to right
-  
+
   // Convert to string if it's an imported module
   const imagePath = typeof imageUrl === 'string' ? imageUrl : imageUrl.src || '';
   const lowerPath = imagePath.toLowerCase();
-  
+
   // Check filename for direction indicators
-  if (lowerPath.includes('front-left') || lowerPath.includes('left-front') || 
-      lowerPath.includes('facing-left') || lowerPath.includes('_left')) {
+  if (lowerPath.includes('front-left') || lowerPath.includes('left-front') ||
+    lowerPath.includes('facing-left') || lowerPath.includes('_left')) {
     return 'left';
   }
-  
-  if (lowerPath.includes('front-right') || lowerPath.includes('right-front') || 
-      lowerPath.includes('facing-right') || lowerPath.includes('_right')) {
+
+  if (lowerPath.includes('front-right') || lowerPath.includes('right-front') ||
+    lowerPath.includes('facing-right') || lowerPath.includes('_right')) {
     return 'right';
   }
-  
+
   // Check for side profile indicators
   if (lowerPath.includes('side-left') || lowerPath.includes('left-side')) {
     return 'left';
   }
-  
+
   if (lowerPath.includes('side-right') || lowerPath.includes('right-side')) {
     return 'right';
   }
-  
+
   // Try to detect from specific car image names
   // Based on common car image naming patterns
   if (lowerPath.includes('car_img1') || lowerPath.includes('ferrari')) {
     // Ferrari FF - typically front-facing left
     return 'left';
   }
-  
+
   if (lowerPath.includes('car_img4') || lowerPath.includes('lamborghini')) {
     // Lamborghini - typically front-facing left
     return 'left';
   }
-  
+
   if (lowerPath.includes('car_img5') || lowerPath.includes('bmw') && lowerPath.includes('gts')) {
     // BMW GTS - typically side profile facing right
     return 'right';
   }
-  
+
   if (lowerPath.includes('car_img6') || lowerPath.includes('tesla')) {
     // Tesla - typically front-facing left
     return 'left';
   }
-  
+
   if (lowerPath.includes('car_img8') || lowerPath.includes('bmw') && !lowerPath.includes('gts')) {
     // BMW side profile - typically facing right
     return 'right';
   }
-  
+
   // Default: assume right-facing (most common)
   return 'right';
 };
@@ -109,6 +109,7 @@ const CarDetailsPage = () => {
   const [inclusionsExclusions, setInclusionsExclusions] = useState([]);
 
   // Get authentication state
+  const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
@@ -583,10 +584,10 @@ const CarDetailsPage = () => {
   // Returns all unique images from API (same as admin side)
   const normalizeCarImages = (carData) => {
     if (!carData) return null;
-    
+
     let allImages = [];
     let primaryImage = null;
-    
+
     // Extract all images from images array (same as admin side)
     if (carData.images && Array.isArray(carData.images) && carData.images.length > 0) {
       // First, extract all image URLs with their primary status
@@ -599,7 +600,7 @@ const CarDetailsPage = () => {
           };
         })
         .filter(img => img.url); // Remove null/empty values
-      
+
       // Remove duplicates based on URL
       const uniqueImages = [];
       const seenUrls = new Set();
@@ -609,7 +610,7 @@ const CarDetailsPage = () => {
           uniqueImages.push(img);
         }
       }
-      
+
       // Find primary image and put it first
       const primaryImgObj = uniqueImages.find(img => img.isPrimary);
       if (primaryImgObj) {
@@ -625,18 +626,18 @@ const CarDetailsPage = () => {
         primaryImage = allImages[0];
       }
     }
-    
+
     // If no images from array, try carData.image
     if (allImages.length === 0 && carData.image) {
-      const img = typeof carData.image === 'string' 
-        ? carData.image.trim() 
+      const img = typeof carData.image === 'string'
+        ? carData.image.trim()
         : (carData.image?.url || carData.image?.path || null)?.trim();
       if (img) {
         allImages = [img];
         primaryImage = img;
       }
     }
-    
+
     // Ensure we have at least one image
     if (allImages.length === 0) {
       allImages = [carImg1];
@@ -644,7 +645,7 @@ const CarDetailsPage = () => {
     } else if (!primaryImage) {
       primaryImage = allImages[0];
     }
-    
+
     return {
       ...carData,
       image: primaryImage,
@@ -705,7 +706,7 @@ const CarDetailsPage = () => {
   const normalizedStoredCar = storedCar ? normalizeCarFromState(storedCar) : null;
   const effectiveInitialCar = normalizedInitialCar || normalizedStoredCar;
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id || '');
-  
+
   // Always ensure we have a valid baseCar (fallback to mock data if needed)
   const getBaseCarData = () => {
     try {
@@ -749,7 +750,7 @@ const CarDetailsPage = () => {
       };
     }
   };
-  
+
   const shouldUseMockBase = !effectiveInitialCar && (!id || !isValidObjectId);
   const baseCar = shouldUseMockBase ? getBaseCarData() : null;
   // Ensure baseCar has reviews initialized
@@ -757,10 +758,10 @@ const CarDetailsPage = () => {
     baseCar.reviews = [];
   }
   // Ensure normalizedInitialCar has reviews initialized
-  const initialCarWithReviews = effectiveInitialCar 
-    ? (effectiveInitialCar.reviews && Array.isArray(effectiveInitialCar.reviews) 
-        ? effectiveInitialCar 
-        : { ...effectiveInitialCar, reviews: [] })
+  const initialCarWithReviews = effectiveInitialCar
+    ? (effectiveInitialCar.reviews && Array.isArray(effectiveInitialCar.reviews)
+      ? effectiveInitialCar
+      : { ...effectiveInitialCar, reviews: [] })
     : null;
   const shouldFetchFromApi = !!id && isValidObjectId && !effectiveInitialCar;
   const [car, setCar] = useState(initialCarWithReviews || baseCar);
@@ -783,7 +784,7 @@ const CarDetailsPage = () => {
           // Extract all images from API (same as admin side)
           let allImages = [];
           let primaryImage = null;
-          
+
           // Extract all images from images array (same as admin side)
           if (apiCar.images && Array.isArray(apiCar.images) && apiCar.images.length > 0) {
             // First, extract all image URLs
@@ -796,7 +797,7 @@ const CarDetailsPage = () => {
                 };
               })
               .filter(img => img.url); // Remove null/empty values
-            
+
             // Remove duplicates based on URL
             const uniqueImages = [];
             const seenUrls = new Set();
@@ -806,7 +807,7 @@ const CarDetailsPage = () => {
                 uniqueImages.push(img);
               }
             }
-            
+
             // Find primary image
             const primaryImgObj = uniqueImages.find(img => img.isPrimary);
             if (primaryImgObj) {
@@ -822,13 +823,13 @@ const CarDetailsPage = () => {
               primaryImage = allImages[0];
             }
           }
-          
+
           // If no images from array, try primaryImage field
           if (allImages.length === 0 && apiCar.primaryImage) {
             allImages = [apiCar.primaryImage];
             primaryImage = apiCar.primaryImage;
           }
-          
+
           // Ensure we have at least one image
           if (allImages.length === 0) {
             allImages = [carImg1];
@@ -854,8 +855,8 @@ const CarDetailsPage = () => {
               typeof apiCar.location === 'string'
                 ? apiCar.location
                 : apiCar.location?.city ||
-                  apiCar.location?.address ||
-                  '',
+                apiCar.location?.address ||
+                '',
             locationObject: apiCar.location || {},
             seats: apiCar.seatingCapacity || 4,
             seatingCapacity: apiCar.seatingCapacity || 4,
@@ -863,20 +864,20 @@ const CarDetailsPage = () => {
               apiCar.transmission === 'automatic'
                 ? 'Automatic'
                 : apiCar.transmission === 'manual'
-                ? 'Manual'
-                : apiCar.transmission === 'cvt'
-                ? 'CVT'
-                : 'Automatic',
+                  ? 'Manual'
+                  : apiCar.transmission === 'cvt'
+                    ? 'CVT'
+                    : 'Automatic',
             fuelType:
               apiCar.fuelType === 'petrol'
                 ? 'Petrol'
                 : apiCar.fuelType === 'diesel'
-                ? 'Diesel'
-                : apiCar.fuelType === 'electric'
-                ? 'Electric'
-                : apiCar.fuelType === 'hybrid'
-                ? 'Hybrid'
-                : 'Petrol',
+                  ? 'Diesel'
+                  : apiCar.fuelType === 'electric'
+                    ? 'Electric'
+                    : apiCar.fuelType === 'hybrid'
+                      ? 'Hybrid'
+                      : 'Petrol',
             year: apiCar.year || new Date().getFullYear(),
             color: apiCar.color || '',
             carType: apiCar.carType || '',
@@ -901,7 +902,7 @@ const CarDetailsPage = () => {
               verified: apiCar.owner.verified || false,
             } : null,
           });
-          
+
           // Preserve images from location.state to prevent shuffle
           // If we have images from initial state, keep them and only update other fields
           if (initialCar && initialCar.images && initialCar.images.length > 0) {
@@ -1118,17 +1119,53 @@ const CarDetailsPage = () => {
 
     fetchCommonData();
   }, []);
-  
+
+  // Fetch user profile from database when authenticated - always fetch fresh data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+
+      try {
+        const response = await userService.getProfile();
+
+        // userService.getProfile() returns: { success: true, data: { user: {...} } }
+        // So we access: response.data.user
+        const userData = response?.data?.user || response?.user || response?.data;
+
+        if (userData) {
+          // Normalize user data (handle fullName vs name)
+          const normalizedUserData = {
+            ...userData,
+            name: userData.name || userData.fullName || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            age: userData.age || null,
+            gender: userData.gender || '',
+          };
+
+          // Update Redux store with fetched data from database
+          dispatch(setUser(normalizedUserData));
+        }
+      } catch (error) {
+        console.error('❌ CarDetailsPage - Error fetching user profile:', error);
+        // Don't show error - just use existing Redux data if available
+      }
+    };
+
+    fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, isAuthenticated]);
+
   // Extract numeric price from car.price (format: "Rs. 200" or just number)
-  const getCarPrice = () => {
-    if (typeof car.price === 'number') return car.price;
-    if (typeof car.pricePerDay) return car.pricePerDay;
-    if (typeof car.price === 'string') {
+  const getCarPrice = useCallback(() => {
+    if (typeof car?.price === 'number') return car.price;
+    if (typeof car?.pricePerDay === 'number') return car.pricePerDay;
+    if (typeof car?.price === 'string') {
       const match = car.price.match(/\d+/);
       return match ? parseInt(match[0], 10) : 0;
     }
     return 0;
-  };
+  }, [car]);
 
   // Get car display name (Brand + Model or name)
   const getCarDisplayName = () => {
@@ -1146,12 +1183,12 @@ const CarDetailsPage = () => {
     if (car.fuelType) specs.push(car.fuelType);
     return specs.join(' · ');
   };
-  
+
   // Generate car images for gallery.
   // Shows all images from API (same as admin side)
   const generateCarImages = () => {
     if (!car) return [carImg1];
-    
+
     // Return all images from car.images array (same as admin side)
     if (car.images && Array.isArray(car.images) && car.images.length > 0) {
       return car.images
@@ -1161,29 +1198,29 @@ const CarDetailsPage = () => {
         })
         .filter(Boolean); // Remove null/empty values
     }
-    
+
     // Fallback to car.image if images array is empty
     if (car.image) {
       const img = typeof car.image === 'string' ? car.image : (car.image?.url || car.image?.path || null);
       if (img) return [img];
     }
-    
+
     return [carImg1];
   };
-  
+
   const carImages = generateCarImages();
-  
+
   // Reset image index only when car ID changes (not when images array changes)
   useEffect(() => {
     if (carImages.length > 0) {
       setCurrentImageIndex(0);
     }
   }, [car?.id || car?._id || id]); // Only reset when car ID changes, not when images array changes
-  
+
   // Detect car facing direction
   const [facingDirection, setFacingDirection] = useState('right');
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
-  
+
   useEffect(() => {
     if (!car) return;
     const direction = getCarFacingDirection(car.image || carImages[0]);
@@ -1244,11 +1281,11 @@ const CarDetailsPage = () => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!isAuthenticated) return;
-      
+
       try {
         const response = await userService.getProfile();
         const userProfile = response?.data?.user || response?.user || user;
-        
+
         if (userProfile) {
           // Auto-fill personal details from user profile (prioritize database values)
           setPersonalDetails((prev) => ({
@@ -1258,7 +1295,7 @@ const CarDetailsPage = () => {
             age: userProfile.age ? String(userProfile.age) : prev.age || "",
             gender: userProfile.gender || prev.gender || "",
           }));
-          
+
           // Auto-fill current address if available
           if (userProfile.address) {
             setCurrentAddress((prev) => prev || userProfile.address);
@@ -1301,30 +1338,32 @@ const CarDetailsPage = () => {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Load add-on services prices
+  // Load add-on services prices from API
   useEffect(() => {
-    const prices = getAddOnServicesPrices();
-    setAddOnServicesPrices(prices);
-    
-    // Listen for storage changes (when admin updates prices)
-    const handleStorageChange = (e) => {
-      if (e.key === 'addon_services_prices') {
-        const newPrices = getAddOnServicesPrices();
-        setAddOnServicesPrices(newPrices);
+    const fetchPrices = async () => {
+      try {
+        const response = await commonService.getAddOnServicesPrices();
+        if (response.success && response.data) {
+          setAddOnServicesPrices({
+            driver: response.data.driver || 500,
+            bodyguard: response.data.bodyguard || 1000,
+            gunmen: response.data.gunmen || 1500,
+            bouncer: response.data.bouncer || 800,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching add-on services prices:', error);
+        // Fallback to default prices
+        setAddOnServicesPrices({
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        });
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(() => {
-      const currentPrices = getAddOnServicesPrices();
-      setAddOnServicesPrices(currentPrices);
-    }, 1000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+
+    fetchPrices();
   }, []);
 
   // Booking confirmation modal state
@@ -1340,13 +1379,58 @@ const CarDetailsPage = () => {
   const [selectedHour, setSelectedHour] = useState(10);
   const [selectedMinute, setSelectedMinute] = useState(30);
   const [selectedPeriod, setSelectedPeriod] = useState('am');
-  
+
   // Time picker modal state
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
+  // Use ref to track if we've auto-filled to prevent infinite loops
+  const autoFilledRef = useRef(false);
+  const lastUserDataRef = useRef(null);
+
+  // Auto-fill personal details from database when checkbox is checked and user data is available
+  useEffect(() => {
+    // Only auto-fill if checkbox is checked and user data is available
+    if (!isPersonal || !user) {
+      // Reset ref when checkbox is unchecked
+      if (!isPersonal) {
+        autoFilledRef.current = false;
+        lastUserDataRef.current = null;
+      }
+      return;
+    }
+
+
+
+    // Create a stable key from user data to detect changes
+    const userDataKey = `${user.name || ''}_${user.phone || ''}_${user.email || ''}_${user.age || ''}_${user.gender || ''}`;
+
+    // Only auto-fill if user data has changed or hasn't been filled yet
+    if (lastUserDataRef.current !== userDataKey) {
+      console.log('📱 CarDetailsPage - Auto-filling personal details from user data:', {
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        age: user.age,
+        gender: user.gender,
+      });
+
+      const newPersonalDetails = {
+        name: user.name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        age: user.age ? String(user.age) : '',
+        gender: user.gender || '',
+      };
+
+      setPersonalDetails(newPersonalDetails);
+      autoFilledRef.current = true;
+      lastUserDataRef.current = userDataKey;
+    }
+  }, [isPersonal, user?.name, user?.phone, user?.email, user?.age, user?.gender]);
+
   // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
   // Use noon (12:00) to avoid timezone shift issues
-  const parseLocalDate = (dateStr) => {
+  const parseLocalDate = useCallback((dateStr) => {
     if (!dateStr) return null;
     const parts = dateStr.split('-');
     if (parts.length === 3) {
@@ -1357,7 +1441,7 @@ const CarDetailsPage = () => {
       return new Date(year, month, day, 12, 0, 0);
     }
     return null;
-  };
+  }, []);
 
   // Helper: Convert Date object to date string (YYYY-MM-DD) in local timezone
   const formatLocalDate = (date) => {
@@ -1368,17 +1452,35 @@ const CarDetailsPage = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Calculate dynamic price
-  const calculatePrice = () => {
+  // Helper function to format decimal values (remove trailing zeros)
+  const formatDecimal = (value) => {
+    if (value == null || isNaN(value)) return '0';
+    // Always show 2 decimal places for payment amounts
+    const numValue = typeof value === 'number' ? value : parseFloat(value);
+    if (isNaN(numValue)) return '0';
+    // Show exact decimal value, remove trailing zeros
+    return numValue.toFixed(2).replace(/\.?0+$/, '');
+  };
+
+  // Memoize price calculation to update when dependencies change
+  const priceDetails = useMemo(() => {
+    // Calculate add-on services total FIRST (even if dates not set)
+    const addOnServicesTotal =
+      (addOnServices.driver * (addOnServicesPrices.driver || 0)) +
+      (addOnServices.bodyguard * (addOnServicesPrices.bodyguard || 0)) +
+      (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
+      (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
+
     if (!pickupDate || !dropDate || !car) {
       return {
         basePrice: 0,
         totalDays: 0,
-        totalPrice: 0,
+        totalPrice: addOnServicesTotal,
+        addOnServicesTotal: Math.round(addOnServicesTotal),
         advancePayment: 0,
         remainingPayment: 0,
         discount: 0,
-        finalPrice: 0,
+        finalPrice: Math.round(addOnServicesTotal),
       };
     }
 
@@ -1391,32 +1493,54 @@ const CarDetailsPage = () => {
     const basePrice = getCarPrice();
     let totalPrice = basePrice * totalDays;
 
-    // Apply dynamic pricing multipliers
-    const dayOfWeek = pickup.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 1.2 : 1.0;
-    totalPrice = totalPrice * weekendMultiplier;
+    // No dynamic pricing multiplier needed
+    totalPrice = totalPrice;
+
+    // Add add-on services to total price
+    totalPrice = totalPrice + addOnServicesTotal;
 
     // Apply coupon discount
     const discount = couponDiscount || 0;
-    const finalPrice = Math.max(0, totalPrice - discount);
+    const finalPriceBeforeRound = Math.max(0, totalPrice - discount);
+    const finalPrice = finalPriceBeforeRound;
 
-    // Payment options
-    const advancePayment = Math.round(finalPrice * 0.35);
+    // Payment options - Round to avoid decimals
+    const advancePayment = finalPriceBeforeRound * 0.35;
     const remainingPayment = finalPrice - advancePayment;
 
     return {
       basePrice,
       totalDays,
-      totalPrice: Math.round(totalPrice),
-      discount: Math.round(discount),
-      finalPrice: Math.round(finalPrice),
-      advancePayment,
-      remainingPayment: Math.round(remainingPayment),
+      totalPrice: totalPrice,
+      addOnServicesTotal: addOnServicesTotal,
+      discount: discount,
+      finalPrice: finalPrice,
+      advancePayment: advancePayment,
+      remainingPayment: remainingPayment,
     };
-  };
+  }, [
+    pickupDate,
+    dropDate,
+    car,
+    addOnServices.driver,
+    addOnServices.bodyguard,
+    addOnServices.gunmen,
+    addOnServices.bouncer,
+    addOnServicesPrices.driver,
+    addOnServicesPrices.bodyguard,
+    addOnServicesPrices.gunmen,
+    addOnServicesPrices.bouncer,
+    couponDiscount,
+    paymentOption,
+    getCarPrice,
+    parseLocalDate,
+  ]);
 
-  const priceDetails = calculatePrice();
+  // Ensure addOnServicesTotal is always included (default to 0 if not calculated)
+  const finalPriceDetails = useMemo(() => ({
+    ...priceDetails,
+    addOnServicesTotal: priceDetails.addOnServicesTotal || 0,
+  }), [priceDetails]);
 
   // Get minimum date (today) - using local timezone
   const getMinDate = () => {
@@ -1430,7 +1554,7 @@ const CarDetailsPage = () => {
   // Combined date-time picker helpers
   const openDateTimePicker = (target) => {
     setDateTimePickerTarget(target);
-    
+
     const existingDate = target === 'pickup' ? pickupDate : dropDate;
     let baseDate;
     if (existingDate) {
@@ -1444,7 +1568,7 @@ const CarDetailsPage = () => {
     }
     setCalendarMonth(new Date(baseDate.getFullYear(), baseDate.getMonth(), 1));
     setCalendarSelectedDate(baseDate);
-    
+
     const existingTime = target === 'pickup' ? pickupTime : dropTime;
     if (existingTime) {
       const [hour, minute] = existingTime.split(':').map(Number);
@@ -1461,7 +1585,7 @@ const CarDetailsPage = () => {
       setSelectedMinute(30);
       setSelectedPeriod('am');
     }
-    
+
     setIsDateTimePickerOpen(true);
   };
 
@@ -1516,10 +1640,11 @@ const CarDetailsPage = () => {
       setIsDateTimePickerOpen(false);
       return;
     }
-    
+
+    let dateStr = null;
     if (calendarSelectedDate) {
       // Use local date components instead of toISOString to avoid timezone shift
-      const dateStr = formatLocalDate(calendarSelectedDate);
+      dateStr = formatLocalDate(calendarSelectedDate);
       if (dateTimePickerTarget === 'pickup') {
         setPickupDate(dateStr);
         // Compare dates properly
@@ -1533,35 +1658,35 @@ const CarDetailsPage = () => {
         setDropDate(dateStr);
       }
     }
-    
+
     let hour24 = selectedHour;
     if (selectedPeriod === 'pm' && selectedHour !== 12) {
       hour24 = selectedHour + 12;
     } else if (selectedPeriod === 'am' && selectedHour === 12) {
       hour24 = 0;
     }
-    
+
     const timeStr = `${hour24.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
-    
+
     if (dateTimePickerTarget === 'pickup') {
       setPickupTime(timeStr);
     } else if (dateTimePickerTarget === 'drop') {
       setDropTime(timeStr);
     }
-    
+
     // Save dates to localStorage for auto-fill in book-now page
     try {
       const dates = {
-        pickupDate: dateTimePickerTarget === 'pickup' ? dateStr : pickupDate,
+        pickupDate: dateTimePickerTarget === 'pickup' ? (dateStr || pickupDate) : pickupDate,
         pickupTime: dateTimePickerTarget === 'pickup' ? timeStr : pickupTime,
-        dropDate: dateTimePickerTarget === 'drop' ? dateStr : dropDate,
+        dropDate: dateTimePickerTarget === 'drop' ? (dateStr || dropDate) : dropDate,
         dropTime: dateTimePickerTarget === 'drop' ? timeStr : dropTime,
       };
       localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
     } catch (error) {
       console.error('Error saving dates to localStorage:', error);
     }
-    
+
     setIsDateTimePickerOpen(false);
   };
 
@@ -1573,7 +1698,7 @@ const CarDetailsPage = () => {
     }
 
     if (couponCode.toUpperCase() === 'SAVE10') {
-      const discount = priceDetails.totalPrice * 0.1;
+      const discount = finalPriceDetails.totalPrice * 0.1;
       setAppliedCoupon({ code: 'SAVE10', discount: discount });
       setCouponDiscount(discount);
       alert('Coupon applied successfully!');
@@ -1587,7 +1712,7 @@ const CarDetailsPage = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!pickupDate || !dropDate || !pickupTime || !dropTime) {
       alert('Please select pickup and drop date & time');
       return;
@@ -1649,8 +1774,8 @@ const CarDetailsPage = () => {
 
     const amountToPay =
       paymentOption === "advance"
-        ? priceDetails.advancePayment
-        : priceDetails.finalPrice;
+        ? finalPriceDetails.advancePayment
+        : finalPriceDetails.finalPrice;
 
     setIsProcessing(true);
 
@@ -1719,10 +1844,10 @@ const CarDetailsPage = () => {
             specialRequests: bookingPayload.specialRequests,
 
             // Pricing details
-            totalPrice: priceDetails.totalPrice,
+            totalPrice: finalPriceDetails.totalPrice,
             paidAmount: amountToPay,
             remainingAmount:
-              (priceDetails.finalPrice || 0) - (amountToPay || 0),
+              (finalPriceDetails.finalPrice || 0) - (amountToPay || 0),
             couponCode: bookingPayload.couponCode,
             couponDiscount: bookingPayload.couponDiscount,
             paymentOption: bookingPayload.paymentOption,
@@ -1736,7 +1861,7 @@ const CarDetailsPage = () => {
           };
 
           setIsProcessing(false);
-          
+
           // Save booking to localStorage so it shows up immediately on bookings page
           try {
             const existingBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
@@ -1752,9 +1877,12 @@ const CarDetailsPage = () => {
           } catch (error) {
             console.error('Error saving booking to localStorage:', error);
           }
-          
+
+          console.log("outside set timeout")
+
           // Wait a moment for Razorpay modal to fully close, then show our confirmation modal
           setTimeout(() => {
+            console.log("inside set timeout")
             console.log('🎉 Showing booking confirmation modal now!');
             setConfirmedBookingId(bookingId.toString());
             setConfirmedBookingData(bookingDataForPdf);
@@ -1773,8 +1901,8 @@ const CarDetailsPage = () => {
       setIsProcessing(false);
       alert(
         error?.response?.data?.message ||
-          error?.message ||
-          "Failed to create booking. Please try again."
+        error?.message ||
+        "Failed to create booking. Please try again."
       );
     }
   };
@@ -1823,7 +1951,7 @@ const CarDetailsPage = () => {
       'inclusion-exclusion': inclusionExclusionRef,
       faqs: faqsRef,
     };
-    
+
     const ref = refs[tabName];
     if (ref && ref.current) {
       const offset = 150; // Offset for sticky header
@@ -1918,7 +2046,7 @@ const CarDetailsPage = () => {
   // Don't show loader if we have initial car from navigation state, stored car, or baseCar
   if (isLoading && !car && !effectiveInitialCar && !baseCar) {
     return (
-      <div 
+      <div
         className="min-h-screen w-full flex items-center justify-center"
         style={{ backgroundColor: colors.backgroundPrimary }}
       >
@@ -1934,7 +2062,7 @@ const CarDetailsPage = () => {
   // But only show error if we don't have initial car or baseCar
   if (!car && !effectiveInitialCar && !baseCar) {
     return (
-      <div 
+      <div
         className="min-h-screen w-full flex items-center justify-center"
         style={{ backgroundColor: colors.backgroundPrimary }}
       >
@@ -1953,7 +2081,7 @@ const CarDetailsPage = () => {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen w-full relative"
       style={{ backgroundColor: colors.backgroundPrimary }}
     >
@@ -2080,8 +2208,8 @@ const CarDetailsPage = () => {
 
       {/* Web container - max-width and centered on larger screens */}
       <div className="max-w-7xl mx-auto">
-        {/* Desktop: Two-column layout (Image Gallery Left + Booking Form Right) */}
-        <div className="hidden lg:grid lg:grid-cols-[65%_35%] lg:gap-6 lg:px-6 xl:px-8 lg:mt-4">
+        {/* Desktop: Two-column layout (Image Gallery Left + Booking Form Right) - Hidden on Mobile/Tablet */}
+        <div className="hidden lg:grid lg:grid-cols-[65%_35%] gap-4 lg:gap-6 px-4 lg:px-6 xl:px-8 mt-4 lg:mt-4">
           {/* Left Column: Car Image Gallery */}
           <div className="relative w-full">
             <div className="rounded-2xl overflow-hidden shadow-lg" style={{ backgroundColor: colors.backgroundPrimary }}>
@@ -2120,7 +2248,7 @@ const CarDetailsPage = () => {
                     />
                   </div>
                 )}
-                
+
                 {/* Navigation Arrow - Left */}
                 {carImages.length > 1 && (
                   <button
@@ -2129,7 +2257,7 @@ const CarDetailsPage = () => {
                     style={{ backgroundColor: colors.overlayWhite }}
                     aria-label="Previous image"
                   >
-                    <svg 
+                    <svg
                       className="w-5 h-5 text-gray-700"
                       fill="none"
                       stroke="currentColor"
@@ -2148,7 +2276,7 @@ const CarDetailsPage = () => {
                     style={{ backgroundColor: colors.overlayWhite }}
                     aria-label="Next image"
                   >
-                    <svg 
+                    <svg
                       className="w-5 h-5 text-gray-700"
                       fill="none"
                       stroke="currentColor"
@@ -2158,7 +2286,7 @@ const CarDetailsPage = () => {
                     </svg>
                   </button>
                 )}
-                
+
                 {/* Image Counter */}
                 {carImages.length > 1 && (
                   <div className="absolute bottom-4 right-4 z-10 px-3 py-1.5 rounded-full text-sm font-semibold"
@@ -2167,9 +2295,9 @@ const CarDetailsPage = () => {
                     {currentImageIndex + 1}/{carImages.length}
                   </div>
                 )}
-                
+
                 {/* Heart Icon - Top Left */}
-                <motion.button 
+                <motion.button
                   onClick={() => {
                     setIsFavorite(!isFavorite);
                     setIsAnimating(true);
@@ -2185,22 +2313,22 @@ const CarDetailsPage = () => {
                     ease: "easeOut"
                   }}
                 >
-                  <svg 
+                  <svg
                     className={`w-7 h-7 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
                     fill={isFavorite ? 'currentColor' : 'none'}
                     stroke="currentColor"
                     strokeWidth={2}
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                     />
                   </svg>
                 </motion.button>
               </div>
-              
+
               {/* Thumbnail Row - Below Main Image */}
               {carImages.length > 1 && (
                 <div className="p-4 xl:p-6">
@@ -2210,11 +2338,10 @@ const CarDetailsPage = () => {
                       return (
                         <div
                           key={`thumbnail-${imageKey}-${index}`}
-                          className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                            currentImageIndex === index 
-                              ? '' 
-                              : 'hover:opacity-80 opacity-70'
-                          }`}
+                          className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${currentImageIndex === index
+                            ? ''
+                            : 'hover:opacity-80 opacity-70'
+                            }`}
                           style={{
                             backgroundColor: colors.backgroundPrimary,
                             border: currentImageIndex === index ? `2px solid ${colors.backgroundTertiary}` : '2px solid transparent',
@@ -2245,7 +2372,7 @@ const CarDetailsPage = () => {
           </div>
 
           {/* Right Column: Booking Form Card (Sticky) */}
-          <div className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <div className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto order-2 lg:order-none">
             <form onSubmit={handleSubmit} className="rounded-2xl p-4 xl:p-6 shadow-lg space-y-4"
               style={{ backgroundColor: colors.backgroundSecondary }}
             >
@@ -2257,9 +2384,9 @@ const CarDetailsPage = () => {
                   </span>
                   <span className="text-sm" style={{ color: colors.textSecondary }}>/day</span>
                 </div>
-                {priceDetails.totalDays > 0 && (
+                {finalPriceDetails.totalDays > 0 && (
                   <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    {priceDetails.totalDays} {priceDetails.totalDays === 1 ? 'day' : 'days'} • Total: Rs. {priceDetails.finalPrice}
+                    {finalPriceDetails.totalDays} {finalPriceDetails.totalDays === 1 ? 'day' : 'days'} • Total: Rs. {finalPriceDetails.finalPrice}
                   </div>
                 )}
               </div>
@@ -2271,7 +2398,7 @@ const CarDetailsPage = () => {
                   type="button"
                   onClick={() => openDateTimePicker('pickup')}
                   className="w-full px-3 py-2.5 rounded-lg border-2 text-left"
-                  style={{ 
+                  style={{
                     borderColor: (pickupDate && pickupTime) ? colors.backgroundTertiary : colors.borderMedium,
                     backgroundColor: (pickupDate && pickupTime) ? colors.backgroundPrimary : colors.backgroundSecondary
                   }}
@@ -2289,7 +2416,7 @@ const CarDetailsPage = () => {
                   type="button"
                   onClick={() => openDateTimePicker('drop')}
                   className="w-full px-3 py-2.5 rounded-lg border-2 text-left"
-                  style={{ 
+                  style={{
                     borderColor: (dropDate && dropTime) ? colors.backgroundTertiary : colors.borderMedium,
                     backgroundColor: (dropDate && dropTime) ? colors.backgroundPrimary : colors.backgroundSecondary
                   }}
@@ -2306,9 +2433,8 @@ const CarDetailsPage = () => {
                 <button
                   type="button"
                   onClick={() => setPaymentOption('advance')}
-                  className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                    paymentOption === 'advance' ? 'shadow-md' : ''
-                  }`}
+                  className={`w-full p-3 rounded-lg border-2 text-left transition-all ${paymentOption === 'advance' ? 'shadow-md' : ''
+                    }`}
                   style={{
                     borderColor: paymentOption === 'advance' ? colors.backgroundTertiary : colors.borderMedium,
                     backgroundColor: paymentOption === 'advance' ? colors.backgroundPrimary : colors.backgroundSecondary
@@ -2319,8 +2445,8 @@ const CarDetailsPage = () => {
                       <div className="font-bold text-sm mb-0.5" style={{ color: colors.textPrimary }}>35% Advance Payment</div>
                       <div className="text-xs" style={{ color: colors.textSecondary }}>Pay 35% now, rest later</div>
                     </div>
-                    <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={{ 
-                      borderColor: paymentOption === 'advance' ? colors.backgroundTertiary : colors.borderCheckbox 
+                    <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={{
+                      borderColor: paymentOption === 'advance' ? colors.backgroundTertiary : colors.borderCheckbox
                     }}>
                       {paymentOption === 'advance' && (
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors.backgroundTertiary }}></div>
@@ -2340,7 +2466,7 @@ const CarDetailsPage = () => {
                     onChange={(e) => setCouponCode(e.target.value)}
                     placeholder="Enter coupon code"
                     className="flex-1 px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                    style={{ 
+                    style={{
                       borderColor: colors.borderMedium,
                       backgroundColor: colors.backgroundSecondary,
                       color: colors.textPrimary
@@ -2370,35 +2496,43 @@ const CarDetailsPage = () => {
               </div>
 
               {/* Price Summary */}
-              {priceDetails.totalDays > 0 && (
+              {(finalPriceDetails.totalDays > 0 || finalPriceDetails.addOnServicesTotal > 0) && (
                 <div className="rounded-xl p-4" style={{ backgroundColor: colors.backgroundPrimary }}>
                   <h3 className="text-sm font-bold mb-2" style={{ color: colors.textPrimary }}>Price Summary</h3>
                   <div className="space-y-1.5 mb-3">
-                    <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
-                      <span>Base Price ({priceDetails.totalDays} days)</span>
-                      <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {priceDetails.totalPrice}</span>
-                    </div>
-                    {priceDetails.discount > 0 && (
+                    {finalPriceDetails.totalDays > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
+                        <span>Base Price ({finalPriceDetails.totalDays} days)</span>
+                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {formatDecimal(finalPriceDetails.totalPrice - (finalPriceDetails.addOnServicesTotal || 0))}</span>
+                      </div>
+                    )}
+                    {finalPriceDetails.addOnServicesTotal > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
+                        <span>Add-on Services</span>
+                        <span className="font-semibold" style={{ color: colors.textPrimary }}>Rs. {formatDecimal(finalPriceDetails.addOnServicesTotal)}</span>
+                      </div>
+                    )}
+                    {finalPriceDetails.discount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
                         <span>Discount</span>
-                        <span className="font-semibold" style={{ color: colors.success }}>-Rs. {priceDetails.discount}</span>
+                        <span className="font-semibold" style={{ color: colors.success }}>-Rs. {formatDecimal(finalPriceDetails.discount)}</span>
                       </div>
                     )}
                     <div className="border-t pt-1.5 mt-1.5" style={{ borderColor: colors.borderMedium }}>
                       <div className="flex justify-between font-bold" style={{ color: colors.textPrimary }}>
                         <span className="text-base">Total Amount</span>
-                        <span className="text-base">Rs. {priceDetails.finalPrice}</span>
+                        <span className="text-base">Rs. {formatDecimal(finalPriceDetails.finalPrice)}</span>
                       </div>
                     </div>
-                    {paymentOption === 'advance' && (
+                    {paymentOption === 'advance' && finalPriceDetails.totalDays > 0 && (
                       <div className="mt-2 pt-2 border-t" style={{ borderColor: colors.borderMedium }}>
                         <div className="flex justify-between mb-0.5 text-xs" style={{ color: colors.textSecondary }}>
                           <span>Advance Payment (35%)</span>
-                          <span className="font-semibold">Rs. {priceDetails.advancePayment}</span>
+                          <span className="font-semibold">Rs. {formatDecimal(finalPriceDetails.advancePayment)}</span>
                         </div>
                         <div className="flex justify-between text-xs" style={{ color: colors.textSecondary }}>
                           <span>Remaining Amount</span>
-                          <span className="font-semibold">Rs. {priceDetails.remainingPayment}</span>
+                          <span className="font-semibold">Rs. {formatDecimal(finalPriceDetails.remainingPayment)}</span>
                         </div>
                       </div>
                     )}
@@ -2409,14 +2543,14 @@ const CarDetailsPage = () => {
               {/* Additional Details Section */}
               <div className="space-y-4">
                 <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Additional Details</h3>
-                
+
                 {/* Personal Purpose Checkbox */}
                 <div className="flex items-start gap-2 p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
                   <input
                     type="checkbox"
                     id="personal-purpose"
                     checked={isPersonal}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       setIsPersonal(e.target.checked);
                       if (e.target.checked) {
                         // Clear other purpose if personal is selected
@@ -2426,6 +2560,81 @@ const CarDetailsPage = () => {
                         setStudentId('');
                         setDocumentPhoto(null);
                         setDocumentPhotoPreview(null);
+
+                        // Fetch fresh user data from database when checkbox is checked
+                        if (isAuthenticated) {
+                          try {
+                            const response = await userService.getProfile();
+                            const userData = response?.data?.user || response?.user || response?.data;
+
+                            if (userData) {
+                              // Normalize user data
+                              const normalizedUserData = {
+                                ...userData,
+                                name: userData.name || userData.fullName || '',
+                                phone: userData.phone || '',
+                                email: userData.email || '',
+                                age: userData.age || null,
+                                gender: userData.gender || '',
+                              };
+
+                              // Update Redux store
+                              dispatch(setUser(normalizedUserData));
+
+                              // Auto-fill personal details from fresh database data immediately
+                              setPersonalDetails({
+                                name: normalizedUserData.name || '',
+                                phone: normalizedUserData.phone || '',
+                                email: normalizedUserData.email || '',
+                                age: normalizedUserData.age ? String(normalizedUserData.age) : '',
+                                gender: normalizedUserData.gender || '',
+                              });
+
+                              // Update refs to prevent duplicate auto-fill
+                              autoFilledRef.current = true;
+                              lastUserDataRef.current = `${normalizedUserData.name || ''}_${normalizedUserData.phone || ''}_${normalizedUserData.email || ''}_${normalizedUserData.age || ''}_${normalizedUserData.gender || ''}`;
+                            } else if (user) {
+                              // Fallback to Redux user data if API doesn't return data
+                              setPersonalDetails({
+                                name: user.name || '',
+                                phone: user.phone || '',
+                                email: user.email || '',
+                                age: user.age ? String(user.age) : '',
+                                gender: user.gender || '',
+                              });
+                            }
+                          } catch (error) {
+                            console.error('❌ CarDetailsPage - Error fetching user data on checkbox check:', error);
+                            // Fallback to Redux user data if API call fails
+                            if (user) {
+                              setPersonalDetails({
+                                name: user.name || '',
+                                phone: user.phone || '',
+                                email: user.email || '',
+                                age: user.age ? String(user.age) : '',
+                                gender: user.gender || '',
+                              });
+                            }
+                          }
+                        } else if (user) {
+                          // If not authenticated but user data exists in Redux, use it
+                          setPersonalDetails({
+                            name: user.name || '',
+                            phone: user.phone || '',
+                            email: user.email || '',
+                            age: user.age ? String(user.age) : '',
+                            gender: user.gender || '',
+                          });
+                        }
+                      } else {
+                        // Clear personal details if unchecked
+                        setPersonalDetails({
+                          name: '',
+                          phone: '',
+                          email: '',
+                          age: '',
+                          gender: '',
+                        });
                       }
                     }}
                     className="mt-0.5 w-4 h-4 rounded border-2"
@@ -2438,106 +2647,106 @@ const CarDetailsPage = () => {
 
                 {/* Personal Details Fields - Always visible and auto-filled */}
                 <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                    <h4 className="text-xs font-bold mb-2" style={{ color: colors.textPrimary }}>Personal Details</h4>
-                    
-                    {/* Name */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        value={personalDetails.name}
-                        autoComplete="off"
-                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Enter your name"
-                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                    </div>
+                  <h4 className="text-xs font-bold mb-2" style={{ color: colors.textPrimary }}>Personal Details</h4>
 
-                    {/* Phone */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={personalDetails.phone}
-                        autoComplete="off"
-                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Enter your phone number"
-                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={personalDetails.email}
-                        autoComplete="off"
-                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="Enter your email"
-                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                    </div>
-
-                    {/* Age */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Age
-                      </label>
-                      <input
-                        type="number"
-                        value={personalDetails.age}
-                        autoComplete="off"
-                        onChange={(e) => setPersonalDetails(prev => ({ ...prev, age: e.target.value }))}
-                        placeholder="Enter your age"
-                        min="18"
-                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                    </div>
-
-                    {/* Gender */}
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Gender
-                      </label>
-                      <CustomSelect
-                        value={personalDetails.gender}
-                        onChange={(value) => setPersonalDetails(prev => ({ ...prev, gender: value }))}
-                        options={[
-                          { label: 'Male', value: 'male' },
-                          { label: 'Female', value: 'female' },
-                          { label: 'Other', value: 'other' },
-                        ]}
-                        placeholder="Select gender"
-                      />
-                    </div>
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={personalDetails.name}
+                      autoComplete="off"
+                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter your name"
+                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                    />
                   </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={personalDetails.phone}
+                      autoComplete="off"
+                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Enter your phone number"
+                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={personalDetails.email}
+                      autoComplete="off"
+                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Enter your email"
+                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                    />
+                  </div>
+
+                  {/* Age */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                      Age
+                    </label>
+                    <input
+                      type="number"
+                      value={personalDetails.age}
+                      autoComplete="off"
+                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, age: e.target.value }))}
+                      placeholder="Enter your age"
+                      min="18"
+                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                    />
+                  </div>
+
+                  {/* Gender */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
+                      Gender
+                    </label>
+                    <CustomSelect
+                      value={personalDetails.gender}
+                      onChange={(value) => setPersonalDetails(prev => ({ ...prev, gender: value }))}
+                      options={[
+                        { label: 'Male', value: 'male' },
+                        { label: 'Female', value: 'female' },
+                        { label: 'Other', value: 'other' },
+                      ]}
+                      placeholder="Select gender"
+                    />
+                  </div>
+                </div>
 
                 {/* Booking Purpose Dropdown (Job, Business, Student only) */}
                 <div>
@@ -2789,7 +2998,7 @@ const CarDetailsPage = () => {
               {/* Add-on Services Section */}
               <div className="space-y-4">
                 <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Add-on Services (Optional)</h3>
-                
+
                 <div className="space-y-3">
                   {/* Driver */}
                   <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
@@ -3073,175 +3282,175 @@ const CarDetailsPage = () => {
           <div className="relative w-full mt-2 md:mt-4">
             {/* Mobile: Swipeable Carousel */}
             <div className="md:hidden relative w-full">
-            <Swiper
-              modules={[Pagination, Keyboard, Mousewheel]}
-              spaceBetween={0}
-              slidesPerView={1}
-              pagination={{
-                clickable: true,
-                bulletClass: 'swiper-pagination-bullet-custom',
-                bulletActiveClass: 'swiper-pagination-bullet-active-custom',
-                el: '.car-pagination-dots',
-              }}
-              onSlideChange={(swiper) => setCurrentImageIndex(swiper.activeIndex)}
-              keyboard={{ enabled: true }}
-              mousewheel={{ enabled: true, forceToAxis: true, sensitivity: 1 }}
-              speed={300}
-              className="w-full"
-              watchSlidesProgress={true}
-              allowTouchMove={true}
-            >
-              {carImages && carImages.length > 0 ? (
-                carImages.map((image, index) => (
-                  <SwiperSlide key={index} className="!w-full">
-                    <div 
+              <Swiper
+                modules={[Pagination, Keyboard, Mousewheel]}
+                spaceBetween={0}
+                slidesPerView={1}
+                pagination={{
+                  clickable: true,
+                  bulletClass: 'swiper-pagination-bullet-custom',
+                  bulletActiveClass: 'swiper-pagination-bullet-active-custom',
+                  el: '.car-pagination-dots',
+                }}
+                onSlideChange={(swiper) => setCurrentImageIndex(swiper.activeIndex)}
+                keyboard={{ enabled: true }}
+                mousewheel={{ enabled: true, forceToAxis: true, sensitivity: 1 }}
+                speed={300}
+                className="w-full"
+                watchSlidesProgress={true}
+                allowTouchMove={true}
+              >
+                {carImages && carImages.length > 0 ? (
+                  carImages.map((image, index) => (
+                    <SwiperSlide key={index} className="!w-full">
+                      <div
+                        className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
+                        style={{ backgroundColor: colors.backgroundPrimary }}
+                      >
+                        {index === 0 ? (
+                          <motion.img
+                            ref={imageRef}
+                            src={image || carImg1}
+                            onError={(e) => {
+                              console.error('Mobile image failed to load:', image);
+                              e.target.src = carImg1;
+                            }}
+                            alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
+                            className="w-full h-full object-contain p-4"
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '100%',
+                              objectFit: 'contain',
+                            }}
+                            draggable={false}
+                            initial={{
+                              x: facingDirection === 'left' ? 200 : -200,
+                              opacity: 0
+                            }}
+                            animate={{
+                              x: 0,
+                              opacity: 1
+                            }}
+                            transition={{
+                              duration: 0.7,
+                              ease: 'easeOut'
+                            }}
+                            key={`${car?.id || car?._id || 'car'}-${index}-animated`}
+                          />
+                        ) : (
+                          <img
+                            src={image || carImg1}
+                            onError={(e) => {
+                              console.error('Mobile image failed to load:', image);
+                              e.target.src = carImg1;
+                            }}
+                            alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
+                            className="w-full h-full object-contain p-4"
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '100%',
+                              objectFit: 'contain',
+                            }}
+                            draggable={false}
+                          />
+                        )}
+
+                        {/* Heart Icon - Top Left */}
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsFavorite(!isFavorite);
+                            setIsAnimating(true);
+                            setTimeout(() => setIsAnimating(false), 300);
+                          }}
+                          className="absolute top-2 left-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: colors.overlayWhite }}
+                          animate={isAnimating ? {
+                            scale: [1, 1.3, 1],
+                          } : {}}
+                          transition={{
+                            duration: 0.3,
+                            ease: "easeOut"
+                          }}
+                        >
+                          <svg
+                            className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                            fill={isFavorite ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                          </svg>
+                        </motion.button>
+                      </div>
+                    </SwiperSlide>
+                  ))
+                ) : (
+                  <SwiperSlide className="!w-full">
+                    <div
                       className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
                       style={{ backgroundColor: colors.backgroundPrimary }}
                     >
-                      {index === 0 ? (
-                        <motion.img
-                          ref={imageRef}
-                          src={image || carImg1}
-                          onError={(e) => {
-                            console.error('Mobile image failed to load:', image);
-                            e.target.src = carImg1;
-                          }}
-                          alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
-                          className="w-full h-full object-contain p-4"
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain',
-                          }}
-                          draggable={false}
-                          initial={{ 
-                            x: facingDirection === 'left' ? 200 : -200, 
-                            opacity: 0 
-                          }}
-                          animate={{ 
-                            x: 0, 
-                            opacity: 1 
-                          }}
-                          transition={{ 
-                            duration: 0.7, 
-                            ease: 'easeOut'
-                          }}
-                          key={`${car?.id || car?._id || 'car'}-${index}-animated`}
-                        />
-                      ) : (
-                        <img
-                          src={image || carImg1}
-                          onError={(e) => {
-                            console.error('Mobile image failed to load:', image);
-                            e.target.src = carImg1;
-                          }}
-                          alt={`${car.name || getCarDisplayName()} - Image ${index + 1}`}
-                          className="w-full h-full object-contain p-4"
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain',
-                          }}
-                          draggable={false}
-                        />
-                      )}
-                    
-                    {/* Heart Icon - Top Left */}
-                    <motion.button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsFavorite(!isFavorite);
-                        setIsAnimating(true);
-                        setTimeout(() => setIsAnimating(false), 300);
-                      }}
-                      className="absolute top-2 left-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: colors.overlayWhite }}
-                      animate={isAnimating ? {
-                        scale: [1, 1.3, 1],
-                      } : {}}
-                      transition={{
-                        duration: 0.3,
-                        ease: "easeOut"
-                      }}
-                    >
-                      <svg 
-                        className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
-                        fill={isFavorite ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
+                      <img
+                        src={carImg1}
+                        alt="Default Car"
+                        className="w-full h-full object-contain p-4"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                        }}
+                        draggable={false}
+                      />
+                      {/* Heart Icon - Top Left */}
+                      <motion.button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsFavorite(!isFavorite);
+                          setIsAnimating(true);
+                          setTimeout(() => setIsAnimating(false), 300);
+                        }}
+                        className="absolute top-2 left-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: colors.overlayWhite }}
+                        animate={isAnimating ? {
+                          scale: [1, 1.3, 1],
+                        } : {}}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeOut"
+                        }}
                       >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
-                        />
-                      </svg>
-                    </motion.button>
-                  </div>
-                </SwiperSlide>
-              ))
-            ) : (
-              <SwiperSlide className="!w-full">
-                  <div 
-                    className="relative w-full h-[350px] flex items-center justify-center overflow-hidden bg-gray-50"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <img
-                      src={carImg1}
-                      alt="Default Car"
-                      className="w-full h-full object-contain p-4"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                      }}
-                      draggable={false}
-                    />
-                    {/* Heart Icon - Top Left */}
-                    <motion.button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsFavorite(!isFavorite);
-                        setIsAnimating(true);
-                        setTimeout(() => setIsAnimating(false), 300);
-                      }}
-                      className="absolute top-2 left-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: colors.overlayWhite }}
-                      animate={isAnimating ? {
-                        scale: [1, 1.3, 1],
-                      } : {}}
-                      transition={{
-                        duration: 0.3,
-                        ease: "easeOut"
-                      }}
-                    >
-                      <svg 
-                        className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
-                        fill={isFavorite ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
-                        />
-                      </svg>
-                    </motion.button>
-                  </div>
-                </SwiperSlide>
+                        <svg
+                          className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                          fill={isFavorite ? 'currentColor' : 'none'}
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                      </motion.button>
+                    </div>
+                  </SwiperSlide>
+                )}
+              </Swiper>
+
+              {/* Pagination Dots - Below Car Image */}
+              {carImages && carImages.length > 1 && (
+                <div className="car-pagination-dots absolute bottom-8 left-0 right-0 flex justify-center items-center gap-2 z-10"></div>
               )}
-            </Swiper>
 
-            {/* Pagination Dots - Below Car Image */}
-            {carImages && carImages.length > 1 && (
-              <div className="car-pagination-dots absolute bottom-8 left-0 right-0 flex justify-center items-center gap-2 z-10"></div>
-            )}
-
-            {/* Custom Pagination Styles */}
-            <style>{`
+              {/* Custom Pagination Styles */}
+              <style>{`
               .swiper-pagination-bullet-custom {
                 width: 8px;
                 height: 8px;
@@ -3277,7 +3486,7 @@ const CarDetailsPage = () => {
                 opacity: 1 !important;
               }
             `}</style>
-          </div>
+            </div>
 
             {/* Tablet: Main Image with Thumbnails (hidden on lg+) */}
             <div className="hidden md:block lg:hidden w-full px-6">
@@ -3311,9 +3520,9 @@ const CarDetailsPage = () => {
                       />
                     </div>
                   )}
-                  
+
                   {/* Heart Icon - Top Left */}
-                  <motion.button 
+                  <motion.button
                     onClick={() => {
                       setIsFavorite(!isFavorite);
                       setIsAnimating(true);
@@ -3329,22 +3538,22 @@ const CarDetailsPage = () => {
                       ease: "easeOut"
                     }}
                   >
-                    <svg 
+                    <svg
                       className={`w-7 h-7 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
                       fill={isFavorite ? 'currentColor' : 'none'}
                       stroke="currentColor"
                       strokeWidth={2}
                       viewBox="0 0 24 24"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                       />
                     </svg>
                   </motion.button>
                 </div>
-                
+
                 {/* Thumbnail Grid - Below Main Image */}
                 {carImages.length > 1 && (
                   <div className="p-4">
@@ -3354,11 +3563,10 @@ const CarDetailsPage = () => {
                         return (
                           <div
                             key={`tablet-thumbnail-${imageKey}-${index}`}
-                            className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                              currentImageIndex === index 
-                                ? 'scale-105 shadow-lg border-2' 
-                                : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
-                            }`}
+                            className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${currentImageIndex === index
+                              ? 'scale-105 shadow-lg border-2'
+                              : 'hover:opacity-80 hover:scale-102 opacity-70 border-2 border-transparent'
+                              }`}
                             style={{
                               backgroundColor: colors.backgroundPrimary,
                               borderColor: currentImageIndex === index ? colors.backgroundTertiary : 'transparent'
@@ -3390,9 +3598,9 @@ const CarDetailsPage = () => {
 
         {/* Desktop: Main Content Below Two-Column Layout */}
         <div className="hidden lg:block px-6 xl:px-8 pb-8 pt-6">
-          <div 
+          <div
             className="rounded-3xl p-6 xl:p-8 shadow-lg"
-            style={{ 
+            style={{
               backgroundColor: colors.backgroundSecondary,
               boxShadow: `0 2px 8px ${colors.shadowLight}`,
             }}
@@ -3400,7 +3608,7 @@ const CarDetailsPage = () => {
             {/* Car Name and Description - As per document.txt: Model, Brand */}
             <div className="mb-4">
               <h1 className="text-2xl font-bold text-black mb-2">{getCarDisplayName()}</h1>
-              
+
               {/* Car Specifications - As per document.txt: Seats, Transmission, Fuel Type */}
               {getCarSpecs() && (
                 <div className="mb-2">
@@ -3413,18 +3621,18 @@ const CarDetailsPage = () => {
                   )}
                 </div>
               )}
-              
+
               <p className="text-sm text-gray-600 mb-3">{car.description}</p>
-              
+
               {/* Rating and Reviews - As per document.txt */}
               <div className="flex items-center gap-2 mb  -3">
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-semibold text-black">
                     {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
                   </span>
-                  <svg 
-                    className="w-4 h-4" 
-                    fill={colors.accentOrange} 
+                  <svg
+                    className="w-4 h-4"
+                    fill={colors.accentOrange}
                     viewBox="0 0 24 24"
                   >
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -3473,17 +3681,17 @@ const CarDetailsPage = () => {
               <div className="space-y-4">
                 {offers && offers.length > 0 ? (
                   offers.map((offer, index) => (
-                    <div 
+                    <div
                       key={offer.id || index}
                       className={`p-4 rounded-xl border-2 ${offer.code ? 'flex items-center justify-between' : ''}`}
-                      style={{ 
+                      style={{
                         backgroundColor: colors.backgroundPrimary,
                         borderColor: colors.borderMedium
                       }}
                     >
                       <div className="flex items-center gap-4">
                         {index === 0 && (
-                          <div 
+                          <div
                             className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl"
                             style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
                           >
@@ -3519,40 +3727,40 @@ const CarDetailsPage = () => {
             <div ref={reviewsRef} className="mb-8 scroll-mt-24">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-black">Review ({car.reviewsCount})</h2>
-                <button 
+                <button
                   onClick={() => navigate(`/car-details/${car.id}/reviews`, { state: { car } })}
                   className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
                 >
                   See All
                 </button>
               </div>
-              
+
               {/* Reviews - Horizontal Scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
                 {car?.reviews && car.reviews.length > 0 ? (
                   car.reviews.map((review, index) => (
-                  <div 
-                    key={index}
-                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-semibold text-black">{review.name}</span>
-                          <span className="text-xs font-semibold text-black">{review.rating}</span>
-                          <svg 
-                            className="w-3 h-3" 
-                            fill={colors.accentOrange} 
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
+                    <div
+                      key={index}
+                      className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-black">{review.name}</span>
+                            <span className="text-xs font-semibold text-black">{review.rating}</span>
+                            <svg
+                              className="w-3 h-3"
+                              fill={colors.accentOrange}
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
                     </div>
-                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
-                  </div>
                   ))
                 ) : (
                   <div className="text-sm text-gray-500 text-center py-4">No reviews yet</div>
@@ -3562,9 +3770,9 @@ const CarDetailsPage = () => {
 
             {/* Location Section */}
             <div ref={locationRef} className="mb-8 scroll-mt-24">
-              <div 
+              <div
                 className="p-4 rounded-xl border-2"
-                style={{ 
+                style={{
                   backgroundColor: colors.backgroundSecondary,
                   borderColor: colors.borderMedium
                 }}
@@ -3584,16 +3792,16 @@ const CarDetailsPage = () => {
                         if (location.pincode) locationParts.push(location.pincode);
                         if (location.country) locationParts.push(location.country);
                       }
-                      const locationString = locationParts.length > 0 
-                        ? locationParts.join(', ') 
+                      const locationString = locationParts.length > 0
+                        ? locationParts.join(', ')
                         : (car?.location || 'Location not available');
-                      
+
                       // Split into two lines if too long
                       const words = locationString.split(', ');
                       const midPoint = Math.ceil(words.length / 2);
                       const firstLine = words.slice(0, midPoint).join(', ');
                       const secondLine = words.slice(midPoint).join(', ');
-                      
+
                       return (
                         <>
                           {firstLine && (
@@ -3616,7 +3824,7 @@ const CarDetailsPage = () => {
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    <div 
+                    <div
                       className="w-20 h-20 rounded-lg flex items-center justify-center relative overflow-hidden"
                       style={{ backgroundColor: colors.backgroundLight }}
                     >
@@ -3644,12 +3852,12 @@ const CarDetailsPage = () => {
             {/* Car Features - As per document.txt: Features Array */}
             <div ref={featuresRef} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-3">Car features</h2>
-              
+
               {/* Feature Icons Grid (if featureIcons exist) */}
               {car.featureIcons && car.featureIcons.length > 0 && (
                 <div className="grid grid-cols-6 gap-4 mb-4">
                   {car.featureIcons.map((feature, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="p-3 rounded-lg flex flex-col items-center text-center"
                       style={{ backgroundColor: colors.backgroundPrimary }}
@@ -3668,7 +3876,7 @@ const CarDetailsPage = () => {
               {car.features && Array.isArray(car.features) && car.features.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {car.features.map((feature, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="flex items-center gap-2 p-2 rounded-lg"
                       style={{ backgroundColor: colors.backgroundPrimary }}
@@ -3687,19 +3895,19 @@ const CarDetailsPage = () => {
             <div ref={reviewsRef} className="mb-6 scroll-mt-24">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
-                <button 
+                <button
                   onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`, { state: { car } })}
                   className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
                 >
                   VIEW MORE &gt;
                 </button>
               </div>
-              
+
               {/* Reviews - Horizontal Scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
                 {car?.reviews && car.reviews.length > 0 ? (
                   car.reviews.map((review, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
                       style={{ backgroundColor: colors.backgroundPrimary }}
@@ -3709,9 +3917,9 @@ const CarDetailsPage = () => {
                           <div className="flex items-center gap-1">
                             <span className="text-sm font-semibold text-black">{review.name}</span>
                             <span className="text-xs font-semibold text-black">{review.rating}</span>
-                            <svg 
-                              className="w-3 h-3" 
-                              fill={colors.accentOrange} 
+                            <svg
+                              className="w-3 h-3"
+                              fill={colors.accentOrange}
                               viewBox="0 0 24 24"
                             >
                               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -3731,9 +3939,9 @@ const CarDetailsPage = () => {
             {/* Cancellation Section */}
             <div ref={cancellationRef} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-4">Cancellation Policy</h2>
-              <div 
+              <div
                 className="p-4 rounded-xl border-2"
-                style={{ 
+                style={{
                   backgroundColor: colors.backgroundPrimary,
                   borderColor: colors.borderMedium
                 }}
@@ -3818,7 +4026,7 @@ const CarDetailsPage = () => {
             <div ref={faqsRef} className="mb-8 scroll-mt-24">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
-                <button 
+                <button
                   onClick={() => navigate('/faq')}
                   className="text-sm font-medium hover:opacity-80 transition-opacity"
                   style={{ color: colors.textSecondary }}
@@ -3829,48 +4037,47 @@ const CarDetailsPage = () => {
               <div className="space-y-0">
                 {faqs && faqs.length > 0 ? (
                   faqs.map((faq, index) => (
-                  <div 
-                    key={index}
-                    className="border-b"
-                    style={{ borderColor: colors.borderMedium }}
-                  >
                     <div
-                      onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                      className="py-4 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+                      key={index}
+                      className="border-b"
+                      style={{ borderColor: colors.borderMedium }}
                     >
-                      <div className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
-                        {faq.question}
-                      </div>
-                      <svg 
-                        className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${
-                          openFaqIndex === index ? 'transform rotate-180' : ''
-                        }`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                        style={{ color: colors.textSecondary }}
+                      <div
+                        onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                        className="py-4 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                    {openFaqIndex === index && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
-                          {faq.answer}
+                        <div className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
+                          {faq.question}
                         </div>
-                      </motion.div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500 py-4">No FAQs available at the moment.</div>
-              )}
+                        <svg
+                          className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${openFaqIndex === index ? 'transform rotate-180' : ''
+                            }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                      {openFaqIndex === index && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
+                            {faq.answer}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500 py-4">No FAQs available at the moment.</div>
+                )}
               </div>
             </div>
           </div>
@@ -3878,520 +4085,519 @@ const CarDetailsPage = () => {
 
         {/* Mobile/Tablet: Main Content - White Rounded Card */}
         <div className="lg:hidden px-4 md:px-6 pb-24 md:pb-8 pt-4 md:pt-6">
-        <div 
-          className="rounded-3xl p-4 md:p-6 lg:p-8 -mx-4 md:mx-0 md:shadow-lg"
-          style={{ 
-            backgroundColor: colors.backgroundSecondary,
-            borderTopLeftRadius: '24px',
-            borderTopRightRadius: '24px',
-            borderBottomLeftRadius: '24px',
-            borderBottomRightRadius: '24px',
-            boxShadow: `0 2px 8px ${colors.shadowLight}`,
-          }}
-        >
-          {/* Car Name and Description - As per document.txt: Model, Brand */}
-          <div className="mb-4">
-            <h1 className="text-xl font-bold text-black mb-2">{getCarDisplayName()}</h1>
-            
-            {/* Car Specifications - As per document.txt: Seats, Transmission, Fuel Type */}
-            {getCarSpecs() && (
-              <div className="mb-2">
-                <span className="text-sm font-medium text-gray-600">{getCarSpecs()}</span>
-                {car.color && (
-                  <span className="text-sm text-gray-600"> · {car.color}</span>
-                )}
-                {car.year && (
-                  <span className="text-sm text-gray-600"> · {car.year}</span>
-                )}
-              </div>
-            )}
-            
-            <p className="text-sm text-gray-600 mb-3">{car.description}</p>
-            
-            {/* Rating and Reviews - As per document.txt */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex flex items-center gap-1">
-                <span className="text-sm font-semibold text-black">
-                  {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
-                </span>
-                <svg 
-                  className="w-4 h-4" 
-                  fill={colors.accentOrange} 
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-              </div>
-              <span className="text-xs text-gray-500">({car?.reviewsCount || 0}+ Reviews)</span>
-            </div>
+          <div
+            className="rounded-3xl p-4 md:p-6 lg:p-8 -mx-4 md:mx-0 md:shadow-lg"
+            style={{
+              backgroundColor: colors.backgroundSecondary,
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              borderBottomLeftRadius: '24px',
+              borderBottomRightRadius: '24px',
+              boxShadow: `0 2px 8px ${colors.shadowLight}`,
+            }}
+          >
+            {/* Car Name and Description - As per document.txt: Model, Brand */}
+            <div className="mb-4">
+              <h1 className="text-xl font-bold text-black mb-2">{getCarDisplayName()}</h1>
 
-          </div>
-
-          {/* Tab Navigation Bar - Mobile */}
-          <div className="mb-6 border-b" style={{ borderColor: colors.borderMedium }}>
-            <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide -mx-0">
-              {[
-                { id: 'offers', label: 'Offers' },
-                { id: 'reviews', label: 'Reviews' },
-                { id: 'location', label: 'Location' },
-                { id: 'features', label: 'Features' },
-                { id: 'cancellation', label: 'Cancellation' },
-                { id: 'inclusion-exclusion', label: 'Inclusion/Exclusion' },
-                { id: 'faqs', label: 'FAQs' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
-                  className="flex-shrink-0 pb-3 px-1 text-xs md:text-sm font-medium transition-all relative"
-                  style={{
-                    color: activeTab === tab.id ? colors.backgroundTertiary : colors.textSecondary,
-                  }}
-                >
-                  {tab.label}
-                  {activeTab === tab.id && (
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-0.5"
-                      style={{ backgroundColor: colors.backgroundTertiary }}
-                    />
+              {/* Car Specifications - As per document.txt: Seats, Transmission, Fuel Type */}
+              {getCarSpecs() && (
+                <div className="mb-2">
+                  <span className="text-sm font-medium text-gray-600">{getCarSpecs()}</span>
+                  {car.color && (
+                    <span className="text-sm text-gray-600"> · {car.color}</span>
                   )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Offers Section - Mobile */}
-          <div ref={offersRef} className="mb-8 scroll-mt-24">
-            <h2 className="text-lg md:text-xl font-bold text-black mb-4">Exclusive Offers</h2>
-            <div className="space-y-4">
-              <div 
-                className="p-4 rounded-xl border-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
-                style={{ 
-                  backgroundColor: colors.backgroundPrimary,
-                  borderColor: colors.borderMedium
-                }}
-              >
-                <div className="flex items-center gap-4">
-                  <div 
-                    className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl flex-shrink-0"
-                    style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
-                  >
-                    Z
-                  </div>
-                  <div>
-                    <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
-                      Get 50% OFF!
-                    </div>
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      Check Availability Here &gt;
-                    </div>
-                  </div>
-                </div>
-                <button
-                  className="px-6 py-2 rounded-lg text-white font-semibold text-sm w-full md:w-auto"
-                  style={{ backgroundColor: colors.backgroundTertiary }}
-                >
-                  APPLY
-                </button>
-              </div>
-              <div 
-                className="p-4 rounded-xl border-2"
-                style={{ 
-                  backgroundColor: colors.backgroundPrimary,
-                  borderColor: colors.borderMedium
-                }}
-              >
-                <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                  First Time User Discount
-                </div>
-                <div className="text-sm mb-3" style={{ color: colors.textSecondary }}>
-                  Get 20% off on your first booking. Use code: FIRST20
-                </div>
-                <button
-                  className="px-4 py-1.5 rounded-lg text-sm font-medium"
-                  style={{ 
-                    backgroundColor: colors.backgroundTertiary,
-                    color: colors.textWhite
-                  }}
-                >
-                  Apply Code
-                </button>
-              </div>
-              <div 
-                className="p-4 rounded-xl border-2"
-                style={{ 
-                  backgroundColor: colors.backgroundPrimary,
-                  borderColor: colors.borderMedium
-                }}
-              >
-                <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                  Weekend Special
-                </div>
-                <div className="text-sm" style={{ color: colors.textSecondary }}>
-                  Book for 3+ days and get 15% discount on weekends
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Reviews Section - Mobile */}
-          <div ref={reviewsRef} className="mb-8 scroll-mt-24">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
-              <button 
-                onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`, { state: { car } })}
-                className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
-              >
-                See All
-              </button>
-            </div>
-            
-            {/* Reviews - Horizontal Scroll */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {car.reviews && car.reviews.length > 0 ? (
-                car.reviews.map((review, index) => (
-                  <div 
-                    key={index}
-                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-semibold text-black">{review.name}</span>
-                          <span className="text-xs font-semibold text-black">{review.rating}</span>
-                          <svg 
-                            className="w-3 h-3" 
-                            fill={colors.accentOrange} 
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500">No reviews yet</div>
-              )}
-            </div>
-          </div>
-
-          {/* Location Section - Mobile */}
-          <div ref={locationRef} className="mb-8 scroll-mt-24">
-            <div 
-              className="p-4 rounded-xl border-2"
-              style={{ 
-                backgroundColor: colors.backgroundSecondary,
-                borderColor: colors.borderMedium
-              }}
-            >
-              <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  {(() => {
-                    const location = car?.locationObject || car?.location || {};
-                    const locationParts = [];
-                    if (typeof location === 'string') {
-                      locationParts.push(location);
-                    } else {
-                      if (location.address) locationParts.push(location.address);
-                      if (location.city) locationParts.push(location.city);
-                      if (location.state) locationParts.push(location.state);
-                      if (location.pincode) locationParts.push(location.pincode);
-                      if (location.country) locationParts.push(location.country);
-                    }
-                    const locationString = locationParts.length > 0 
-                      ? locationParts.join(', ') 
-                      : (car?.location || 'Location not available');
-                    
-                    // Split into two lines if too long
-                    const words = locationString.split(', ');
-                    const midPoint = Math.ceil(words.length / 2);
-                    const firstLine = words.slice(0, midPoint).join(', ');
-                    const secondLine = words.slice(midPoint).join(', ');
-                    
-                    return (
-                      <>
-                        {firstLine && (
-                          <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
-                            {firstLine}
-                          </div>
-                        )}
-                        {secondLine && (
-                          <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
-                            {secondLine}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                  {car?.locationObject?.coordinates && (
-                    <div className="text-sm" style={{ color: colors.textSecondary }}>
-                      Coordinates: {car.locationObject.coordinates.latitude?.toFixed(4)}, {car.locationObject.coordinates.longitude?.toFixed(4)}
-                    </div>
+                  {car.year && (
+                    <span className="text-sm text-gray-600"> · {car.year}</span>
                   )}
                 </div>
-                <div className="flex-shrink-0">
-                  <div 
-                    className="w-20 h-20 rounded-lg flex items-center justify-center relative overflow-hidden"
-                    style={{ backgroundColor: colors.backgroundLight }}
-                  >
-                    {/* Map grid lines */}
-                    <svg className="w-full h-full absolute inset-0" viewBox="0 0 100 100" style={{ opacity: 0.3 }}>
-                      <line x1="0" y1="20" x2="100" y2="20" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="0" y1="40" x2="100" y2="40" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="0" y1="60" x2="100" y2="60" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="0" y1="80" x2="100" y2="80" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="20" y1="0" x2="20" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="40" y1="0" x2="40" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="60" y1="0" x2="60" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
-                      <line x1="80" y1="0" x2="80" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
-                    </svg>
-                    {/* Red location pin */}
-                    <svg className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#F44336" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Car Features - As per document.txt: Features Array */}
-          <div ref={featuresRef} className="mb-8 scroll-mt-24">
-            <h2 className="text-lg md:text-xl font-bold text-black mb-3">Car features</h2>
-            
-            {/* Feature Icons Grid (if featureIcons exist) */}
-            {car.featureIcons && car.featureIcons.length > 0 && (
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4 mb-4">
-                {car.featureIcons.map((feature, index) => (
-                  <div 
-                    key={index}
-                    className="p-3 rounded-lg flex flex-col items-center text-center"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <div className="mb-2">
-                      {getFeatureIcon(feature.icon)}
-                    </div>
-                    <span className="text-xs text-gray-600 mb-1">{feature.label}</span>
-                    <span className="text-xs font-bold text-black">{feature.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Features List (as per document.txt: Features Array) */}
-            {car.features && Array.isArray(car.features) && car.features.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {car.features.map((feature, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center gap-2 p-2 rounded-lg"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm text-gray-700">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Reviews Section - Mobile - As per document.txt: Reviews */}
-          <div ref={reviewsRef} className="mb-6 scroll-mt-24">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
-              <button 
-                onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`)}
-                className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
-              >
-                VIEW MORE &gt;
-              </button>
-            </div>
-            
-            {/* Reviews - Horizontal Scroll */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {car?.reviews && car.reviews.length > 0 ? (
-                car.reviews.map((review, index) => (
-                  <div 
-                    key={index}
-                    className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
-                    style={{ backgroundColor: colors.backgroundPrimary }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-semibold text-black">{review.name}</span>
-                          <span className="text-xs font-semibold text-black">{review.rating}</span>
-                          <svg 
-                            className="w-3 h-3" 
-                            fill={colors.accentOrange} 
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500">No reviews yet</div>
               )}
-            </div>
-          </div>
 
-          {/* Cancellation Section - Mobile */}
-          <div ref={cancellationRef} className="mb-8 scroll-mt-24">
-            <h2 className="text-lg md:text-xl font-bold text-black mb-4">Cancellation Policy</h2>
-            <div 
-              className="p-4 rounded-xl border-2"
-              style={{ 
-                backgroundColor: colors.backgroundPrimary,
-                borderColor: colors.borderMedium
-              }}
-            >
+              <p className="text-sm text-gray-600 mb-3">{car.description}</p>
+
+              {/* Rating and Reviews - As per document.txt */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex flex items-center gap-1">
+                  <span className="text-sm font-semibold text-black">
+                    {typeof car?.rating === 'number' ? car.rating.toFixed(1) : (car?.rating || '0.0')}
+                  </span>
+                  <svg
+                    className="w-4 h-4"
+                    fill={colors.accentOrange}
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                </div>
+                <span className="text-xs text-gray-500">({car?.reviewsCount || 0}+ Reviews)</span>
+              </div>
+
+            </div>
+
+            {/* Tab Navigation Bar - Mobile */}
+            <div className="mb-6 border-b" style={{ borderColor: colors.borderMedium }}>
+              <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide -mx-0">
+                {[
+                  { id: 'offers', label: 'Offers' },
+                  { id: 'reviews', label: 'Reviews' },
+                  { id: 'location', label: 'Location' },
+                  { id: 'features', label: 'Features' },
+                  { id: 'cancellation', label: 'Cancellation' },
+                  { id: 'inclusion-exclusion', label: 'Inclusion/Exclusion' },
+                  { id: 'faqs', label: 'FAQs' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    className="flex-shrink-0 pb-3 px-1 text-xs md:text-sm font-medium transition-all relative"
+                    style={{
+                      color: activeTab === tab.id ? colors.backgroundTertiary : colors.textSecondary,
+                    }}
+                  >
+                    {tab.label}
+                    {activeTab === tab.id && (
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-0.5"
+                        style={{ backgroundColor: colors.backgroundTertiary }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Offers Section - Mobile */}
+            <div ref={offersRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-lg md:text-xl font-bold text-black mb-4">Exclusive Offers</h2>
               <div className="space-y-4">
-                <div>
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    Free Cancellation
-                  </div>
-                  <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
-                    Cancel up to 24 hours before pickup time for a full refund.
-                  </div>
-                </div>
-                <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    Partial Refund
-                  </div>
-                  <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
-                    Cancel between 12-24 hours before pickup: 50% refund
-                  </div>
-                </div>
-                <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    No Refund
-                  </div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    Cancellations made less than 12 hours before pickup are not eligible for refund.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Inclusion/Exclusion Section - Mobile */}
-          <div ref={inclusionExclusionRef} className="mb-8 scroll-mt-24">
-            <h2 className="text-lg md:text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>Inclusion/Exclusions</h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Fuel</div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    Fuel not included. Guest should return the car with the same fuel level as at start.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Toll/Fastag</div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    Toll/Fastag charges not included. Check with host for Fastag recharge.
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Trip Protection</div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    Trip Protection excludes: Off-road use, driving under influence, over-speeding, illegal use, restricted zones.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* FAQs Section - Mobile */}
-          <div ref={faqsRef} className="mb-8 scroll-mt-24">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
-              <button 
-                onClick={() => navigate('/faq')}
-                className="text-sm font-medium hover:opacity-80 transition-opacity"
-                style={{ color: colors.textSecondary }}
-              >
-                VIEW MORE &gt;
-              </button>
-            </div>
-            <div className="space-y-0">
-              {faqs && faqs.length > 0 ? (
-                faqs.map((faq, index) => (
-                  <div 
-                    key={index}
-                    className="border-b"
-                    style={{ borderColor: colors.borderMedium }}
-                  >
+                <div
+                  className="p-4 rounded-xl border-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                  style={{
+                    backgroundColor: colors.backgroundPrimary,
+                    borderColor: colors.borderMedium
+                  }}
+                >
+                  <div className="flex items-center gap-4">
                     <div
-                      onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
-                      className="py-4 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+                      className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl flex-shrink-0"
+                      style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
                     >
-                      <div className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
-                        {faq.question}
-                      </div>
-                      <svg 
-                        className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${
-                          openFaqIndex === index ? 'transform rotate-180' : ''
-                        }`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                        style={{ color: colors.textSecondary }}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      Z
                     </div>
-                    {openFaqIndex === index && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
-                          {faq.answer}
+                    <div>
+                      <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
+                        Get 50% OFF!
+                      </div>
+                      <div className="text-sm" style={{ color: colors.textSecondary }}>
+                        Check Availability Here &gt;
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    className="px-6 py-2 rounded-lg text-white font-semibold text-sm w-full md:w-auto"
+                    style={{ backgroundColor: colors.backgroundTertiary }}
+                  >
+                    APPLY
+                  </button>
+                </div>
+                <div
+                  className="p-4 rounded-xl border-2"
+                  style={{
+                    backgroundColor: colors.backgroundPrimary,
+                    borderColor: colors.borderMedium
+                  }}
+                >
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    First Time User Discount
+                  </div>
+                  <div className="text-sm mb-3" style={{ color: colors.textSecondary }}>
+                    Get 20% off on your first booking. Use code: FIRST20
+                  </div>
+                  <button
+                    className="px-4 py-1.5 rounded-lg text-sm font-medium"
+                    style={{
+                      backgroundColor: colors.backgroundTertiary,
+                      color: colors.textWhite
+                    }}
+                  >
+                    Apply Code
+                  </button>
+                </div>
+                <div
+                  className="p-4 rounded-xl border-2"
+                  style={{
+                    backgroundColor: colors.backgroundPrimary,
+                    borderColor: colors.borderMedium
+                  }}
+                >
+                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                    Weekend Special
+                  </div>
+                  <div className="text-sm" style={{ color: colors.textSecondary }}>
+                    Book for 3+ days and get 15% discount on weekends
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Reviews Section - Mobile */}
+            <div ref={reviewsRef} className="mb-8 scroll-mt-24">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
+                <button
+                  onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`, { state: { car } })}
+                  className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
+                >
+                  See All
+                </button>
+              </div>
+
+              {/* Reviews - Horizontal Scroll */}
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
+                {car.reviews && car.reviews.length > 0 ? (
+                  car.reviews.map((review, index) => (
+                    <div
+                      key={index}
+                      className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-black">{review.name}</span>
+                            <span className="text-xs font-semibold text-black">{review.rating}</span>
+                            <svg
+                              className="w-3 h-3"
+                              fill={colors.accentOrange}
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
                         </div>
-                      </motion.div>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No reviews yet</div>
+                )}
+              </div>
+            </div>
+
+            {/* Location Section - Mobile */}
+            <div ref={locationRef} className="mb-8 scroll-mt-24">
+              <div
+                className="p-4 rounded-xl border-2"
+                style={{
+                  backgroundColor: colors.backgroundSecondary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    {(() => {
+                      const location = car?.locationObject || car?.location || {};
+                      const locationParts = [];
+                      if (typeof location === 'string') {
+                        locationParts.push(location);
+                      } else {
+                        if (location.address) locationParts.push(location.address);
+                        if (location.city) locationParts.push(location.city);
+                        if (location.state) locationParts.push(location.state);
+                        if (location.pincode) locationParts.push(location.pincode);
+                        if (location.country) locationParts.push(location.country);
+                      }
+                      const locationString = locationParts.length > 0
+                        ? locationParts.join(', ')
+                        : (car?.location || 'Location not available');
+
+                      // Split into two lines if too long
+                      const words = locationString.split(', ');
+                      const midPoint = Math.ceil(words.length / 2);
+                      const firstLine = words.slice(0, midPoint).join(', ');
+                      const secondLine = words.slice(midPoint).join(', ');
+
+                      return (
+                        <>
+                          {firstLine && (
+                            <div className="text-sm mb-1" style={{ color: colors.textPrimary }}>
+                              {firstLine}
+                            </div>
+                          )}
+                          {secondLine && (
+                            <div className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+                              {secondLine}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                    {car?.locationObject?.coordinates && (
+                      <div className="text-sm" style={{ color: colors.textSecondary }}>
+                        Coordinates: {car.locationObject.coordinates.latitude?.toFixed(4)}, {car.locationObject.coordinates.longitude?.toFixed(4)}
+                      </div>
                     )}
                   </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500 py-4">No FAQs available at the moment.</div>
+                  <div className="flex-shrink-0">
+                    <div
+                      className="w-20 h-20 rounded-lg flex items-center justify-center relative overflow-hidden"
+                      style={{ backgroundColor: colors.backgroundLight }}
+                    >
+                      {/* Map grid lines */}
+                      <svg className="w-full h-full absolute inset-0" viewBox="0 0 100 100" style={{ opacity: 0.3 }}>
+                        <line x1="0" y1="20" x2="100" y2="20" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="0" y1="40" x2="100" y2="40" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="0" y1="60" x2="100" y2="60" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="0" y1="80" x2="100" y2="80" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="20" y1="0" x2="20" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="40" y1="0" x2="40" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="60" y1="0" x2="60" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                        <line x1="80" y1="0" x2="80" y2="100" stroke={colors.borderMedium} strokeWidth="1" />
+                      </svg>
+                      {/* Red location pin */}
+                      <svg className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#F44336" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Car Features - As per document.txt: Features Array */}
+            <div ref={featuresRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-lg md:text-xl font-bold text-black mb-3">Car features</h2>
+
+              {/* Feature Icons Grid (if featureIcons exist) */}
+              {car.featureIcons && car.featureIcons.length > 0 && (
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4 mb-4">
+                  {car.featureIcons.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="p-3 rounded-lg flex flex-col items-center text-center"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <div className="mb-2">
+                        {getFeatureIcon(feature.icon)}
+                      </div>
+                      <span className="text-xs text-gray-600 mb-1">{feature.label}</span>
+                      <span className="text-xs font-bold text-black">{feature.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Features List (as per document.txt: Features Array) */}
+              {car.features && Array.isArray(car.features) && car.features.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {car.features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 p-2 rounded-lg"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm text-gray-700">{feature}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
+
+            {/* Reviews Section - Mobile - As per document.txt: Reviews */}
+            <div ref={reviewsRef} className="mb-6 scroll-mt-24">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-black">Review ({car?.reviewsCount || 0})</h2>
+                <button
+                  onClick={() => navigate(`/car-details/${car?.id || car?._id || id}/reviews`)}
+                  className="text-sm text-gray-500 font-medium hover:text-black transition-colors"
+                >
+                  VIEW MORE &gt;
+                </button>
+              </div>
+
+              {/* Reviews - Horizontal Scroll */}
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
+                {car?.reviews && car.reviews.length > 0 ? (
+                  car.reviews.map((review, index) => (
+                    <div
+                      key={index}
+                      className="min-w-[220px] max-w-[220px] flex-shrink-0 p-3 py-3 rounded-lg border border-black"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-black">{review.name}</span>
+                            <span className="text-xs font-semibold text-black">{review.rating}</span>
+                            <svg
+                              className="w-3 h-3"
+                              fill={colors.accentOrange}
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed break-words">{review.comment}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No reviews yet</div>
+                )}
+              </div>
+            </div>
+
+            {/* Cancellation Section - Mobile */}
+            <div ref={cancellationRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-lg md:text-xl font-bold text-black mb-4">Cancellation Policy</h2>
+              <div
+                className="p-4 rounded-xl border-2"
+                style={{
+                  backgroundColor: colors.backgroundPrimary,
+                  borderColor: colors.borderMedium
+                }}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      Free Cancellation
+                    </div>
+                    <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                      Cancel up to 24 hours before pickup time for a full refund.
+                    </div>
+                  </div>
+                  <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      Partial Refund
+                    </div>
+                    <div className="text-sm mb-1" style={{ color: colors.textSecondary }}>
+                      Cancel between 12-24 hours before pickup: 50% refund
+                    </div>
+                  </div>
+                  <div className="border-t pt-4" style={{ borderColor: colors.borderMedium }}>
+                    <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      No Refund
+                    </div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Cancellations made less than 12 hours before pickup are not eligible for refund.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Inclusion/Exclusion Section - Mobile */}
+            <div ref={inclusionExclusionRef} className="mb-8 scroll-mt-24">
+              <h2 className="text-lg md:text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>Inclusion/Exclusions</h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Fuel</div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Fuel not included. Guest should return the car with the same fuel level as at start.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Toll/Fastag</div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Toll/Fastag charges not included. Check with host for Fastag recharge.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: colors.textSecondary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Trip Protection</div>
+                    <div className="text-sm" style={{ color: colors.textSecondary }}>
+                      Trip Protection excludes: Off-road use, driving under influence, over-speeding, illegal use, restricted zones.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQs Section - Mobile */}
+            <div ref={faqsRef} className="mb-8 scroll-mt-24">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg md:text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
+                <button
+                  onClick={() => navigate('/faq')}
+                  className="text-sm font-medium hover:opacity-80 transition-opacity"
+                  style={{ color: colors.textSecondary }}
+                >
+                  VIEW MORE &gt;
+                </button>
+              </div>
+              <div className="space-y-0">
+                {faqs && faqs.length > 0 ? (
+                  faqs.map((faq, index) => (
+                    <div
+                      key={index}
+                      className="border-b"
+                      style={{ borderColor: colors.borderMedium }}
+                    >
+                      <div
+                        onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+                        className="py-4 flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
+                      >
+                        <div className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
+                          {faq.question}
+                        </div>
+                        <svg
+                          className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${openFaqIndex === index ? 'transform rotate-180' : ''
+                            }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                      {openFaqIndex === index && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pb-4 text-sm" style={{ color: colors.textSecondary }}>
+                            {faq.answer}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500 py-4">No FAQs available at the moment.</div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
         </div>
 
         {/* Book Now Button - Fixed at Bottom on mobile, static on web (only for mobile/tablet) */}
@@ -4433,7 +4639,7 @@ const CarDetailsPage = () => {
                       setIsTimePickerOpen(true);
                     }}
                     className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-                    style={{ 
+                    style={{
                       borderColor: colors.backgroundTertiary,
                       backgroundColor: colors.backgroundTertiary,
                       color: colors.backgroundSecondary
@@ -4492,30 +4698,30 @@ const CarDetailsPage = () => {
                     const dateYear = date.getFullYear();
                     const dateMonth = date.getMonth();
                     const dateDay = date.getDate();
-                    
+
                     // Check if selected using local date components
                     let isSelected = false;
                     if (calendarSelectedDate) {
                       const selectedYear = calendarSelectedDate.getFullYear();
                       const selectedMonth = calendarSelectedDate.getMonth();
                       const selectedDay = calendarSelectedDate.getDate();
-                      isSelected = dateYear === selectedYear && 
-                                   dateMonth === selectedMonth && 
-                                   dateDay === selectedDay;
+                      isSelected = dateYear === selectedYear &&
+                        dateMonth === selectedMonth &&
+                        dateDay === selectedDay;
                     }
-                    
+
                     // Check if past date using local date components
                     const today = new Date();
                     const todayYear = today.getFullYear();
                     const todayMonth = today.getMonth();
                     const todayDay = today.getDate();
-                    const isPast = dateYear < todayYear || 
-                                  (dateYear === todayYear && dateMonth < todayMonth) ||
-                                  (dateYear === todayYear && dateMonth === todayMonth && dateDay < todayDay);
-                    
+                    const isPast = dateYear < todayYear ||
+                      (dateYear === todayYear && dateMonth < todayMonth) ||
+                      (dateYear === todayYear && dateMonth === todayMonth && dateDay < todayDay);
+
                     const isMinDate = dateStr === getMinDate();
                     const isCurrentMonth = dateMonth === calendarMonth.getMonth();
-                    
+
                     return (
                       <button
                         key={idx}
@@ -4528,15 +4734,14 @@ const CarDetailsPage = () => {
                           }
                         }}
                         disabled={isPast && !isMinDate}
-                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          isSelected
-                            ? 'text-white'
-                            : isPast && !isMinDate
+                        className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
+                          ? 'text-white'
+                          : isPast && !isMinDate
                             ? 'cursor-not-allowed'
                             : !isCurrentMonth
-                            ? 'opacity-40'
-                            : 'hover:bg-gray-100'
-                        }`}
+                              ? 'opacity-40'
+                              : 'hover:bg-gray-100'
+                          }`}
                         style={{
                           backgroundColor: isSelected ? colors.backgroundTertiary : 'transparent',
                           color: isSelected ? colors.backgroundSecondary : (isPast && !isMinDate ? colors.borderCheckbox : colors.textPrimary),
@@ -4554,7 +4759,7 @@ const CarDetailsPage = () => {
                 <button
                   onClick={() => setIsDateTimePickerOpen(false)}
                   className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
-                  style={{ 
+                  style={{
                     borderColor: colors.backgroundTertiary,
                     backgroundColor: colors.backgroundSecondary,
                     color: colors.textPrimary
@@ -4588,7 +4793,7 @@ const CarDetailsPage = () => {
           >
             <div className="p-6">
               <h3 className="text-lg font-bold mb-4 text-center" style={{ color: colors.textPrimary }}>Select Time</h3>
-              
+
               {/* Time Selection */}
               <div className="flex items-center justify-center gap-4 mb-6">
                 {/* Hour Selection */}
@@ -4600,9 +4805,8 @@ const CarDetailsPage = () => {
                         key={hour}
                         type="button"
                         onClick={() => setSelectedHour(hour)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          selectedHour === hour ? 'text-white' : ''
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === hour ? 'text-white' : ''
+                          }`}
                         style={{
                           backgroundColor: selectedHour === hour ? colors.backgroundTertiary : 'transparent',
                           color: selectedHour === hour ? colors.backgroundSecondary : colors.textPrimary,
@@ -4625,9 +4829,8 @@ const CarDetailsPage = () => {
                         key={minute}
                         type="button"
                         onClick={() => setSelectedMinute(minute)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                          selectedMinute === minute ? 'text-white' : ''
-                        }`}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === minute ? 'text-white' : ''
+                          }`}
                         style={{
                           backgroundColor: selectedMinute === minute ? colors.backgroundTertiary : 'transparent',
                           color: selectedMinute === minute ? colors.backgroundSecondary : colors.textPrimary,
@@ -4646,9 +4849,8 @@ const CarDetailsPage = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedPeriod('am')}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        selectedPeriod === 'am' ? 'text-white' : ''
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === 'am' ? 'text-white' : ''
+                        }`}
                       style={{
                         backgroundColor: selectedPeriod === 'am' ? colors.backgroundTertiary : 'transparent',
                         color: selectedPeriod === 'am' ? colors.backgroundSecondary : colors.textPrimary,
@@ -4659,9 +4861,8 @@ const CarDetailsPage = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedPeriod('pm')}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                        selectedPeriod === 'pm' ? 'text-white' : ''
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === 'pm' ? 'text-white' : ''
+                        }`}
                       style={{
                         backgroundColor: selectedPeriod === 'pm' ? colors.backgroundTertiary : 'transparent',
                         color: selectedPeriod === 'pm' ? colors.backgroundSecondary : colors.textPrimary,
@@ -4685,7 +4886,7 @@ const CarDetailsPage = () => {
                 <button
                   onClick={() => setIsTimePickerOpen(false)}
                   className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
-                  style={{ 
+                  style={{
                     borderColor: colors.backgroundTertiary,
                     backgroundColor: colors.backgroundSecondary,
                     color: colors.textPrimary
@@ -4712,6 +4913,7 @@ const CarDetailsPage = () => {
           bookingId={confirmedBookingId}
           bookingData={confirmedBookingData}
           onClose={() => {
+            console.log("close booking confirmation modal")
             setShowBookingConfirmationModal(false);
             setConfirmedBookingId(null);
             setConfirmedBookingData(null);

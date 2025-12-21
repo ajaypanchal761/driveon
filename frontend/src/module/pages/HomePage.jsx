@@ -9,7 +9,7 @@ import BottomNavbar from "../components/layout/BottomNavbar";
 import BrandCard from "../components/common/BrandCard";
 import CarCard from "../components/common/CarCard";
 import BannerAd from "../../components/common/BannerAd";
-import ReturningCarBanner from "../../components/common/ReturningCarBanner";
+import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
@@ -1124,10 +1124,8 @@ const HomePage = () => {
           `}</style>
           </div>
 
-          {/* Returning Car Banner - Shows cars returning soon - Mobile Only */}
-          <div className="md:hidden">
-            <ReturningCarBanner />
-          </div>
+          {/* Returning Car Banner - Shows cars returning soon from other users */}
+          <ReturningCarBanner />
 
           {/* Brands Section - Hidden on web view */}
           {brands.length > 0 && (

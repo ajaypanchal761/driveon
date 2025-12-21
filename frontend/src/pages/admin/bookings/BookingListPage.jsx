@@ -273,22 +273,35 @@ const BookingListPage = () => {
   };
 
   const handleCancel = async (bookingId) => {
+    console.log('🔄 handleCancel called with bookingId:', bookingId);
+    
+    if (!bookingId) {
+      console.error('❌ No booking ID provided');
+      alert('Error: Booking ID is missing');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to cancel this booking?')) {
       return;
     }
 
     try {
+      console.log('🔄 Cancelling booking:', bookingId);
       // Call backend API to update booking status to cancelled
       const response = await adminService.updateBooking(bookingId, {
         status: 'cancelled',
         cancellationReason: 'Cancelled by admin',
       });
 
-      if (response.success) {
-        // Update local state
-        setBookings((prevList) =>
-          prevList.map((booking) => {
-            if (booking.id === bookingId) {
+      console.log('📊 Cancel booking response:', response);
+      console.log('📊 Response success:', response?.success);
+
+      if (response && response.success) {
+        // Update local state for both bookings and filteredBookings
+        setBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in bookings state:', booking.id);
               return {
                 ...booking,
                 status: 'cancelled',
@@ -297,17 +310,43 @@ const BookingListPage = () => {
               };
             }
             return booking;
-          })
-        );
+          });
+          return updated;
+        });
+        
+        // Also update filteredBookings to reflect the change immediately
+        setFilteredBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in filteredBookings state:', booking.id);
+              return {
+                ...booking,
+                status: 'cancelled',
+                cancellationReason: 'Cancelled by admin',
+                cancelledDate: new Date().toISOString(),
+              };
+            }
+            return booking;
+          });
+          return updated;
+        });
         
         // Show success message
         alert('Booking cancelled successfully!');
+        
+        // Refresh bookings list to get updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
-        alert('Failed to cancel booking. Please try again.');
+        console.error('❌ API returned success: false');
+        alert(response?.message || 'Failed to cancel booking. Please try again.');
       }
     } catch (error) {
-      console.error('Error cancelling booking:', error);
-      alert(error.response?.data?.message || 'Failed to cancel booking. Please try again.');
+      console.error('❌ Error cancelling booking:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      alert(error.response?.data?.message || error.message || 'Failed to cancel booking. Please try again.');
     }
   };
 
@@ -354,21 +393,34 @@ const BookingListPage = () => {
   };
 
   const handleMarkAsComplete = async (bookingId) => {
+    console.log('🔄 handleMarkAsComplete called with bookingId:', bookingId);
+    
+    if (!bookingId) {
+      console.error('❌ No booking ID provided');
+      alert('Error: Booking ID is missing');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to mark this booking as completed?')) {
       return;
     }
 
     try {
+      console.log('🔄 Marking booking as complete:', bookingId);
       // Call backend API to update booking status to completed
       const response = await adminService.updateBooking(bookingId, {
         status: 'completed',
       });
 
-      if (response.success) {
-        // Update local state
-        setBookings((prevList) =>
-          prevList.map((booking) => {
-            if (booking.id === bookingId) {
+      console.log('📊 Mark complete response:', response);
+      console.log('📊 Response success:', response?.success);
+
+      if (response && response.success) {
+        // Update local state for both bookings and filteredBookings
+        setBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in bookings state:', booking.id);
               return {
                 ...booking,
                 status: 'completed',
@@ -376,17 +428,42 @@ const BookingListPage = () => {
               };
             }
             return booking;
-          })
-        );
+          });
+          return updated;
+        });
+        
+        // Also update filteredBookings to reflect the change immediately
+        setFilteredBookings((prevList) => {
+          const updated = prevList.map((booking) => {
+            if (booking.id === bookingId || booking._id === bookingId) {
+              console.log('✅ Updating booking in filteredBookings state:', booking.id);
+              return {
+                ...booking,
+                status: 'completed',
+                completedDate: new Date().toISOString(),
+              };
+            }
+            return booking;
+          });
+          return updated;
+        });
         
         // Show success message
         alert('Booking marked as completed! User will see it in completed bookings.');
+        
+        // Refresh bookings list to get updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } else {
-        alert('Failed to mark booking as completed. Please try again.');
+        console.error('❌ API returned success: false');
+        alert(response?.message || 'Failed to mark booking as completed. Please try again.');
       }
     } catch (error) {
-      console.error('Error marking booking as complete:', error);
-      alert(error.response?.data?.message || 'Failed to mark booking as completed. Please try again.');
+      console.error('❌ Error marking booking as complete:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      alert(error.response?.data?.message || error.message || 'Failed to mark booking as completed. Please try again.');
     }
   };
 
@@ -816,6 +893,7 @@ const BookingListPage = () => {
                 {/* Actions */}
                 <div className="flex flex-col gap-2 md:w-40">
                   <button
+                    type="button"
                     onClick={() => handleViewBooking(booking)}
                     className="w-full px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: colors.backgroundTertiary }}
@@ -825,6 +903,7 @@ const BookingListPage = () => {
                   
                   {booking.status === 'active' && (
                     <button
+                      type="button"
                       onClick={() => navigate(`/admin/bookings/${booking.id}/tracking`)}
                       className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                     >
@@ -835,12 +914,14 @@ const BookingListPage = () => {
                   {booking.status === 'pending' && (
                     <>
                       <button
+                        type="button"
                         onClick={() => handleApprove(booking.id)}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Approve
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleReject(booking.id)}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
@@ -852,13 +933,25 @@ const BookingListPage = () => {
                   {(booking.status === 'confirmed' || booking.status === 'active') && (
                     <>
                       <button
-                        onClick={() => handleCancel(booking.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('🖱️ Cancel button clicked for booking:', booking.id);
+                          handleCancel(booking.id);
+                        }}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                       >
                         Cancel Booking
                       </button>
                       <button
-                        onClick={() => handleMarkAsComplete(booking.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('🖱️ Mark complete button clicked for booking:', booking.id);
+                          handleMarkAsComplete(booking.id);
+                        }}
                         className="w-full px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         Mark as Complete
@@ -868,6 +961,7 @@ const BookingListPage = () => {
                   
                   {booking.status === 'cancelled' && booking.paymentStatus !== 'refunded' && (
                     <button
+                      type="button"
                       onClick={() => handleProcessRefund(booking.id)}
                       className="w-full px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                     >
@@ -912,11 +1006,35 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
   const [activeTab, setActiveTab] = useState('details');
   const [paymentStatus, setPaymentStatus] = useState(booking.paymentStatus || 'pending');
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+  const [guarantorPoints, setGuarantorPoints] = useState(null);
+  const [loadingGuarantorPoints, setLoadingGuarantorPoints] = useState(false);
 
   // Update payment status when booking prop changes
   useEffect(() => {
     setPaymentStatus(booking.paymentStatus || 'pending');
   }, [booking.paymentStatus]);
+
+  // Fetch guarantor points when modal opens
+  useEffect(() => {
+    const fetchGuarantorPoints = async () => {
+      if (!booking?.id) return;
+      
+      try {
+        setLoadingGuarantorPoints(true);
+        const response = await adminService.getBookingGuarantorPoints(booking.id);
+        if (response.success && response.data) {
+          setGuarantorPoints(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching guarantor points:', error);
+        // Don't show error to user, just log it
+      } finally {
+        setLoadingGuarantorPoints(false);
+      }
+    };
+
+    fetchGuarantorPoints();
+  }, [booking?.id]);
 
   // Calculate remaining amount
   const remainingAmount = (booking.totalAmount || 0) - (booking.paidAmount || 0);
@@ -1115,7 +1233,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 {booking.guarantorName && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Guarantor Information</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="text-xs font-medium text-gray-700">Name</label>
                         <p className="text-sm text-gray-900">{booking.guarantorName}</p>
@@ -1125,6 +1243,79 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                         <p className="text-sm text-gray-900">{booking.guarantorId}</p>
                       </div>
                     </div>
+
+                    {/* Guarantor Points Section */}
+                    {loadingGuarantorPoints ? (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600">Loading guarantor points...</p>
+                      </div>
+                    ) : guarantorPoints && guarantorPoints.guarantors && guarantorPoints.guarantors.length > 0 ? (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Guarantor Points Allocation</h4>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <span className="text-gray-600">Booking Amount:</span>
+                              <p className="font-semibold text-gray-900">₹{guarantorPoints.bookingAmount?.toLocaleString() || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">10% Pool Amount:</span>
+                              <p className="font-semibold text-gray-900">
+                                ₹{(() => {
+                                  const amt = Number(guarantorPoints.totalPoolAmount);
+                                  if (amt % 1 === 0) return amt.toLocaleString();
+                                  const decimals = amt.toString().split('.')[1]?.length || 0;
+                                  return decimals <= 3 ? amt.toFixed(decimals) : amt.toFixed(3);
+                                })()}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Total Guarantors:</span>
+                              <p className="font-semibold text-gray-900">{guarantorPoints.totalGuarantors || 0}</p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Active Guarantors:</span>
+                              <p className="font-semibold text-green-600">{guarantorPoints.activeGuarantors || 0}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 pt-3 border-t border-blue-200">
+                            <h5 className="text-xs font-semibold text-gray-900 mb-2">Points Per Guarantor:</h5>
+                            <div className="space-y-2">
+                              {guarantorPoints.guarantors.map((guarantor, index) => (
+                                <div key={guarantor.id || index} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
+                                  <div className="flex-1">
+                                    <p className="text-xs font-medium text-gray-900">{guarantor.guarantorName}</p>
+                                    <p className="text-xs text-gray-500">{guarantor.guarantorEmail}</p>
+                                    {guarantor.guarantorGuarantorId && (
+                                      <p className="text-xs text-gray-500">ID: {guarantor.guarantorGuarantorId}</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <p className={`text-sm font-bold ${guarantor.status === 'active' ? 'text-green-600' : 'text-red-600 line-through'}`}>
+                                      {(() => {
+                                        const pts = Number(guarantor.pointsAllocated);
+                                        if (pts % 1 === 0) return pts.toLocaleString();
+                                        const decimals = pts.toString().split('.')[1]?.length || 0;
+                                        return decimals <= 3 ? pts.toFixed(decimals) : pts.toFixed(3);
+                                      })()}
+                                    </p>
+                                    <p className={`text-xs ${guarantor.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                                      {guarantor.status === 'active' ? 'Active' : 'Reversed'}
+                                    </p>
+                                    {guarantor.reversedAt && (
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(guarantor.reversedAt).toLocaleDateString()}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
