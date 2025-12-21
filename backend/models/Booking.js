@@ -139,6 +139,35 @@ const bookingSchema = new mongoose.Schema(
         required: true,
         min: [0, 'Final price cannot be negative'],
       },
+      addOnServicesTotal: {
+        type: Number,
+        default: 0,
+        min: [0, 'Add-on services total cannot be negative'],
+      },
+    },
+
+    // Add-On Services (Optional)
+    addOnServices: {
+      driver: {
+        type: Number,
+        default: 0,
+        min: [0, 'Driver quantity cannot be negative'],
+      },
+      bodyguard: {
+        type: Number,
+        default: 0,
+        min: [0, 'Bodyguard quantity cannot be negative'],
+      },
+      gunmen: {
+        type: Number,
+        default: 0,
+        min: [0, 'Gunmen quantity cannot be negative'],
+      },
+      bouncer: {
+        type: Number,
+        default: 0,
+        min: [0, 'Bouncer quantity cannot be negative'],
+      },
     },
 
     // Payment Information

@@ -12,7 +12,7 @@ import { processReferralSignup } from './referral.controller.js';
  */
 export const register = async (req, res) => {
   try {
-    const { email, phone, referralCode, fullName, name } = req.body;
+    const { email, phone, referralCode, fullName, name, heardAbout } = req.body;
 
     // Validation
     if (!email || !phone) {
@@ -102,25 +102,20 @@ export const register = async (req, res) => {
       
       const smsResult = await sendOTP(normalizedPhone, otp, 'register');
       
-      if (smsResult.isTest) {
-        console.log(`🧪 Test mode: OTP ${otp} generated for ${normalizedPhone} (SMS skipped)`);
-        smsSent = true;
+      // Verify SMS was actually sent successfully (all users receive real SMS)
+      if (smsResult.success === false || smsResult.status === 'failed') {
+        smsErrorOccurred = true;
+        smsErrorMessage = smsResult.error || 'SMS sending failed - unknown error';
+        console.error(`❌ SMS Result indicates failure:`, smsResult);
       } else {
-        // Verify SMS was actually sent successfully
-        if (smsResult.success === false || smsResult.status === 'failed') {
-          smsErrorOccurred = true;
-          smsErrorMessage = smsResult.error || 'SMS sending failed - unknown error';
-          console.error(`❌ SMS Result indicates failure:`, smsResult);
-        } else {
-          smsSent = true;
-          console.log(`✅ OTP sent successfully to ${normalizedPhone} via SMSIndia Hub`);
-          console.log(`📱 SMS Details:`, {
-            messageId: smsResult.messageId,
-            status: smsResult.status,
-            provider: smsResult.provider,
-            jobId: smsResult.jobId,
-          });
-        }
+        smsSent = true;
+        console.log(`✅ OTP sent successfully to ${normalizedPhone} via SMSIndia Hub`);
+        console.log(`📱 SMS Details:`, {
+          messageId: smsResult.messageId,
+          status: smsResult.status,
+          provider: smsResult.provider,
+          jobId: smsResult.jobId,
+        });
       }
     } catch (smsError) {
       smsErrorOccurred = true;
@@ -138,16 +133,16 @@ export const register = async (req, res) => {
     
     // Check if SMS failed and handle accordingly
     if (smsErrorOccurred || !smsSent) {
-      // Check if it's a test number (only allow failure for test numbers in development)
-      const isTestNumber = normalizedPhone && ['9993911855', '9685974247', '6268455485', '9755262071'].some(testNum => normalizedPhone.endsWith(testNum));
+      // Check if it's a test number (allow failure for test numbers in development)
+      const isTestNumber = normalizedPhone && ['9993911855'].some(testNum => normalizedPhone.endsWith(testNum));
       
       if (isTestNumber && process.env.NODE_ENV === 'development') {
         console.log(`⚠️ Test number - SMS failed but allowing registration in development mode. OTP: ${otp}`);
         smsSent = true; // Mark as sent for test numbers
       } else {
-        // For real numbers (like 7610416911), return error if SMS fails
+        // For real numbers, return error if SMS fails
         console.error(`\n❌ SMS FAILED for real number: ${normalizedPhone}`);
-        console.error(`❌ This number should receive real SMS. Registration blocked.`);
+        console.error(`❌ Real numbers must receive real SMS from SMS Hub. Registration blocked.`);
         console.error(`❌ Error: ${smsErrorMessage || 'Unknown error'}\n`);
         
         return res.status(500).json({
@@ -171,6 +166,7 @@ export const register = async (req, res) => {
       phone: normalizedPhone,
       name: userName,
       referredBy,
+      heardAbout: heardAbout || '',
       isEmailVerified: false,
       isPhoneVerified: false,
       profileComplete: 0, // Will be updated during profile completion
@@ -375,7 +371,7 @@ export const sendLoginOTP = async (req, res) => {
     // Check if SMS failed and handle accordingly (same as register)
     if (smsErrorOccurred || !smsSent) {
       // Check if it's a test number (only allow failure for test numbers in development)
-      const isTestNumber = normalizedPhone && ['9993911855', '9685974247', '6268455485', '9755262071'].some(testNum => normalizedPhone.endsWith(testNum));
+      const isTestNumber = normalizedPhone && ['9993911855'].some(testNum => normalizedPhone.endsWith(testNum));
       
       if (isTestNumber && process.env.NODE_ENV === 'development') {
         console.log(`⚠️ Test number - SMS failed but allowing login in development mode. OTP: ${otp}`);
@@ -721,7 +717,7 @@ export const resendOTP = async (req, res) => {
       
       // Always return error if SMS fails (even in development for real numbers)
       // Only allow in development if it's a test number
-      const isTestNumber = normalizedPhone && ['9993911855', '9685974247', '6268455485', '9755262071'].some(testNum => normalizedPhone.endsWith(testNum));
+      const isTestNumber = normalizedPhone && ['9993911855'].some(testNum => normalizedPhone.endsWith(testNum));
       
       if (isTestNumber && process.env.NODE_ENV === 'development') {
         console.log(`⚠️ Test number - SMS failed but allowing resend in development mode. OTP: ${otp}`);

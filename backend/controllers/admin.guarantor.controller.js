@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import GuarantorRequest from '../models/GuarantorRequest.js';
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
+import GuarantorPoints from '../models/GuarantorPoints.js';
 
 /**
  * @desc    Send guarantor request
@@ -133,6 +134,20 @@ export const sendGuarantorRequest = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'A pending request already exists for this booking and guarantor',
+      });
+    }
+
+    // Check maximum 5 guarantors per booking limit
+    const acceptedGuarantorsCount = await GuarantorRequest.countDocuments({
+      booking: bookingId,
+      status: 'accepted',
+    });
+
+    if (acceptedGuarantorsCount >= 5) {
+      console.error('❌ Maximum guarantors limit reached');
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 5 guarantors can be linked to a booking. This booking already has 5 guarantors.',
       });
     }
 
@@ -426,6 +441,81 @@ export const deleteGuarantorRequest = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete guarantor request',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Get guarantor points for a booking
+ * @route   GET /api/admin/bookings/:bookingId/guarantor-points
+ * @access  Private (Admin)
+ */
+export const getBookingGuarantorPoints = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid booking ID format',
+      });
+    }
+
+    // Get all points records for this booking
+    const pointsRecords = await GuarantorPoints.find({
+      booking: bookingId,
+    })
+      .populate('guarantor', 'name email phone guarantorId')
+      .populate('guarantorRequest', 'status acceptedAt')
+      .sort({ createdAt: -1 });
+
+    // Get booking details
+    const booking = await Booking.findById(bookingId).select('bookingId pricing.finalPrice pricing.totalPrice status');
+
+    // Calculate totals (exact decimal, no rounding)
+    const totalPoolAmount = booking ? (booking.pricing?.finalPrice || booking.pricing?.totalPrice || 0) * 0.1 : 0;
+    const activePoints = pointsRecords.filter((r) => r.status === 'active');
+    const reversedPoints = pointsRecords.filter((r) => r.status === 'reversed');
+    const totalAllocated = activePoints.reduce((sum, r) => sum + r.pointsAllocated, 0);
+    const totalReversed = reversedPoints.reduce((sum, r) => sum + r.pointsAllocated, 0);
+
+    // Format response
+    const guarantorsData = pointsRecords.map((record) => ({
+      id: record._id.toString(),
+      guarantorId: record.guarantor?._id?.toString(),
+      guarantorName: record.guarantor?.name || 'N/A',
+      guarantorEmail: record.guarantor?.email || '',
+      guarantorPhone: record.guarantor?.phone || '',
+      guarantorGuarantorId: record.guarantor?.guarantorId || '',
+      pointsAllocated: record.pointsAllocated,
+      status: record.status,
+      allocatedAt: record.createdAt,
+      reversedAt: record.reversedAt,
+      reversalReason: record.reversalReason,
+      totalGuarantors: record.totalGuarantors,
+      requestStatus: record.guarantorRequest?.status,
+      acceptedAt: record.guarantorRequest?.acceptedAt,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        bookingId: booking?.bookingId || bookingId,
+        bookingAmount: booking?.pricing?.finalPrice || booking?.pricing?.totalPrice || 0,
+        totalPoolAmount,
+        totalGuarantors: pointsRecords.length,
+        activeGuarantors: activePoints.length,
+        totalAllocated,
+        totalReversed,
+        guarantors: guarantorsData,
+      },
+    });
+  } catch (error) {
+    console.error('Get booking guarantor points error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch guarantor points',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

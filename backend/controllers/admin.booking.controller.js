@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
+import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
 
 /**
  * @desc    Get all bookings (Admin)
@@ -243,6 +244,14 @@ export const updateBooking = async (req, res) => {
         booking.cancellationReason = cancellationReason || '';
         booking.isTrackingActive = false;
         booking.tripStatus = 'cancelled';
+        
+        // Reverse guarantor points for cancelled booking
+        try {
+          await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled by admin');
+        } catch (pointsError) {
+          console.error('Error reversing guarantor points:', pointsError);
+          // Don't fail booking cancellation if points reversal fails
+        }
       } else if (status === 'completed') {
         booking.completedAt = new Date();
         booking.tripStatus = 'completed';

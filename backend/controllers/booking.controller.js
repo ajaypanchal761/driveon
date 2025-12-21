@@ -2,7 +2,9 @@ import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
+import AddOnServices from '../models/AddOnServices.js';
 import { processReferralTripCompletion } from './referral.controller.js';
+import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
 
 /**
  * @desc    Create new booking
@@ -18,6 +20,7 @@ export const createBooking = async (req, res) => {
       paymentOption,
       specialRequests,
       couponCode,
+      addOnServices, // Optional: { driver: 0, bodyguard: 0, gunmen: 0, bouncer: 0 }
     } = req.body;
 
     const userId = req.user._id;
@@ -74,17 +77,17 @@ export const createBooking = async (req, res) => {
     }
 
     // Set default location if not provided
-    const pickupLocation = tripStart.location && tripStart.location.trim() !== '' 
-      ? tripStart.location.trim() 
+    const pickupLocation = tripStart.location && tripStart.location.trim() !== ''
+      ? tripStart.location.trim()
       : 'Location to be confirmed';
-    const dropLocation = tripEnd.location && tripEnd.location.trim() !== '' 
-      ? tripEnd.location.trim() 
+    const dropLocation = tripEnd.location && tripEnd.location.trim() !== ''
+      ? tripEnd.location.trim()
       : 'Location to be confirmed';
 
     // Validate trip dates - combine date and time for accurate comparison
     let startDate = new Date(tripStart.date);
     let endDate = new Date(tripEnd.date);
-    
+
     // Validate date objects
     if (isNaN(startDate.getTime())) {
       return res.status(400).json({
@@ -93,7 +96,7 @@ export const createBooking = async (req, res) => {
         received: tripStart.date,
       });
     }
-    
+
     if (isNaN(endDate.getTime())) {
       return res.status(400).json({
         success: false,
@@ -101,7 +104,7 @@ export const createBooking = async (req, res) => {
         received: tripEnd.date,
       });
     }
-    
+
     // If time is provided, combine date and time
     if (tripStart.time) {
       const timeParts = tripStart.time.split(':');
@@ -115,7 +118,7 @@ export const createBooking = async (req, res) => {
     } else {
       startDate.setHours(0, 0, 0, 0);
     }
-    
+
     if (tripEnd.time) {
       const timeParts = tripEnd.time.split(':');
       if (timeParts.length >= 2) {
@@ -128,7 +131,7 @@ export const createBooking = async (req, res) => {
     } else {
       endDate.setHours(23, 59, 59, 999); // Set to end of day if no time provided
     }
-    
+
     const now = new Date();
     now.setSeconds(0, 0); // Remove seconds for comparison
 
@@ -203,6 +206,56 @@ export const createBooking = async (req, res) => {
     // Apply multipliers
     totalPrice = totalPrice * (1 + weekendMultiplier);
 
+    // Calculate add-on services total
+    let addOnServicesTotal = 0;
+    let addOnServicesData = {
+      driver: 0,
+      bodyguard: 0,
+      gunmen: 0,
+      bouncer: 0,
+    };
+
+    if (addOnServices && typeof addOnServices === 'object') {
+      try {
+        // Get current prices from database
+        const prices = await AddOnServices.getPrices();
+
+        // Validate and calculate add-on services
+        const quantities = {
+          driver: Math.max(0, parseInt(addOnServices.driver) || 0),
+          bodyguard: Math.max(0, parseInt(addOnServices.bodyguard) || 0),
+          gunmen: Math.max(0, parseInt(addOnServices.gunmen) || 0),
+          bouncer: Math.max(0, parseInt(addOnServices.bouncer) || 0),
+        };
+
+        // Calculate total for add-on services
+        addOnServicesTotal =
+          (quantities.driver * prices.driver) +
+          (quantities.bodyguard * prices.bodyguard) +
+          (quantities.gunmen * prices.gunmen) +
+          (quantities.bouncer * prices.bouncer);
+
+        addOnServicesData = quantities;
+
+        console.log('✅ Add-on services calculated:', {
+          quantities,
+          prices: {
+            driver: prices.driver,
+            bodyguard: prices.bodyguard,
+            gunmen: prices.gunmen,
+            bouncer: prices.bouncer,
+          },
+          total: addOnServicesTotal,
+        });
+      } catch (addOnError) {
+        console.error('❌ Error calculating add-on services:', addOnError);
+        // Continue without add-on services if there's an error
+      }
+    }
+
+    // Add add-on services to total price
+    totalPrice = totalPrice + addOnServicesTotal;
+
     // Handle coupon discount if provided
     let couponDiscount = 0;
     let appliedCoupon = null;
@@ -212,17 +265,17 @@ export const createBooking = async (req, res) => {
         if (coupon) {
           // Get car details for coupon validation
           const carType = car.carType;
-          
+
           // Check if coupon can be applied
           const canApply = coupon.canBeApplied(totalPrice, carId, userId, carType);
           if (canApply.valid) {
             // Calculate discount
             couponDiscount = coupon.calculateDiscount(totalPrice);
             appliedCoupon = coupon;
-            
+
             // Apply discount to total price
             totalPrice = Math.max(0, totalPrice - couponDiscount);
-            
+
             console.log('✅ Coupon applied:', {
               code: coupon.code,
               discount: couponDiscount,
@@ -252,14 +305,14 @@ export const createBooking = async (req, res) => {
     }
 
     // Calculate advance payment (35% for advance option)
-    const advancePayment = paymentOption === 'advance' ? Math.round(totalPrice * 0.35) : 0;
+    const advancePayment = paymentOption === 'advance' ? (totalPrice * 0.35) : 0;
     const remainingPayment = totalPrice - advancePayment;
     const finalPrice = paymentOption === 'full' ? totalPrice : advancePayment;
 
     // Prepare coordinates structure
     const startCoordinates = tripStart.coordinates || {};
     const endCoordinates = tripEnd.coordinates || {};
-    
+
     // Ensure coordinates have proper structure (latitude/longitude as numbers or omit if not provided)
     // Mongoose will handle undefined values, but we need to make sure we don't send empty objects
     const formattedStartCoordinates = {};
@@ -269,7 +322,7 @@ export const createBooking = async (req, res) => {
     if (typeof startCoordinates.longitude === 'number' && !isNaN(startCoordinates.longitude)) {
       formattedStartCoordinates.longitude = startCoordinates.longitude;
     }
-    
+
     const formattedEndCoordinates = {};
     if (typeof endCoordinates.latitude === 'number' && !isNaN(endCoordinates.latitude)) {
       formattedEndCoordinates.latitude = endCoordinates.latitude;
@@ -277,7 +330,7 @@ export const createBooking = async (req, res) => {
     if (typeof endCoordinates.longitude === 'number' && !isNaN(endCoordinates.longitude)) {
       formattedEndCoordinates.longitude = endCoordinates.longitude;
     }
-    
+
     console.log('📍 Coordinates formatted:', {
       start: formattedStartCoordinates,
       end: formattedEndCoordinates,
@@ -302,19 +355,21 @@ export const createBooking = async (req, res) => {
       totalDays,
       pricing: {
         basePrice,
-        totalPrice: Math.round(totalPrice + couponDiscount), // Original total before discount
+        totalPrice: totalPrice + couponDiscount, // Original total before discount
         advancePayment,
-        remainingPayment: Math.round(remainingPayment),
+        remainingPayment,
         weekendMultiplier,
         timeOfDayMultiplier: 0,
-        discount: Math.round(couponDiscount),
-        finalPrice: Math.round(finalPrice),
+        discount: couponDiscount,
+        finalPrice,
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        addOnServicesTotal,
       },
+      addOnServices: addOnServicesData,
       paymentOption: paymentOption || 'full',
       paymentStatus: 'pending',
       paidAmount: 0,
-      remainingAmount: Math.round(remainingPayment),
+      remainingAmount: remainingPayment,
       specialRequests: specialRequests || '',
       status: 'pending',
     });
@@ -341,7 +396,7 @@ export const createBooking = async (req, res) => {
     try {
       await booking.save();
       console.log('✅ Booking saved successfully:', booking.bookingId);
-      
+
       // Increment coupon usage count if coupon was applied
       if (appliedCoupon) {
         await appliedCoupon.incrementUsage();
@@ -351,7 +406,7 @@ export const createBooking = async (req, res) => {
       console.error('❌ Booking save error:', saveError);
       console.error('Save error name:', saveError.name);
       console.error('Save error message:', saveError.message);
-      
+
       if (saveError.name === 'ValidationError') {
         const validationErrors = Object.keys(saveError.errors || {}).map(key => {
           const err = saveError.errors[key];
@@ -362,9 +417,9 @@ export const createBooking = async (req, res) => {
             kind: err.kind,
           };
         });
-        
+
         console.error('Validation errors:', validationErrors);
-        
+
         return res.status(400).json({
           success: false,
           message: 'Validation error while creating booking',
@@ -395,7 +450,7 @@ export const createBooking = async (req, res) => {
       code: error.code,
       body: req.body,
     });
-    
+
     // Handle specific error types
     if (error.name === 'ValidationError') {
       const validationErrors = Object.keys(error.errors || {}).map(key => ({
@@ -409,7 +464,7 @@ export const createBooking = async (req, res) => {
         error: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
-    
+
     if (error.name === 'MongoServerError' && error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -417,7 +472,7 @@ export const createBooking = async (req, res) => {
         error: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Failed to create booking',
@@ -579,13 +634,21 @@ export const updateBookingStatus = async (req, res) => {
       booking.cancellationReason = cancellationReason || '';
       booking.isTrackingActive = false;
       booking.tripStatus = 'cancelled';
+
+      // Reverse guarantor points for cancelled booking
+      try {
+        await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled');
+      } catch (pointsError) {
+        console.error('Error reversing guarantor points:', pointsError);
+        // Don't fail booking cancellation if points reversal fails
+      }
     } else if (status === 'confirmed') {
       booking.confirmedAt = new Date();
     } else if (status === 'completed') {
       booking.completedAt = new Date();
       booking.tripStatus = 'completed';
       booking.isTrackingActive = false;
-      
+
       // Process referral trip completion
       try {
         await processReferralTripCompletion(booking.user.toString());

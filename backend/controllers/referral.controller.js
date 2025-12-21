@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
+import GuarantorPoints from '../models/GuarantorPoints.js';
 
 /**
  * Process referral signup completion
@@ -177,11 +178,31 @@ export const getReferralDashboard = async (req, res) => {
     const activeReferrals = referrals.filter(r => r.status === 'active').length;
     const totalPointsFromReferrals = referrals.reduce((sum, r) => sum + r.pointsEarned, 0);
 
+    // Recalculate exact total points from both referral and guarantor points
+    // This ensures exact decimals are shown (10.5 instead of 11)
+    let exactTotalPoints = totalPointsFromReferrals; // Start with referral points
+    
+    // Add exact guarantor points (recalculate from records to avoid rounding)
+    const guarantorPointsRecords = await GuarantorPoints.find({
+      guarantor: userId,
+      status: 'active',
+    });
+    
+    const exactGuarantorPoints = guarantorPointsRecords.reduce((sum, r) => {
+      // Recalculate exact points from booking amount to avoid rounding issues
+      const exactTotalPool = r.bookingAmount * 0.1; // 10% of booking amount (exact)
+      const exactPointsPerGuarantor = exactTotalPool / r.totalGuarantors; // Exact division
+      return sum + exactPointsPerGuarantor;
+    }, 0);
+    
+    // Total points = referral points + guarantor points (both exact decimals)
+    exactTotalPoints = totalPointsFromReferrals + exactGuarantorPoints;
+
     res.status(200).json({
       success: true,
       data: {
         referralCode: user.referralCode || '',
-        points: user.points || 0,
+        points: exactTotalPoints, // Use recalculated exact value instead of user.points (might be rounded)
         totalPointsEarned: user.totalPointsEarned || 0,
         totalPointsUsed: user.totalPointsUsed || 0,
         referrals,

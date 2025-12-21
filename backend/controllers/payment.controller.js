@@ -23,7 +23,7 @@ export const createPayment = async (req, res) => {
     // Get booking
     const booking = await Booking.findById(bookingId)
       .populate('user', 'name phone email');
-    
+
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -101,7 +101,7 @@ export const createPayment = async (req, res) => {
 export const phonepeCallback = async (req, res) => {
   try {
     const { response } = req.body;
-    
+
     if (!response) {
       return res.status(400).json({
         success: false,
@@ -319,7 +319,7 @@ export const createRazorpayOrder = async (req, res) => {
         error: process.env.NODE_ENV === 'development' ? dbError.message : undefined,
       });
     }
-    
+
     if (!booking) {
       console.error('❌ Booking not found:', bookingId);
       return res.status(404).json({
@@ -327,7 +327,7 @@ export const createRazorpayOrder = async (req, res) => {
         message: 'Booking not found',
       });
     }
-    
+
     console.log('✅ Booking found:', {
       bookingId: booking.bookingId,
       _id: booking._id?.toString(),
@@ -344,7 +344,7 @@ export const createRazorpayOrder = async (req, res) => {
         message: 'Booking user data not available',
       });
     }
-    
+
     if (booking.user._id.toString() !== userId.toString()) {
       console.error('❌ Access denied:', {
         bookingUserId: booking.user._id.toString(),
@@ -367,7 +367,7 @@ export const createRazorpayOrder = async (req, res) => {
     // Check if Razorpay is configured
     if (!razorpayService.isConfigured()) {
       console.error('❌ Razorpay not configured - missing environment variables');
-      
+
       // Validate keys and provide helpful error message
       const validation = razorpayService.validateKeys();
       if (!validation.hasKeys) {
@@ -377,7 +377,7 @@ export const createRazorpayOrder = async (req, res) => {
           error: 'RAZORPAY_NOT_CONFIGURED',
         });
       }
-      
+
       // Try to re-initialize if keys exist but service failed
       if (validation.hasKeys) {
         const reinitSuccess = razorpayService.reinitialize();
@@ -416,7 +416,7 @@ export const createRazorpayOrder = async (req, res) => {
         code: razorpayError.code,
         error: razorpayError.error,
       });
-      
+
       // Check if it's a configuration error
       const rawMessage = razorpayError?.message;
       const rpMessage = typeof rawMessage === 'string' ? rawMessage : '';
@@ -431,7 +431,7 @@ export const createRazorpayOrder = async (req, res) => {
           error: 'RAZORPAY_NOT_CONFIGURED',
         });
       }
-      
+
       // Surface Razorpay authentication failures explicitly
       if (
         razorpayError?.statusCode === 401 ||
@@ -443,7 +443,7 @@ export const createRazorpayOrder = async (req, res) => {
           error: razorpayError?.error?.code || 'RAZORPAY_AUTH_FAILED',
         });
       }
-      
+
       // Check if it's an API error from Razorpay
       if (razorpayError.error) {
         return res.status(500).json({
@@ -452,7 +452,7 @@ export const createRazorpayOrder = async (req, res) => {
           error: razorpayError.error.code || 'RAZORPAY_ERROR',
         });
       }
-      
+
       return res.status(500).json({
         success: false,
         message: 'Failed to create payment order. Please try again.',

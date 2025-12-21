@@ -21,7 +21,7 @@ npm install
 cp .env.example .env
 ```
 
-3. Update `.env` with your MongoDB connection string.
+3. Update `.env` with your MongoDB connection string
 
 4. Start development server:
 ```bash
