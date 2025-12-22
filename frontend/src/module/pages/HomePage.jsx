@@ -9,7 +9,7 @@ import BottomNavbar from "../components/layout/BottomNavbar";
 import BrandCard from "../components/common/BrandCard";
 import CarCard from "../components/common/CarCard";
 import BannerAd from "../../components/common/BannerAd";
-import ReturningCarBanner from "../../components/common/ReturningCarBanner";
+import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
@@ -76,16 +76,16 @@ const HomePage = () => {
   const [heroBanners, setHeroBanners] = useState([]);
   const [faqs, setFaqs] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
-  
+
   // Featured car for AVAILABLE section
   const [featuredCar, setFeaturedCar] = useState(null);
-  
+
   // Promotional banner data
   const [promotionalBanner, setPromotionalBanner] = useState({
     title: "",
     subtitle: "",
   });
-  
+
   // Banner overlay text
   const [bannerOverlay, setBannerOverlay] = useState({
     title: "",
@@ -156,7 +156,7 @@ const HomePage = () => {
     } else {
       setDropoffDate(dateStr);
     }
-    
+
     // Save dates to localStorage for auto-fill in car details page
     try {
       const dates = {
@@ -169,7 +169,7 @@ const HomePage = () => {
     } catch (error) {
       console.error('Error saving dates to localStorage:', error);
     }
-    
+
     setIsCalendarOpen(false);
   };
 
@@ -212,19 +212,19 @@ const HomePage = () => {
       hour24 = 0;
     }
     const time24Format = `${String(hour24).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`;
-    
+
     if (timePickerTarget === "pickup") {
       setPickupTime(formattedTime);
     } else if (timePickerTarget === "dropoff") {
       setDropoffTime(formattedTime);
     }
-    
+
     // Save dates to localStorage for auto-fill in car details page
     try {
       // Get current times in 24-hour format
       let currentPickupTime24 = '';
       let currentDropoffTime24 = '';
-      
+
       if (timePickerTarget === "pickup") {
         currentPickupTime24 = time24Format;
         // Convert existing dropoff time if available
@@ -258,7 +258,7 @@ const HomePage = () => {
           }
         }
       }
-      
+
       const dates = {
         pickupDate: pickupDate,
         pickupTime: currentPickupTime24,
@@ -269,7 +269,7 @@ const HomePage = () => {
     } catch (error) {
       console.error('Error saving dates to localStorage:', error);
     }
-    
+
     setIsTimePickerOpen(false);
   };
 
@@ -421,8 +421,8 @@ const HomePage = () => {
 
         // Fetch featured car for AVAILABLE section
         try {
-          const featuredResponse = await carService.getCars({ 
-            limit: 1, 
+          const featuredResponse = await carService.getCars({
+            limit: 1,
             featured: true,
             status: 'active',
             isAvailable: true,
@@ -433,7 +433,7 @@ const HomePage = () => {
             setFeaturedCar(transformedCar);
           } else {
             // Fallback: Get first available car
-            const fallbackResponse = await carService.getCars({ 
+            const fallbackResponse = await carService.getCars({
               limit: 1,
               status: 'active',
               isAvailable: true,
@@ -512,11 +512,11 @@ const HomePage = () => {
   // Transform API car data to CarCard format
   const transformCarData = (car, index = 0) => {
     if (!car) return null;
-    
+
     // Extract all images from images array (same as admin side)
     let carImages = [];
     let carImage = fallbackCarImages[index % fallbackCarImages.length];
-    
+
     if (car.images && Array.isArray(car.images) && car.images.length > 0) {
       // Extract all image URLs (same as admin side)
       carImages = car.images
@@ -525,10 +525,10 @@ const HomePage = () => {
           return img?.url || img?.path || null;
         })
         .filter(Boolean);
-      
+
       // Remove duplicates
       carImages = [...new Set(carImages)];
-      
+
       // Find primary image first, otherwise use first image
       const primaryImage = car.images.find(img => img.isPrimary);
       carImage = primaryImage ? (primaryImage.url || primaryImage.path || primaryImage) : (carImages[0] || carImage);
@@ -538,7 +538,7 @@ const HomePage = () => {
     } else {
       carImages = [carImage];
     }
-    
+
     // Return all images (same as admin side)
     return {
       id: car._id || car.id,
@@ -560,7 +560,7 @@ const HomePage = () => {
     const fetchLatestCars = async () => {
       try {
         setCarsLoading(true);
-        
+
         // Fetch latest cars sorted by createdAt (descending)
         const response = await carService.getCars({
           limit: 5,
@@ -572,11 +572,11 @@ const HomePage = () => {
 
         if (response.success && response.data?.cars) {
           const cars = response.data.cars;
-          
+
           // Best Cars - First 2 latest cars
           const bestCarsData = cars.slice(0, 2).map((car, index) => transformCarData(car, index));
           setBestCars(bestCarsData);
-          
+
           // Nearby Cars - Next 3 cars
           const nearbyCarsData = cars.slice(2, 5).map((car, index) => transformCarData(car, index + 2));
           setNearbyCars(nearbyCarsData);
@@ -801,218 +801,218 @@ const HomePage = () => {
             </div>
           </div>
 
-                 {/* Search Bar Section - Positioned at bottom of hero section */}
-                 <div
-                   className="w-full px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 pb-2 -mt-0"
-                   onClick={(e) => e.stopPropagation()}
-                 >
-                   <div className="max-w-7xl mx-auto mb-24">
-                    {/* Search Form */}
-                    <div
-                      className="booking-card flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 lg:gap-4 bg-white rounded-xl p-3 md:p-4 lg:p-5 shadow-lg"
+          {/* Search Bar Section - Positioned at bottom of hero section */}
+          <div
+            className="w-full px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 pb-2 -mt-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="max-w-7xl mx-auto mb-24">
+              {/* Search Form */}
+              <div
+                className="booking-card flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 lg:gap-4 bg-white rounded-xl p-3 md:p-4 lg:p-5 shadow-lg"
+                style={{
+                  border: `1px solid ${colors.borderMedium}`,
+                  position: "relative",
+                  zIndex: 40,
+                }}
+              >
+                {/* Trip Start Date */}
+                <div className="flex-1 relative">
+                  <label
+                    className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Trip Start Date
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openCalendar("pickup")}
+                      className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
                       style={{
-                        border: `1px solid ${colors.borderMedium}`,
-                        position: "relative",
-                        zIndex: 40,
+                        color: pickupDate
+                          ? colors.textPrimary
+                          : colors.textTertiary,
                       }}
                     >
-                      {/* Trip Start Date */}
-                      <div className="flex-1 relative">
-                        <label
-                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Trip Start Date
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openCalendar("pickup")}
-                            className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
-                            style={{
-                              color: pickupDate
-                                ? colors.textPrimary
-                                : colors.textTertiary,
-                            }}
-                          >
-                            {pickupDate ? formatDateDisplay(pickupDate) : "dd-mm-yyyy"}
-                          </button>
-                          <svg
-                            className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ color: colors.textSecondary }}
-                            onClick={() => openCalendar("pickup")}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div
-                        className="hidden md:block w-px h-10 md:h-12 lg:h-14"
-                        style={{ backgroundColor: colors.borderMedium }}
+                      {pickupDate ? formatDateDisplay(pickupDate) : "dd-mm-yyyy"}
+                    </button>
+                    <svg
+                      className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: colors.textSecondary }}
+                      onClick={() => openCalendar("pickup")}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
-
-                      {/* Trip Start Time */}
-                      <div className="flex-1 relative">
-                        <label
-                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Trip Start Time
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openTimePicker("pickup")}
-                            className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
-                            style={{
-                              color: pickupTime
-                                ? colors.textPrimary
-                                : colors.textTertiary,
-                            }}
-                          >
-                            {pickupTime ? formatTimeDisplay(pickupTime) : "hh:mm"}
-                          </button>
-                          <svg
-                            className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ color: colors.textSecondary }}
-                            onClick={() => openTimePicker("pickup")}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div
-                        className="hidden md:block w-px h-10 md:h-12 lg:h-14"
-                        style={{ backgroundColor: colors.borderMedium }}
-                      />
-
-                      {/* Trip End Date */}
-                      <div className="flex-1 relative">
-                        <label
-                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Trip End Date
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openCalendar("dropoff")}
-                            className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
-                            style={{
-                              color: dropoffDate
-                                ? colors.textPrimary
-                                : colors.textTertiary,
-                            }}
-                          >
-                            {dropoffDate ? formatDateDisplay(dropoffDate) : "dd-mm-yyyy"}
-                          </button>
-                          <svg
-                            className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ color: colors.textSecondary }}
-                            onClick={() => openCalendar("dropoff")}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div
-                        className="hidden md:block w-px h-10 md:h-12 lg:h-14"
-                        style={{ backgroundColor: colors.borderMedium }}
-                      />
-
-                      {/* Trip End Time */}
-                      <div className="flex-1 relative">
-                        <label
-                          className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
-                          style={{ color: colors.textSecondary }}
-                        >
-                          Trip End Time
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openTimePicker("dropoff")}
-                            className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
-                            style={{
-                              color: dropoffTime
-                                ? colors.textPrimary
-                                : colors.textTertiary,
-                            }}
-                          >
-                            {dropoffTime ? formatTimeDisplay(dropoffTime) : "hh:mm"}
-                          </button>
-                          <svg
-                            className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ color: colors.textSecondary }}
-                            onClick={() => openTimePicker("dropoff")}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Search Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // Handle search action here
-                          console.log("Search clicked", {
-                            pickupDate,
-                            dropoffDate,
-                          });
-                          navigate("/search");
-                        }}
-                        className="px-4 md:px-6 lg:px-8 py-2 md:py-2.5 lg:py-3 rounded-lg font-semibold text-xs md:text-sm lg:text-base transition-all hover:opacity-90 flex-shrink-0 w-full md:w-auto"
-                        style={{
-                          backgroundColor: colors.backgroundTertiary,
-                          color: colors.textWhite,
-                        }}
-                      >
-                        Search
-                      </button>
-                    </div>
+                    </svg>
                   </div>
                 </div>
+
+                {/* Divider */}
+                <div
+                  className="hidden md:block w-px h-10 md:h-12 lg:h-14"
+                  style={{ backgroundColor: colors.borderMedium }}
+                />
+
+                {/* Trip Start Time */}
+                <div className="flex-1 relative">
+                  <label
+                    className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Trip Start Time
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openTimePicker("pickup")}
+                      className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
+                      style={{
+                        color: pickupTime
+                          ? colors.textPrimary
+                          : colors.textTertiary,
+                      }}
+                    >
+                      {pickupTime ? formatTimeDisplay(pickupTime) : "hh:mm"}
+                    </button>
+                    <svg
+                      className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: colors.textSecondary }}
+                      onClick={() => openTimePicker("pickup")}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div
+                  className="hidden md:block w-px h-10 md:h-12 lg:h-14"
+                  style={{ backgroundColor: colors.borderMedium }}
+                />
+
+                {/* Trip End Date */}
+                <div className="flex-1 relative">
+                  <label
+                    className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Trip End Date
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openCalendar("dropoff")}
+                      className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
+                      style={{
+                        color: dropoffDate
+                          ? colors.textPrimary
+                          : colors.textTertiary,
+                      }}
+                    >
+                      {dropoffDate ? formatDateDisplay(dropoffDate) : "dd-mm-yyyy"}
+                    </button>
+                    <svg
+                      className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: colors.textSecondary }}
+                      onClick={() => openCalendar("dropoff")}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div
+                  className="hidden md:block w-px h-10 md:h-12 lg:h-14"
+                  style={{ backgroundColor: colors.borderMedium }}
+                />
+
+                {/* Trip End Time */}
+                <div className="flex-1 relative">
+                  <label
+                    className="block text-xs md:text-sm font-medium mb-0.5 md:mb-1"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    Trip End Time
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openTimePicker("dropoff")}
+                      className="flex-1 text-xs md:text-sm lg:text-base text-left outline-none py-0.5 md:py-1"
+                      style={{
+                        color: dropoffTime
+                          ? colors.textPrimary
+                          : colors.textTertiary,
+                      }}
+                    >
+                      {dropoffTime ? formatTimeDisplay(dropoffTime) : "hh:mm"}
+                    </button>
+                    <svg
+                      className="w-3.5 h-3.5 md:w-4 md:h-4 cursor-pointer flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: colors.textSecondary }}
+                      onClick={() => openTimePicker("dropoff")}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Search Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Handle search action here
+                    console.log("Search clicked", {
+                      pickupDate,
+                      dropoffDate,
+                    });
+                    navigate("/search");
+                  }}
+                  className="px-4 md:px-6 lg:px-8 py-2 md:py-2.5 lg:py-3 rounded-lg font-semibold text-xs md:text-sm lg:text-base transition-all hover:opacity-90 flex-shrink-0 w-full md:w-auto"
+                  style={{
+                    backgroundColor: colors.backgroundTertiary,
+                    color: colors.textWhite,
+                  }}
+                >
+                  Search
+                </button>
               </div>
+            </div>
+          </div>
+        </div>
 
         {/* White Background Section Below Search Bar */}
         <div
@@ -1375,30 +1375,30 @@ const HomePage = () => {
                     )}
                   </div>
 
-                {/* Car Info Below Banner - Clickable */}
-                {featuredCar && (
-                  <div
-                    className="mt-3 cursor-pointer"
-                    onClick={() => navigate(`/car-details/${featuredCar.id}`, { state: { car: featuredCar } })}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-xl font-bold text-black">{featuredCar.name || `${featuredCar.brand} ${featuredCar.model}`}</h3>
-                      <div className="flex items-center gap-1">
-                        <svg
-                          className="w-5 h-5"
-                          fill={colors.accentOrange}
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <span className="text-base font-semibold text-black">
-                          {featuredCar.rating || "5.0"}
-                        </span>
+                  {/* Car Info Below Banner - Clickable */}
+                  {featuredCar && (
+                    <div
+                      className="mt-3 cursor-pointer"
+                      onClick={() => navigate(`/car-details/${featuredCar.id}`, { state: { car: featuredCar } })}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-xl font-bold text-black">{featuredCar.name || `${featuredCar.brand} ${featuredCar.model}`}</h3>
+                        <div className="flex items-center gap-1">
+                          <svg
+                            className="w-5 h-5"
+                            fill={colors.accentOrange}
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          <span className="text-base font-semibold text-black">
+                            {featuredCar.rating || "5.0"}
+                          </span>
+                        </div>
                       </div>
+                      <p className="text-sm text-gray-500">Rs. {featuredCar.price || featuredCar.pricePerDay || 800} / day</p>
                     </div>
-                    <p className="text-sm text-gray-500">Rs. {featuredCar.price || featuredCar.pricePerDay || 800} / day</p>
-                  </div>
-                )}
+                  )}
                 </div>
               )}
 
@@ -1643,15 +1643,14 @@ const HomePage = () => {
                       !isDisabled && isCurrentMonth && handleDateSelect(date)
                     }
                     disabled={isDisabled && !isSelected}
-                    className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      isSelected
+                    className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
                         ? "text-white"
                         : isDisabled
-                        ? "cursor-not-allowed opacity-40"
-                        : !isCurrentMonth
-                        ? "opacity-40"
-                        : "hover:bg-gray-100"
-                    }`}
+                          ? "cursor-not-allowed opacity-40"
+                          : !isCurrentMonth
+                            ? "opacity-40"
+                            : "hover:bg-gray-100"
+                      }`}
                     style={{
                       backgroundColor: isSelected
                         ? colors.backgroundTertiary
@@ -1659,8 +1658,8 @@ const HomePage = () => {
                       color: isSelected
                         ? colors.backgroundSecondary
                         : isDisabled
-                        ? colors.borderCheckbox
-                        : colors.textPrimary,
+                          ? colors.borderCheckbox
+                          : colors.textPrimary,
                     }}
                   >
                     {date.getDate()}
@@ -1736,11 +1735,10 @@ const HomePage = () => {
                       key={hour}
                       type="button"
                       onClick={() => setSelectedHour(hour)}
-                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
-                        selectedHour === hour
+                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedHour === hour
                           ? "text-white"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       style={{
                         backgroundColor:
                           selectedHour === hour
@@ -1773,11 +1771,10 @@ const HomePage = () => {
                       key={minute}
                       type="button"
                       onClick={() => setSelectedMinute(minute)}
-                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
-                        selectedMinute === minute
+                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedMinute === minute
                           ? "text-white"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       style={{
                         backgroundColor:
                           selectedMinute === minute
@@ -1806,11 +1803,10 @@ const HomePage = () => {
                       key={period}
                       type="button"
                       onClick={() => setSelectedPeriod(period)}
-                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
-                        selectedPeriod === period
+                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedPeriod === period
                           ? "text-white"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       style={{
                         backgroundColor:
                           selectedPeriod === period
@@ -2023,9 +2019,8 @@ const HomePage = () => {
                       className="rounded-xl overflow-hidden transition-all duration-200"
                       style={{
                         backgroundColor: colors.backgroundPrimary,
-                        border: `1px solid ${
-                          isOpen ? colors.textPrimary : colors.borderLight
-                        }`,
+                        border: `1px solid ${isOpen ? colors.textPrimary : colors.borderLight
+                          }`,
                         boxShadow: isOpen
                           ? `0 4px 6px ${colors.shadowLight}`
                           : "none",
@@ -2047,9 +2042,8 @@ const HomePage = () => {
                           {faq.question}
                         </h3>
                         <svg
-                          className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex-shrink-0 transition-transform duration-300 ${
-                            isOpen ? "transform rotate-180" : ""
-                          }`}
+                          className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex-shrink-0 transition-transform duration-300 ${isOpen ? "transform rotate-180" : ""
+                            }`}
                           style={{ color: colors.textPrimary }}
                           fill="none"
                           stroke="currentColor"
@@ -2064,9 +2058,8 @@ const HomePage = () => {
                         </svg>
                       </button>
                       <div
-                        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                          isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                        }`}
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                          }`}
                       >
                         <div className="px-4 md:px-5 lg:px-6 pb-4 md:pb-5 lg:pb-6 pt-0">
                           <p
