@@ -740,12 +740,12 @@ const SearchPage = () => {
     <>
       {/* Mobile View - DO NOT MODIFY */}
       <div
-        className="min-h-screen w-full flex flex-col md:hidden"
+        className="min-h-screen w-full flex flex-col md:hidden max-md:h-screen max-md:overflow-hidden"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* TOP COMPACT HEADER - matches module-test page */}
         <div
-          className="px-4 pt-6 pb-4 space-y-2"
+          className="px-4 pt-6 pb-4 space-y-2 max-md:sticky max-md:top-0 max-md:z-20 max-md:flex-shrink-0"
           style={{ backgroundColor: colors.backgroundTertiary }}
         >
           {/* Logo and Location in same row */}
@@ -890,12 +890,12 @@ const SearchPage = () => {
 
         {/* CONTENT */}
         <main
-          className="flex-1 pb-0"
+          className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
           style={{ backgroundColor: colors.backgroundTertiary }}
         >
           {/* Floating white card container */}
           <motion.div
-            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-44 space-y-4"
+            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-52 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0"
             style={{ minHeight: '100vh' }} // ensure full height on mobile even with little content
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}

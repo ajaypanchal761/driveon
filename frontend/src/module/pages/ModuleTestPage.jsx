@@ -70,6 +70,99 @@ const ModuleTestPage = () => {
   const [featuredCar, setFeaturedCar] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Banner Scroll Logic
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const bannerScrollRef = useRef(null);
+  const isBannerAutoScrollingRef = useRef(false);
+  const isBannerPausedRef = useRef(false);
+  const bannerPauseTimeoutRef = useRef(null);
+
+  const bannerCars = useMemo(() => [
+    { image: bannerCar1, alt: "Car 1" },
+    { image: bannerCar2, alt: "Car 2" },
+    { image: bannerCar3, alt: "Car 3" },
+    { image: bannerCar4, alt: "Car 4" },
+  ], []);
+
+  // Banner scroll handling
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = bannerScrollRef.current;
+      if (!container) return;
+      
+      const scrollLeft = container.scrollLeft;
+      const cardWidth = container.clientWidth;
+      const newIndex = Math.round(scrollLeft / cardWidth);
+      
+      if (newIndex >= 0 && newIndex < bannerCars.length) {
+        setCurrentBannerIndex(newIndex);
+      }
+
+      // Pause on manual scroll
+      if (!isBannerAutoScrollingRef.current) {
+        isBannerPausedRef.current = true;
+        if (bannerPauseTimeoutRef.current) clearTimeout(bannerPauseTimeoutRef.current);
+        bannerPauseTimeoutRef.current = setTimeout(() => {
+          isBannerPausedRef.current = false;
+        }, 5000);
+      }
+    };
+
+    const container = bannerScrollRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll, { passive: true });
+    }
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, [bannerCars.length]);
+
+  // Banner auto-scroll
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isBannerPausedRef.current) return;
+      
+      const container = bannerScrollRef.current;
+      if (!container) return;
+      
+      const nextIndex = (currentBannerIndex + 1) % bannerCars.length;
+      const cardWidth = container.clientWidth;
+      
+      isBannerAutoScrollingRef.current = true;
+      container.scrollTo({
+        left: nextIndex * cardWidth,
+        behavior: "smooth"
+      });
+      
+      setTimeout(() => {
+        isBannerAutoScrollingRef.current = false;
+      }, 500);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [currentBannerIndex, bannerCars.length]);
+
+  const goToBannerIndex = (index) => {
+    const container = bannerScrollRef.current;
+    if (!container) return;
+
+    isBannerPausedRef.current = true;
+    if (bannerPauseTimeoutRef.current) clearTimeout(bannerPauseTimeoutRef.current);
+    
+    isBannerAutoScrollingRef.current = true;
+    const cardWidth = container.clientWidth;
+    container.scrollTo({
+      left: index * cardWidth,
+      behavior: "smooth"
+    });
+
+    setTimeout(() => {
+      isBannerAutoScrollingRef.current = false;
+    }, 500);
+
+    bannerPauseTimeoutRef.current = setTimeout(() => {
+      isBannerPausedRef.current = false;
+    }, 5000);
+  };
+
   // Filter options state for FilterDropdown
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
@@ -826,12 +919,12 @@ const ModuleTestPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col"
+      className="min-h-screen w-full flex flex-col max-md:h-screen max-md:overflow-hidden"
       style={{ backgroundColor: colors.backgroundTertiary }}
     >
       {/* TOP COMPACT HEADER - matches reference */}
       <div
-        className="px-4 pt-6 pb-6 space-y-3 rounded-b-[32px] shadow-lg relative z-20"
+        className="px-4 pt-6 pb-6 space-y-3 md:rounded-b-[32px] md:shadow-lg relative z-20 max-md:sticky max-md:top-0 max-md:flex-shrink-0"
         style={{ background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)" }}
       >
         {/* Logo and Location in same row */}
@@ -1075,12 +1168,12 @@ const ModuleTestPage = () => {
 
       {/* CONTENT */}
       <main
-        className="flex-1 pb-0"
+        className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* Floating white card container like reference */}
         <motion.div
-          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
+          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0 max-md:rounded-t-3xl"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -1363,35 +1456,33 @@ const ModuleTestPage = () => {
 
           {/* BANNER SECTION - Between Featured Car and Best Cars */}
           <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
-            <Swiper
-              modules={[Pagination, Autoplay]}
-              spaceBetween={0}
-              slidesPerView={1}
-              autoplay={{
-                delay: 3000,
-                disableOnInteraction: false,
-              }}
-              pagination={{
-                clickable: true,
-                bulletClass: "swiper-pagination-bullet-custom",
-                bulletActiveClass: "swiper-pagination-bullet-active-custom",
-                el: ".mobile-banner-pagination",
-              }}
-              className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
+            <div 
+              className="w-full rounded-2xl md:rounded-3xl overflow-hidden relative"
               style={{ background: "rgb(41, 70, 87)" }}
             >
-              {[
-                { image: bannerCar1, alt: "Car 1" },
-                { image: bannerCar2, alt: "Car 2" },
-                { image: bannerCar3, alt: "Car 3" },
-                { image: bannerCar4, alt: "Car 4" },
-              ].map((car, index) => (
-                <SwiperSlide key={index} className="!w-full">
+              <div
+                ref={bannerScrollRef}
+                className="flex overflow-x-auto scroll-smooth w-full"
+                style={{
+                  scrollSnapType: "x mandatory",
+                  touchAction: "pan-x",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch"
+                }}
+              >
+                {bannerCars.map((car, index) => (
                   <div
+                    key={index}
                     className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
+                    style={{ scrollSnapAlign: "center" }}
                     onClick={() => navigate("/search")}
                   >
-                    <div className="flex-shrink-0 w-1/3 z-10">
+                    <div 
+                      className={`flex-shrink-0 w-1/3 z-10 transition-all duration-700 ease-out ${
+                        index === currentBannerIndex ? "opacity-100 translate-y-0" : "opacity-60 translate-y-4"
+                      }`}
+                    >
                       <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
                         20% Off Your First Ride!
                       </h2>
@@ -1408,7 +1499,13 @@ const ModuleTestPage = () => {
                         Discover More
                       </button>
                     </div>
-                    <div className="flex-1 flex items-center justify-end h-full relative">
+                    <div 
+                      className="flex-1 flex items-center justify-end h-full relative transition-all duration-700 ease-out"
+                      style={{
+                        transform: index === currentBannerIndex ? "scale(1)" : "scale(0.9)",
+                        opacity: index === currentBannerIndex ? 1 : 0.8
+                      }}
+                    >
                       <img
                         alt={car.alt}
                         className="h-full max-h-full w-auto object-contain"
@@ -1417,15 +1514,29 @@ const ModuleTestPage = () => {
                         style={{
                           maxWidth: "100%",
                           objectFit: "contain",
-                          transform: "translateX(15px)",
+                          transform: index === currentBannerIndex ? "translateX(15px) scale(1)" : "translateX(30px) scale(0.9)",
+                          transition: "transform 0.7s ease-out"
                         }}
                       />
                     </div>
                   </div>
-                </SwiperSlide>
+                ))}
+              </div>
+            </div>
+            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4">
+              {bannerCars.map((_, index) => (
+                <span
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToBannerIndex(index);
+                  }}
+                  className={`swiper-pagination-bullet-custom ${
+                    index === currentBannerIndex ? "swiper-pagination-bullet-active-custom" : ""
+                  }`}
+                />
               ))}
-            </Swiper>
-            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4"></div>
+            </div>
             <style>{`
               .swiper-pagination-bullet-custom {
                 width: 8px;

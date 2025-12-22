@@ -96,54 +96,36 @@ const ReturningCarBanner = () => {
       if (!isAutoScrollingRef.current) {
         setIsAutoScrollPaused(true);
         isPausedRef.current = true;
-        // Clear existing timeout
-        if (pauseTimeoutRef.current) {
-          clearTimeout(pauseTimeoutRef.current);
-        }
-        // Resume after 10 seconds
+        if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
         pauseTimeoutRef.current = setTimeout(() => {
           setIsAutoScrollPaused(false);
           isPausedRef.current = false;
-        }, 10000);
+        }, 5000); // Resume after 5 seconds
       }
     };
     
     const webHandler = () => {
       handleScroll(webContainer);
-      // Only pause if it's user-initiated scroll, not auto-scroll
       if (!isAutoScrollingRef.current) {
         setIsAutoScrollPaused(true);
         isPausedRef.current = true;
-        // Clear existing timeout
-        if (pauseTimeoutRef.current) {
-          clearTimeout(pauseTimeoutRef.current);
-        }
-        // Resume after 10 seconds
+        if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
         pauseTimeoutRef.current = setTimeout(() => {
           setIsAutoScrollPaused(false);
           isPausedRef.current = false;
-        }, 10000);
+        }, 5000); // Resume after 5 seconds
       }
     };
 
-    if (mobileContainer) {
-      mobileContainer.addEventListener("scroll", mobileHandler, { passive: true });
-    }
-    if (webContainer) {
-      webContainer.addEventListener("scroll", webHandler, { passive: true });
-    }
+    if (mobileContainer) mobileContainer.addEventListener("scroll", mobileHandler, { passive: true });
+    if (webContainer) webContainer.addEventListener("scroll", webHandler, { passive: true });
 
-    // Initial sync
     if (mobileContainer) handleScroll(mobileContainer);
     if (webContainer) handleScroll(webContainer);
 
     return () => {
-      if (mobileContainer) {
-        mobileContainer.removeEventListener("scroll", mobileHandler);
-      }
-      if (webContainer) {
-        webContainer.removeEventListener("scroll", webHandler);
-      }
+      if (mobileContainer) mobileContainer.removeEventListener("scroll", mobileHandler);
+      if (webContainer) webContainer.removeEventListener("scroll", webHandler);
     };
   }, [returningCars.length]);
 
@@ -267,7 +249,11 @@ const ReturningCarBanner = () => {
                 onClick={() => handleBannerClick(car)}
               >
                 {/* Left Side - Text Content */}
-                <div className="flex-1 min-w-0 pr-3">
+                <div 
+                  className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${
+                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-1.5">
                     <svg
                       className="w-4 h-4 flex-shrink-0"
@@ -316,8 +302,13 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side - Car Image */}
                 <div
-                  className="flex-shrink-0 flex items-center justify-center"
-                  style={{ width: "40%", minWidth: "120px" }}
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
+                  style={{ 
+                    width: "40%", 
+                    minWidth: "120px",
+                    transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
+                    opacity: index === currentCarIndex ? 1 : 0.8
+                  }}
                 >
                   <img
                     src={car.image}
@@ -328,7 +319,8 @@ const ReturningCarBanner = () => {
                       objectFit: "contain",
                       maxHeight: "250px",
                       width: "100%",
-                      transform: "scale(1.25)",
+                      transform: index === currentCarIndex ? "scale(1.25)" : "scale(1)",
+                      transition: "transform 0.7s ease-out"
                     }}
                   />
                 </div>
@@ -395,7 +387,11 @@ const ReturningCarBanner = () => {
                 onClick={() => handleBannerClick(car)}
               >
                 {/* Left Side - Text Content */}
-                <div className="flex-1 min-w-0 pr-6">
+                <div 
+                  className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${
+                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <svg
                       className="w-5 h-5 flex-shrink-0"
@@ -444,8 +440,13 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side - Car Image */}
                 <div
-                  className="flex-shrink-0 flex items-center justify-center"
-                  style={{ width: "45%", minWidth: "280px" }}
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
+                  style={{ 
+                    width: "45%", 
+                    minWidth: "280px",
+                    transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
+                    opacity: index === currentCarIndex ? 1 : 0.8
+                  }}
                 >
                   <img
                     src={car.image}
@@ -456,7 +457,8 @@ const ReturningCarBanner = () => {
                       objectFit: "contain",
                       maxHeight: "340px",
                       width: "100%",
-                      transform: "scale(1.15)",
+                      transform: index === currentCarIndex ? "scale(1.15)" : "scale(1)",
+                      transition: "transform 0.7s ease-out"
                     }}
                   />
                 </div>
