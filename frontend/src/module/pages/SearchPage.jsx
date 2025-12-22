@@ -126,28 +126,54 @@ const SearchPage = () => {
   // Track if filters should auto-open (e.g., when coming from home pills)
   const [shouldOpenFilters, setShouldOpenFilters] = useState(false);
 
-  // Sync state when query params change (e.g., from home pills)
+
+
+  // Sync appliedFilters with URL params
   useEffect(() => {
-    const q = searchParams.get('q') || '';
-    setSearchQuery(q);
+    const filters = {};
+    const hasParams = Array.from(searchParams.keys()).length > 0;
 
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
-    if (minPrice || maxPrice) {
-      setAppliedFilters((prev) => ({
-        ...prev,
-        priceRange: {
-          min: minPrice || '',
-          max: maxPrice || '',
-        },
-      }));
-      setShouldOpenFilters(true);
+    if (!hasParams) {
+      // Reset to defaults if no params
+      setAppliedFilters({
+        brand: '',
+        model: '',
+        seats: '',
+        fuelType: '',
+        transmission: '',
+        color: '',
+        priceRange: { min: '', max: '' },
+        rating: '',
+        location: '',
+        carType: '',
+        features: [],
+        availableFrom: '',
+        availableTo: '',
+      });
+      return;
     }
 
-    const filterParam = searchParams.get('filter');
-    if (filterParam) {
-      setShouldOpenFilters(true);
-    }
+    // Explicitly read all potential params to ensure sync
+    filters.brand = searchParams.get('brand') || '';
+    filters.model = searchParams.get('model') || '';
+    filters.seats = searchParams.get('seats') || '';
+    filters.fuelType = searchParams.get('fuelType') || '';
+    filters.transmission = searchParams.get('transmission') || '';
+    filters.color = searchParams.get('color') || '';
+    filters.rating = searchParams.get('rating') || '';
+    filters.location = searchParams.get('location') || '';
+    filters.carType = searchParams.get('carType') || '';
+    filters.features = searchParams.get('features') ? searchParams.get('features').split(',') : [];
+
+    filters.priceRange = {
+      min: searchParams.get('minPrice') || '',
+      max: searchParams.get('maxPrice') || ''
+    };
+
+    setAppliedFilters(filters);
+
+    if (searchParams.get('filter')) setShouldOpenFilters(true);
+
   }, [searchParams]);
 
   // Open filters when requested by URL params
@@ -260,14 +286,80 @@ const SearchPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Fetch latest active cars
-        const carsResponse = await carService.getCars({
-          limit: 12,
+
+        // Date Parsing Logic
+        const pickupDate = searchParams.get('pickupDate');
+        const pickupTime = searchParams.get('pickupTime');
+        const dropoffDate = searchParams.get('dropoffDate');
+        const dropoffTime = searchParams.get('dropoffTime');
+
+        let startDateStr = undefined;
+        let endDateStr = undefined;
+
+        const parseTime = (dateStr, timeStr) => {
+          if (!dateStr) return null;
+          if (!timeStr) return new Date(`${dateStr}T00:00:00`);
+
+          try {
+            // timeStr expected format: "HH:MM am/pm"
+            const [timePart, period] = timeStr.trim().split(' ');
+            let [hours, minutes] = timePart.split(':').map(Number);
+
+            if (period.toLowerCase() === 'pm' && hours !== 12) hours += 12;
+            if (period.toLowerCase() === 'am' && hours === 12) hours = 0;
+
+            const date = new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
+            return date;
+          } catch (e) {
+            console.error("Error parsing time", e);
+            return new Date(dateStr);
+          }
+        };
+
+        if (pickupDate) {
+          const start = parseTime(pickupDate, pickupTime);
+          if (start && !isNaN(start.getTime())) startDateStr = start.toISOString();
+        }
+
+        if (dropoffDate) {
+          const end = parseTime(dropoffDate, dropoffTime);
+          if (end && !isNaN(end.getTime())) endDateStr = end.toISOString();
+        }
+
+        // Build backend query params
+        const queryParams = {
+          limit: 100, // Increase limit to allow client-side filtering of unsupported fields
           sortBy: 'createdAt',
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
-        });
+          startDate: startDateStr,
+          endDate: endDateStr,
+        };
+
+        // Add supported backend filters
+        if (searchParams.get('brand') && searchParams.get('brand') !== 'All Brands') {
+          queryParams.brand = searchParams.get('brand');
+        }
+
+        // Map model to search (since backend getAllCars supports search which covers model)
+        // If 'q' exists, we prioritized it, otherwise use 'model'
+        const q = searchParams.get('q');
+        const model = searchParams.get('model');
+        if (q) {
+          queryParams.search = q;
+        } else if (model) {
+          queryParams.search = model;
+        }
+
+        if (searchParams.get('fuelType')) queryParams.fuelType = searchParams.get('fuelType');
+        if (searchParams.get('carType')) queryParams.carType = searchParams.get('carType');
+        if (searchParams.get('location')) queryParams.location = searchParams.get('location');
+        if (searchParams.get('minPrice')) queryParams.minPrice = searchParams.get('minPrice');
+        if (searchParams.get('maxPrice')) queryParams.maxPrice = searchParams.get('maxPrice');
+
+        // Fetch latest active cars with filters
+        const carsResponse = await carService.getCars(queryParams);
 
         let cars = [];
         if (carsResponse.success && carsResponse.data?.cars) {
@@ -369,6 +461,10 @@ const SearchPage = () => {
         });
 
         setBrands(dynamicBrands);
+
+        // ... rest of the option building code stays same implicitly as it depends on cars
+        // But for safety, I will include the option building code as well to close the block properly
+
 
         // Extract unique filter options from cars data
         const uniqueBrands = Array.from(
@@ -505,8 +601,7 @@ const SearchPage = () => {
     };
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   // Handle search
   const handleSearch = (query) => {
@@ -756,18 +851,16 @@ const SearchPage = () => {
               className="h-9 w-auto object-contain"
             />
             {/* Location pill */}
-            <button
-              type="button"
-              className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
+            <div
+              className="flex items-start justify-between rounded-2xl px-3 py-2 text-[11px] flex-shrink-0"
               style={{
                 backgroundColor: colors.backgroundTertiary,
                 color: colors.textWhite,
               }}
-              onClick={() => navigate("/module-location")}
             >
-              <span className="flex items-center gap-2 min-w-0">
+              <span className="flex items-start gap-2 min-w-0">
                 <span
-                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px]"
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px] flex-shrink-0 mt-0.5"
                   style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   <svg
@@ -790,22 +883,9 @@ const SearchPage = () => {
                     />
                   </svg>
                 </span>
-                <span className="truncate max-w-[140px]">{currentLocation || 'Getting location...'}</span>
+                <span className="text-[10px] leading-snug break-words text-left max-w-[210px] font-medium opacity-90">{currentLocation || 'Getting location...'}</span>
               </span>
-              <svg
-                className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
+            </div>
           </div>
 
           {/* Search Bar Section - In Header */}
@@ -1286,7 +1366,30 @@ const SearchPage = () => {
           onClose={() => setIsFilterOpen(false)}
           onApplyFilters={(filters) => {
             console.log('Applied filters:', filters);
-            setAppliedFilters(filters);
+            // Construct query parameters same as Header.jsx
+            const params = new URLSearchParams(searchParams); // Keep existing params if any? No, replace.
+            // Actually better to start fresh from searchParams but update fields
+
+            // Clear keys we are about to set
+            ['brand', 'model', 'seats', 'fuelType', 'transmission', 'color', 'minPrice', 'maxPrice', 'rating', 'location', 'carType', 'features', 'pickupDate', 'dropoffDate'].forEach(k => params.delete(k));
+
+            if (filters.brand && filters.brand !== 'All Brands') params.set('brand', filters.brand);
+            if (filters.model) params.set('model', filters.model);
+            if (filters.seats && filters.seats !== 'Any') params.set('seats', filters.seats);
+            if (filters.fuelType) params.set('fuelType', filters.fuelType);
+            if (filters.transmission) params.set('transmission', filters.transmission);
+            if (filters.color && filters.color !== 'Any Color') params.set('color', filters.color);
+            if (filters.minPrice) params.set('minPrice', filters.minPrice);
+            if (filters.priceRange?.min) params.set('minPrice', filters.priceRange.min);
+            if (filters.priceRange?.max) params.set('maxPrice', filters.priceRange.max);
+            if (filters.rating) params.set('rating', filters.rating);
+            if (filters.location) params.set('location', filters.location);
+            if (filters.carType) params.set('carType', filters.carType);
+            if (filters.features && filters.features.length > 0) params.set('features', filters.features.join(','));
+            if (filters.availableFrom) params.set('pickupDate', filters.availableFrom);
+            if (filters.availableTo) params.set('dropoffDate', filters.availableTo);
+
+            navigate(`/search?${params.toString()}`);
             setIsFilterOpen(false);
           }}
           brands={filterOptions.brands}
@@ -1296,6 +1399,8 @@ const SearchPage = () => {
           carTypes={filterOptions.carTypes}
           featuresList={filterOptions.features}
           seatOptions={filterOptions.seats}
+          locations={filterOptions.locations}
+          ratingOptions={filterOptions.ratings}
         />
       </div>
     </>

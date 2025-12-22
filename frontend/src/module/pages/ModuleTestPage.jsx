@@ -231,12 +231,12 @@ const ModuleTestPage = () => {
       fuelType.toLowerCase() === "petrol"
         ? "Petrol"
         : fuelType.toLowerCase() === "diesel"
-        ? "Diesel"
-        : fuelType.toLowerCase() === "electric"
-        ? "Electric"
-        : fuelType.toLowerCase() === "hybrid"
-        ? "Hybrid"
-        : fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
+          ? "Diesel"
+          : fuelType.toLowerCase() === "electric"
+            ? "Electric"
+            : fuelType.toLowerCase() === "hybrid"
+              ? "Hybrid"
+              : fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
 
     // Normalize transmission
     const transmission = car.transmission || "";
@@ -244,11 +244,11 @@ const ModuleTestPage = () => {
       transmission.toLowerCase() === "automatic"
         ? "Automatic"
         : transmission.toLowerCase() === "manual"
-        ? "Manual"
-        : transmission.toLowerCase() === "cvt"
-        ? "CVT"
-        : transmission.charAt(0).toUpperCase() +
-          transmission.slice(1).toLowerCase();
+          ? "Manual"
+          : transmission.toLowerCase() === "cvt"
+            ? "CVT"
+            : transmission.charAt(0).toUpperCase() +
+            transmission.slice(1).toLowerCase();
 
     return {
       id: car._id || car.id,
@@ -372,82 +372,82 @@ const ModuleTestPage = () => {
 
             // If no API logo, map specific brand/model names to correct logos
             if (!brandLogo) {
-            // Indian brands/models
-            if (lowerName.includes('alto') || lowerName.includes('800')) {
-              brandLogo = logo2; // Maruti/Toyota logo for Alto
-              displayName = 'Maruti Suzuki';
-            } else if (lowerName.includes('xuv') || lowerName.includes('500')) {
-              brandLogo = logo9; // Mahindra logo for XUV
-              displayName = 'Mahindra';
-            } else if (lowerName.includes('swift') || lowerName.includes('dzire')) {
-              brandLogo = logo2; // Maruti logo for Swift/Dzire
-              displayName = 'Maruti Suzuki';
-            } else if (lowerName.includes('hyundai')) {
-              brandLogo = logo6; // Hyundai logo (different from KIA)
-              displayName = 'Hyundai';
-            } else if (lowerName.includes('kia')) {
-              brandLogo = logo1; // KIA logo
-              displayName = 'Kia';
-            } else if (lowerName.includes('toyota')) {
-              brandLogo = logo2; // Toyota logo
-              displayName = 'Toyota';
-            } else if (lowerName.includes('mahindra')) {
-              brandLogo = logo9; // Mahindra logo
-              displayName = 'Mahindra';
-            } else if (lowerName.includes('maruti')) {
-              brandLogo = logo2; // Maruti logo
-              displayName = 'Maruti Suzuki';
-            } else if (lowerName.includes('tata')) {
-              brandLogo = logo3; // Tata logo
-              displayName = 'Tata';
-            } else if (lowerName.includes('honda')) {
-              brandLogo = logo8; // Honda logo
-              displayName = 'Honda';
-            } else if (lowerName.includes('nissan')) {
-              brandLogo = logo11; // Nissan logo
-              displayName = 'Nissan';
-            } else if (lowerName.includes('ford')) {
-              brandLogo = logo4; // Ford logo
-              displayName = 'Ford';
-            } else if (lowerName.includes('chevrolet')) {
-              brandLogo = logo5; // Chevrolet logo
-              displayName = 'Chevrolet';
-            } else if (lowerName.includes('ferrari')) {
-              brandLogo = logo10; // Ferrari logo
-              displayName = 'Ferrari';
-            } else if (lowerName.includes('lamborghini')) {
-              brandLogo = logo5; // Lamborghini logo
-              displayName = 'Lamborghini';
-            } else if (lowerName.includes('bmw')) {
-              brandLogo = logo11; // BMW logo
-              displayName = 'BMW';
-            } else if (lowerName.includes('audi')) {
-              brandLogo = logo10; // Audi logo
-              displayName = 'Audi';
-            } else if (lowerName.includes('tesla')) {
-              brandLogo = logo4; // Tesla logo
-              displayName = 'Tesla';
-            } else {
-              // Try exact match from brandLogos map
-              brandLogo = brandLogos[normalizedName];
-              
-              // Try case-insensitive match
-              if (!brandLogo) {
-                const brandKey = Object.keys(brandLogos).find(
-                  key => key.toLowerCase() === normalizedName.toLowerCase()
-                );
-                if (brandKey) {
-                  brandLogo = brandLogos[brandKey];
-                  displayName = brandKey;
+              // Indian brands/models
+              if (lowerName.includes('alto') || lowerName.includes('800')) {
+                brandLogo = logo2; // Maruti/Toyota logo for Alto
+                displayName = 'Maruti Suzuki';
+              } else if (lowerName.includes('xuv') || lowerName.includes('500')) {
+                brandLogo = logo9; // Mahindra logo for XUV
+                displayName = 'Mahindra';
+              } else if (lowerName.includes('swift') || lowerName.includes('dzire')) {
+                brandLogo = logo2; // Maruti logo for Swift/Dzire
+                displayName = 'Maruti Suzuki';
+              } else if (lowerName.includes('hyundai')) {
+                brandLogo = logo6; // Hyundai logo (different from KIA)
+                displayName = 'Hyundai';
+              } else if (lowerName.includes('kia')) {
+                brandLogo = logo1; // KIA logo
+                displayName = 'Kia';
+              } else if (lowerName.includes('toyota')) {
+                brandLogo = logo2; // Toyota logo
+                displayName = 'Toyota';
+              } else if (lowerName.includes('mahindra')) {
+                brandLogo = logo9; // Mahindra logo
+                displayName = 'Mahindra';
+              } else if (lowerName.includes('maruti')) {
+                brandLogo = logo2; // Maruti logo
+                displayName = 'Maruti Suzuki';
+              } else if (lowerName.includes('tata')) {
+                brandLogo = logo3; // Tata logo
+                displayName = 'Tata';
+              } else if (lowerName.includes('honda')) {
+                brandLogo = logo8; // Honda logo
+                displayName = 'Honda';
+              } else if (lowerName.includes('nissan')) {
+                brandLogo = logo11; // Nissan logo
+                displayName = 'Nissan';
+              } else if (lowerName.includes('ford')) {
+                brandLogo = logo4; // Ford logo
+                displayName = 'Ford';
+              } else if (lowerName.includes('chevrolet')) {
+                brandLogo = logo5; // Chevrolet logo
+                displayName = 'Chevrolet';
+              } else if (lowerName.includes('ferrari')) {
+                brandLogo = logo10; // Ferrari logo
+                displayName = 'Ferrari';
+              } else if (lowerName.includes('lamborghini')) {
+                brandLogo = logo5; // Lamborghini logo
+                displayName = 'Lamborghini';
+              } else if (lowerName.includes('bmw')) {
+                brandLogo = logo11; // BMW logo
+                displayName = 'BMW';
+              } else if (lowerName.includes('audi')) {
+                brandLogo = logo10; // Audi logo
+                displayName = 'Audi';
+              } else if (lowerName.includes('tesla')) {
+                brandLogo = logo4; // Tesla logo
+                displayName = 'Tesla';
+              } else {
+                // Try exact match from brandLogos map
+                brandLogo = brandLogos[normalizedName];
+
+                // Try case-insensitive match
+                if (!brandLogo) {
+                  const brandKey = Object.keys(brandLogos).find(
+                    key => key.toLowerCase() === normalizedName.toLowerCase()
+                  );
+                  if (brandKey) {
+                    brandLogo = brandLogos[brandKey];
+                    displayName = brandKey;
+                  }
+                }
+
+                // Use fallback brand logo if still not found
+                if (!brandLogo) {
+                  brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
                 }
               }
-              
-              // Use fallback brand logo if still not found
-              if (!brandLogo) {
-                brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
-              }
             }
-          }
 
             return {
               id: index + 1,
@@ -842,8 +842,7 @@ const ModuleTestPage = () => {
             className="h-9 w-auto object-contain"
           />
           {/* Location pill */}
-          <button
-            type="button"
+          <div
             className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
             style={{
               backgroundColor: "rgba(255, 255, 255, 0.08)",
@@ -851,7 +850,6 @@ const ModuleTestPage = () => {
               color: colors.textWhite,
               border: "1px solid rgba(255, 255, 255, 0.15)",
             }}
-            onClick={() => navigate("/module-location")}
           >
             <span className="flex items-center gap-2 min-w-0">
               <span
@@ -882,20 +880,7 @@ const ModuleTestPage = () => {
                 {currentLocation || "Getting location..."}
               </span>
             </span>
-            <svg
-              className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -1182,15 +1167,15 @@ const ModuleTestPage = () => {
                 <motion.button
                   key={cat.id}
                   type="button"
-                className="flex-shrink-0 w-24"
-                onClick={() => {
-                  // Navigate to category page
-                  // Use carType if available, otherwise convert label to lowercase
-                  const categoryName = cat.carType 
-                    ? cat.carType.toLowerCase() 
-                    : (cat.label || '').toLowerCase().replace(/\s+/g, '-');
-                  navigate(`/category/${categoryName}`);
-                }}
+                  className="flex-shrink-0 w-24"
+                  onClick={() => {
+                    // Navigate to category page
+                    // Use carType if available, otherwise convert label to lowercase
+                    const categoryName = cat.carType
+                      ? cat.carType.toLowerCase()
+                      : (cat.label || '').toLowerCase().replace(/\s+/g, '-');
+                    navigate(`/category/${categoryName}`);
+                  }}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
@@ -1517,8 +1502,8 @@ const ModuleTestPage = () => {
                       animate={
                         animatingStates[car.id]
                           ? {
-                              scale: [1, 1.3, 1],
-                            }
+                            scale: [1, 1.3, 1],
+                          }
                           : {}
                       }
                       transition={{
@@ -1528,9 +1513,8 @@ const ModuleTestPage = () => {
                       whileTap={{ scale: 0.95 }}
                     >
                       <svg
-                        className={`w-5 h-5 md:w-6 md:h-6 ${
-                          favoriteStates[car.id] ? "text-red-500" : "text-white"
-                        }`}
+                        className={`w-5 h-5 md:w-6 md:h-6 ${favoriteStates[car.id] ? "text-red-500" : "text-white"
+                          }`}
                         fill={favoriteStates[car.id] ? "currentColor" : "none"}
                         stroke="currentColor"
                         strokeWidth={2}
@@ -1693,8 +1677,8 @@ const ModuleTestPage = () => {
                         animate={
                           animatingStates[car.id]
                             ? {
-                                scale: [1, 1.3, 1],
-                              }
+                              scale: [1, 1.3, 1],
+                            }
                             : {}
                         }
                         transition={{
@@ -1704,11 +1688,10 @@ const ModuleTestPage = () => {
                         whileTap={{ scale: 0.95 }}
                       >
                         <svg
-                          className={`w-5 h-5 ${
-                            favoriteStates[car.id]
+                          className={`w-5 h-5 ${favoriteStates[car.id]
                               ? "text-red-500"
                               : "text-white"
-                          }`}
+                            }`}
                           fill={
                             favoriteStates[car.id] ? "currentColor" : "none"
                           }
@@ -2009,9 +1992,8 @@ const ModuleTestPage = () => {
                       <button
                         key={hour}
                         type="button"
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          selectedHour === hour ? "text-white" : "text-black"
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === hour ? "text-white" : "text-black"
+                          }`}
                         style={
                           selectedHour === hour
                             ? { backgroundColor: "#1C205C", color: "#ffffff" }
@@ -2039,11 +2021,10 @@ const ModuleTestPage = () => {
                       <button
                         key={minute}
                         type="button"
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                          selectedMinute === minute
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === minute
                             ? "text-white"
                             : "text-black"
-                        }`}
+                          }`}
                         style={
                           selectedMinute === minute
                             ? { backgroundColor: "#1C205C", color: "#ffffff" }
@@ -2067,9 +2048,8 @@ const ModuleTestPage = () => {
                       <button
                         key={p}
                         type="button"
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                          selectedPeriod === p ? "text-white" : "text-black"
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === p ? "text-white" : "text-black"
+                          }`}
                         style={
                           selectedPeriod === p
                             ? { backgroundColor: "#1C205C", color: "#ffffff" }

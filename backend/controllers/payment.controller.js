@@ -395,11 +395,31 @@ export const createRazorpayOrder = async (req, res) => {
     // Generate transaction ID
     const transactionId = razorpayService.generateTransactionId('TXN');
 
+    // Determine amount to pay based on payment status
+    // For pending bookings, ALWAYS use the finalPrice from DB to ensure consistency
+    let amountToPay = parseFloat(amount);
+
+    if (booking.paymentStatus === 'pending') {
+      console.log('ℹ️ Enforcing booking price from DB:', {
+        requestedAmount: amount,
+        dbFinalPrice: booking.pricing.finalPrice,
+        paymentOption: booking.paymentOption
+      });
+      amountToPay = booking.pricing.finalPrice;
+    } else if (booking.paymentStatus === 'partial') {
+      // For partial payments (remaining balance), use remaining amount from DB
+      console.log('ℹ️ Enforcing remaining amount from DB:', {
+        requestedAmount: amount,
+        dbRemainingAmount: booking.remainingAmount
+      });
+      amountToPay = booking.remainingAmount;
+    }
+
     // Create Razorpay order
     let order;
     try {
       order = await razorpayService.createOrder({
-        amount: parseFloat(amount),
+        amount: amountToPay,
         receipt: `booking_${booking.bookingId}_${Date.now()}`,
         notes: {
           booking_id: booking._id.toString(),
@@ -464,7 +484,7 @@ export const createRazorpayOrder = async (req, res) => {
     booking.transactions.push({
       transactionId,
       razorpayOrderId: order.id,
-      amount: parseFloat(amount),
+      amount: amountToPay,
       status: 'pending',
       paymentMethod: 'razorpay',
     });

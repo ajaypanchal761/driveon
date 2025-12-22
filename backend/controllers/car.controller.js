@@ -1,5 +1,6 @@
 import Car from '../models/Car.js';
 import User from '../models/User.js';
+import Booking from '../models/Booking.js';
 
 /**
  * @desc    Get All Cars (Public)
@@ -24,6 +25,8 @@ export const getAllCars = async (req, res) => {
       isPopular,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      startDate,
+      endDate,
     } = req.query;
 
     // Build query
@@ -31,6 +34,91 @@ export const getAllCars = async (req, res) => {
       status: 'active', // Public can only see active cars
       isAvailable: isAvailable === 'true' || isAvailable === true,
     };
+
+    // Date Availability Filter
+    if (startDate && endDate) {
+      const searchStart = new Date(startDate);
+      const searchEnd = new Date(endDate);
+
+      if (!isNaN(searchStart.getTime()) && !isNaN(searchEnd.getTime())) {
+        // 1. Broad Query: Find potential overlaps based on DATE boundaries (Start of Day / End of Day)
+        // This ensures we catch bookings even if stored timestamps are 00:00:00
+        const broadStart = new Date(searchStart);
+        broadStart.setHours(0, 0, 0, 0);
+
+        const broadEnd = new Date(searchEnd);
+        broadEnd.setHours(23, 59, 59, 999);
+
+        const potentialBookings = await Booking.find({
+          status: { $in: ['confirmed', 'active', 'pending'] },
+          $or: [
+            { 'tripStart.date': { $lte: broadEnd }, 'tripEnd.date': { $gte: broadStart } }
+          ]
+        }).select('car tripStart tripEnd');
+
+        // 2. Precise Filtering: Helper to parse stored time strings
+        // Expected formats: "HH:mm" (24h) or "hh:mm am/pm" (12h)
+        const parseBookingDateTime = (dateObj, timeStr) => {
+          if (!dateObj) return null;
+          const dt = new Date(dateObj); // Clone
+
+          if (!timeStr) {
+            // Default to start/end of day if time missing?
+            // Or maybe tripStart -> 00:00, tripEnd -> 23:59?
+            // For safety, let's assume 00:00 if start, 23:59 if end logic required,
+            // but here we just return the base date (00:00)
+            dt.setHours(0, 0, 0, 0);
+            return dt;
+          }
+
+          try {
+            const lowerTime = timeStr.toLowerCase().trim();
+            let hours = 0, minutes = 0;
+
+            // Check AM/PM
+            const isAM = lowerTime.includes('am');
+            const isPM = lowerTime.includes('pm');
+
+            // Extract HH:MM
+            // Remove am/pm and split
+            const cleanTime = lowerTime.replace('am', '').replace('pm', '').trim();
+            const parts = cleanTime.split(':');
+
+            if (parts.length >= 2) {
+              hours = parseInt(parts[0], 10);
+              minutes = parseInt(parts[1], 10);
+            }
+
+            if (isPM && hours < 12) hours += 12;
+            if (isAM && hours === 12) hours = 0;
+            // If no AM/PM, assume 24h format (standard assumption)
+
+            dt.setHours(hours, minutes, 0, 0);
+            return dt;
+          } catch (e) {
+            console.error("Error parsing booking time:", timeStr, e);
+            return dt; // Fallback to date only
+          }
+        };
+
+        // 3. Filter IDs strictly
+        const bookedCarIds = potentialBookings.filter(booking => {
+          const bStart = parseBookingDateTime(booking.tripStart.date, booking.tripStart.time);
+          const bEnd = parseBookingDateTime(booking.tripEnd.date, booking.tripEnd.time);
+
+          // Determine strict overlap
+          // Overlap if (StartA < EndB) and (EndA > StartB)
+          // Using strict inequality (<) means if one ends exactly when other starts, we allow it (no overlap).
+          // e.g. Booked 10-12, Search 12-14 -> Allowed.
+          return (bStart < searchEnd) && (bEnd > searchStart);
+        }).map(b => b.car);
+
+        // Exclude these cars
+        if (bookedCarIds.length > 0) {
+          query._id = { $nin: bookedCarIds };
+        }
+      }
+    }
 
     // Search filter
     if (search) {

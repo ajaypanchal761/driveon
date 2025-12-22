@@ -998,8 +998,17 @@ const HomePage = () => {
                     console.log("Search clicked", {
                       pickupDate,
                       dropoffDate,
+                      pickupTime,
+                      dropoffTime
                     });
-                    navigate("/search");
+
+                    const params = new URLSearchParams();
+                    if (pickupDate) params.append('pickupDate', pickupDate);
+                    if (pickupTime) params.append('pickupTime', pickupTime);
+                    if (dropoffDate) params.append('dropoffDate', dropoffDate);
+                    if (dropoffTime) params.append('dropoffTime', dropoffTime);
+
+                    navigate(`/search?${params.toString()}`);
                   }}
                   className="px-4 md:px-6 lg:px-8 py-2 md:py-2.5 lg:py-3 rounded-lg font-semibold text-xs md:text-sm lg:text-base transition-all hover:opacity-90 flex-shrink-0 w-full md:w-auto"
                   style={{
@@ -1642,12 +1651,12 @@ const HomePage = () => {
                     }
                     disabled={isDisabled && !isSelected}
                     className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isSelected
-                        ? "text-white"
-                        : isDisabled
-                          ? "cursor-not-allowed opacity-40"
-                          : !isCurrentMonth
-                            ? "opacity-40"
-                            : "hover:bg-gray-100"
+                      ? "text-white"
+                      : isDisabled
+                        ? "cursor-not-allowed opacity-40"
+                        : !isCurrentMonth
+                          ? "opacity-40"
+                          : "hover:bg-gray-100"
                       }`}
                     style={{
                       backgroundColor: isSelected
@@ -1734,8 +1743,8 @@ const HomePage = () => {
                       type="button"
                       onClick={() => setSelectedHour(hour)}
                       className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedHour === hour
-                          ? "text-white"
-                          : "hover:bg-gray-100"
+                        ? "text-white"
+                        : "hover:bg-gray-100"
                         }`}
                       style={{
                         backgroundColor:
@@ -1770,8 +1779,8 @@ const HomePage = () => {
                       type="button"
                       onClick={() => setSelectedMinute(minute)}
                       className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedMinute === minute
-                          ? "text-white"
-                          : "hover:bg-gray-100"
+                        ? "text-white"
+                        : "hover:bg-gray-100"
                         }`}
                       style={{
                         backgroundColor:
@@ -1802,8 +1811,8 @@ const HomePage = () => {
                       type="button"
                       onClick={() => setSelectedPeriod(period)}
                       className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedPeriod === period
-                          ? "text-white"
-                          : "hover:bg-gray-100"
+                        ? "text-white"
+                        : "hover:bg-gray-100"
                         }`}
                       style={{
                         backgroundColor:

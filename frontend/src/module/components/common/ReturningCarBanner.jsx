@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { colors } from "../../theme/colors";
+import { useAppSelector } from "../../../hooks/redux";
+import { bookingService } from "../../../services/booking.service";
 
 // Fallback car images
 import carImg1 from "../../../assets/car_img1-removebg-preview.png";
@@ -14,11 +16,20 @@ const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
 /**
  * ReturningCarBanner Component
  * Shows cars that are returning soon from other users' bookings
- * Always visible with dummy data (for user2 browsing/booking)
- * With horizontal scroll and pagination dots
+ * DYNAMIC: Shows specific banner for logged-in user if their booking ends today
  */
 const ReturningCarBanner = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+
+  // State for dynamic booking banner
+  const [dynamicBooking, setDynamicBooking] = useState(null);
+  const [isDynamicVisible, setIsDynamicVisible] = useState(false);
+  const [dynamicState, setDynamicState] = useState('hidden'); // 'hidden', 'returning', 'available'
+  const [remainingTimeText, setRemainingTimeText] = useState('');
+  const [isLoading, setIsLoading] = useState(true); // Default to true to prevent static flash
+
+  // Standard carousel state
   const [currentCarIndex, setCurrentCarIndex] = useState(0);
   const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
   const mobileScrollRef = useRef(null);
@@ -29,8 +40,8 @@ const ReturningCarBanner = () => {
   const currentIndexRef = useRef(0);
   const isPausedRef = useRef(false);
 
-  // Dummy data - Cars returning soon from other users
-  const returningCars = [
+  // Dummy data (fallback)
+  const defaultReturningCars = [
     {
       id: "returning1",
       name: "Toyota Innova",
@@ -40,30 +51,121 @@ const ReturningCarBanner = () => {
       price: 1200,
       location: "Mumbai",
       returningIn: "2 hours",
-    },
-    {
-      id: "returning2",
-      name: "Hyundai Creta",
-      brand: "Hyundai",
-      model: "Creta",
-      image: fallbackCarImages[1],
-      price: 1500,
-      location: "Delhi",
-      returningIn: "1 hour 30 mins",
-    },
-    {
-      id: "returning3",
-      name: "Maruti Swift Dzire",
-      brand: "Maruti",
-      model: "Swift Dzire",
-      image: fallbackCarImages[2],
-      price: 800,
-      location: "Bangalore",
-      returningIn: "3 hours",
-    },
+    }
   ];
 
-  // Get active scroll container (mobile or web)
+  const [returningCars, setReturningCars] = useState(defaultReturningCars);
+
+  // Fetch latest booking for dynamic logic
+  useEffect(() => {
+    const fetchLatestBooking = async () => {
+      if (!isAuthenticated) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await bookingService.getBookings({
+          limit: 10,
+        });
+
+        if (response.success && response.data?.bookings?.length > 0) {
+          // Find the booking that ends TODAY
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const relevantBooking = response.data.bookings.find(booking => {
+            // Check status manually since backend doesn't support multiple status query
+            if (!['active', 'confirmed', 'completed'].includes(booking.status)) return false;
+
+            if (!booking.tripEnd || !booking.tripEnd.date) return false;
+            const endDate = new Date(booking.tripEnd.date);
+            const bookingEndDay = new Date(endDate);
+            bookingEndDay.setHours(0, 0, 0, 0);
+            return today.getTime() === bookingEndDay.getTime();
+          });
+
+          if (relevantBooking) {
+            checkBookingStatus(relevantBooking);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching booking for banner:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLatestBooking();
+
+    // Set up an interval to re-check time every minute
+    const interval = setInterval(() => {
+      if (dynamicBooking) {
+        checkBookingStatus(dynamicBooking);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, dynamicBooking?.bookingId]); // Re-run if auth or booking ID changes
+
+  const checkBookingStatus = (booking) => {
+    if (!booking || !booking.tripEnd || !booking.tripEnd.date) return;
+
+    const endDate = new Date(booking.tripEnd.date);
+    const now = new Date();
+
+    // Reset seconds/milliseconds for cleaner comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const bookingEndDay = new Date(endDate);
+    bookingEndDay.setHours(0, 0, 0, 0);
+
+    // Condition 1: Banner only visible if booking end date is TODAY
+    const isToday = today.getTime() === bookingEndDay.getTime();
+
+    if (!isToday) {
+      setDynamicState('hidden');
+      return;
+    }
+
+    // Condition 2: Check time
+    // If Now < EndTime -> Dynamic "Returning Soon"
+    // If Now >= EndTime -> Static "Available Now"
+
+    if (now < endDate) {
+      setDynamicState('returning');
+      setDynamicBooking(booking);
+
+      // Calculate remaining time
+      const diffMs = endDate - now;
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+      let timeText = "";
+      if (diffHrs > 0) timeText += `${diffHrs} hr${diffHrs > 1 ? 's' : ''} `;
+      if (diffMins > 0) timeText += `${diffMins} min${diffMins > 1 ? 's' : ''}`;
+      if (!timeText) timeText = "less than 1 min";
+
+      setRemainingTimeText(timeText.trim());
+    } else {
+      setDynamicState('hidden');
+      setDynamicBooking(null);
+    }
+  };
+
+  // Helper: Get image from car object
+  const getCarImage = (car) => {
+    if (!car) return fallbackCarImages[0];
+    if (car.images && car.images.length > 0) {
+      const img = car.images.find(i => i.isPrimary) || car.images[0];
+      return img.url || img.path || img; // Handle string or object
+    }
+    return fallbackCarImages[0];
+  };
+
+  // --- Start Standard Carousel Logic (Same as before) ---
   const getScrollContainer = () => {
     if (typeof window !== "undefined") {
       return window.innerWidth >= 768 ? webScrollRef.current : mobileScrollRef.current;
@@ -71,183 +173,284 @@ const ReturningCarBanner = () => {
     return null;
   };
 
-  // Track scroll position to update current index
   useEffect(() => {
     if (returningCars.length <= 1) return;
-
     const handleScroll = (container) => {
       if (!container) return;
       const scrollLeft = container.scrollLeft;
       const cardWidth = container.clientWidth;
       const newIndex = Math.round(scrollLeft / cardWidth);
-      
       if (newIndex >= 0 && newIndex < returningCars.length) {
         setCurrentCarIndex(newIndex);
         currentIndexRef.current = newIndex;
       }
     };
-
     const mobileContainer = mobileScrollRef.current;
     const webContainer = webScrollRef.current;
-
     const mobileHandler = () => {
       handleScroll(mobileContainer);
-      // Only pause if it's user-initiated scroll, not auto-scroll
       if (!isAutoScrollingRef.current) {
         setIsAutoScrollPaused(true);
         isPausedRef.current = true;
-        // Clear existing timeout
-        if (pauseTimeoutRef.current) {
-          clearTimeout(pauseTimeoutRef.current);
-        }
-        // Resume after 10 seconds
+        if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
         pauseTimeoutRef.current = setTimeout(() => {
           setIsAutoScrollPaused(false);
           isPausedRef.current = false;
         }, 10000);
       }
     };
-    
     const webHandler = () => {
       handleScroll(webContainer);
-      // Only pause if it's user-initiated scroll, not auto-scroll
       if (!isAutoScrollingRef.current) {
         setIsAutoScrollPaused(true);
         isPausedRef.current = true;
-        // Clear existing timeout
-        if (pauseTimeoutRef.current) {
-          clearTimeout(pauseTimeoutRef.current);
-        }
-        // Resume after 10 seconds
+        if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
         pauseTimeoutRef.current = setTimeout(() => {
           setIsAutoScrollPaused(false);
           isPausedRef.current = false;
         }, 10000);
       }
     };
-
-    if (mobileContainer) {
-      mobileContainer.addEventListener("scroll", mobileHandler, { passive: true });
-    }
-    if (webContainer) {
-      webContainer.addEventListener("scroll", webHandler, { passive: true });
-    }
-
-    // Initial sync
+    if (mobileContainer) mobileContainer.addEventListener("scroll", mobileHandler, { passive: true });
+    if (webContainer) webContainer.addEventListener("scroll", webHandler, { passive: true });
     if (mobileContainer) handleScroll(mobileContainer);
     if (webContainer) handleScroll(webContainer);
-
     return () => {
-      if (mobileContainer) {
-        mobileContainer.removeEventListener("scroll", mobileHandler);
-      }
-      if (webContainer) {
-        webContainer.removeEventListener("scroll", webHandler);
-      }
+      if (mobileContainer) mobileContainer.removeEventListener("scroll", mobileHandler);
+      if (webContainer) webContainer.removeEventListener("scroll", webHandler);
     };
   }, [returningCars.length]);
 
-  // Auto-scroll to next car
   useEffect(() => {
-    // Clear any existing interval first
     if (autoScrollIntervalRef.current) {
       clearInterval(autoScrollIntervalRef.current);
       autoScrollIntervalRef.current = null;
     }
-
     if (returningCars.length <= 1) return;
-
-    // Start interval - it will check pause state on each execution
     autoScrollIntervalRef.current = setInterval(() => {
-      // Skip if paused (use ref to get latest value)
       if (isPausedRef.current) return;
-
       const container = getScrollContainer();
       if (!container) return;
-
-      // Use ref to get current index to avoid dependency issues
       const currentIdx = currentIndexRef.current;
       const nextIndex = (currentIdx + 1) % returningCars.length;
       const cardWidth = container.clientWidth;
-      
-      // Mark as auto-scrolling
       isAutoScrollingRef.current = true;
-      
-      container.scrollTo({
-        left: nextIndex * cardWidth,
-        behavior: "smooth",
-      });
-      
-      // Reset flag after scroll completes (smooth scroll takes ~500ms)
-      setTimeout(() => {
-        isAutoScrollingRef.current = false;
-      }, 800);
-    }, 3000); // Auto-scroll every 3 seconds
-
+      container.scrollTo({ left: nextIndex * cardWidth, behavior: "smooth" });
+      setTimeout(() => { isAutoScrollingRef.current = false; }, 800);
+    }, 3000);
     return () => {
-      if (autoScrollIntervalRef.current) {
-        clearInterval(autoScrollIntervalRef.current);
-        autoScrollIntervalRef.current = null;
-      }
+      if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
     };
   }, [returningCars.length]);
 
-  // Navigate to specific index
   const goToIndex = (index) => {
     const container = getScrollContainer();
     if (!container) return;
-
-    // Pause auto-scroll when user clicks pagination
     setIsAutoScrollPaused(true);
     isPausedRef.current = true;
-    
-    // Clear existing timeout
-    if (pauseTimeoutRef.current) {
-      clearTimeout(pauseTimeoutRef.current);
-    }
-    
-    // Mark as auto-scrolling (programmatic scroll)
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     isAutoScrollingRef.current = true;
-    
     const cardWidth = container.clientWidth;
-    container.scrollTo({
-      left: index * cardWidth,
-      behavior: "smooth",
-    });
-    
-    // Reset flag after scroll completes
-    setTimeout(() => {
-      isAutoScrollingRef.current = false;
-    }, 600);
-    
-    // Resume auto-scroll after 10 seconds
+    container.scrollTo({ left: index * cardWidth, behavior: "smooth" });
+    setTimeout(() => { isAutoScrollingRef.current = false; }, 600);
     pauseTimeoutRef.current = setTimeout(() => {
       setIsAutoScrollPaused(false);
       isPausedRef.current = false;
     }, 10000);
   };
+  // --- End Standard Carousel Logic ---
 
   const handleBannerClick = (car) => {
-    navigate(`/car-details/${car.id}`, {
-      state: {
-        car,
-        highlightReturning: true,
-      },
-    });
+    if (car && car._id || car.id) {
+      navigate(`/car-details/${car._id || car.id}`);
+    }
   };
+
+
+
+  // If dynamic state is active (returning or available), show simpler single-item layout
+  if (dynamicState !== 'hidden') {
+    return (
+      <div className="w-full mb-4 md:mb-6 animate-fade-in">
+        <div className="">
+          {/* Mobile View - Exact replica of Static Mobile */}
+          <div className="block md:hidden">
+            <div
+              className="rounded-2xl overflow-hidden shadow-2xl relative"
+              style={{
+                background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+                maxHeight: "280px",
+                height: "auto",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-4 py-4 w-full"
+              >
+                {/* Left Side */}
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <svg
+                      className="w-4 h-4 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: "#10B981" }}
+                    >
+                      <path d={dynamicState === 'available'
+                        ? "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" // Checkmark
+                        : "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" // Box Icon
+                      } />
+                    </svg>
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: "#10B981" }}
+                    >
+                      {dynamicState === 'available' ? "Available Now" : "Returning Soon"}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1 truncate">
+                    {dynamicBooking.car?.brand} {dynamicBooking.car?.model}
+                  </h3>
+                  <p className="text-sm text-white/90 mb-1.5">
+                    {dynamicState === 'available' ? (
+                      "This car is now available for booking!"
+                    ) : (
+                      <>
+                        This car is returning in{" "}
+                        <span className="font-semibold">{remainingTimeText}</span>
+                      </>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="text-sm font-semibold text-white">
+                      Rs. {dynamicBooking.car?.pricePerDay} / day
+                    </span>
+                    <span className="text-xs text-white/60">•</span>
+                    <span className="text-sm text-white/80 truncate">
+                      {dynamicBooking.tripEnd?.location || "Location TBD"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Side */}
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{ width: "40%", minWidth: "120px" }}
+                >
+                  <img
+                    src={getCarImage(dynamicBooking.car)}
+                    alt={dynamicBooking.car?.model}
+                    className="w-full h-auto object-contain"
+                    draggable={false}
+                    style={{
+                      objectFit: "contain",
+                      maxHeight: "250px",
+                      width: "100%",
+                      transform: "scale(1.25)",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Web View - Exact replica of Static Web */}
+          <div className="hidden md:block">
+            <div
+              className="rounded-3xl overflow-hidden shadow-2xl relative"
+              style={{
+                background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+                maxHeight: "340px",
+                height: "340px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full h-full"
+              >
+                {/* Left Side */}
+                <div className="flex-1 min-w-0 pr-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg
+                      className="w-5 h-5 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: "#10B981" }}
+                    >
+                      <path d={dynamicState === 'available'
+                        ? "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                        : "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                      } />
+                    </svg>
+                    <span
+                      className="text-sm font-semibold uppercase tracking-wide"
+                      style={{ color: "#10B981" }}
+                    >
+                      {dynamicState === 'available' ? "Available Now" : "Returning Soon"}
+                    </span>
+                  </div>
+                  <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1.5">
+                    {dynamicBooking.car?.brand} {dynamicBooking.car?.model}
+                  </h3>
+                  <p className="text-lg lg:text-xl text-white/90 mb-2">
+                    {dynamicState === 'available' ? (
+                      "This car is now available for booking!"
+                    ) : (
+                      <>
+                        This car is returning in{" "}
+                        <span className="font-semibold">{remainingTimeText}</span>
+                      </>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="text-lg lg:text-xl font-semibold text-white">
+                      Rs. {dynamicBooking.car?.pricePerDay} / day
+                    </span>
+                    <span className="text-white/60">•</span>
+                    <span className="text-lg text-white/80">{dynamicBooking.tripEnd?.location || "Location TBD"}</span>
+                  </div>
+                </div>
+
+                {/* Right Side */}
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{ width: "45%", minWidth: "280px" }}
+                >
+                  <img
+                    src={getCarImage(dynamicBooking.car)}
+                    alt={dynamicBooking.car?.model}
+                    className="w-full h-auto object-contain"
+                    draggable={false}
+                    style={{
+                      objectFit: "contain",
+                      maxHeight: "340px",
+                      width: "100%",
+                      transform: "scale(1.15)",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback to default carousel if no dynamic booking
+  if (isLoading) return null; // Prevent flash of static content while loading
 
   return (
     <div className="w-full mb-4 md:mb-6">
       {/* Mobile View */}
       <div className="block md:hidden">
-          <div
-            className="rounded-2xl overflow-hidden shadow-2xl relative"
-            style={{
-              background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
-              maxHeight: "280px",
-              height: "auto",
-            }}
-          >
+        <div
+          className="rounded-2xl overflow-hidden shadow-2xl relative"
+          style={{
+            background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+            maxHeight: "280px",
+            height: "auto",
+          }}
+        >
           <div
             ref={mobileScrollRef}
             className="flex overflow-x-auto scroll-smooth h-full"
@@ -262,11 +465,10 @@ const ReturningCarBanner = () => {
             {returningCars.map((car, index) => (
               <div
                 key={car.id || index}
-                className="flex-shrink-0 flex items-center justify-between px-4 py-4 w-full cursor-pointer"
+                className="flex-shrink-0 flex items-center justify-between px-4 py-4 w-full cursor-default"
                 style={{ scrollSnapAlign: "center" }}
-                onClick={() => handleBannerClick(car)}
               >
-                {/* Left Side - Text Content */}
+                {/* Left Side */}
                 <div className="flex-1 min-w-0 pr-3">
                   <div className="flex items-center gap-2 mb-1.5">
                     <svg
@@ -288,7 +490,7 @@ const ReturningCarBanner = () => {
                     {car.name}
                   </h3>
                   <p className="text-sm text-white/90 mb-1.5">
-                    Available in {car.returningIn}
+                    This car is returning in {car.returningIn}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap mb-2">
                     <span className="text-sm font-semibold text-white">
@@ -299,22 +501,10 @@ const ReturningCarBanner = () => {
                       {car.location}
                     </span>
                   </div>
-                  <button
-                    className="px-4 py-1.5 rounded-lg font-semibold text-xs transition-all hover:opacity-90"
-                    style={{
-                      backgroundColor: colors.backgroundPrimary,
-                      color: colors.textPrimary,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBannerClick(car);
-                    }}
-                  >
-                    Book Now
-                  </button>
+
                 </div>
 
-                {/* Right Side - Car Image */}
+                {/* Right Side */}
                 <div
                   className="flex-shrink-0 flex items-center justify-center"
                   style={{ width: "40%", minWidth: "120px" }}
@@ -337,14 +527,6 @@ const ReturningCarBanner = () => {
           </div>
         </div>
 
-        {/* Hide scrollbar */}
-        <style>{`
-          .overflow-x-auto::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
-
-        {/* Pagination Dots - Outside Banner - Mobile */}
         {returningCars.length > 1 && (
           <div className="flex justify-center items-center gap-2 mt-4">
             {returningCars.map((_, index) => (
@@ -354,11 +536,10 @@ const ReturningCarBanner = () => {
                   e.stopPropagation();
                   goToIndex(index);
                 }}
-                className={`swiper-pagination-bullet-custom ${
-                  index === currentCarIndex
-                    ? "swiper-pagination-bullet-active-custom"
-                    : ""
-                }`}
+                className={`swiper-pagination-bullet-custom ${index === currentCarIndex
+                  ? "swiper-pagination-bullet-active-custom"
+                  : ""
+                  }`}
               />
             ))}
           </div>
@@ -390,11 +571,10 @@ const ReturningCarBanner = () => {
             {returningCars.map((car, index) => (
               <div
                 key={car.id || index}
-                className="flex-shrink-0 flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full cursor-pointer"
+                className="flex-shrink-0 flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full cursor-default"
                 style={{ scrollSnapAlign: "center" }}
-                onClick={() => handleBannerClick(car)}
               >
-                {/* Left Side - Text Content */}
+                {/* Left Side */}
                 <div className="flex-1 min-w-0 pr-6">
                   <div className="flex items-center gap-2 mb-2">
                     <svg
@@ -417,8 +597,7 @@ const ReturningCarBanner = () => {
                   </h3>
                   <p className="text-lg lg:text-xl text-white/90 mb-2">
                     This car is returning in{" "}
-                    <span className="font-semibold">{car.returningIn}</span> - Book
-                    it now!
+                    <span className="font-semibold">{car.returningIn}</span>
                   </p>
                   <div className="flex items-center gap-4 mb-3">
                     <span className="text-lg lg:text-xl font-semibold text-white">
@@ -427,22 +606,10 @@ const ReturningCarBanner = () => {
                     <span className="text-white/60">•</span>
                     <span className="text-lg text-white/80">{car.location}</span>
                   </div>
-                  <button
-                    className="px-5 py-2.5 rounded-lg font-semibold text-base transition-all hover:opacity-90"
-                    style={{
-                      backgroundColor: colors.backgroundPrimary,
-                      color: colors.textPrimary,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBannerClick(car);
-                    }}
-                  >
-                    Book Now
-                  </button>
+
                 </div>
 
-                {/* Right Side - Car Image */}
+                {/* Right Side */}
                 <div
                   className="flex-shrink-0 flex items-center justify-center"
                   style={{ width: "45%", minWidth: "280px" }}
@@ -465,14 +632,6 @@ const ReturningCarBanner = () => {
           </div>
         </div>
 
-        {/* Hide scrollbar */}
-        <style>{`
-          .overflow-x-auto::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
-
-        {/* Pagination Dots - Outside Banner - Web */}
         {returningCars.length > 1 && (
           <div className="flex justify-center items-center gap-2 mt-4">
             {returningCars.map((_, index) => (
@@ -482,19 +641,20 @@ const ReturningCarBanner = () => {
                   e.stopPropagation();
                   goToIndex(index);
                 }}
-                className={`swiper-pagination-bullet-custom ${
-                  index === currentCarIndex
-                    ? "swiper-pagination-bullet-active-custom"
-                    : ""
-                }`}
+                className={`swiper-pagination-bullet-custom ${index === currentCarIndex
+                  ? "swiper-pagination-bullet-active-custom"
+                  : ""
+                  }`}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Custom Pagination Styles */}
       <style>{`
+        .overflow-x-auto::-webkit-scrollbar {
+          display: none;
+        }
         .swiper-pagination-bullet-custom {
           width: 6px;
           height: 6px;
@@ -511,6 +671,13 @@ const ReturningCarBanner = () => {
           width: 24px;
           height: 6px;
           border-radius: 3px;
+        }
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out forwards;
         }
       `}</style>
     </div>
