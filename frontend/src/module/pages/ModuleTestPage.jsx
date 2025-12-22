@@ -372,6 +372,11 @@ const ModuleTestPage = () => {
   const [isTimeOpen, setIsTimeOpen] = useState(false);
   const [pickupDate, setPickupDate] = useState("");
   const [dropoffDate, setDropoffDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
+  const [dropoffTime, setDropoffTime] = useState("");
+  const [calendarTarget, setCalendarTarget] = useState("pickup");
+  const [timeTarget, setTimeTarget] = useState("pickup");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedHour, setSelectedHour] = useState("10");
   const [selectedMinute, setSelectedMinute] = useState("30");
   const [selectedPeriod, setSelectedPeriod] = useState("AM");
@@ -382,6 +387,7 @@ const ModuleTestPage = () => {
   const searchInputRef = useRef(null);
   const [favoriteStates, setFavoriteStates] = useState({});
   const [animatingStates, setAnimatingStates] = useState({});
+  const [isLocationExpanded, setIsLocationExpanded] = useState(false);
 
   const performSearch = () => {
     const trimmed = searchValue.trim();
@@ -770,8 +776,20 @@ const ModuleTestPage = () => {
   };
 
   const formatTimeDisplay = () => {
-    return `${selectedHour} : ${selectedMinute} ${selectedPeriod.toLowerCase()}`;
+    let hour = parseInt(selectedHour);
+    if (selectedPeriod === "PM" && hour !== 12) hour += 12;
+    if (selectedPeriod === "AM" && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, "0")}:${selectedMinute}`;
   };
+
+  // ... (Header update happens in second chunk below or same tool call if possible?)
+  // Tool supports multiple chunks? Yes but `replace_file_content` is single chunk? No, `replace_file_content` is SINGLE contiguous block.
+  // `multi_replace_file_content` is needed for non-contiguous.
+  
+  // I will use `replace_file_content` for `formatTimeDisplay` first, then another for the Header JSX.
+  // Actually, I can use `multi_replace_file_content`.
+
+  // Let's use `multi_replace_file_content` to do both in one go.
 
   // Handler for when filters are applied
   const handleApplyFilters = (filters) => {
@@ -937,22 +955,24 @@ const ModuleTestPage = () => {
           {/* Location pill */}
           <button
             type="button"
-            className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
+            className="flex items-center justify-between rounded-full px-3 py-1 text-[10px] flex-shrink-0"
             style={{
               backgroundColor: "rgba(255, 255, 255, 0.08)",
               backdropFilter: "blur(4px)",
               color: colors.textWhite,
               border: "1px solid rgba(255, 255, 255, 0.15)",
+              maxWidth: isLocationExpanded ? "75%" : "auto",
+              transition: "all 0.3s ease"
             }}
-            onClick={() => navigate("/module-location")}
+            onClick={() => setIsLocationExpanded(!isLocationExpanded)}
           >
-            <span className="flex items-center gap-2 min-w-0">
+            <span className="flex items-center gap-1.5 min-w-0">
               <span
-                className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px]"
+                className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-white text-[9px] flex-shrink-0"
                 style={{ backgroundColor: colors.backgroundTertiary }}
               >
                 <svg
-                  className="w-3 h-3"
+                  className="w-2.5 h-2.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -971,12 +991,12 @@ const ModuleTestPage = () => {
                   />
                 </svg>
               </span>
-              <span className="truncate max-w-[140px]">
+              <span className={`leading-tight ${isLocationExpanded ? "text-left break-words whitespace-normal" : "truncate max-w-[120px]"}`}>
                 {currentLocation || "Getting location..."}
               </span>
             </span>
             <svg
-              className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
+              className={`w-3 h-3 text-gray-300 flex-shrink-0 ml-1.5 transition-transform duration-200 ${isLocationExpanded ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -991,179 +1011,59 @@ const ModuleTestPage = () => {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <motion.div
-          className="w-full"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        >
-          {!isSearchActive ? (
-            <motion.button
-              type="button"
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                backdropFilter: "blur(10px)",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-              onClick={() => setIsSearchActive(true)}
-              whileHover={{
-                scale: 1.02,
-                borderColor: "rgba(255,255,255,0.2)",
-                transition: { duration: 0.2 },
-              }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <motion.svg
-                className="w-4 h-4 text-gray-200 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                animate={{
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatDelay: 1,
-                }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </motion.svg>
-              <span className="flex-1 text-left text-gray-300 truncate">
-                Search your dream car....
-              </span>
-              <motion.svg
-                className="w-3 h-3 text-gray-300 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                whileHover={{ x: 2 }}
-                transition={{ duration: 0.2 }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </motion.svg>
-            </motion.button>
-          ) : (
+        {/* Date/Time Search Bar - Premium Glassmorphism */}
+
             <motion.div
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                backdropFilter: "blur(10px)",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              className="w-full relative z-20"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
             >
-              <motion.svg
-                className="w-4 h-4 text-gray-200 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                initial={{ rotate: -90 }}
-                animate={{ rotate: 0 }}
-                transition={{ duration: 0.3 }}
-                onClick={performSearch}
-                style={{ cursor: "pointer" }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </motion.svg>
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search your dream car...."
-                className="flex-1 bg-transparent text-gray-300 placeholder-gray-400 outline-none text-[11px]"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    performSearch();
-                  }
-                  if (e.key === "Escape") {
-                    setIsSearchActive(false);
-                    setSearchValue("");
-                  }
-                }}
-              />
-              {searchValue && (
+              {!isSearchActive ? (
                 <motion.button
-                  type="button"
-                  onClick={() => {
-                    setSearchValue("");
-                    navigate("/search");
-                  }}
-                  className="flex-shrink-0"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsSearchActive(true)}
+                  className="w-full bg-white/10 backdrop-blur-md rounded-2xl p-3 flex items-center justify-between border border-white/20 shadow-lg"
                 >
-                  <svg
-                    className="w-4 h-4 text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-white/80 text-sm font-medium">Search your dream car...</span>
+                  </div>
                 </motion.button>
-              )}
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setIsSearchActive(false);
-                  setSearchValue("");
-                }}
-                className="flex-shrink-0"
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <svg
-                  className="w-4 h-4 text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              ) : (
+                <motion.div
+                  className="w-full bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search brand, model..."
+                    className="flex-1 bg-transparent text-gray-800 placeholder-gray-400 text-sm font-medium focus:outline-none px-2"
+                    onChange={(e) => handleSearch(e.target.value)}
                   />
-                </svg>
-              </motion.button>
+                  <button
+                    onClick={() => {
+                        setIsSearchActive(false);
+                        handleSearch('');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold text-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </motion.div>
+              )}
             </motion.div>
-          )}
-        </motion.div>
       </div>
 
       {/* CONTENT */}
@@ -1962,11 +1862,17 @@ const ModuleTestPage = () => {
               </div>
 
               {/* Calendar header */}
+              {/* Calendar header with navigation */}
               <div className="mb-4">
                 <div className="mb-3 flex items-center justify-between">
                   <button
                     className="p-1.5 rounded-lg hover:bg-gray-100"
                     type="button"
+                    onClick={() => {
+                        const newDate = new Date(currentMonth);
+                        newDate.setMonth(newDate.getMonth() - 1);
+                        setCurrentMonth(newDate);
+                    }}
                   >
                     <svg
                       className="w-4 h-4"
@@ -1982,12 +1888,17 @@ const ModuleTestPage = () => {
                       />
                     </svg>
                   </button>
-                  <h4 className="text-base font-semibold text-black">
-                    December {new Date().getFullYear()}
+                  <h4 className="text-base font-semibold text-black capitalize">
+                    {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
                   </h4>
                   <button
                     className="p-1.5 rounded-lg hover:bg-gray-100"
                     type="button"
+                    onClick={() => {
+                        const newDate = new Date(currentMonth);
+                        newDate.setMonth(newDate.getMonth() + 1);
+                        setCurrentMonth(newDate);
+                    }}
                   >
                     <svg
                       className="w-4 h-4"
@@ -2006,52 +1917,64 @@ const ModuleTestPage = () => {
                 </div>
 
                 {/* Week days */}
-                <div className="grid grid-cols-7 gap-1 mb-4">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                    (d) => (
-                      <div
-                        key={d}
-                        className="text-center text-xs font-semibold py-1 text-gray-600"
-                      >
-                        {d}
-                      </div>
-                    )
-                  )}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                    <div key={d} className="text-center text-[10px] uppercase font-bold text-gray-400 py-1">
+                      {d}
+                    </div>
+                  ))}
+                </div>
 
-                  {/* Simple static days grid to match design */}
-                  <div></div>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(
-                    (day) => (
+                {/* Days Grid - Functional Interactivity Restored */}
+                <div className="grid grid-cols-7 gap-1">
+                  {/* Empty cells for padding start of month */}
+                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  
+                  {/* Days of the month */}
+                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map(
+                    (_, i) => {
+                      const day = i + 1;
+                      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                      const isToday = new Date().toDateString() === date.toDateString();
+                      // Use local components to avoid UTC shift
+                      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                      const isSelected = (calendarTarget === 'pickup' && pickupDate && pickupDate === dateString) || 
+                                         (calendarTarget === 'dropoff' && dropoffDate && dropoffDate === dateString);
+                      
+                      // Check if past date
+                      const todayZero = new Date();
+                      todayZero.setHours(0,0,0,0);
+                      const isPast = date < todayZero;
+
+                      return (
                       <button
                         key={day}
                         type="button"
-                        disabled
-                        className="p-1.5 rounded-lg text-xs font-semibold transition-all cursor-not-allowed"
-                        style={{
-                          backgroundColor: "transparent",
-                          color: "#d1d5db",
+                        disabled={isPast}
+                        onClick={() => {
+                            if (calendarTarget === 'pickup') {
+                                setPickupDate(dateString);
+                            } else {
+                                setDropoffDate(dateString);
+                            }
                         }}
+                        className={`
+                            aspect-square rounded-lg text-xs font-semibold flex items-center justify-center transition-all
+                            ${isSelected 
+                                ? 'bg-[#1C205C] text-white shadow-md' 
+                                : isToday 
+                                    ? 'bg-blue-50 text-[#1C205C] border border-blue-100'
+                                    : 'hover:bg-gray-100 text-gray-700'
+                            }
+                            ${isPast ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
+                        `}
                       >
                         {day}
                       </button>
-                    )
+                    )}
                   )}
-                  {[
-                    15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-                    31,
-                  ].map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      className="p-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-gray-100"
-                      style={{
-                        backgroundColor: "transparent",
-                        color: "#000000",
-                      }}
-                    >
-                      {day}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -2222,7 +2145,15 @@ const ModuleTestPage = () => {
                   className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
                   type="button"
                   style={{ backgroundColor: "#1C205C" }}
-                  onClick={() => setIsTimeOpen(false)}
+                  onClick={() => {
+                      const timeStr = formatTimeDisplay();
+                      if (timeTarget === 'pickup') {
+                          setPickupTime(timeStr);
+                      } else {
+                          setDropoffTime(timeStr);
+                      }
+                      setIsTimeOpen(false);
+                  }}
                 >
                   Done
                 </button>

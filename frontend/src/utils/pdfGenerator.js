@@ -171,14 +171,55 @@ export const generateBookingPDF = (bookingData) => {
     yPosition = 20;
   }
 
+  // ========== GUARANTOR INFORMATION SECTION ==========
+  if (bookingData.guarantor || bookingData.guarantorName) {
+    yPosition = addSectionHeader('GUARANTOR INFORMATION', yPosition);
+    
+    // Handle both object and flat structure
+    const gName = bookingData.guarantor?.name || bookingData.guarantorName || 'N/A';
+    const gPhone = bookingData.guarantor?.phone || bookingData.guarantorPhone;
+    const gId = bookingData.guarantor?._id || bookingData.guarantorId;
+
+    yPosition += addKeyValue('Name', gName, margin, yPosition, contentWidth);
+    yPosition += lineHeight;
+    
+    if (gPhone) {
+      yPosition += addKeyValue('Phone', gPhone, margin, yPosition, contentWidth);
+      yPosition += lineHeight;
+    }
+    
+    if (gId) {
+      yPosition += addKeyValue('Guarantor ID', String(gId), margin, yPosition, contentWidth);
+      yPosition += lineHeight;
+    }
+
+    yPosition += sectionSpacing;
+    drawLine(yPosition);
+    yPosition += sectionSpacing;
+  }
+
+  // Check if new page needed
+  if (yPosition > pageHeight - 50) {
+    doc.addPage();
+    yPosition = 20;
+  }
+
   // ========== CAR INFORMATION SECTION ==========
   yPosition = addSectionHeader('CAR INFORMATION', yPosition);
 
   const car = bookingData.car || {};
-  yPosition += addKeyValue('Brand', car.brand || 'N/A', margin, yPosition, contentWidth);
-  yPosition += lineHeight;
-  yPosition += addKeyValue('Model', car.model || 'N/A', margin, yPosition, contentWidth);
-  yPosition += lineHeight;
+  // Handle case where car is just a string (from flattened data)
+  const brandModel = typeof car === 'string' ? car : (car.brand ? `${car.brand} ${car.model}` : bookingData.carName);
+  
+  if (brandModel) {
+     yPosition += addKeyValue('Car', brandModel, margin, yPosition, contentWidth);
+     yPosition += lineHeight;
+  } else {
+     yPosition += addKeyValue('Brand', car.brand || 'N/A', margin, yPosition, contentWidth);
+     yPosition += lineHeight;
+     yPosition += addKeyValue('Model', car.model || 'N/A', margin, yPosition, contentWidth);
+     yPosition += lineHeight;
+  }
 
   if (car.year) {
     yPosition += addKeyValue('Year', String(car.year), margin, yPosition, contentWidth);
@@ -229,26 +270,30 @@ export const generateBookingPDF = (bookingData) => {
     }
   };
 
-  yPosition += addKeyValue('Pickup Date', formatDate(bookingData.pickupDate), margin, yPosition, contentWidth);
+  yPosition += addKeyValue('Pickup Date', formatDate(bookingData.pickupDate || bookingData.tripStart?.date), margin, yPosition, contentWidth);
   yPosition += lineHeight;
-  yPosition += addKeyValue('Pickup Time', bookingData.pickupTime || 'N/A', margin, yPosition, contentWidth);
+  yPosition += addKeyValue('Pickup Time', bookingData.pickupTime || bookingData.tripStart?.time || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
-  yPosition += addKeyValue('Drop Date', formatDate(bookingData.dropDate), margin, yPosition, contentWidth);
+  yPosition += addKeyValue('Drop Date', formatDate(bookingData.dropDate || bookingData.tripEnd?.date), margin, yPosition, contentWidth);
   yPosition += lineHeight;
-  yPosition += addKeyValue('Drop Time', bookingData.dropTime || 'N/A', margin, yPosition, contentWidth);
+  yPosition += addKeyValue('Drop Time', bookingData.dropTime || bookingData.tripEnd?.time || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
 
   // Calculate total days
-  if (bookingData.pickupDate && bookingData.dropDate) {
+  if ((bookingData.pickupDate || bookingData.tripStart?.date) && (bookingData.dropDate || bookingData.tripEnd?.date)) {
     try {
-      const pickup = new Date(bookingData.pickupDate);
-      const drop = new Date(bookingData.dropDate);
+      const pickup = new Date(bookingData.pickupDate || bookingData.tripStart?.date);
+      const drop = new Date(bookingData.dropDate || bookingData.tripEnd?.date);
       const diffTime = Math.abs(drop - pickup);
       const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
       yPosition += addKeyValue('Total Days', `${totalDays} day${totalDays > 1 ? 's' : ''}`, margin, yPosition, contentWidth);
       yPosition += lineHeight;
     } catch (e) {
       console.error('Error calculating days:', e);
+      if (bookingData.days || bookingData.totalDays) {
+          yPosition += addKeyValue('Total Days', `${bookingData.days || bookingData.totalDays} day${(bookingData.days > 1) ? 's' : ''}`, margin, yPosition, contentWidth);
+          yPosition += lineHeight;
+      }
     }
   }
 
@@ -479,7 +524,9 @@ export const generateBookingPDF = (bookingData) => {
     'partial': 'Partial Payment',
     'full': 'Full Payment',
     'pending': 'Pending',
-    'completed': 'Completed'
+    'completed': 'Completed',
+    'refunded': 'Refunded',
+    'failed': 'Failed'
   };
 
   yPosition += addKeyValue('Status', statusLabels[bookingData.status] || bookingData.status || 'N/A', margin, yPosition, contentWidth);
@@ -487,6 +534,24 @@ export const generateBookingPDF = (bookingData) => {
   yPosition += addKeyValue('Payment Status', paymentStatusLabels[bookingData.paymentStatus] || bookingData.paymentStatus || 'N/A', margin, yPosition, contentWidth);
   yPosition += lineHeight;
   yPosition += addKeyValue('Trip Status', bookingData.tripStatus ? bookingData.tripStatus.charAt(0).toUpperCase() + bookingData.tripStatus.slice(1).replace('_', ' ') : 'N/A', margin, yPosition, contentWidth);
+  yPosition += lineHeight;
+
+  if (bookingData.status === 'completed' && bookingData.completedDate) {
+    yPosition += addKeyValue('Completed On', new Date(bookingData.completedDate).toLocaleString(), margin, yPosition, contentWidth);
+    yPosition += lineHeight;
+  }
+
+  if (bookingData.status === 'cancelled') {
+    if (bookingData.cancelledDate) {
+        yPosition += addKeyValue('Cancelled On', new Date(bookingData.cancelledDate).toLocaleString(), margin, yPosition, contentWidth);
+        yPosition += lineHeight;
+    }
+    if (bookingData.cancellationReason) {
+        yPosition += addKeyValue('Reason', bookingData.cancellationReason, margin, yPosition, contentWidth);
+        yPosition += lineHeight;
+    }
+  }
+
   yPosition += sectionSpacing;
   drawLine(yPosition);
   yPosition += sectionSpacing;

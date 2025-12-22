@@ -126,6 +126,14 @@ const SearchPage = () => {
   // Track if filters should auto-open (e.g., when coming from home pills)
   const [shouldOpenFilters, setShouldOpenFilters] = useState(false);
 
+  // Sync brand selection between pills and filter dropdown
+  useEffect(() => {
+    setAppliedFilters(prev => ({
+      ...prev,
+      brand: selectedBrand === 'all' ? '' : selectedBrand
+    }));
+  }, [selectedBrand]);
+
   // Sync state when query params change (e.g., from home pills)
   useEffect(() => {
     const q = searchParams.get('q') || '';
@@ -133,15 +141,32 @@ const SearchPage = () => {
 
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
-    if (minPrice || maxPrice) {
+    const availabilityStart = searchParams.get('availabilityStart');
+    const availabilityEnd = searchParams.get('availabilityEnd');
+    const brandParam = searchParams.get('brand');
+    const modelParam = searchParams.get('model');
+
+    if (minPrice || maxPrice || availabilityStart || availabilityEnd || brandParam || modelParam) {
       setAppliedFilters((prev) => ({
         ...prev,
         priceRange: {
-          min: minPrice || '',
-          max: maxPrice || '',
+          min: minPrice || prev.priceRange.min,
+          max: maxPrice || prev.priceRange.max,
         },
+        availableFrom: availabilityStart || prev.availableFrom,
+        availableTo: availabilityEnd || prev.availableTo,
+        brand: brandParam || prev.brand,
+        model: modelParam || prev.model,
       }));
-      setShouldOpenFilters(true);
+
+      if (brandParam) {
+        setSelectedBrand(brandParam);
+      }
+      
+      // Auto-open filters if we have specific filter params (not just search query)
+      if (minPrice || maxPrice || brandParam || modelParam) {
+        setShouldOpenFilters(true);
+      }
     }
 
     const filterParam = searchParams.get('filter');
@@ -252,6 +277,7 @@ const SearchPage = () => {
       features: car.features || [],
       seats: car.seatingCapacity || car.seats || 4,
       seatingCapacity: car.seatingCapacity || car.seats || 4,
+      bookings: car.bookings || car.bookingsMap || [], // Preserve bookings for availability filter
     };
   };
 
@@ -522,24 +548,13 @@ const SearchPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Filter cars based on selected brand, search query, and applied filters
   const filteredRecommendCars = useMemo(() => {
     let filtered = allRecommendCars;
 
-    // Filter by brand (from brand filter buttons) - case-insensitive
-    if (selectedBrand !== 'all') {
-      const target = norm(selectedBrand);
-      filtered = filtered.filter((car) => {
-        const b = norm(car.brand);
-        const m = norm(car.model);
-        const n = norm(car.name);
-        return b === target || m.includes(target) || n.includes(target);
-      });
-    }
-
-    // Filter by brand from FilterDropdown
-    if (appliedFilters.brand) {
-      const target = norm(appliedFilters.brand);
+    // Filter by brand (combined from pills and dropdown)
+    const activeBrand = appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : '');
+    if (activeBrand) {
+      const target = norm(activeBrand);
       filtered = filtered.filter((car) => {
         const b = norm(car.brand);
         const m = norm(car.model);
@@ -617,6 +632,43 @@ const SearchPage = () => {
         const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
         return carPrice >= minPrice && carPrice <= maxPrice;
       });
+    }
+
+    // Filter by rating
+    if (appliedFilters.rating) {
+      const minRating = parseFloat(appliedFilters.rating.replace('+', '')) || 0;
+      filtered = filtered.filter((car) => {
+        const carRating = parseFloat(car.rating) || 0;
+        return carRating >= minRating;
+      });
+    }
+
+    // Filter by location
+    if (appliedFilters.location) {
+      const locationQuery = norm(appliedFilters.location);
+      filtered = filtered.filter((car) => {
+        const carLoc = norm(car.location);
+        return carLoc.includes(locationQuery);
+      });
+    }
+
+    // Filter by availability
+    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
+      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
+      const selectedTo = new Date(appliedFilters.availableTo).getTime();
+
+      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
+        filtered = filtered.filter((car) => {
+          // If the car has explicit bookings data, check for overlap
+          const bookings = car.bookings || car.bookingsMap || [];
+          const hasOverlap = bookings.some(booking => {
+            const bookingStart = new Date(booking.startDate || booking.start).getTime();
+            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
+            return selectedFrom < bookingEnd && selectedTo > bookingStart;
+          });
+          return !hasOverlap;
+        });
+      }
     }
 
     // Filter by search query (case-insensitive, supports partial words)
@@ -630,20 +682,10 @@ const SearchPage = () => {
   const filteredPopularCars = useMemo(() => {
     let filtered = allPopularCars;
 
-    // Filter by brand (from brand filter buttons) - case-insensitive
-    if (selectedBrand !== 'all') {
-      const target = norm(selectedBrand);
-      filtered = filtered.filter((car) => {
-        const b = norm(car.brand);
-        const m = norm(car.model);
-        const n = norm(car.name);
-        return b === target || m.includes(target) || n.includes(target);
-      });
-    }
-
-    // Filter by brand from FilterDropdown
-    if (appliedFilters.brand) {
-      const target = norm(appliedFilters.brand);
+    // Filter by brand (combined from pills and dropdown)
+    const activeBrand = appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : '');
+    if (activeBrand) {
+      const target = norm(activeBrand);
       filtered = filtered.filter((car) => {
         const b = norm(car.brand);
         const m = norm(car.model);
@@ -721,6 +763,42 @@ const SearchPage = () => {
         const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
         return carPrice >= minPrice && carPrice <= maxPrice;
       });
+    }
+
+    // Filter by rating
+    if (appliedFilters.rating) {
+      const minRating = parseFloat(appliedFilters.rating.replace('+', '')) || 0;
+      filtered = filtered.filter((car) => {
+        const carRating = parseFloat(car.rating) || 0;
+        return carRating >= minRating;
+      });
+    }
+
+    // Filter by location
+    if (appliedFilters.location) {
+      const locationQuery = norm(appliedFilters.location);
+      filtered = filtered.filter((car) => {
+        const carLoc = norm(car.location);
+        return carLoc.includes(locationQuery);
+      });
+    }
+
+    // Filter by availability
+    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
+      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
+      const selectedTo = new Date(appliedFilters.availableTo).getTime();
+
+      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
+        filtered = filtered.filter((car) => {
+          const bookings = car.bookings || car.bookingsMap || [];
+          const hasOverlap = bookings.some(booking => {
+            const bookingStart = new Date(booking.startDate || booking.start).getTime();
+            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
+            return selectedFrom < bookingEnd && selectedTo > bookingStart;
+          });
+          return !hasOverlap;
+        });
+      }
     }
 
     // Filter by search query (case-insensitive, supports partial words)
@@ -1280,14 +1358,19 @@ const SearchPage = () => {
           </div>
         </div>
 
-        {/* Filter Dropdown for Web */}
+        {/* Shared Filter Modal for both Mobile and Web */}
         <FilterDropdown
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
+          initialFilters={appliedFilters} // Sync state when re-opening
           onApplyFilters={(filters) => {
             console.log('Applied filters:', filters);
             setAppliedFilters(filters);
+            // Keep pills in sync with brand filter
+            setSelectedBrand(filters.brand ? filters.brand : 'all');
             setIsFilterOpen(false);
+            // Scroll to top to reveal filtered results
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           brands={filterOptions.brands}
           fuelTypes={filterOptions.fuelTypes}
@@ -1296,6 +1379,8 @@ const SearchPage = () => {
           carTypes={filterOptions.carTypes}
           featuresList={filterOptions.features}
           seatOptions={filterOptions.seats}
+          ratingOptions={filterOptions.ratings}
+          locations={filterOptions.locations}
         />
       </div>
     </>
