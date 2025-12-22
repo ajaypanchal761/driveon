@@ -124,7 +124,7 @@ const ModuleProfile1Page = () => {
   const kycStatusText = isKYCVerified ? "Verified" : "Pending";
 
   // Module theme colors - using colors from module/theme/colors.js
-  const primaryColor = colors.backgroundTertiary || "#0B4DAF"; // Dark color for primary buttons
+  const primaryColor = colors.backgroundTertiary || "#1C205C"; // Dark color for primary buttons
   const accentColor = colors.accentBlue || "#8FA3B0"; // Light blue-gray for accents
   const successColor = colors.success || "#4CAF50"; // Green for verified status
   const darkColor = colors.backgroundDark || "#294657"; // Dark blue for premium feel
@@ -189,7 +189,7 @@ const ModuleProfile1Page = () => {
       {/* Web Header - Only visible on desktop */}
       <header
         className="hidden md:block w-full sticky top-0 z-50"
-        style={{ backgroundColor: colors.brandBlack || "#0B4DAF" }}
+        style={{ backgroundColor: colors.brandBlack || "#1C205C" }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">

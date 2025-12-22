@@ -171,7 +171,7 @@ const ModuleNewProfilePage = () => {
   return (
     <div 
       className="min-h-screen w-full relative pb-20 md:pb-0"
-      style={{ backgroundColor: '#0B4DAF' }}
+      style={{ backgroundColor: '#1C205C' }}
     >
       {/* Top Section - Dark Background */}
       <div className="relative pt-12 pb-8 px-4">
@@ -235,7 +235,7 @@ const ModuleNewProfilePage = () => {
             ) : (
               <div
                 className="w-24 h-24 rounded-full overflow-hidden border-2 border-white"
-                style={{ backgroundColor: '#0B4DAF' }}
+                style={{ backgroundColor: '#1C205C' }}
               >
                 <img
                   src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGdpcmwlMjBwcm9maWxlfGVufDB8fDB8fHww"

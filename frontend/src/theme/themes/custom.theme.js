@@ -1,13 +1,13 @@
 // Premium Theme - Centralized Color Management
 // All colors imported from colors.js for single source of truth
-// Primary: #1c205c, Accent: #25b8d7, Secondary: #21598b
+// Primary: #1C205C, Accent: #25b8d7, Secondary: #21598b
 
 import premiumColors from '../colors';
 
 export const customTheme = {
   name: 'custom',
   colors: {
-    // Primary Colors - Main brand color (#1c205c)
+    // Primary Colors - Main brand color (#1C205C)
     primary: {
       50: premiumColors.primary[50],
       100: premiumColors.primary[100],
@@ -19,7 +19,7 @@ export const customTheme = {
       700: premiumColors.primary[700],
       800: premiumColors.primary[800],
       900: premiumColors.primary[900],
-      DEFAULT: premiumColors.primary.DEFAULT, // #1c205c
+      DEFAULT: premiumColors.primary.DEFAULT, // #1C205C
       dark: premiumColors.primary.dark, // #1a1c45
       light: premiumColors.primary.light, // #2693b9
     },

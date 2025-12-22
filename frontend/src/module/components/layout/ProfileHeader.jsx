@@ -7,10 +7,10 @@ const ProfileHeader = ({ title = 'Profile', showBack = false, onBack }) => {
   return (
     <header 
       className="w-full relative rounded-b-3xl sticky top-0 z-50"
-      style={{ backgroundColor: '#0B4DAF' }}
+      style={{ backgroundColor: '#1C205C' }}
     >
       {/* Status Bar Area (for mobile) */}
-      <div className="h-2" style={{ backgroundColor: '#0B4DAF' }}></div>
+      <div className="h-2" style={{ backgroundColor: '#1C205C' }}></div>
 
       {/* Abstract Line Graphics Background - Lighter blue patterns */}
       <div className="absolute inset-0 opacity-15 pointer-events-none overflow-hidden">

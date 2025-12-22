@@ -104,7 +104,7 @@ const ModuleKYCStatusPage = () => {
       {/* Header */}
       <div 
         className="px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6 lg:pt-8 pb-4 md:pb-6 rounded-b-3xl"
-        style={{ backgroundColor: '#0B4DAF' }}
+        style={{ backgroundColor: '#1C205C' }}
       >
         <div className="flex items-center justify-between mb-4">
           <button

@@ -8,7 +8,7 @@ import { useLocation } from '../../../hooks/useLocation';
 /**
  * Header Component - Match to design image
  * Top header with status bar, location selector, search bar, and navigation icons
- * Dark background (#0B4DAF) with abstract patterns
+ * Dark background (#1C205C) with abstract patterns
  */
 const Header = ({ onHeightChange }) => {
   const navigate = useNavigate();

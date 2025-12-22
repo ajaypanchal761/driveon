@@ -240,14 +240,14 @@ const ReturningCarBanner = () => {
     <div className="w-full mb-4 md:mb-6">
       {/* Mobile View */}
       <div className="block md:hidden">
-        <div
-          className="rounded-2xl overflow-hidden shadow-lg"
-          style={{
-            backgroundColor: colors.backgroundTertiary || "#21292b",
-            maxHeight: "240px",
-            height: "auto",
-          }}
-        >
+          <div
+            className="rounded-2xl overflow-hidden shadow-2xl relative"
+            style={{
+              background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+              maxHeight: "280px",
+              height: "auto",
+            }}
+          >
           <div
             ref={mobileScrollRef}
             className="flex overflow-x-auto scroll-smooth h-full"
@@ -368,11 +368,11 @@ const ReturningCarBanner = () => {
       {/* Web View */}
       <div className="hidden md:block">
         <div
-          className="rounded-2xl overflow-hidden shadow-lg"
+          className="rounded-3xl overflow-hidden shadow-2xl relative"
           style={{
-            backgroundColor: colors.backgroundTertiary || "#21292b",
-            maxHeight: "320px",
-            height: "320px",
+            background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+            maxHeight: "340px",
+            height: "340px",
             overflow: "hidden",
           }}
         >
@@ -507,9 +507,10 @@ const ReturningCarBanner = () => {
           display: inline-block;
         }
         .swiper-pagination-bullet-active-custom {
-          background: #000000;
-          width: 6px;
+          background: ${colors.backgroundTertiary};
+          width: 24px;
           height: 6px;
+          border-radius: 3px;
         }
       `}</style>
     </div>

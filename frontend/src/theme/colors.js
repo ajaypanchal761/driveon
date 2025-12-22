@@ -4,7 +4,7 @@
  * Based on premium blue color scheme analysis
  * 
  * Color Analysis:
- * - #1c205c: Dark navy blue (Primary - main brand color)
+ * - #1C205C: Dark navy blue (Primary - main brand color)
  * - #25b8d7: Bright cyan (Accent - highlights, CTAs)
  * - #21598b: Medium blue (Secondary - supporting elements)
  * - #1a1c45: Very dark navy (Primary Dark - darker variants)
@@ -21,12 +21,12 @@ export const premiumColors = {
     200: '#929ac2',
     300: '#6873ab',
     400: '#3e4c94',
-    500: '#1c205c', // Main brand color
+    500: '#1C205C', // Main brand color
     600: '#161a4a',
     700: '#101338',
     800: '#0a0d26',
     900: '#040714',
-    DEFAULT: '#1c205c',
+    DEFAULT: '#1C205C',
     dark: '#1a1c45',
     light: '#2693b9',
   },
@@ -125,7 +125,7 @@ export const premiumColors = {
     DEFAULT: '#cbd0d8',
     dark: '#8c97a8',
     focus: '#25b8d7',
-    primary: '#1c205c',
+    primary: '#1C205C',
   },
 
   // Status Colors

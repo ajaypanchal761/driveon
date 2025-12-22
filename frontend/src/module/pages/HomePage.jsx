@@ -504,7 +504,7 @@ const HomePage = () => {
   const heroTitle = currentHero.title || "";
   const heroSubtitle = currentHero.subtitle || "";
   const heroCta = currentHero.cta || "";
-  const heroGradient = currentHero.gradient || colors.backgroundPrimary;
+  const heroGradient = currentHero.gradient || colors.gradientPrimary;
 
   // Fallback car images
   const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
@@ -605,7 +605,7 @@ const HomePage = () => {
       {/* Web Header - Only visible on web */}
       <header
         className="hidden md:block w-full sticky top-0 z-50"
-        style={{ backgroundColor: colors.brandBlack }}
+        style={{ background: colors.gradientHeader }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
@@ -723,7 +723,7 @@ const HomePage = () => {
               >
                 {heroTitle && (
                   <>
-                    <span style={{ color: "#21292b" }}>
+                    <span style={{ color: colors.textPrimary }}>
                       {heroTitle.split(" ")[0]}
                     </span>{" "}
                     <span style={{ color: colors.textPrimary }}>

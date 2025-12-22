@@ -205,7 +205,7 @@ const ModuleLoginPage = () => {
           <div 
             className="relative flex flex-col justify-center px-8 py-12"
             style={{ 
-              backgroundColor: colors.backgroundTertiary,
+              background: colors.gradientHeader,
               minHeight: '200px'
             }}
           >
@@ -295,7 +295,7 @@ const ModuleLoginPage = () => {
               {/* Phone Icon */}
               <svg 
                 className="w-5 h-5 mr-3 flex-shrink-0" 
-                style={{ color: '#21292b' }}
+                style={{ color: colors.backgroundTertiary }}
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -356,7 +356,7 @@ const ModuleLoginPage = () => {
                 {/* Lock/OTP Icon */}
                 <svg 
                   className="w-5 h-5 mr-3 flex-shrink-0" 
-                  style={{ color: '#21292b' }}
+                  style={{ color: colors.backgroundTertiary }}
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -397,7 +397,7 @@ const ModuleLoginPage = () => {
                   {error}
                 </p>
               )}
-              <p className="text-xs mt-1 ml-1" style={{ color: '#21292b' }}>
+              <p className="text-xs mt-1 ml-1" style={{ color: colors.backgroundTertiary }}>
                 OTP sent to +91 {phoneNumber}
               </p>
             </div>
@@ -451,7 +451,7 @@ const ModuleLoginPage = () => {
 
           {/* Sign Up Link */}
           <div className="text-center mt-6">
-            <p className="text-sm" style={{ color: '#21292b' }}>
+            <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
               Don't have an account?{' '}
               <Link
                 to="/register"
@@ -476,7 +476,7 @@ const ModuleLoginPage = () => {
         <div 
           className="relative flex-1 flex flex-col justify-center px-6 pb-8"
           style={{ 
-            backgroundColor: colors.backgroundTertiary,
+            background: colors.gradientHeader,
             minHeight: '40%'
           }}
         >
@@ -567,7 +567,7 @@ const ModuleLoginPage = () => {
                 {/* Phone Icon */}
                 <svg 
                   className="w-5 h-5 mr-3 flex-shrink-0" 
-                  style={{ color: '#21292b' }}
+                  style={{ color: colors.backgroundTertiary }}
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -628,7 +628,7 @@ const ModuleLoginPage = () => {
                   {/* Lock/OTP Icon */}
                   <svg 
                     className="w-5 h-5 mr-3 flex-shrink-0" 
-                    style={{ color: '#21292b' }}
+                    style={{ color: colors.backgroundTertiary }}
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -669,7 +669,7 @@ const ModuleLoginPage = () => {
                     {error}
                   </p>
                 )}
-                <p className="text-xs mt-1 ml-1" style={{ color: '#21292b' }}>
+                <p className="text-xs mt-1 ml-1" style={{ color: colors.backgroundTertiary }}>
                   OTP sent to +91 {phoneNumber}
                 </p>
               </div>
