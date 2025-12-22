@@ -18,8 +18,8 @@ import premiumColors from './colors';
 // Export theme colors as constants for easy access
 export const theme = {
   colors: {
-    // Primary Colors - Main brand color (#1c205c)
-    primary: customTheme.colors.primary.DEFAULT, // #1c205c
+    // Primary Colors - Main brand color (#1C205C)
+    primary: customTheme.colors.primary.DEFAULT, // #1C205C
     primaryDark: customTheme.colors.primary.dark, // #1a1c45
     primaryLight: customTheme.colors.primary.light, // #2693b9
     
@@ -51,7 +51,7 @@ export const theme = {
     borderDefault: customTheme.colors.border.DEFAULT, // #cbd0d8
     borderDark: customTheme.colors.border.dark, // #8c97a8
     borderFocus: customTheme.colors.border.focus, // #25b8d7
-    borderPrimary: customTheme.colors.border.primary, // #1c205c
+    borderPrimary: customTheme.colors.border.primary, // #1C205C
     
     // Status Colors
     success: customTheme.colors.success.DEFAULT, // #4caf50

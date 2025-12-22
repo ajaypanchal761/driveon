@@ -410,7 +410,7 @@ const ModuleProfilePage = () => {
   ];
 
   // Light version of dark background for profile section
-  const profileSectionBg = colors.backgroundPrimary || '#f8f8f8';
+  const profileSectionBg = colors.backgroundPrimary || '#F1F2F4';
   const iconBgColor = colors.backgroundPrimary || colors.backgroundImage;
 
   return (

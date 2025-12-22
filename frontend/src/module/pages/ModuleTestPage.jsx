@@ -831,8 +831,8 @@ const ModuleTestPage = () => {
     >
       {/* TOP COMPACT HEADER - matches reference */}
       <div
-        className="px-4 pt-6 pb-4 space-y-2"
-        style={{ backgroundColor: colors.backgroundTertiary }}
+        className="px-4 pt-6 pb-6 space-y-3 rounded-b-[32px] shadow-lg relative z-20"
+        style={{ background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)" }}
       >
         {/* Logo and Location in same row */}
         <div className="flex items-center justify-between gap-3 mb-1.5">
@@ -846,8 +846,10 @@ const ModuleTestPage = () => {
             type="button"
             className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
             style={{
-              backgroundColor: colors.backgroundTertiary,
+              backgroundColor: "rgba(255, 255, 255, 0.08)",
+              backdropFilter: "blur(4px)",
               color: colors.textWhite,
+              border: "1px solid rgba(255, 255, 255, 0.15)",
             }}
             onClick={() => navigate("/module-location")}
           >
@@ -908,7 +910,8 @@ const ModuleTestPage = () => {
               type="button"
               className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
               style={{
-                backgroundColor: "#21292b",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
+                backdropFilter: "blur(10px)",
                 color: "#ffffff",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
@@ -967,7 +970,8 @@ const ModuleTestPage = () => {
             <motion.div
               className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
               style={{
-                backgroundColor: "#21292b",
+                backgroundColor: "rgba(255, 255, 255, 0.12)",
+                backdropFilter: "blur(10px)",
                 color: "#ffffff",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
@@ -1820,8 +1824,8 @@ const ModuleTestPage = () => {
                     type="button"
                     className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
                     style={{
-                      borderColor: "#21292b",
-                      backgroundColor: "#21292b",
+                      borderColor: "#1C205C",
+                      backgroundColor: "#1C205C",
                       color: "#ffffff",
                     }}
                     onClick={() => setIsTimeOpen(true)}
@@ -1946,7 +1950,7 @@ const ModuleTestPage = () => {
                   className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
                   type="button"
                   style={{
-                    borderColor: "#21292b",
+                    borderColor: "#1C205C",
                     backgroundColor: "#ffffff",
                     color: "#000000",
                   }}
@@ -1957,7 +1961,7 @@ const ModuleTestPage = () => {
                 <button
                   className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
                   type="button"
-                  style={{ backgroundColor: "#21292b" }}
+                  style={{ backgroundColor: "#1C205C" }}
                   onClick={() => setIsCalendarOpen(false)}
                 >
                   Done
@@ -2010,7 +2014,7 @@ const ModuleTestPage = () => {
                         }`}
                         style={
                           selectedHour === hour
-                            ? { backgroundColor: "#21292b", color: "#ffffff" }
+                            ? { backgroundColor: "#1C205C", color: "#ffffff" }
                             : { backgroundColor: "transparent" }
                         }
                         onClick={() => setSelectedHour(hour)}
@@ -2042,7 +2046,7 @@ const ModuleTestPage = () => {
                         }`}
                         style={
                           selectedMinute === minute
-                            ? { backgroundColor: "#21292b", color: "#ffffff" }
+                            ? { backgroundColor: "#1C205C", color: "#ffffff" }
                             : { backgroundColor: "transparent" }
                         }
                         onClick={() => setSelectedMinute(minute)}
@@ -2068,7 +2072,7 @@ const ModuleTestPage = () => {
                         }`}
                         style={
                           selectedPeriod === p
-                            ? { backgroundColor: "#21292b", color: "#ffffff" }
+                            ? { backgroundColor: "#1C205C", color: "#ffffff" }
                             : { backgroundColor: "transparent" }
                         }
                         onClick={() => setSelectedPeriod(p)}
@@ -2083,7 +2087,7 @@ const ModuleTestPage = () => {
               {/* Preview */}
               <div
                 className="mb-4 p-3 rounded-lg text-center"
-                style={{ backgroundColor: "#f8f8f8" }}
+                style={{ backgroundColor: "#F1F2F4" }}
               >
                 <span className="text-lg font-bold text-black">
                   {formatTimeDisplay()}
@@ -2095,7 +2099,7 @@ const ModuleTestPage = () => {
                   className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
                   type="button"
                   style={{
-                    borderColor: "#21292b",
+                    borderColor: "#1C205C",
                     backgroundColor: "#ffffff",
                     color: "#000000",
                   }}
@@ -2106,7 +2110,7 @@ const ModuleTestPage = () => {
                 <button
                   className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
                   type="button"
-                  style={{ backgroundColor: "#21292b" }}
+                  style={{ backgroundColor: "#1C205C" }}
                   onClick={() => setIsTimeOpen(false)}
                 >
                   Done
@@ -2121,3 +2125,5 @@ const ModuleTestPage = () => {
 };
 
 export default ModuleTestPage;
+
+

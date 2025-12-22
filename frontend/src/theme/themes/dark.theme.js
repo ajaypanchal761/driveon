@@ -8,7 +8,7 @@ export const darkTheme = {
   colors: {
     primary: {
       DEFAULT: premiumColors.primary.light, // #2693b9 - Lighter for dark mode
-      dark: premiumColors.primary.DEFAULT, // #1c205c
+      dark: premiumColors.primary.DEFAULT, // #1C205C
       light: premiumColors.accent.DEFAULT, // #25b8d7
     },
     secondary: {

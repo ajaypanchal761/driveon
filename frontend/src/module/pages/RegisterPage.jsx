@@ -316,7 +316,7 @@ const ModuleRegisterPage = () => {
     <div 
       className="fixed inset-0 flex flex-col overflow-hidden md:overflow-auto"
       style={{ 
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#F1F2F4',
         margin: 0,
         padding: 0,
         position: 'fixed',
@@ -867,7 +867,7 @@ const ModuleRegisterPage = () => {
       {/* Mobile View - Original Layout */}
       <div className="md:hidden flex flex-col h-full">
         {/* Status Bar Area (for mobile) */}
-        <div className="h-6" style={{ backgroundColor: '#f8f8f8' }}></div>
+        <div className="h-6" style={{ backgroundColor: '#F1F2F4' }}></div>
 
         {/* Header Section - Dark Background with Wave Graphics */}
         <div 

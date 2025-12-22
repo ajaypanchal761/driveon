@@ -7,10 +7,10 @@ const ProfileHeader = ({ title = 'Profile', showBack = false, onBack }) => {
   return (
     <header 
       className="w-full relative rounded-b-3xl sticky top-0 z-50"
-      style={{ backgroundColor: '#21292b' }}
+      style={{ backgroundColor: '#1C205C' }}
     >
       {/* Status Bar Area (for mobile) */}
-      <div className="h-2" style={{ backgroundColor: '#21292b' }}></div>
+      <div className="h-2" style={{ backgroundColor: '#1C205C' }}></div>
 
       {/* Abstract Line Graphics Background - Lighter blue patterns */}
       <div className="absolute inset-0 opacity-15 pointer-events-none overflow-hidden">
@@ -75,7 +75,7 @@ const ProfileHeader = ({ title = 'Profile', showBack = false, onBack }) => {
             onClick={onBack || (() => navigate(-1))}
             className="absolute left-4 w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shadow-sm"
             style={{
-              backgroundColor: '#f8f8f8',
+              backgroundColor: '#F1F2F4',
               border: '1px solid rgba(255,255,255,0.2)',
               color: '#111827',
             }}

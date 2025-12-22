@@ -3,19 +3,19 @@ export const colors = {
   // Primary colors from design
   backgroundPrimary: "#f8f8f8", // Top header background
   backgroundSecondary: "#ffffff", // White
-  backgroundTertiary: "#21292b", // Bottom navbar
+  backgroundTertiary: "#1C205C", // Primary theme color (Dark Blue)
   backgroundImage: "#f0f0f0", // Car image background in cards
-  backgroundDark: "#294657", // Dark blue background
+  backgroundDark: "#1C205C", // Also updated to the new primary color for consistency
   backgroundLight: "#ededed", // Light gray background
   backgroundIcon: "#e0e0e0", // Icon background, progress bars
   lightGreen: "#e8f5e9", // Light green for profile header
   lightGreenDark: "#c8e6c9", // Slightly darker green for buttons
 
   // Brand colors
-  brandBlack: "#000000", // Brand logo background
+  brandBlack: "#1C205C", // Brand header background (updated to match primary theme)
 
   // Text colors
-  textPrimary: "#000000",
+  textPrimary: "#1C205C", // Updated to new primary color for better branding
   textSecondary: "#666666",
   textTertiary: "#999999",
   textWhite: "#ffffff", // White text
@@ -24,7 +24,7 @@ export const colors = {
   // Accent colors
   accentOrange: "#FF6B35", // Rating star color
   accentRed: "#FF0000", // Notification badge
-  accentBlue: "#8FA3B0", // Light blue-gray for SVG graphics
+  accentBlue: "#1C205C", // Updated to match brand
 
   // Border colors
   borderLight: "#d0d0d0", // Card borders
@@ -39,6 +39,10 @@ export const colors = {
   warning: "#FF9800",
   info: "#2196F3",
 
+  // Gradient Colors
+  gradientPrimary: "linear-gradient(135deg, #1C205C 0%, #294657 100%)",
+  gradientHeader: "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+
   // Overlay colors (rgba)
   overlayWhite: "rgba(255, 255, 255, 0.9)", // Semi-transparent white
   overlayWhiteLight: "rgba(255, 255, 255, 0.2)", // Light semi-transparent white
@@ -47,5 +51,5 @@ export const colors = {
 
   // Shadow colors
   shadowLight: "rgba(0, 0, 0, 0.08)", // Light shadow
-  shadowFocus: "rgba(33, 41, 43, 0.1)", // Focus shadow (backgroundTertiary with opacity)
+  shadowFocus: "rgba(28, 32, 92, 0.15)", // Focus shadow (#1C205C with opacity)
 };

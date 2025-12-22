@@ -1,257 +1,520 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { bookingService } from '../../../services/booking.service';
-import { carService } from '../../../services/car.service';
-import { useAppSelector } from '../../../hooks/redux';
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { colors } from "../../theme/colors";
 
+// Fallback car images
+import carImg1 from "../../../assets/car_img1-removebg-preview.png";
+import carImg4 from "../../../assets/car_img4-removebg-preview.png";
+import carImg5 from "../../../assets/car_img5-removebg-preview.png";
+import carImg6 from "../../../assets/car_img6-removebg-preview.png";
+import carImg8 from "../../../assets/car_img8.png";
+
+const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
+
+/**
+ * ReturningCarBanner Component
+ * Shows cars that are returning soon from other users' bookings
+ * Always visible with dummy data (for user2 browsing/booking)
+ * With horizontal scroll and pagination dots
+ */
 const ReturningCarBanner = () => {
-    const [status, setStatus] = useState('hidden'); // hidden | dynamic | static
-    const [timeLeft, setTimeLeft] = useState('');
-    const [booking, setBooking] = useState(null);
-    const [carDetails, setCarDetails] = useState(null);
+  const navigate = useNavigate();
+  const [currentCarIndex, setCurrentCarIndex] = useState(0);
+  const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
+  const mobileScrollRef = useRef(null);
+  const webScrollRef = useRef(null);
+  const autoScrollIntervalRef = useRef(null);
+  const isAutoScrollingRef = useRef(false);
+  const pauseTimeoutRef = useRef(null);
+  const currentIndexRef = useRef(0);
+  const isPausedRef = useRef(false);
 
-    const { user } = useAppSelector((state) => ({
-        user: state.auth?.user || state.user?.user || state.user,
-    }));
+  // Dummy data - Cars returning soon from other users
+  const returningCars = [
+    {
+      id: "returning1",
+      name: "Toyota Innova",
+      brand: "Toyota",
+      model: "Innova",
+      image: fallbackCarImages[0],
+      price: 1200,
+      location: "Mumbai",
+      returningIn: "2 hours",
+    },
+    {
+      id: "returning2",
+      name: "Hyundai Creta",
+      brand: "Hyundai",
+      model: "Creta",
+      image: fallbackCarImages[1],
+      price: 1500,
+      location: "Delhi",
+      returningIn: "1 hour 30 mins",
+    },
+    {
+      id: "returning3",
+      name: "Maruti Swift Dzire",
+      brand: "Maruti",
+      model: "Swift Dzire",
+      image: fallbackCarImages[2],
+      price: 800,
+      location: "Bangalore",
+      returningIn: "3 hours",
+    },
+  ];
 
-    const fetchUserBooking = useCallback(async () => {
-        if (!user?._id) return;
+  // Get active scroll container (mobile or web)
+  const getScrollContainer = () => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 768 ? webScrollRef.current : mobileScrollRef.current;
+    }
+    return null;
+  };
 
-        try {
-            // Fetch user's bookings
-            const response = await bookingService.getBookings({ userId: user._id });
+  // Track scroll position to update current index
+  useEffect(() => {
+    if (returningCars.length <= 1) return;
 
-            // Handle different response structures including pagination
-            let bookings = [];
-            if (Array.isArray(response)) {
-                bookings = response;
-            } else if (response && Array.isArray(response.bookings)) {
-                bookings = response.bookings;
-            } else if (response && Array.isArray(response.data)) {
-                bookings = response.data;
-            } else if (response && response.data && Array.isArray(response.data.bookings)) {
-                bookings = response.data.bookings;
-            } else if (response && response.data && Array.isArray(response.data.docs)) {
-                bookings = response.data.docs;
-            } else {
-                bookings = [];
-            }
-
-            if (!Array.isArray(bookings)) {
-                setStatus('hidden');
-                return;
-            }
-
-            // Find a relevant booking:
-            // 1. Status is not cancelled/completed
-            // 2. End Date is TODAY
-            const today = new Date();
-            const activeBooking = bookings.find(b => {
-                const status = b.status;
-                if (status === 'cancelled' || status === 'completed') return false;
-
-                // Handle tripEnd structure (could be string or object)
-                const endDateVal = b.tripEnd?.date || b.tripEnd;
-                if (!endDateVal) return false;
-
-                const end = new Date(endDateVal);
-                return end.toDateString() === today.toDateString();
-            });
-
-            if (activeBooking) {
-                setBooking(activeBooking);
-
-                // Fetch car details if 'car' is just an ID
-                if (activeBooking.car && typeof activeBooking.car === 'string') {
-                    try {
-                        const carData = await carService.getCarDetails(activeBooking.car);
-                        setCarDetails(carData.data || carData);
-                    } catch (err) {
-                        console.error("Error fetching car details for banner:", err);
-                    }
-                } else if (activeBooking.car && typeof activeBooking.car === 'object') {
-                    setCarDetails(activeBooking.car);
-                }
-            } else {
-                setStatus('hidden');
-            }
-        } catch (error) {
-            console.error("Error fetching returning car banner data:", error);
-            setStatus('hidden');
-        }
-    }, [user]);
-
-    useEffect(() => {
-        fetchUserBooking();
-    }, [fetchUserBooking]);
-
-    useEffect(() => {
-        if (!booking) return;
-
-        const calculateStatus = () => {
-            const now = new Date();
-            // Handle tripEnd structure robustly
-            const endDateVal = booking.tripEnd?.date || booking.tripEnd;
-            if (!endDateVal) return;
-
-            const end = new Date(endDateVal);
-
-            // Double check date matching
-            const isSameDay = now.toDateString() === end.toDateString();
-            if (!isSameDay) {
-                setStatus('hidden');
-                return;
-            }
-
-            // Check time
-            if (now < end) {
-                setStatus('dynamic');
-
-                // Calculate remaining time
-                const diff = end - now;
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-                if (hours > 0) {
-                    setTimeLeft(`${hours} hours ${minutes > 0 ? `& ${minutes} mins` : ''}`);
-                } else {
-                    setTimeLeft(`${minutes} mins`);
-                }
-            } else {
-                // Time passed - show static banner
-                setStatus('static');
-            }
-        };
-
-        // Calculate immediately
-        calculateStatus();
-
-        // Update every minute
-        const timer = setInterval(calculateStatus, 60000);
-        return () => clearInterval(timer);
-    }, [booking]);
-
-    if (status === 'hidden') return null;
-
-    // Helper to get car details safely
-    const displayCar = carDetails || booking?.car || {};
-    const carName = displayCar.name || displayCar.brand || displayCar.modelName || booking?.carName || "Car";
-
-    // Robust image extraction
-    const getCarImageUrl = (carData) => {
-        if (!carData) return null;
-        if (carData.image && typeof carData.image === 'string') return carData.image;
-        if (carData.image?.url) return carData.image.url;
-
-        if (carData.images && Array.isArray(carData.images) && carData.images.length > 0) {
-            const firstImg = carData.images[0];
-            if (typeof firstImg === 'string') return firstImg;
-            if (firstImg.url) return firstImg.url;
-            if (firstImg.path) return firstImg.path;
-        }
-        return null;
+    const handleScroll = (container) => {
+      if (!container) return;
+      const scrollLeft = container.scrollLeft;
+      const cardWidth = container.clientWidth;
+      const newIndex = Math.round(scrollLeft / cardWidth);
+      
+      if (newIndex >= 0 && newIndex < returningCars.length) {
+        setCurrentCarIndex(newIndex);
+        currentIndexRef.current = newIndex;
+      }
     };
 
-    const carImage = getCarImageUrl(displayCar) || booking?.carImage || "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80";
+    const mobileContainer = mobileScrollRef.current;
+    const webContainer = webScrollRef.current;
 
-    // Safety check for location
-    const carLocation = booking?.pickupLocation?.address ?
-        booking.pickupLocation.address :
-        (booking?.location?.area ? `${booking.location.area}, ${booking.location.city}` : "Indore, MP");
+    const mobileHandler = () => {
+      handleScroll(mobileContainer);
+      // Only pause if it's user-initiated scroll, not auto-scroll
+      if (!isAutoScrollingRef.current) {
+        setIsAutoScrollPaused(true);
+        isPausedRef.current = true;
+        // Clear existing timeout
+        if (pauseTimeoutRef.current) {
+          clearTimeout(pauseTimeoutRef.current);
+        }
+        // Resume after 10 seconds
+        pauseTimeoutRef.current = setTimeout(() => {
+          setIsAutoScrollPaused(false);
+          isPausedRef.current = false;
+        }, 10000);
+      }
+    };
+    
+    const webHandler = () => {
+      handleScroll(webContainer);
+      // Only pause if it's user-initiated scroll, not auto-scroll
+      if (!isAutoScrollingRef.current) {
+        setIsAutoScrollPaused(true);
+        isPausedRef.current = true;
+        // Clear existing timeout
+        if (pauseTimeoutRef.current) {
+          clearTimeout(pauseTimeoutRef.current);
+        }
+        // Resume after 10 seconds
+        pauseTimeoutRef.current = setTimeout(() => {
+          setIsAutoScrollPaused(false);
+          isPausedRef.current = false;
+        }, 10000);
+      }
+    };
 
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="w-full"
-            >
-                {status === 'dynamic' ? (
-                    // Dynamic Banner - Compact Version
-                    <div className="relative overflow-hidden rounded-xl bg-gray-900 border border-gray-800 shadow-xl p-0">
-                        {/* Background Gradient */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -ml-32 -mb-32"></div>
+    if (mobileContainer) {
+      mobileContainer.addEventListener("scroll", mobileHandler, { passive: true });
+    }
+    if (webContainer) {
+      webContainer.addEventListener("scroll", webHandler, { passive: true });
+    }
 
-                        <div className="flex flex-row items-center gap-3 p-3 relative z-10">
-                            {/* Car Image Thumbnail - Smaller */}
-                            <div className="flex-shrink-0 relative">
-                                <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 shadow-md">
-                                    <img
-                                        src={carImage}
-                                        alt={carName}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                {/* Pulse Indicator - Adjusted */}
-                                <div className="absolute -top-1 -right-1 w-3 h-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500 border-2 border-gray-900"></span>
-                                </div>
-                            </div>
+    // Initial sync
+    if (mobileContainer) handleScroll(mobileContainer);
+    if (webContainer) handleScroll(webContainer);
 
-                            {/* Content - Computed Layout */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-400 tracking-wider uppercase border border-orange-500/20 whitespace-nowrap">
-                                        Returning Soon
-                                    </span>
-                                    <h3 className="text-white font-bold text-base truncate">
-                                        {carName}
-                                    </h3>
-                                </div>
+    return () => {
+      if (mobileContainer) {
+        mobileContainer.removeEventListener("scroll", mobileHandler);
+      }
+      if (webContainer) {
+        webContainer.removeEventListener("scroll", webHandler);
+      }
+    };
+  }, [returningCars.length]);
 
-                                <div className="flex items-center gap-3 text-gray-400 text-xs">
-                                    <div className="flex items-center gap-1 text-orange-300 font-medium whitespace-nowrap">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        <span>In {timeLeft}</span>
-                                    </div>
+  // Auto-scroll to next car
+  useEffect(() => {
+    // Clear any existing interval first
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
 
-                                    <div className="flex items-center gap-1 opacity-80 truncate">
-                                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                        <span className="truncate">{carLocation}</span>
-                                    </div>
-                                </div>
-                            </div>
+    if (returningCars.length <= 1) return;
 
-                            {/* Action / Arrow - Compact */}
-                            <div className="hidden sm:block">
-                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-white/10 transition-colors">
-                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    // Static Banner - Compact Version
-                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/20 shadow-lg p-3 backdrop-blur-sm">
-                        <div className="flex items-center gap-3">
-                            {/* Static Banner Image (Now showing Car Image) */}
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-emerald-500/20 flex-shrink-0 shadow-md">
-                                <img
-                                    src={carImage}
-                                    alt={carName}
-                                    className="w-full h-full object-cover"
-                                />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-white font-bold text-sm">Car is now available!</h3>
-                                <p className="text-emerald-200/80 text-xs truncate">
-                                    <span className="font-semibold text-emerald-100">{carName}</span> is back at {carLocation.split(',')[0]}.
-                                </p>
-                            </div>
-                            <div className="ml-auto">
-                                <button className="px-3 py-1.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition-colors shadow-md shadow-emerald-900/20 whitespace-nowrap">
-                                    Book Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </motion.div>
-        </AnimatePresence>
-    );
+    // Start interval - it will check pause state on each execution
+    autoScrollIntervalRef.current = setInterval(() => {
+      // Skip if paused (use ref to get latest value)
+      if (isPausedRef.current) return;
+
+      const container = getScrollContainer();
+      if (!container) return;
+
+      // Use ref to get current index to avoid dependency issues
+      const currentIdx = currentIndexRef.current;
+      const nextIndex = (currentIdx + 1) % returningCars.length;
+      const cardWidth = container.clientWidth;
+      
+      // Mark as auto-scrolling
+      isAutoScrollingRef.current = true;
+      
+      container.scrollTo({
+        left: nextIndex * cardWidth,
+        behavior: "smooth",
+      });
+      
+      // Reset flag after scroll completes (smooth scroll takes ~500ms)
+      setTimeout(() => {
+        isAutoScrollingRef.current = false;
+      }, 800);
+    }, 3000); // Auto-scroll every 3 seconds
+
+    return () => {
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
+    };
+  }, [returningCars.length]);
+
+  // Navigate to specific index
+  const goToIndex = (index) => {
+    const container = getScrollContainer();
+    if (!container) return;
+
+    // Pause auto-scroll when user clicks pagination
+    setIsAutoScrollPaused(true);
+    isPausedRef.current = true;
+    
+    // Clear existing timeout
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+    
+    // Mark as auto-scrolling (programmatic scroll)
+    isAutoScrollingRef.current = true;
+    
+    const cardWidth = container.clientWidth;
+    container.scrollTo({
+      left: index * cardWidth,
+      behavior: "smooth",
+    });
+    
+    // Reset flag after scroll completes
+    setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 600);
+    
+    // Resume auto-scroll after 10 seconds
+    pauseTimeoutRef.current = setTimeout(() => {
+      setIsAutoScrollPaused(false);
+      isPausedRef.current = false;
+    }, 10000);
+  };
+
+  const handleBannerClick = (car) => {
+    navigate(`/car-details/${car.id}`, {
+      state: {
+        car,
+        highlightReturning: true,
+      },
+    });
+  };
+
+  return (
+    <div className="w-full mb-4 md:mb-6">
+      {/* Mobile View */}
+      <div className="block md:hidden">
+          <div
+            className="rounded-2xl overflow-hidden shadow-2xl relative"
+            style={{
+              background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+              maxHeight: "280px",
+              height: "auto",
+            }}
+          >
+          <div
+            ref={mobileScrollRef}
+            className="flex overflow-x-auto scroll-smooth h-full"
+            style={{
+              scrollSnapType: "x mandatory",
+              touchAction: "pan-x",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {returningCars.map((car, index) => (
+              <div
+                key={car.id || index}
+                className="flex-shrink-0 flex items-center justify-between px-4 py-4 w-full cursor-pointer"
+                style={{ scrollSnapAlign: "center" }}
+                onClick={() => handleBannerClick(car)}
+              >
+                {/* Left Side - Text Content */}
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <svg
+                      className="w-4 h-4 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: "#10B981" }}
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: "#10B981" }}
+                    >
+                      Returning Soon
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1 truncate">
+                    {car.name}
+                  </h3>
+                  <p className="text-sm text-white/90 mb-1.5">
+                    Available in {car.returningIn}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="text-sm font-semibold text-white">
+                      Rs. {car.price} / day
+                    </span>
+                    <span className="text-xs text-white/60">•</span>
+                    <span className="text-sm text-white/80 truncate">
+                      {car.location}
+                    </span>
+                  </div>
+                  <button
+                    className="px-4 py-1.5 rounded-lg font-semibold text-xs transition-all hover:opacity-90"
+                    style={{
+                      backgroundColor: colors.backgroundPrimary,
+                      color: colors.textPrimary,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBannerClick(car);
+                    }}
+                  >
+                    Book Now
+                  </button>
+                </div>
+
+                {/* Right Side - Car Image */}
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{ width: "40%", minWidth: "120px" }}
+                >
+                  <img
+                    src={car.image}
+                    alt={car.name}
+                    className="w-full h-auto object-contain"
+                    draggable={false}
+                    style={{
+                      objectFit: "contain",
+                      maxHeight: "250px",
+                      width: "100%",
+                      transform: "scale(1.25)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Hide scrollbar */}
+        <style>{`
+          .overflow-x-auto::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+
+        {/* Pagination Dots - Outside Banner - Mobile */}
+        {returningCars.length > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            {returningCars.map((_, index) => (
+              <span
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToIndex(index);
+                }}
+                className={`swiper-pagination-bullet-custom ${
+                  index === currentCarIndex
+                    ? "swiper-pagination-bullet-active-custom"
+                    : ""
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Web View */}
+      <div className="hidden md:block">
+        <div
+          className="rounded-3xl overflow-hidden shadow-2xl relative"
+          style={{
+            background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+            maxHeight: "340px",
+            height: "340px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            ref={webScrollRef}
+            className="flex overflow-x-auto overflow-y-hidden scroll-smooth h-full"
+            style={{
+              scrollSnapType: "x mandatory",
+              touchAction: "pan-x",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              overflowY: "hidden",
+            }}
+          >
+            {returningCars.map((car, index) => (
+              <div
+                key={car.id || index}
+                className="flex-shrink-0 flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full cursor-pointer"
+                style={{ scrollSnapAlign: "center" }}
+                onClick={() => handleBannerClick(car)}
+              >
+                {/* Left Side - Text Content */}
+                <div className="flex-1 min-w-0 pr-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg
+                      className="w-5 h-5 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      style={{ color: "#10B981" }}
+                    >
+                      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                    </svg>
+                    <span
+                      className="text-sm font-semibold uppercase tracking-wide"
+                      style={{ color: "#10B981" }}
+                    >
+                      Returning Soon
+                    </span>
+                  </div>
+                  <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1.5">
+                    {car.name}
+                  </h3>
+                  <p className="text-lg lg:text-xl text-white/90 mb-2">
+                    This car is returning in{" "}
+                    <span className="font-semibold">{car.returningIn}</span> - Book
+                    it now!
+                  </p>
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="text-lg lg:text-xl font-semibold text-white">
+                      Rs. {car.price} / day
+                    </span>
+                    <span className="text-white/60">•</span>
+                    <span className="text-lg text-white/80">{car.location}</span>
+                  </div>
+                  <button
+                    className="px-5 py-2.5 rounded-lg font-semibold text-base transition-all hover:opacity-90"
+                    style={{
+                      backgroundColor: colors.backgroundPrimary,
+                      color: colors.textPrimary,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBannerClick(car);
+                    }}
+                  >
+                    Book Now
+                  </button>
+                </div>
+
+                {/* Right Side - Car Image */}
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{ width: "45%", minWidth: "280px" }}
+                >
+                  <img
+                    src={car.image}
+                    alt={car.name}
+                    className="w-full h-auto object-contain"
+                    draggable={false}
+                    style={{
+                      objectFit: "contain",
+                      maxHeight: "340px",
+                      width: "100%",
+                      transform: "scale(1.15)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Hide scrollbar */}
+        <style>{`
+          .overflow-x-auto::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+
+        {/* Pagination Dots - Outside Banner - Web */}
+        {returningCars.length > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            {returningCars.map((_, index) => (
+              <span
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToIndex(index);
+                }}
+                className={`swiper-pagination-bullet-custom ${
+                  index === currentCarIndex
+                    ? "swiper-pagination-bullet-active-custom"
+                    : ""
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Custom Pagination Styles */}
+      <style>{`
+        .swiper-pagination-bullet-custom {
+          width: 6px;
+          height: 6px;
+          background: rgba(0, 0, 0, 0.3);
+          opacity: 1;
+          margin: 0 3px;
+          transition: all 0.3s ease;
+          border-radius: 50%;
+          cursor: pointer;
+          display: inline-block;
+        }
+        .swiper-pagination-bullet-active-custom {
+          background: ${colors.backgroundTertiary};
+          width: 24px;
+          height: 6px;
+          border-radius: 3px;
+        }
+      `}</style>
+    </div>
+  );
 };
 
 export default ReturningCarBanner;

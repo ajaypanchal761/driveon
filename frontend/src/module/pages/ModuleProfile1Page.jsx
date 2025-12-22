@@ -124,7 +124,7 @@ const ModuleProfile1Page = () => {
   const kycStatusText = isKYCVerified ? "Verified" : "Pending";
 
   // Module theme colors - using colors from module/theme/colors.js
-  const primaryColor = colors.backgroundTertiary || "#21292b"; // Dark color for primary buttons
+  const primaryColor = colors.backgroundTertiary || "#1C205C"; // Dark color for primary buttons
   const accentColor = colors.accentBlue || "#8FA3B0"; // Light blue-gray for accents
   const successColor = colors.success || "#4CAF50"; // Green for verified status
   const darkColor = colors.backgroundDark || "#294657"; // Dark blue for premium feel
@@ -184,12 +184,12 @@ const ModuleProfile1Page = () => {
   return (
     <div
       className="min-h-screen w-full relative pb-20 md:pb-0"
-      style={{ backgroundColor: colors.backgroundPrimary || "#f8f8f8" }}
+      style={{ backgroundColor: colors.backgroundPrimary || "#F1F2F4" }}
     >
       {/* Web Header - Only visible on desktop */}
       <header
         className="hidden md:block w-full sticky top-0 z-50"
-        style={{ backgroundColor: colors.brandBlack || "#21292b" }}
+        style={{ backgroundColor: colors.brandBlack || "#1C205C" }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
@@ -264,7 +264,7 @@ const ModuleProfile1Page = () => {
       {/* Mobile Header with Close Button */}
       <motion.div
         className="md:hidden sticky top-0 z-10 px-4 pt-4 pb-3 flex items-center justify-between"
-        style={{ backgroundColor: colors.backgroundPrimary || "#f8f8f8" }}
+        style={{ backgroundColor: colors.backgroundPrimary || "#F1F2F4" }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -308,10 +308,10 @@ const ModuleProfile1Page = () => {
       </motion.div>
 
       {/* Main content - compact spacing for mobile, centered on desktop */}
-      <div className="px-4 md:px-6 lg:px-8  pb-4 md:pb-6 space-y-2 md:space-y-4 max-w-4xl mx-auto">
+      <div className="px-4 md:px-6 lg:px-8 pt-0 md:pt-6 pb-4 md:pb-6 space-y-2 md:space-y-4 max-w-3xl mx-auto">
         {/* Profile Summary Card */}
         <motion.div
-          className="bg-white rounded-2xl p-3 shadow-sm"
+          className="bg-white rounded-2xl p-3 md:p-5 shadow-sm"
           style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -420,7 +420,7 @@ const ModuleProfile1Page = () => {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all hover:opacity-90 flex-shrink-0"
+              className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium border transition-all hover:opacity-90 flex-shrink-0"
               style={{
                 borderColor: colors.error || "#F44336",
                 color: colors.error || "#F44336",
@@ -494,7 +494,7 @@ const ModuleProfile1Page = () => {
 
         {/* Profile Details Card */}
         <motion.div
-          className="bg-white rounded-2xl p-4 shadow-sm"
+          className="bg-white rounded-2xl p-4 md:p-6 shadow-sm"
           style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -564,7 +564,7 @@ const ModuleProfile1Page = () => {
             <div key={item.id}>
               <motion.button
                 onClick={() => navigate(item.path)}
-                className="w-full p-4 flex items-center justify-between transition-all active:bg-gray-50 relative"
+                className="w-full p-4 md:py-4 md:px-6 flex items-center justify-between transition-all active:bg-gray-50 relative"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{

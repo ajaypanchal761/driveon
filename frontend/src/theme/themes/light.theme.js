@@ -7,7 +7,7 @@ export const lightTheme = {
   name: 'light',
   colors: {
     primary: {
-      DEFAULT: premiumColors.primary.DEFAULT, // #1c205c
+      DEFAULT: premiumColors.primary.DEFAULT, // #1C205C
       dark: premiumColors.primary.dark, // #1a1c45
       light: premiumColors.primary.light, // #2693b9
     },
