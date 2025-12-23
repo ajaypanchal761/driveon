@@ -471,10 +471,9 @@ const ReturningCarBanner = () => {
                 style={{ scrollSnapAlign: "center" }}
               >
                 {/* Left Side - Text Content */}
-                <div 
-                  className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${
-                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
-                  }`}
+                <div
+                  className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <svg
@@ -513,8 +512,8 @@ const ReturningCarBanner = () => {
                 {/* Right Side */}
                 <div
                   className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
-                  style={{ 
-                    width: "40%", 
+                  style={{
+                    width: "40%",
                     minWidth: "120px",
                     transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
                     opacity: index === currentCarIndex ? 1 : 0.8
@@ -587,10 +586,9 @@ const ReturningCarBanner = () => {
                 style={{ scrollSnapAlign: "center" }}
               >
                 {/* Left Side - Text Content */}
-                <div 
-                  className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${
-                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
-                  }`}
+                <div
+                  className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <svg
@@ -628,8 +626,8 @@ const ReturningCarBanner = () => {
                 {/* Right Side */}
                 <div
                   className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
-                  style={{ 
-                    width: "45%", 
+                  style={{
+                    width: "45%",
                     minWidth: "280px",
                     transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
                     opacity: index === currentCarIndex ? 1 : 0.8

@@ -121,6 +121,8 @@ const SearchPage = () => {
     features: [],
     availableFrom: '',
     availableTo: '',
+    pickupTime: '',
+    dropoffTime: '',
   });
 
   // Track if filters should auto-open (e.g., when coming from home pills)
@@ -143,6 +145,8 @@ const SearchPage = () => {
     const maxPrice = searchParams.get('maxPrice');
     const availabilityStart = searchParams.get('availabilityStart');
     const availabilityEnd = searchParams.get('availabilityEnd');
+    const pickupTime = searchParams.get('pickupTime');
+    const dropoffTime = searchParams.get('dropoffTime');
     const brandParam = searchParams.get('brand');
     const modelParam = searchParams.get('model');
 
@@ -155,6 +159,8 @@ const SearchPage = () => {
         },
         availableFrom: availabilityStart || prev.availableFrom,
         availableTo: availabilityEnd || prev.availableTo,
+        pickupTime: pickupTime || prev.pickupTime,
+        dropoffTime: dropoffTime || prev.dropoffTime,
         brand: brandParam || prev.brand,
         model: modelParam || prev.model,
       }));
@@ -162,7 +168,7 @@ const SearchPage = () => {
       if (brandParam) {
         setSelectedBrand(brandParam);
       }
-      
+
       // Auto-open filters if we have specific filter params (not just search query)
       if (minPrice || maxPrice || brandParam || modelParam) {
         setShouldOpenFilters(true);
@@ -286,6 +292,9 @@ const SearchPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        // Clear existing data to prevent flickering of old results
+        setAllRecommendCars([]);
+        setAllPopularCars([]);
 
         // Date Parsing Logic
         const pickupDate = searchParams.get('pickupDate');
@@ -335,7 +344,11 @@ const SearchPage = () => {
           isAvailable: true,
           availabilityStart: appliedFilters.availableFrom,
           availabilityEnd: appliedFilters.availableTo,
-        });
+          pickupTime: pickupTime,
+          dropoffTime: dropoffTime,
+        };
+
+        const carsResponse = await carService.getCars(queryParams);
 
         let cars = [];
         if (carsResponse.success && carsResponse.data?.cars) {
