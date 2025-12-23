@@ -70,6 +70,99 @@ const ModuleTestPage = () => {
   const [featuredCar, setFeaturedCar] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Banner Scroll Logic
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const bannerScrollRef = useRef(null);
+  const isBannerAutoScrollingRef = useRef(false);
+  const isBannerPausedRef = useRef(false);
+  const bannerPauseTimeoutRef = useRef(null);
+
+  const bannerCars = useMemo(() => [
+    { image: bannerCar1, alt: "Car 1" },
+    { image: bannerCar2, alt: "Car 2" },
+    { image: bannerCar3, alt: "Car 3" },
+    { image: bannerCar4, alt: "Car 4" },
+  ], []);
+
+  // Banner scroll handling
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = bannerScrollRef.current;
+      if (!container) return;
+      
+      const scrollLeft = container.scrollLeft;
+      const cardWidth = container.clientWidth;
+      const newIndex = Math.round(scrollLeft / cardWidth);
+      
+      if (newIndex >= 0 && newIndex < bannerCars.length) {
+        setCurrentBannerIndex(newIndex);
+      }
+
+      // Pause on manual scroll
+      if (!isBannerAutoScrollingRef.current) {
+        isBannerPausedRef.current = true;
+        if (bannerPauseTimeoutRef.current) clearTimeout(bannerPauseTimeoutRef.current);
+        bannerPauseTimeoutRef.current = setTimeout(() => {
+          isBannerPausedRef.current = false;
+        }, 5000);
+      }
+    };
+
+    const container = bannerScrollRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll, { passive: true });
+    }
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, [bannerCars.length]);
+
+  // Banner auto-scroll
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isBannerPausedRef.current) return;
+      
+      const container = bannerScrollRef.current;
+      if (!container) return;
+      
+      const nextIndex = (currentBannerIndex + 1) % bannerCars.length;
+      const cardWidth = container.clientWidth;
+      
+      isBannerAutoScrollingRef.current = true;
+      container.scrollTo({
+        left: nextIndex * cardWidth,
+        behavior: "smooth"
+      });
+      
+      setTimeout(() => {
+        isBannerAutoScrollingRef.current = false;
+      }, 500);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [currentBannerIndex, bannerCars.length]);
+
+  const goToBannerIndex = (index) => {
+    const container = bannerScrollRef.current;
+    if (!container) return;
+
+    isBannerPausedRef.current = true;
+    if (bannerPauseTimeoutRef.current) clearTimeout(bannerPauseTimeoutRef.current);
+    
+    isBannerAutoScrollingRef.current = true;
+    const cardWidth = container.clientWidth;
+    container.scrollTo({
+      left: index * cardWidth,
+      behavior: "smooth"
+    });
+
+    setTimeout(() => {
+      isBannerAutoScrollingRef.current = false;
+    }, 500);
+
+    bannerPauseTimeoutRef.current = setTimeout(() => {
+      isBannerPausedRef.current = false;
+    }, 5000);
+  };
+
   // Filter options state for FilterDropdown
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
@@ -279,6 +372,11 @@ const ModuleTestPage = () => {
   const [isTimeOpen, setIsTimeOpen] = useState(false);
   const [pickupDate, setPickupDate] = useState("");
   const [dropoffDate, setDropoffDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
+  const [dropoffTime, setDropoffTime] = useState("");
+  const [calendarTarget, setCalendarTarget] = useState("pickup");
+  const [timeTarget, setTimeTarget] = useState("pickup");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedHour, setSelectedHour] = useState("10");
   const [selectedMinute, setSelectedMinute] = useState("30");
   const [selectedPeriod, setSelectedPeriod] = useState("AM");
@@ -289,6 +387,7 @@ const ModuleTestPage = () => {
   const searchInputRef = useRef(null);
   const [favoriteStates, setFavoriteStates] = useState({});
   const [animatingStates, setAnimatingStates] = useState({});
+  const [isLocationExpanded, setIsLocationExpanded] = useState(false);
 
   const performSearch = () => {
     const trimmed = searchValue.trim();
@@ -677,8 +776,20 @@ const ModuleTestPage = () => {
   };
 
   const formatTimeDisplay = () => {
-    return `${selectedHour} : ${selectedMinute} ${selectedPeriod.toLowerCase()}`;
+    let hour = parseInt(selectedHour);
+    if (selectedPeriod === "PM" && hour !== 12) hour += 12;
+    if (selectedPeriod === "AM" && hour === 12) hour = 0;
+    return `${String(hour).padStart(2, "0")}:${selectedMinute}`;
   };
+
+  // ... (Header update happens in second chunk below or same tool call if possible?)
+  // Tool supports multiple chunks? Yes but `replace_file_content` is single chunk? No, `replace_file_content` is SINGLE contiguous block.
+  // `multi_replace_file_content` is needed for non-contiguous.
+  
+  // I will use `replace_file_content` for `formatTimeDisplay` first, then another for the Header JSX.
+  // Actually, I can use `multi_replace_file_content`.
+
+  // Let's use `multi_replace_file_content` to do both in one go.
 
   // Handler for when filters are applied
   const handleApplyFilters = (filters) => {
@@ -826,12 +937,12 @@ const ModuleTestPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col"
+      className="min-h-screen w-full flex flex-col max-md:h-screen max-md:overflow-hidden"
       style={{ backgroundColor: colors.backgroundTertiary }}
     >
       {/* TOP COMPACT HEADER - matches reference */}
       <div
-        className="px-4 pt-6 pb-6 space-y-3 rounded-b-[32px] shadow-lg relative z-20"
+        className="px-4 pt-6 pb-6 space-y-3 md:rounded-b-[32px] md:shadow-lg relative z-20 max-md:sticky max-md:top-0 max-md:flex-shrink-0"
         style={{ background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)" }}
       >
         {/* Logo and Location in same row */}
@@ -842,22 +953,26 @@ const ModuleTestPage = () => {
             className="h-9 w-auto object-contain"
           />
           {/* Location pill */}
-          <div
-            className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
+          <button
+            type="button"
+            className="flex items-center justify-between rounded-full px-3 py-1 text-[10px] flex-shrink-0"
             style={{
               backgroundColor: "rgba(255, 255, 255, 0.08)",
               backdropFilter: "blur(4px)",
               color: colors.textWhite,
               border: "1px solid rgba(255, 255, 255, 0.15)",
+              maxWidth: isLocationExpanded ? "75%" : "auto",
+              transition: "all 0.3s ease"
             }}
+            onClick={() => setIsLocationExpanded(!isLocationExpanded)}
           >
-            <span className="flex items-center gap-2 min-w-0">
+            <span className="flex items-center gap-1.5 min-w-0">
               <span
-                className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px]"
+                className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-white text-[9px] flex-shrink-0"
                 style={{ backgroundColor: colors.backgroundTertiary }}
               >
                 <svg
-                  className="w-3 h-3"
+                  className="w-2.5 h-2.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -876,288 +991,194 @@ const ModuleTestPage = () => {
                   />
                 </svg>
               </span>
-              <span className="truncate max-w-[140px]">
+              <span className={`leading-tight ${isLocationExpanded ? "text-left break-words whitespace-normal" : "truncate max-w-[120px]"}`}>
                 {currentLocation || "Getting location..."}
               </span>
             </span>
-          </div>
+            <svg
+              className={`w-3 h-3 text-gray-300 flex-shrink-0 ml-1.5 transition-transform duration-200 ${isLocationExpanded ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
         </div>
 
-        {/* Search Bar */}
-        <motion.div
-          className="w-full"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        >
-          {!isSearchActive ? (
-            <motion.button
-              type="button"
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                backdropFilter: "blur(10px)",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-              onClick={() => setIsSearchActive(true)}
-              whileHover={{
-                scale: 1.02,
-                borderColor: "rgba(255,255,255,0.2)",
-                transition: { duration: 0.2 },
-              }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <motion.svg
-                className="w-4 h-4 text-gray-200 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                animate={{
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatDelay: 1,
-                }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </motion.svg>
-              <span className="flex-1 text-left text-gray-300 truncate">
-                Search your dream car....
-              </span>
-              <motion.svg
-                className="w-3 h-3 text-gray-300 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                whileHover={{ x: 2 }}
-                transition={{ duration: 0.2 }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </motion.svg>
-            </motion.button>
-          ) : (
+        {/* Date/Time Search Bar - Premium Glassmorphism */}
+
             <motion.div
-              className="w-full flex items-center gap-3 rounded-full px-4 py-2.5 text-[11px] shadow-sm"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                backdropFilter: "blur(10px)",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              className="w-full relative z-20 hidden md:block"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
             >
-              <motion.svg
-                className="w-4 h-4 text-gray-200 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                initial={{ rotate: -90 }}
-                animate={{ rotate: 0 }}
-                transition={{ duration: 0.3 }}
-                onClick={performSearch}
-                style={{ cursor: "pointer" }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </motion.svg>
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search your dream car...."
-                className="flex-1 bg-transparent text-gray-300 placeholder-gray-400 outline-none text-[11px]"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    performSearch();
-                  }
-                  if (e.key === "Escape") {
-                    setIsSearchActive(false);
-                    setSearchValue("");
-                  }
-                }}
-              />
-              {searchValue && (
+              {!isSearchActive ? (
                 <motion.button
-                  type="button"
-                  onClick={() => {
-                    setSearchValue("");
-                    navigate("/search");
-                  }}
-                  className="flex-shrink-0"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsSearchActive(true)}
+                  className="w-full bg-white/10 backdrop-blur-md rounded-2xl p-3 flex items-center justify-between border border-white/20 shadow-lg"
                 >
-                  <svg
-                    className="w-4 h-4 text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-white/80 text-sm font-medium">Search your dream car...</span>
+                  </div>
                 </motion.button>
-              )}
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setIsSearchActive(false);
-                  setSearchValue("");
-                }}
-                className="flex-shrink-0"
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.2 }}
-              >
-                <svg
-                  className="w-4 h-4 text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              ) : (
+                <motion.div
+                  className="w-full bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search brand, model..."
+                    className="flex-1 bg-transparent text-gray-800 placeholder-gray-400 text-sm font-medium focus:outline-none px-2"
+                    onChange={(e) => handleSearch(e.target.value)}
                   />
-                </svg>
-              </motion.button>
+                  <button
+                    onClick={() => {
+                        setIsSearchActive(false);
+                        handleSearch('');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold text-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </motion.div>
+              )}
             </motion.div>
-          )}
-        </motion.div>
       </div>
 
       {/* CONTENT */}
       <main
-        className="flex-1 pb-0"
+        className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* Floating white card container like reference */}
         <motion.div
-          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4"
+          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0 max-md:rounded-t-3xl"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          {/* FILTER PILLS ROW */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            {/* All filters pill */}
-            <motion.button
-              type="button"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold flex-shrink-0 border shadow-sm"
-              style={{
-                borderColor: "#e5e7eb",
-                backgroundColor:
-                  activeFilter === "All filters"
-                    ? colors.backgroundTertiary
-                    : colors.backgroundSecondary,
-                color:
-                  activeFilter === "All filters"
-                    ? "#ffffff"
-                    : colors.textPrimary,
-              }}
-              onClick={() => {
-                setActiveFilter("All filters");
-                setIsFilterOpen(true);
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span>All filters</span>
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6L15 13.25V19a1 1 0 01-.553.894l-4 2A1 1 0 019 21v-7.75L3.2 4.6A1 1 0 013 4z"
-                />
-              </svg>
-            </motion.button>
+          {/* MOBILE PREMIUM BOOKING CARD */}
+          <div className="md:hidden -mt-3 mb-5 px-1 relative z-30">
+            <div className="bg-white rounded-[1.5rem] p-3.5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] border border-gray-100 relative">
+              <div className="grid grid-cols-2 gap-y-2.5 gap-x-3.5 relative">
+                {/* Pickup Section */}
+                <div 
+                  className="flex flex-col cursor-pointer group" 
+                  onClick={() => { setCalendarTarget('pickup'); setIsCalendarOpen(true); }}
+                >
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip Start Date</span>
+                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
+                    <span className="text-[13px] font-bold text-[#1C205C]">{pickupDate ? formatDateDisplay(pickupDate) : "dd-mm-yyyy"}</span>
+                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path></svg>
+                  </div>
+                </div>
 
-            {/* Price pill */}
-            <motion.button
-              type="button"
-              className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0"
-              style={{
-                backgroundColor:
-                  activeFilter === "$200–$1,000 / day"
-                    ? colors.backgroundTertiary
-                    : colors.backgroundSecondary,
-                color:
-                  activeFilter === "$200–$1,000 / day"
-                    ? "#ffffff"
-                    : colors.textSecondary,
-                border: "1px solid #e5e7eb",
-              }}
-              onClick={() => handleFilterNavigate("$200–$1,000 / day")}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              $200–$1,000 / day
-            </motion.button>
+                <div 
+                  className="flex flex-col cursor-pointer group" 
+                  onClick={() => { setTimeTarget('pickup'); setIsTimeOpen(true); }}
+                >
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip Start Time</span>
+                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
+                    <span className="text-[13px] font-bold text-[#1C205C]">{pickupTime || "hh:mm"}</span>
+                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </div>
+                </div>
 
-            {["Brand", "Body", "More"].map((label) => (
-              <motion.button
-                key={label}
-                type="button"
-                className="px-3 py-1.5 rounded-full text-[11px] font-medium flex-shrink-0 border"
-                style={{
-                  borderColor: "#e5e7eb",
-                  backgroundColor:
-                    activeFilter === label
-                      ? colors.backgroundTertiary
-                      : colors.backgroundSecondary,
-                  color:
-                    activeFilter === label ? "#ffffff" : colors.textSecondary,
+                {/* Return Section */}
+                <div 
+                  className="flex flex-col cursor-pointer group" 
+                  onClick={() => { setCalendarTarget('dropoff'); setIsCalendarOpen(true); }}
+                >
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip End Date</span>
+                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
+                    <span className="text-[13px] font-bold text-[#1C205C]">{dropoffDate ? formatDateDisplay(dropoffDate) : "dd-mm-yyyy"}</span>
+                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path></svg>
+                  </div>
+                </div>
+
+                <div 
+                  className="flex flex-col cursor-pointer group" 
+                  onClick={() => { setTimeTarget('dropoff'); setIsTimeOpen(true); }}
+                >
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip End Time</span>
+                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
+                    <span className="text-[13px] font-bold text-[#1C205C]">{dropoffTime || "hh:mm"}</span>
+                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  </div>
+                </div>
+              </div>
+
+              <motion.button 
+                whileTap={{ scale: 0.96 }}
+                className="w-full mt-3.5 py-3 bg-[#1C205C] text-white rounded-xl font-bold text-xs shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+                onClick={() => {
+                  // Validate inputs
+                  if (!pickupDate || !pickupTime || !dropoffDate || !dropoffTime) {
+                    alert('Please select both pickup and drop-off dates and times.');
+                    return;
+                  }
+
+                  // Combine date and time
+                  const startDateTimeStr = `${pickupDate} ${pickupTime}`;
+                  const endDateTimeStr = `${dropoffDate} ${dropoffTime}`;
+                  
+                  // Simple Date parsing (assuming standard format, if not, adjusts needed)
+                  // If times are like "10:30 AM", we need to parse them correctly
+                  const parseDateTime = (dateStr, timeStr) => {
+                    const [time, period] = timeStr.trim().split(/\s+/);
+                    let [hours, minutes] = time.split(':').map(Number);
+                    if (period && period.toLowerCase() === 'pm' && hours !== 12) hours += 12;
+                    if (period && period.toLowerCase() === 'am' && hours === 12) hours = 0;
+                    return new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
+                  };
+
+                  const startDate = parseDateTime(pickupDate, pickupTime);
+                  const endDate = parseDateTime(dropoffDate, dropoffTime);
+
+                  if (startDate >= endDate) {
+                    alert('Drop-off time must be after pickup time.');
+                    return;
+                  }
+
+                  // Navigate with query params
+                  const params = new URLSearchParams();
+                  params.append('availabilityStart', startDate.toISOString());
+                  params.append('availabilityEnd', endDate.toISOString());
+                  
+                  navigate(`/search?${params.toString()}`);
                 }}
-                onClick={() => handleFilterNavigate(label)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
               >
-                {label}
+                <span>Search Your Car</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
               </motion.button>
-            ))}
+            </div>
           </div>
+
 
           {/* CATEGORY IMAGE CARDS */}
           <motion.div
-            className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-lg border border-gray-100"
+            className="bg-white rounded-3xl px-3 pt-3 pb-4 shadow-lg border border-gray-100 hidden md:block"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
@@ -1202,41 +1223,46 @@ const ModuleTestPage = () => {
             </div>
           </motion.div>
 
-          {/* TOP BRANDS SECTION (between categories and meta row) */}
+          {/* TOP BRANDS SECTION */}
           <motion.div
-            className="mb-4"
+            className="mb-6 px-1"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.15 }}
           >
-            <h2 className="text-base font-bold text-black mb-4">Top Brands</h2>
-            <div className="relative overflow-hidden w-full">
-              <div className="flex gap-7 brands-scroll">
+            <div className="flex items-center justify-between mb-4 pr-1">
+              <h2 className="text-xl font-bold text-[#1C205C]">Our Premium Fleet</h2>
+              <span className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-bold text-gray-500 tracking-wider uppercase border border-gray-200/50">
+                World Class
+              </span>
+            </div>
+            
+            <div className="relative overflow-hidden w-full -mx-1 px-1">
+              {/* Fade masks */}
+              <div className="absolute top-0 left-0 w-8 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-8 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+              <div className="flex gap-4 brands-scroll py-2">
                 {brands.concat(brands).map((brand, index) => (
                   <motion.button
                     key={`${brand.id}-${index}`}
                     type="button"
-                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer"
+                    className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
                     onClick={() => {
-                      // Navigate to brand page
-                      // Use displayName if available, otherwise use name
                       const brandName = brand.displayName || brand.name || '';
                       navigate(`/brand/${encodeURIComponent(brandName)}`);
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center p-2.5"
-                      style={{ backgroundColor: colors.backgroundTertiary }}
-                    >
+                    <div className="w-20 h-20 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center p-4 transition-all duration-300 group-hover:bg-white group-hover:shadow-md group-hover:border-indigo-100">
                       <img
                         src={brand.logo}
                         alt={brand.name}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
                       />
                     </div>
-                    <span className="text-xs text-gray-600 font-medium">
+                    <span className="text-xs font-bold text-gray-500 group-hover:text-[#1C205C] transition-colors">
                       {brand.name}
                     </span>
                   </motion.button>
@@ -1245,7 +1271,7 @@ const ModuleTestPage = () => {
             </div>
             <style>{`
               .brands-scroll {
-                animation: scrollBrands 30s linear infinite;
+                animation: scrollBrands 40s linear infinite;
                 display: flex;
                 width: fit-content;
               }
@@ -1263,175 +1289,7 @@ const ModuleTestPage = () => {
             `}</style>
           </motion.div>
 
-          {/* META ROW */}
-          <div className="flex items-center justify-between mt-1 px-1">
-            <span className="text-xs text-gray-500">
-              {totalCarsCount || 0} available
-            </span>
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs text-gray-600"
-            >
-              <span>Popular</span>
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* FEATURED CAR CARD */}
-          {activeFeaturedCar && (
-            <motion.div
-              className="px-1"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <motion.div
-                className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
-                whileHover={{
-                  scale: 1.02,
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-                }}
-                transition={{ duration: 0.3 }}
-                onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
-              >
-                <div className="w-full h-48 bg-gray-100 overflow-hidden">
-                  <motion.img
-                    src={activeFeaturedCar.image}
-                    alt={activeFeaturedCar.name}
-                    className="w-full h-full object-cover"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ duration: 0.4 }}
-                  />
-                </div>
-                <div className="px-4 pt-3 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900">
-                        {activeFeaturedCar.name}
-                      </h3>
-                      <p className="mt-1 text-xs font-semibold text-gray-700">
-                        {activeFeaturedCar.price}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
-                        style={{ backgroundColor: colors.backgroundTertiary }}
-                      >
-                        <svg
-                          className="w-3 h-3 text-yellow-400"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <span>{activeFeaturedCar.rating}</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* BANNER SECTION - Between Featured Car and Best Cars */}
-          <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
-            <Swiper
-              modules={[Pagination, Autoplay]}
-              spaceBetween={0}
-              slidesPerView={1}
-              autoplay={{
-                delay: 3000,
-                disableOnInteraction: false,
-              }}
-              pagination={{
-                clickable: true,
-                bulletClass: "swiper-pagination-bullet-custom",
-                bulletActiveClass: "swiper-pagination-bullet-active-custom",
-                el: ".mobile-banner-pagination",
-              }}
-              className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
-              style={{ background: "rgb(41, 70, 87)" }}
-            >
-              {[
-                { image: bannerCar1, alt: "Car 1" },
-                { image: bannerCar2, alt: "Car 2" },
-                { image: bannerCar3, alt: "Car 3" },
-                { image: bannerCar4, alt: "Car 4" },
-              ].map((car, index) => (
-                <SwiperSlide key={index} className="!w-full">
-                  <div
-                    className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
-                    onClick={() => navigate("/search")}
-                  >
-                    <div className="flex-shrink-0 w-1/3 z-10">
-                      <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
-                        20% Off Your First Ride!
-                      </h2>
-                      <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
-                        Experience Seamless Car Rentals.
-                      </p>
-                      <button
-                        className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate("/search");
-                        }}
-                      >
-                        Discover More
-                      </button>
-                    </div>
-                    <div className="flex-1 flex items-center justify-end h-full relative">
-                      <img
-                        alt={car.alt}
-                        className="h-full max-h-full w-auto object-contain"
-                        draggable="false"
-                        src={car.image}
-                        style={{
-                          maxWidth: "100%",
-                          objectFit: "contain",
-                          transform: "translateX(15px)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4"></div>
-            <style>{`
-              .swiper-pagination-bullet-custom {
-                width: 8px;
-                height: 8px;
-                background: rgba(0, 0, 0, 0.3);
-                opacity: 1;
-                margin: 0 4px;
-                transition: all 0.3s ease;
-                border-radius: 50%;
-                cursor: pointer;
-                display: inline-block;
-              }
-              .swiper-pagination-bullet-active-custom {
-                background: #000000;
-                width: 10px;
-                height: 10px;
-              }
-            `}</style>
-          </div>
-
-          {/* BEST CARS GRID (above Nearby) */}
+          {/* BEST CARS GRID (Moved Here) */}
           <motion.div
             className="mt-4 px-1"
             initial={{ opacity: 0, y: 20 }}
@@ -1474,11 +1332,15 @@ const ModuleTestPage = () => {
                     className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
                     style={{ backgroundColor: "#f0f0f0" }}
                   >
-                    <img
+                    <motion.img
                       alt={car.name}
                       src={car.image}
-                      className="w-full h-full object-contain scale-125"
+                      className="w-full h-full object-contain z-10"
                       style={{ opacity: 1 }}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1.25, opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                      whileHover={{ scale: 1.35, rotate: 2 }}
                     />
                     <motion.button
                       className="absolute -top-1 left-1.5 md:left-2 z-10"
@@ -1605,6 +1467,195 @@ const ModuleTestPage = () => {
             </div>
           </motion.div>
 
+          {/* META ROW */}
+          <div className="flex items-center justify-between mt-1 px-1">
+            <span className="text-xs text-gray-500">
+              {totalCarsCount || 0} available
+            </span>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-gray-600"
+            >
+              <span>Popular</span>
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* FEATURED CAR CARD */}
+          {activeFeaturedCar && (
+            <motion.div
+              className="px-1"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              <motion.div
+                className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                }}
+                transition={{ duration: 0.3 }}
+                onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
+              >
+                <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                  <motion.img
+                    src={activeFeaturedCar.image}
+                    alt={activeFeaturedCar.name}
+                    className="w-full h-full object-cover"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ duration: 0.4 }}
+                  />
+                </div>
+                <div className="px-4 pt-3 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        {activeFeaturedCar.name}
+                      </h3>
+                      <p className="mt-1 text-xs font-semibold text-gray-700">
+                        {activeFeaturedCar.price}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
+                        style={{ backgroundColor: colors.backgroundTertiary }}
+                      >
+                        <svg
+                          className="w-3 h-3 text-yellow-400"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        <span>{activeFeaturedCar.rating}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* BANNER SECTION - Between Featured Car and Best Cars */}
+          <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
+            <div 
+              className="w-full rounded-2xl md:rounded-3xl overflow-hidden relative"
+              style={{ background: "rgb(41, 70, 87)" }}
+            >
+              <div
+                ref={bannerScrollRef}
+                className="flex overflow-x-auto overflow-y-hidden scroll-smooth w-full"
+                style={{
+                  scrollSnapType: "x mandatory",
+                  touchAction: "pan-x",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch"
+                }}
+              >
+                {bannerCars.map((car, index) => (
+                  <div
+                    key={index}
+                    className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
+                    style={{ scrollSnapAlign: "center" }}
+                    onClick={() => navigate("/search")}
+                  >
+                    <div 
+                      className={`flex-shrink-0 w-1/3 z-10 transition-all duration-700 ease-out ${
+                        index === currentBannerIndex ? "opacity-100 translate-y-0" : "opacity-60 translate-y-4"
+                      }`}
+                    >
+                      <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
+                        20% Off Your First Ride!
+                      </h2>
+                      <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
+                        Experience Seamless Car Rentals.
+                      </p>
+                      <button
+                        className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate("/search");
+                        }}
+                      >
+                        Discover More
+                      </button>
+                    </div>
+                    <div 
+                      className="flex-1 flex items-center justify-end h-full relative transition-all duration-700 ease-out"
+                      style={{
+                        transform: index === currentBannerIndex ? "scale(1)" : "scale(0.9)",
+                        opacity: index === currentBannerIndex ? 1 : 0.8
+                      }}
+                    >
+                      <img
+                        alt={car.alt}
+                        className="h-full max-h-full w-auto object-contain"
+                        draggable="false"
+                        src={car.image}
+                        style={{
+                          maxWidth: "100%",
+                          objectFit: "contain",
+                          transform: index === currentBannerIndex ? "translateX(15px) scale(1)" : "translateX(30px) scale(0.9)",
+                          transition: "transform 0.7s ease-out"
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4">
+              {bannerCars.map((_, index) => (
+                <span
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToBannerIndex(index);
+                  }}
+                  className={`swiper-pagination-bullet-custom ${
+                    index === currentBannerIndex ? "swiper-pagination-bullet-active-custom" : ""
+                  }`}
+                />
+              ))}
+            </div>
+            <style>{`
+              .swiper-pagination-bullet-custom {
+                width: 8px;
+                height: 8px;
+                background: rgba(0, 0, 0, 0.3);
+                opacity: 1;
+                margin: 0 4px;
+                transition: all 0.3s ease;
+                border-radius: 50%;
+                cursor: pointer;
+                display: inline-block;
+              }
+              .swiper-pagination-bullet-active-custom {
+                background: #000000;
+                width: 10px;
+                height: 10px;
+              }
+            `}</style>
+          </div>
+
+
+
+
           {/* NEARBY CARS SECTION (horizontal cards) */}
           <motion.div
             className="mt-4"
@@ -1650,10 +1701,14 @@ const ModuleTestPage = () => {
                       className="relative w-full h-28 flex items-center justify-center rounded-t-xl overflow-hidden"
                       style={{ backgroundColor: "#f0f0f0" }}
                     >
-                      <img
+                      <motion.img
                         src={car.image}
                         alt={car.name}
-                        className="w-full h-full object-contain scale-125"
+                        className="w-full h-full object-contain z-10"
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1.25, opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        whileHover={{ scale: 1.35, rotate: 2 }}
                       />
                       <motion.button
                         className="absolute -top-1 left-1.5 z-10"
@@ -1792,166 +1847,105 @@ const ModuleTestPage = () => {
         <BottomNavbar />
       </div>
 
-      {/* Calendar modal styled like provided popup */}
       {isCalendarOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-sm rounded-2xl max-h-[85vh] overflow-y-auto shadow-2xl bg-white opacity-100">
-            <div className="p-4">
-              {/* Time summary + open clock popup */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2 text-black">
-                  Time
-                </label>
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
-                    style={{
-                      borderColor: "#1C205C",
-                      backgroundColor: "#1C205C",
-                      color: "#ffffff",
-                    }}
-                    onClick={() => setIsTimeOpen(true)}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span className="font-semibold text-sm">
-                      {formatTimeDisplay()}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Calendar header */}
-              <div className="mb-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <button
-                    className="p-1.5 rounded-lg hover:bg-gray-100"
-                    type="button"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 19l-7-7 7-7"
-                      />
-                    </svg>
-                  </button>
-                  <h4 className="text-base font-semibold text-black">
-                    December {new Date().getFullYear()}
-                  </h4>
-                  <button
-                    className="p-1.5 rounded-lg hover:bg-gray-100"
-                    type="button"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Week days */}
-                <div className="grid grid-cols-7 gap-1 mb-4">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                    (d) => (
-                      <div
-                        key={d}
-                        className="text-center text-xs font-semibold py-1 text-gray-600"
-                      >
-                        {d}
-                      </div>
-                    )
-                  )}
-
-                  {/* Simple static days grid to match design */}
-                  <div></div>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map(
-                    (day) => (
-                      <button
-                        key={day}
-                        type="button"
-                        disabled
-                        className="p-1.5 rounded-lg text-xs font-semibold transition-all cursor-not-allowed"
-                        style={{
-                          backgroundColor: "transparent",
-                          color: "#d1d5db",
-                        }}
-                      >
-                        {day}
-                      </button>
-                    )
-                  )}
-                  {[
-                    15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-                    31,
-                  ].map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      className="p-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-gray-100"
-                      style={{
-                        backgroundColor: "transparent",
-                        color: "#000000",
-                      }}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
-                  type="button"
-                  style={{
-                    borderColor: "#1C205C",
-                    backgroundColor: "#ffffff",
-                    color: "#000000",
-                  }}
-                  onClick={() => setIsCalendarOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
-                  type="button"
-                  style={{ backgroundColor: "#1C205C" }}
-                  onClick={() => setIsCalendarOpen(false)}
-                >
-                  Done
-                </button>
-              </div>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-[320px] rounded-2xl shadow-2xl border p-5 relative" 
+            style={{ backgroundColor: "rgb(255, 255, 255)", borderColor: "rgb(229, 231, 235)" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold" style={{ color: "rgb(28, 32, 92)" }}>
+                {calendarTarget === 'pickup' ? 'Pick-up Date' : 'Return Date'}
+              </h3>
+              <button 
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors" 
+                style={{ color: "rgb(28, 32, 92)" }}
+                onClick={() => setIsCalendarOpen(false)}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
             </div>
-          </div>
+            
+            <div className="flex items-center justify-between mb-4">
+              <button 
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" 
+                style={{ color: "rgb(28, 32, 92)" }}
+                onClick={() => {
+                  const newDate = new Date(currentMonth);
+                  newDate.setMonth(newDate.getMonth() - 1);
+                  setCurrentMonth(newDate);
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+              <h4 className="text-sm font-bold capitalize" style={{ color: "rgb(28, 32, 92)" }}>
+                {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h4>
+              <button 
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" 
+                style={{ color: "rgb(28, 32, 92)" }}
+                onClick={() => {
+                  const newDate = new Date(currentMonth);
+                  newDate.setMonth(newDate.getMonth() + 1);
+                  setCurrentMonth(newDate);
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                <div key={day} className="text-center text-[10px] font-bold py-1" style={{ color: "rgb(156, 163, 175)" }}>{day}</div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                <div key={`empty-${i}`} />
+              ))}
+              
+              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                const day = i + 1;
+                const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const isPast = d < today;
+                
+                const isSelected = (calendarTarget === 'pickup' && pickupDate === dateString) || 
+                                   (calendarTarget === 'dropoff' && dropoffDate === dateString);
+
+                return (
+                  <button 
+                    key={day}
+                    type="button" 
+                    disabled={isPast}
+                    className={`p-1.5 rounded-lg text-[11px] font-bold transition-all relative ${
+                      isPast ? 'cursor-not-allowed opacity-30 text-gray-300' : 
+                      isSelected ? 'bg-[#1C205C] text-white shadow-lg' : 'hover:bg-gray-100 text-[#1C205C]'
+                    }`}
+                    onClick={() => {
+                      if (calendarTarget === 'pickup') setPickupDate(dateString);
+                      else setDropoffDate(dateString);
+                      setIsCalendarOpen(false);
+                    }}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
         </div>
       )}
 
@@ -1971,133 +1965,93 @@ const ModuleTestPage = () => {
         locations={filterOptions.locations}
       />
 
-      {/* Time picker popup shown above calendar */}
       {isTimeOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm rounded-2xl shadow-2xl bg-white">
-            <div className="p-6">
-              <h3 className="text-lg font-bold mb-4 text-center text-black">
-                Select Time
-              </h3>
-              <div className="flex items-center justify-center gap-4 mb-6">
-                {/* Hour column */}
-                <div className="flex flex-col items-center">
-                  <label className="text-xs font-semibold mb-2 text-gray-600">
-                    Hour
-                  </label>
-                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                    {Array.from({ length: 12 }, (_, i) =>
-                      String(i + 1).padStart(2, "0")
-                    ).map((hour) => (
-                      <button
-                        key={hour}
-                        type="button"
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === hour ? "text-white" : "text-black"
-                          }`}
-                        style={
-                          selectedHour === hour
-                            ? { backgroundColor: "#1C205C", color: "#ffffff" }
-                            : { backgroundColor: "transparent" }
-                        }
-                        onClick={() => setSelectedHour(hour)}
-                      >
-                        {hour}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <span className="text-2xl font-bold mt-8 text-black">:</span>
-
-                {/* Minute column */}
-                <div className="flex flex-col items-center">
-                  <label className="text-xs font-semibold mb-2 text-gray-600">
-                    Minute
-                  </label>
-                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                    {Array.from({ length: 60 }, (_, i) =>
-                      String(i).padStart(2, "0")
-                    ).map((minute) => (
-                      <button
-                        key={minute}
-                        type="button"
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === minute
-                            ? "text-white"
-                            : "text-black"
-                          }`}
-                        style={
-                          selectedMinute === minute
-                            ? { backgroundColor: "#1C205C", color: "#ffffff" }
-                            : { backgroundColor: "transparent" }
-                        }
-                        onClick={() => setSelectedMinute(minute)}
-                      >
-                        {minute}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Period column */}
-                <div className="flex flex-col items-center">
-                  <label className="text-xs font-semibold mb-2 text-gray-600">
-                    Period
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    {["AM", "PM"].map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === p ? "text-white" : "text-black"
-                          }`}
-                        style={
-                          selectedPeriod === p
-                            ? { backgroundColor: "#1C205C", color: "#ffffff" }
-                            : { backgroundColor: "transparent" }
-                        }
-                        onClick={() => setSelectedPeriod(p)}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div
-                className="mb-4 p-3 rounded-lg text-center"
-                style={{ backgroundColor: "#F1F2F4" }}
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-[280px] rounded-2xl shadow-2xl border p-5" 
+            style={{ backgroundColor: "rgb(255, 255, 255)", borderColor: "rgb(229, 231, 235)" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold" style={{ color: "rgb(28, 32, 92)" }}>Select Time</h3>
+              <button 
+                className="p-1 px-1.5 rounded-full hover:bg-gray-100 transition-colors" 
+                style={{ color: "rgb(28, 32, 92)" }}
+                onClick={() => setIsTimeOpen(false)}
               >
-                <span className="text-lg font-bold text-black">
-                  {formatTimeDisplay()}
-                </span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "rgb(156, 163, 175)" }}>Hour</label>
+                <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto scrollbar-hide px-1">
+                  {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => (
+                    <button 
+                      key={h}
+                      type="button" 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedHour === h.padStart(2, '0') ? 'bg-[#1C205C] text-white' : 'hover:bg-gray-100 text-[#1C205C]'}`}
+                      onClick={() => setSelectedHour(h.padStart(2, '0'))}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              <div className="flex gap-3">
-                <button
-                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
-                  type="button"
-                  style={{
-                    borderColor: "#1C205C",
-                    backgroundColor: "#ffffff",
-                    color: "#000000",
-                  }}
-                  onClick={() => setIsTimeOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
-                  type="button"
-                  style={{ backgroundColor: "#1C205C" }}
-                  onClick={() => setIsTimeOpen(false)}
-                >
-                  Done
-                </button>
+              
+              <span className="text-xl font-bold mt-6" style={{ color: "rgb(28, 32, 92)" }}>:</span>
+              
+              <div className="flex flex-col items-center">
+                <label className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "rgb(156, 163, 175)" }}>Minute</label>
+                <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto scrollbar-hide px-1">
+                  {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                    <button 
+                      key={m}
+                      type="button" 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedMinute === m ? 'bg-[#1C205C] text-white' : 'hover:bg-gray-100 text-[#1C205C]'}`}
+                      onClick={() => setSelectedMinute(m)}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-center ml-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "rgb(156, 163, 175)" }}>Period</label>
+                <div className="flex flex-col gap-2">
+                  {["AM", "PM"].map(p => (
+                    <button 
+                      key={p}
+                      type="button" 
+                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${selectedPeriod === p ? 'bg-[#1C205C] text-white' : 'hover:bg-gray-100 text-[#1C205C]'}`}
+                      onClick={() => setSelectedPeriod(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+
+            <button 
+              type="button" 
+              className="w-full py-3 rounded-xl font-bold text-xs transition-opacity hover:opacity-90 shadow-lg mb-2" 
+              style={{ backgroundColor: "rgb(28, 32, 92)", color: "rgb(255, 255, 255)" }}
+              onClick={() => {
+                const timeStr = formatTimeDisplay();
+                if (timeTarget === 'pickup') setPickupTime(timeStr);
+                else setDropoffTime(timeStr);
+                setIsTimeOpen(false);
+              }}
+            >
+              Confirm Time
+            </button>
+          </motion.div>
         </div>
       )}
     </div>

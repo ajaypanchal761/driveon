@@ -196,7 +196,7 @@ const ReturningCarBanner = () => {
         pauseTimeoutRef.current = setTimeout(() => {
           setIsAutoScrollPaused(false);
           isPausedRef.current = false;
-        }, 10000);
+        }, 5000); // Resume after 5 seconds
       }
     };
     const webHandler = () => {
@@ -208,11 +208,13 @@ const ReturningCarBanner = () => {
         pauseTimeoutRef.current = setTimeout(() => {
           setIsAutoScrollPaused(false);
           isPausedRef.current = false;
-        }, 10000);
+        }, 5000); // Resume after 5 seconds
       }
     };
+
     if (mobileContainer) mobileContainer.addEventListener("scroll", mobileHandler, { passive: true });
     if (webContainer) webContainer.addEventListener("scroll", webHandler, { passive: true });
+
     if (mobileContainer) handleScroll(mobileContainer);
     if (webContainer) handleScroll(webContainer);
     return () => {
@@ -468,8 +470,12 @@ const ReturningCarBanner = () => {
                 className="flex-shrink-0 flex items-center justify-between px-4 py-4 w-full cursor-default"
                 style={{ scrollSnapAlign: "center" }}
               >
-                {/* Left Side */}
-                <div className="flex-1 min-w-0 pr-3">
+                {/* Left Side - Text Content */}
+                <div 
+                  className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${
+                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-1.5">
                     <svg
                       className="w-4 h-4 flex-shrink-0"
@@ -506,8 +512,13 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side */}
                 <div
-                  className="flex-shrink-0 flex items-center justify-center"
-                  style={{ width: "40%", minWidth: "120px" }}
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
+                  style={{ 
+                    width: "40%", 
+                    minWidth: "120px",
+                    transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
+                    opacity: index === currentCarIndex ? 1 : 0.8
+                  }}
                 >
                   <img
                     src={car.image}
@@ -518,7 +529,8 @@ const ReturningCarBanner = () => {
                       objectFit: "contain",
                       maxHeight: "250px",
                       width: "100%",
-                      transform: "scale(1.25)",
+                      transform: index === currentCarIndex ? "scale(1.25)" : "scale(1)",
+                      transition: "transform 0.7s ease-out"
                     }}
                   />
                 </div>
@@ -574,8 +586,12 @@ const ReturningCarBanner = () => {
                 className="flex-shrink-0 flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full cursor-default"
                 style={{ scrollSnapAlign: "center" }}
               >
-                {/* Left Side */}
-                <div className="flex-1 min-w-0 pr-6">
+                {/* Left Side - Text Content */}
+                <div 
+                  className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${
+                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
+                  }`}
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <svg
                       className="w-5 h-5 flex-shrink-0"
@@ -611,8 +627,13 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side */}
                 <div
-                  className="flex-shrink-0 flex items-center justify-center"
-                  style={{ width: "45%", minWidth: "280px" }}
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
+                  style={{ 
+                    width: "45%", 
+                    minWidth: "280px",
+                    transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
+                    opacity: index === currentCarIndex ? 1 : 0.8
+                  }}
                 >
                   <img
                     src={car.image}
@@ -623,7 +644,8 @@ const ReturningCarBanner = () => {
                       objectFit: "contain",
                       maxHeight: "340px",
                       width: "100%",
-                      transform: "scale(1.15)",
+                      transform: index === currentCarIndex ? "scale(1.15)" : "scale(1)",
+                      transition: "transform 0.7s ease-out"
                     }}
                   />
                 </div>

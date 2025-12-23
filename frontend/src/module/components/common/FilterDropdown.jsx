@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { colors } from '../../theme/colors';
+import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from './CustomSelect';
-import CustomDatePicker from './CustomDatePicker';
+
 
 /**
  * FilterDropdown Component
@@ -12,6 +13,7 @@ const FilterDropdown = ({
   isOpen, 
   onClose, 
   onApplyFilters,
+  initialFilters, // Track currently applied filters
   brands,
   fuelTypes,
   transmissions,
@@ -41,6 +43,13 @@ const FilterDropdown = ({
     availableFrom: '',
     availableTo: '',
   });
+
+  // Sync internal filters with parent appliedFilters when dropdown opens
+  useEffect(() => {
+    if (isOpen && initialFilters) {
+      setFilters(initialFilters);
+    }
+  }, [isOpen, initialFilters]);
 
   // Close dropdown when clicking outside (mobile only)
   useEffect(() => {
@@ -197,42 +206,56 @@ const FilterDropdown = ({
   // On desktop, always show as sidebar when isOpen is true
   return (
     <>
-      {/* Mobile Dropdown - Only show when isOpen is true */}
-      {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="filter-dropdown fixed top-24 left-4 right-4 z-[100] max-h-[75vh] overflow-y-auto rounded-2xl shadow-2xl md:hidden"
-          style={{
-            backgroundColor: colors.backgroundSecondary,
-            animation: 'slideDownFilter 0.3s ease-out',
-          }}
-        >
-          {renderFilterContent(false)}
-        </div>
-      )}
-
-      {/* Desktop Sidebar - with backdrop */}
-      {isOpen && (
-        <div className="hidden md:flex md:fixed md:inset-0 md:z-[90]">
-          <div
-            className="flex-1 bg-black/30"
-            onClick={onClose}
-            aria-label="Close filters"
-          />
-          <div
-            className="filter-dropdown relative w-96 max-w-md h-full overflow-y-auto shadow-2xl border-l"
-            style={{
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.borderForm
-            }}
-          >
-            {renderFilterContent(true)}
+      <AnimatePresence>
+        {/* Unified Modal - Popup for Mobile, Sidebar for Desktop (or center modal if preferred) */}
+        {isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={onClose}
+            />
+            
+            {/* Modal Content */}
+            <motion.div
+              ref={dropdownRef}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className={`relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[2rem] shadow-2xl flex flex-col md:max-w-xl`}
+              style={{ 
+                backgroundColor: colors.backgroundSecondary,
+              }}
+            >
+              <div className="flex-1 overflow-y-auto">
+                {renderFilterContent(false)}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Animation Styles and Theme Colors for Dropdowns/Calendar */}
       <style>{`
+        @keyframes slideUpModal {
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        
+        .filter-modal-content {
+          animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         @keyframes slideDownFilter {
           from {
             opacity: 0;
@@ -622,51 +645,9 @@ const FilterDropdown = ({
             </div>
           </div>
 
-          {/* Location */}
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
-              Location
-            </label>
-            <input
-              type="text"
-              value={filters.location}
-              onChange={(e) => handleFilterChange('location', e.target.value)}
-              placeholder="Enter location"
-              list={filterLocations && filterLocations.length > 0 ? "location-options" : undefined}
-              className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
-              style={{ 
-                borderColor: colors.borderForm,
-                backgroundColor: colors.backgroundSecondary,
-                color: colors.textPrimary
-              }}
-            />
-            {filterLocations && filterLocations.length > 0 && (
-              <datalist id="location-options">
-                {filterLocations.map((location, index) => (
-                  <option key={index} value={location} />
-                ))}
-              </datalist>
-            )}
-          </div>
 
-          {/* Availability */}
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
-              Availability
-            </label>
-            <div className="space-y-1.5">
-              <CustomDatePicker
-                value={filters.availableFrom}
-                onChange={(value) => handleFilterChange('availableFrom', value)}
-                placeholder="From Date & Time"
-              />
-              <CustomDatePicker
-                value={filters.availableTo}
-                onChange={(value) => handleFilterChange('availableTo', value)}
-                placeholder="To Date & Time"
-              />
-            </div>
-          </div>
+
+
 
           {/* Features */}
           <div>

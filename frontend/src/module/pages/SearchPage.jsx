@@ -126,54 +126,53 @@ const SearchPage = () => {
   // Track if filters should auto-open (e.g., when coming from home pills)
   const [shouldOpenFilters, setShouldOpenFilters] = useState(false);
 
-
-
-  // Sync appliedFilters with URL params
+  // Sync brand selection between pills and filter dropdown
   useEffect(() => {
-    const filters = {};
-    const hasParams = Array.from(searchParams.keys()).length > 0;
+    setAppliedFilters(prev => ({
+      ...prev,
+      brand: selectedBrand === 'all' ? '' : selectedBrand
+    }));
+  }, [selectedBrand]);
 
-    if (!hasParams) {
-      // Reset to defaults if no params
-      setAppliedFilters({
-        brand: '',
-        model: '',
-        seats: '',
-        fuelType: '',
-        transmission: '',
-        color: '',
-        priceRange: { min: '', max: '' },
-        rating: '',
-        location: '',
-        carType: '',
-        features: [],
-        availableFrom: '',
-        availableTo: '',
-      });
-      return;
+  // Sync state when query params change (e.g., from home pills)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    setSearchQuery(q);
+
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    const availabilityStart = searchParams.get('availabilityStart');
+    const availabilityEnd = searchParams.get('availabilityEnd');
+    const brandParam = searchParams.get('brand');
+    const modelParam = searchParams.get('model');
+
+    if (minPrice || maxPrice || availabilityStart || availabilityEnd || brandParam || modelParam) {
+      setAppliedFilters((prev) => ({
+        ...prev,
+        priceRange: {
+          min: minPrice || prev.priceRange.min,
+          max: maxPrice || prev.priceRange.max,
+        },
+        availableFrom: availabilityStart || prev.availableFrom,
+        availableTo: availabilityEnd || prev.availableTo,
+        brand: brandParam || prev.brand,
+        model: modelParam || prev.model,
+      }));
+
+      if (brandParam) {
+        setSelectedBrand(brandParam);
+      }
+      
+      // Auto-open filters if we have specific filter params (not just search query)
+      if (minPrice || maxPrice || brandParam || modelParam) {
+        setShouldOpenFilters(true);
+      }
     }
 
-    // Explicitly read all potential params to ensure sync
-    filters.brand = searchParams.get('brand') || '';
-    filters.model = searchParams.get('model') || '';
-    filters.seats = searchParams.get('seats') || '';
-    filters.fuelType = searchParams.get('fuelType') || '';
-    filters.transmission = searchParams.get('transmission') || '';
-    filters.color = searchParams.get('color') || '';
-    filters.rating = searchParams.get('rating') || '';
-    filters.location = searchParams.get('location') || '';
-    filters.carType = searchParams.get('carType') || '';
-    filters.features = searchParams.get('features') ? searchParams.get('features').split(',') : [];
-
-    filters.priceRange = {
-      min: searchParams.get('minPrice') || '',
-      max: searchParams.get('maxPrice') || ''
-    };
-
-    setAppliedFilters(filters);
-
-    if (searchParams.get('filter')) setShouldOpenFilters(true);
-
+    const filterParam = searchParams.get('filter');
+    if (filterParam) {
+      setShouldOpenFilters(true);
+    }
   }, [searchParams]);
 
   // Open filters when requested by URL params
@@ -278,6 +277,7 @@ const SearchPage = () => {
       features: car.features || [],
       seats: car.seatingCapacity || car.seats || 4,
       seatingCapacity: car.seatingCapacity || car.seats || 4,
+      bookings: car.bookings || car.bookingsMap || [], // Preserve bookings for availability filter
     };
   };
 
@@ -333,33 +333,9 @@ const SearchPage = () => {
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
-          startDate: startDateStr,
-          endDate: endDateStr,
-        };
-
-        // Add supported backend filters
-        if (searchParams.get('brand') && searchParams.get('brand') !== 'All Brands') {
-          queryParams.brand = searchParams.get('brand');
-        }
-
-        // Map model to search (since backend getAllCars supports search which covers model)
-        // If 'q' exists, we prioritized it, otherwise use 'model'
-        const q = searchParams.get('q');
-        const model = searchParams.get('model');
-        if (q) {
-          queryParams.search = q;
-        } else if (model) {
-          queryParams.search = model;
-        }
-
-        if (searchParams.get('fuelType')) queryParams.fuelType = searchParams.get('fuelType');
-        if (searchParams.get('carType')) queryParams.carType = searchParams.get('carType');
-        if (searchParams.get('location')) queryParams.location = searchParams.get('location');
-        if (searchParams.get('minPrice')) queryParams.minPrice = searchParams.get('minPrice');
-        if (searchParams.get('maxPrice')) queryParams.maxPrice = searchParams.get('maxPrice');
-
-        // Fetch latest active cars with filters
-        const carsResponse = await carService.getCars(queryParams);
+          availabilityStart: appliedFilters.availableFrom,
+          availabilityEnd: appliedFilters.availableTo,
+        });
 
         let cars = [];
         if (carsResponse.success && carsResponse.data?.cars) {
@@ -601,7 +577,8 @@ const SearchPage = () => {
     };
 
     fetchData();
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appliedFilters.availableFrom, appliedFilters.availableTo]);
 
   // Handle search
   const handleSearch = (query) => {
@@ -617,24 +594,13 @@ const SearchPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Filter cars based on selected brand, search query, and applied filters
   const filteredRecommendCars = useMemo(() => {
     let filtered = allRecommendCars;
 
-    // Filter by brand (from brand filter buttons) - case-insensitive
-    if (selectedBrand !== 'all') {
-      const target = norm(selectedBrand);
-      filtered = filtered.filter((car) => {
-        const b = norm(car.brand);
-        const m = norm(car.model);
-        const n = norm(car.name);
-        return b === target || m.includes(target) || n.includes(target);
-      });
-    }
-
-    // Filter by brand from FilterDropdown
-    if (appliedFilters.brand) {
-      const target = norm(appliedFilters.brand);
+    // Filter by brand (combined from pills and dropdown)
+    const activeBrand = appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : '');
+    if (activeBrand) {
+      const target = norm(activeBrand);
       filtered = filtered.filter((car) => {
         const b = norm(car.brand);
         const m = norm(car.model);
@@ -712,6 +678,43 @@ const SearchPage = () => {
         const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
         return carPrice >= minPrice && carPrice <= maxPrice;
       });
+    }
+
+    // Filter by rating
+    if (appliedFilters.rating) {
+      const minRating = parseFloat(appliedFilters.rating.replace('+', '')) || 0;
+      filtered = filtered.filter((car) => {
+        const carRating = parseFloat(car.rating) || 0;
+        return carRating >= minRating;
+      });
+    }
+
+    // Filter by location
+    if (appliedFilters.location) {
+      const locationQuery = norm(appliedFilters.location);
+      filtered = filtered.filter((car) => {
+        const carLoc = norm(car.location);
+        return carLoc.includes(locationQuery);
+      });
+    }
+
+    // Filter by availability
+    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
+      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
+      const selectedTo = new Date(appliedFilters.availableTo).getTime();
+
+      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
+        filtered = filtered.filter((car) => {
+          // If the car has explicit bookings data, check for overlap
+          const bookings = car.bookings || car.bookingsMap || [];
+          const hasOverlap = bookings.some(booking => {
+            const bookingStart = new Date(booking.startDate || booking.start).getTime();
+            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
+            return selectedFrom < bookingEnd && selectedTo > bookingStart;
+          });
+          return !hasOverlap;
+        });
+      }
     }
 
     // Filter by search query (case-insensitive, supports partial words)
@@ -725,20 +728,10 @@ const SearchPage = () => {
   const filteredPopularCars = useMemo(() => {
     let filtered = allPopularCars;
 
-    // Filter by brand (from brand filter buttons) - case-insensitive
-    if (selectedBrand !== 'all') {
-      const target = norm(selectedBrand);
-      filtered = filtered.filter((car) => {
-        const b = norm(car.brand);
-        const m = norm(car.model);
-        const n = norm(car.name);
-        return b === target || m.includes(target) || n.includes(target);
-      });
-    }
-
-    // Filter by brand from FilterDropdown
-    if (appliedFilters.brand) {
-      const target = norm(appliedFilters.brand);
+    // Filter by brand (combined from pills and dropdown)
+    const activeBrand = appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : '');
+    if (activeBrand) {
+      const target = norm(activeBrand);
       filtered = filtered.filter((car) => {
         const b = norm(car.brand);
         const m = norm(car.model);
@@ -816,6 +809,42 @@ const SearchPage = () => {
         const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
         return carPrice >= minPrice && carPrice <= maxPrice;
       });
+    }
+
+    // Filter by rating
+    if (appliedFilters.rating) {
+      const minRating = parseFloat(appliedFilters.rating.replace('+', '')) || 0;
+      filtered = filtered.filter((car) => {
+        const carRating = parseFloat(car.rating) || 0;
+        return carRating >= minRating;
+      });
+    }
+
+    // Filter by location
+    if (appliedFilters.location) {
+      const locationQuery = norm(appliedFilters.location);
+      filtered = filtered.filter((car) => {
+        const carLoc = norm(car.location);
+        return carLoc.includes(locationQuery);
+      });
+    }
+
+    // Filter by availability
+    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
+      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
+      const selectedTo = new Date(appliedFilters.availableTo).getTime();
+
+      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
+        filtered = filtered.filter((car) => {
+          const bookings = car.bookings || car.bookingsMap || [];
+          const hasOverlap = bookings.some(booking => {
+            const bookingStart = new Date(booking.startDate || booking.start).getTime();
+            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
+            return selectedFrom < bookingEnd && selectedTo > bookingStart;
+          });
+          return !hasOverlap;
+        });
+      }
     }
 
     // Filter by search query (case-insensitive, supports partial words)
@@ -835,12 +864,12 @@ const SearchPage = () => {
     <>
       {/* Mobile View - DO NOT MODIFY */}
       <div
-        className="min-h-screen w-full flex flex-col md:hidden"
+        className="min-h-screen w-full flex flex-col md:hidden max-md:h-screen max-md:overflow-hidden"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* TOP COMPACT HEADER - matches module-test page */}
         <div
-          className="px-4 pt-6 pb-4 space-y-2"
+          className="px-4 pt-6 pb-4 space-y-2 max-md:sticky max-md:top-0 max-md:z-20 max-md:flex-shrink-0"
           style={{ backgroundColor: colors.backgroundTertiary }}
         >
           {/* Logo and Location in same row */}
@@ -970,12 +999,12 @@ const SearchPage = () => {
 
         {/* CONTENT */}
         <main
-          className="flex-1 pb-0"
+          className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
           style={{ backgroundColor: colors.backgroundTertiary }}
         >
           {/* Floating white card container */}
           <motion.div
-            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-44 space-y-4"
+            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-52 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0"
             style={{ minHeight: '100vh' }} // ensure full height on mobile even with little content
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1360,37 +1389,19 @@ const SearchPage = () => {
           </div>
         </div>
 
-        {/* Filter Dropdown for Web */}
+        {/* Shared Filter Modal for both Mobile and Web */}
         <FilterDropdown
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
+          initialFilters={appliedFilters} // Sync state when re-opening
           onApplyFilters={(filters) => {
             console.log('Applied filters:', filters);
-            // Construct query parameters same as Header.jsx
-            const params = new URLSearchParams(searchParams); // Keep existing params if any? No, replace.
-            // Actually better to start fresh from searchParams but update fields
-
-            // Clear keys we are about to set
-            ['brand', 'model', 'seats', 'fuelType', 'transmission', 'color', 'minPrice', 'maxPrice', 'rating', 'location', 'carType', 'features', 'pickupDate', 'dropoffDate'].forEach(k => params.delete(k));
-
-            if (filters.brand && filters.brand !== 'All Brands') params.set('brand', filters.brand);
-            if (filters.model) params.set('model', filters.model);
-            if (filters.seats && filters.seats !== 'Any') params.set('seats', filters.seats);
-            if (filters.fuelType) params.set('fuelType', filters.fuelType);
-            if (filters.transmission) params.set('transmission', filters.transmission);
-            if (filters.color && filters.color !== 'Any Color') params.set('color', filters.color);
-            if (filters.minPrice) params.set('minPrice', filters.minPrice);
-            if (filters.priceRange?.min) params.set('minPrice', filters.priceRange.min);
-            if (filters.priceRange?.max) params.set('maxPrice', filters.priceRange.max);
-            if (filters.rating) params.set('rating', filters.rating);
-            if (filters.location) params.set('location', filters.location);
-            if (filters.carType) params.set('carType', filters.carType);
-            if (filters.features && filters.features.length > 0) params.set('features', filters.features.join(','));
-            if (filters.availableFrom) params.set('pickupDate', filters.availableFrom);
-            if (filters.availableTo) params.set('dropoffDate', filters.availableTo);
-
-            navigate(`/search?${params.toString()}`);
+            setAppliedFilters(filters);
+            // Keep pills in sync with brand filter
+            setSelectedBrand(filters.brand ? filters.brand : 'all');
             setIsFilterOpen(false);
+            // Scroll to top to reveal filtered results
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           brands={filterOptions.brands}
           fuelTypes={filterOptions.fuelTypes}
@@ -1399,8 +1410,8 @@ const SearchPage = () => {
           carTypes={filterOptions.carTypes}
           featuresList={filterOptions.features}
           seatOptions={filterOptions.seats}
-          locations={filterOptions.locations}
           ratingOptions={filterOptions.ratings}
+          locations={filterOptions.locations}
         />
       </div>
     </>

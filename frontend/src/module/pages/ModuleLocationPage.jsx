@@ -1,16 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { colors } from '../theme/colors';
+import { useLocation } from '../../hooks/useLocation';
+import { useAppSelector } from '../../hooks/redux';
 
 const ModuleLocationPage = () => {
   const navigate = useNavigate();
-  const [pickup, setPickup] = useState('104B, near Barfani Dham, Sh...');
-  const [destination, setDestination] = useState('');
+  
+  // Get authentication state
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { user } = useAppSelector((state) => state.user);
+  
+  // Get user's current live location
+  const { currentLocation, isLoading: locationLoading } = useLocation(true, isAuthenticated, user?._id || user?.id);
+  
+  const [pickup, setPickup] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Set current location as default pickup when it's available
+  useEffect(() => {
+    if (currentLocation && (!pickup || pickup === 'Getting location...')) {
+      setPickup(currentLocation);
+    }
+  }, [currentLocation]);
+  
+  // Handle "Current Location" button click
+  const handleUseCurrentLocation = () => {
+    if (currentLocation) {
+      setPickup(currentLocation);
+    }
+  };
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  // Handle selecting a location
+  const handleSelectLocation = (locationName) => {
+    setPickup(locationName);
+    setSearchQuery('');
+    // After selection, navigate back or to search with this location
+    setTimeout(() => {
+        navigate('/module-test'); // Assuming this is the home page based on previous turns
+    }, 300);
   };
 
   return (
@@ -37,63 +70,38 @@ const ModuleLocationPage = () => {
 
         {/* Floating Input Card */}
         <div 
-          className="absolute left-6 right-6 -bottom-16 bg-white rounded-3xl shadow-2xl p-4 flex flex-col gap-0 border border-gray-100"
+          className="absolute left-6 right-6 -bottom-10 bg-white rounded-3xl shadow-2xl p-4 flex flex-col gap-0 border border-gray-100"
           style={{ boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}
         >
-          {/* Pickup Location */}
+          {/* Pickup Location Only */}
           <div className="flex items-start gap-4 p-3 rounded-2xl transition-colors hover:bg-blue-50/50">
             <div className="mt-1 relative flex flex-col items-center">
               <div className="w-4 h-4 rounded-full border-4 border-white ring-2 ring-blue-400 bg-blue-400"></div>
-              <div className="w-[2px] h-12 bg-gray-200 mt-2"></div>
             </div>
             <div className="flex-1">
               <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">Pickup Location</p>
               <input 
                 type="text" 
                 value={pickup}
-                onChange={(e) => setPickup(e.target.value)}
-                className="w-full text-sm font-semibold text-gray-800 bg-transparent outline-none focus:ring-0 placeholder:text-gray-400"
+                onChange={(e) => {
+                  setPickup(e.target.value);
+                  setSearchQuery(e.target.value);
+                }}
+                autoFocus
+                className="w-full text-base font-semibold text-gray-800 bg-transparent outline-none focus:ring-0 placeholder:text-gray-400"
                 placeholder="Where from?"
               />
             </div>
-            <button className="mt-1 text-gray-400">
+            <button 
+              className="mt-1 text-gray-400"
+              onClick={handleUseCurrentLocation}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
             </button>
           </div>
-
-          {/* Destination */}
-          <div className="flex items-start gap-4 p-3 pt-0 rounded-2xl transition-colors hover:bg-blue-50/50">
-            <div className="mt-1 flex flex-col items-center">
-               <div className="w-4 h-4 rounded-full border-4 border-white ring-2 ring-blue-900 bg-blue-900"></div>
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Destination</p>
-              <input 
-                type="text" 
-                value={destination}
-                onChange={(e) => {
-                    setDestination(e.target.value);
-                    setSearchQuery(e.target.value);
-                }}
-                autoFocus
-                className="w-full text-base font-medium text-gray-800 bg-transparent outline-none focus:ring-0 placeholder:text-gray-300"
-                placeholder="Search for a city or place"
-              />
-            </div>
-          </div>
-
-          {/* Floating Switch Button */}
-          <button 
-            className="absolute right-6 top-1/2 -translate-y-1/2 w-10 h-10 bg-white shadow-lg border border-gray-100 rounded-full flex items-center justify-center text-blue-900 transition-transform active:scale-95 z-20"
-            style={{ boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 16V4M7 4L3 8M7 4L11 8M17 8v12M17 20l4-4M17 20l-4-4" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -102,6 +110,7 @@ const ModuleLocationPage = () => {
         {/* Current Location Button */}
         <motion.button 
           whileTap={{ scale: 0.98 }}
+          onClick={handleUseCurrentLocation}
           className="w-full mt-4 flex items-center gap-4 p-4 rounded-3xl border border-blue-50 bg-blue-50/30 transition-all hover:bg-blue-50"
         >
           <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600">
@@ -147,8 +156,12 @@ const ModuleLocationPage = () => {
             >
                {/* Search results would go here */}
                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Search Results</p>
-               {[1, 2, 3].map((item) => (
-                  <button key={item} className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors">
+               {['Mumbai', 'Delhi', 'Bangalore'].map((city, item) => (
+                  <button 
+                    key={item} 
+                    onClick={() => handleSelectLocation(city)}
+                    className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors"
+                  >
                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -156,8 +169,8 @@ const ModuleLocationPage = () => {
                         </svg>
                      </div>
                      <div className="text-left">
-                        <p className="font-semibold text-gray-800">Sample Location {item}</p>
-                        <p className="text-xs text-gray-400">City name, State, Country</p>
+                        <p className="font-semibold text-gray-800">{city}</p>
+                        <p className="text-xs text-gray-400">Popular city in India</p>
                      </div>
                   </button>
                ))}

@@ -113,7 +113,7 @@ const CarDetailsPage = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
-  // Refs for section scrolling
+  // Refs for section scrolling (Mobile)
   const offersRef = useRef(null);
   const reviewsRef = useRef(null);
   const locationRef = useRef(null);
@@ -121,6 +121,15 @@ const CarDetailsPage = () => {
   const cancellationRef = useRef(null);
   const inclusionExclusionRef = useRef(null);
   const faqsRef = useRef(null);
+
+  // Refs for section scrolling (Web)
+  const offersRefWeb = useRef(null);
+  const reviewsRefWeb = useRef(null);
+  const locationRefWeb = useRef(null);
+  const featuresRefWeb = useRef(null);
+  const cancellationRefWeb = useRef(null);
+  const inclusionExclusionRefWeb = useRef(null);
+  const faqsRefWeb = useRef(null);
 
   // Mock car data - used only when no initial car is provided and API data isn't available
   // Structure matches document.txt requirements: Model, Brand, Seats, Transmission, Fuel Type, Color, Features, Rating, Reviews, Owner Details, Price
@@ -1942,7 +1951,19 @@ const CarDetailsPage = () => {
   // Handle tab click and scroll to section
   const handleTabClick = (tabName) => {
     setActiveTab(tabName);
-    const refs = {
+    
+    // Choose correct refs based on screen size
+    const isDesktop = window.innerWidth >= 1024;
+    
+    const refs = isDesktop ? {
+      offers: offersRefWeb,
+      reviews: reviewsRefWeb,
+      location: locationRefWeb,
+      features: featuresRefWeb,
+      cancellation: cancellationRefWeb,
+      'inclusion-exclusion': inclusionExclusionRefWeb,
+      faqs: faqsRefWeb,
+    } : {
       offers: offersRef,
       reviews: reviewsRef,
       location: locationRef,
@@ -1968,7 +1989,17 @@ const CarDetailsPage = () => {
   // Track active section on scroll
   useEffect(() => {
     const handleScroll = () => {
-      const refs = [
+      const isDesktop = window.innerWidth >= 1024;
+      
+      const refs = isDesktop ? [
+        { id: 'offers', ref: offersRefWeb },
+        { id: 'reviews', ref: reviewsRefWeb },
+        { id: 'location', ref: locationRefWeb },
+        { id: 'features', ref: featuresRefWeb },
+        { id: 'cancellation', ref: cancellationRefWeb },
+        { id: 'inclusion-exclusion', ref: inclusionExclusionRefWeb },
+        { id: 'faqs', ref: faqsRefWeb },
+      ] : [
         { id: 'offers', ref: offersRef },
         { id: 'reviews', ref: reviewsRef },
         { id: 'location', ref: locationRef },
@@ -1983,7 +2014,10 @@ const CarDetailsPage = () => {
       for (let i = refs.length - 1; i >= 0; i--) {
         const { id, ref } = refs[i];
         if (ref && ref.current) {
-          const elementTop = ref.current.offsetTop;
+          // Use getBoundingClientRect for more reliable position detection across different layouts
+          const rect = ref.current.getBoundingClientRect();
+          const elementTop = rect.top + window.pageYOffset;
+          
           if (scrollPosition >= elementTop) {
             setActiveTab(id);
             break;
@@ -3676,7 +3710,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Offers Section */}
-            <div ref={offersRef} className="mb-8 scroll-mt-24">
+            <div ref={offersRefWeb} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-4">Exclusive Offers</h2>
               <div className="space-y-4">
                 {offers && offers.length > 0 ? (
@@ -3724,7 +3758,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Reviews Section */}
-            <div ref={reviewsRef} className="mb-8 scroll-mt-24">
+            <div ref={reviewsRefWeb} className="mb-8 scroll-mt-24">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-black">Review ({car.reviewsCount})</h2>
                 <button
@@ -3769,7 +3803,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Location Section */}
-            <div ref={locationRef} className="mb-8 scroll-mt-24">
+            <div ref={locationRefWeb} className="mb-8 scroll-mt-24">
               <div
                 className="p-4 rounded-xl border-2"
                 style={{
@@ -3850,7 +3884,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Car Features - As per document.txt: Features Array */}
-            <div ref={featuresRef} className="mb-8 scroll-mt-24">
+            <div ref={featuresRefWeb} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-3">Car features</h2>
 
               {/* Feature Icons Grid (if featureIcons exist) */}
@@ -3937,7 +3971,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Cancellation Section */}
-            <div ref={cancellationRef} className="mb-8 scroll-mt-24">
+            <div ref={cancellationRefWeb} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold text-black mb-4">Cancellation Policy</h2>
               <div
                 className="p-4 rounded-xl border-2"
@@ -3986,7 +4020,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* Inclusion/Exclusion Section */}
-            <div ref={inclusionExclusionRef} className="mb-8 scroll-mt-24">
+            <div ref={inclusionExclusionRefWeb} className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>Inclusion/Exclusions</h2>
               <div className="space-y-4">
                 {inclusionsExclusions && inclusionsExclusions.length > 0 ? (
@@ -4023,7 +4057,7 @@ const CarDetailsPage = () => {
             </div>
 
             {/* FAQs Section */}
-            <div ref={faqsRef} className="mb-8 scroll-mt-24">
+            <div ref={faqsRefWeb} className="mb-8 scroll-mt-24">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>FAQs</h2>
                 <button

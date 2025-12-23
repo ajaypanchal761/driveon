@@ -199,7 +199,7 @@ const AdminSidebar = () => {
           style={{ borderBottomColor: colors.borderMedium }}
         >
           <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
-            Admin Panel
+            Driveon Admin
           </h2>
         </div>
 
