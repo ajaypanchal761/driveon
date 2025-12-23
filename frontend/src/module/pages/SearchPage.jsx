@@ -293,6 +293,8 @@ const SearchPage = () => {
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
+          availabilityStart: appliedFilters.availableFrom,
+          availabilityEnd: appliedFilters.availableTo,
         });
 
         let cars = [];
@@ -532,7 +534,7 @@ const SearchPage = () => {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [appliedFilters.availableFrom, appliedFilters.availableTo]);
 
   // Handle search
   const handleSearch = (query) => {

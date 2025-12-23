@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { colors } from '../../theme/colors';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from './CustomSelect';
-import CustomDatePicker from './CustomDatePicker';
+
 
 /**
  * FilterDropdown Component
@@ -645,51 +645,9 @@ const FilterDropdown = ({
             </div>
           </div>
 
-          {/* Location */}
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
-              Location
-            </label>
-            <input
-              type="text"
-              value={filters.location}
-              onChange={(e) => handleFilterChange('location', e.target.value)}
-              placeholder="Enter location"
-              list={filterLocations && filterLocations.length > 0 ? "location-options" : undefined}
-              className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
-              style={{ 
-                borderColor: colors.borderForm,
-                backgroundColor: colors.backgroundSecondary,
-                color: colors.textPrimary
-              }}
-            />
-            {filterLocations && filterLocations.length > 0 && (
-              <datalist id="location-options">
-                {filterLocations.map((location, index) => (
-                  <option key={index} value={location} />
-                ))}
-              </datalist>
-            )}
-          </div>
 
-          {/* Availability */}
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.textPrimary }}>
-              Availability
-            </label>
-            <div className="space-y-1.5">
-              <CustomDatePicker
-                value={filters.availableFrom}
-                onChange={(value) => handleFilterChange('availableFrom', value)}
-                placeholder="From Date & Time"
-              />
-              <CustomDatePicker
-                value={filters.availableTo}
-                onChange={(value) => handleFilterChange('availableTo', value)}
-                placeholder="To Date & Time"
-              />
-            </div>
-          </div>
+
+
 
           {/* Features */}
           <div>
