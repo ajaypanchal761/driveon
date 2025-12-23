@@ -250,7 +250,7 @@ const ReturningCarBanner = () => {
               >
                 {/* Left Side - Text Content */}
                 <div 
-                  className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${
+                  className={`flex-1 min-w-0 pr-3 transition-all duration-300 ease-out ${
                     index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
                   }`}
                 >
@@ -302,7 +302,7 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side - Car Image */}
                 <div
-                  className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300 ease-out"
                   style={{ 
                     width: "40%", 
                     minWidth: "120px",
@@ -315,12 +315,13 @@ const ReturningCarBanner = () => {
                     alt={car.name}
                     className="w-full h-auto object-contain"
                     draggable={false}
+                    loading="eager"
                     style={{
                       objectFit: "contain",
                       maxHeight: "250px",
                       width: "100%",
                       transform: index === currentCarIndex ? "scale(1.25)" : "scale(1)",
-                      transition: "transform 0.7s ease-out"
+                      transition: "transform 0.3s ease-out"
                     }}
                   />
                 </div>
@@ -388,7 +389,7 @@ const ReturningCarBanner = () => {
               >
                 {/* Left Side - Text Content */}
                 <div 
-                  className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${
+                  className={`flex-1 min-w-0 pr-6 transition-all duration-300 ease-out ${
                     index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
                   }`}
                 >
@@ -440,7 +441,7 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side - Car Image */}
                 <div
-                  className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300 ease-out"
                   style={{ 
                     width: "45%", 
                     minWidth: "280px",
@@ -453,12 +454,13 @@ const ReturningCarBanner = () => {
                     alt={car.name}
                     className="w-full h-auto object-contain"
                     draggable={false}
+                    loading="eager"
                     style={{
                       objectFit: "contain",
                       maxHeight: "340px",
                       width: "100%",
                       transform: index === currentCarIndex ? "scale(1.15)" : "scale(1)",
-                      transition: "transform 0.7s ease-out"
+                      transition: "transform 0.3s ease-out"
                     }}
                   />
                 </div>

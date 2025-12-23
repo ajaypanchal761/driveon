@@ -1,6 +1,5 @@
 import Car from '../models/Car.js';
 import User from '../models/User.js';
-import Booking from '../models/Booking.js';
 
 /**
  * @desc    Get All Cars (Public)
@@ -23,8 +22,6 @@ export const getAllCars = async (req, res) => {
       isAvailable = true,
       isFeatured,
       isPopular,
-      availabilityStart,
-      availabilityEnd,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = req.query;
@@ -34,32 +31,6 @@ export const getAllCars = async (req, res) => {
       status: 'active', // Public can only see active cars
       isAvailable: isAvailable === 'true' || isAvailable === true,
     };
-
-    // Availability Filter (Database Check)
-    if (availabilityStart && availabilityEnd) {
-      const start = new Date(availabilityStart);
-      const end = new Date(availabilityEnd);
-
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        // Find bookings that overlap with the requested dates
-        // Overlap logic: (StartA <= EndB) and (EndA >= StartB)
-        const conflictingBookings = await Booking.find({
-          status: { $in: ['confirmed', 'active', 'pending'] }, // Statuses that block availability
-          $or: [
-            {
-              startDate: { $lte: end },
-              endDate: { $gte: start }
-            }
-          ]
-        }).select('car');
-
-        const bookedCarIds = conflictingBookings.map(b => b.car);
-        
-        if (bookedCarIds.length > 0) {
-          query._id = { $nin: bookedCarIds };
-        }
-      }
-    }
 
     // Search filter
     if (search) {
