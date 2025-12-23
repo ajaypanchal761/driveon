@@ -398,6 +398,45 @@ const ModuleTestPage = () => {
     }
   };
 
+  const handleBookingSearch = () => {
+    let queryParams = new URLSearchParams();
+    
+    // Pass existing search value if any
+    const trimmed = searchValue.trim();
+    if (trimmed) {
+      queryParams.append('q', trimmed);
+    }
+
+    if (pickupDate && dropoffDate) {
+       const getISOString = (dateStr, timeStr) => {
+           const [year, month, day] = dateStr.split('-').map(Number);
+           let hours = 10;
+           let minutes = 30; // Default time
+           if (timeStr) {
+               const parts = timeStr.trim().split(' ');
+               if (parts.length === 2) {
+                   const [time, period] = parts;
+                   const [h, m] = time.split(':').map(Number);
+                   hours = h;
+                   minutes = m;
+                   if (period === 'PM' && hours !== 12) hours += 12;
+                   if (period === 'AM' && hours === 12) hours = 0;
+               }
+           }
+           return new Date(year, month - 1, day, hours, minutes).toISOString();
+       };
+       
+       try {
+           queryParams.append('availabilityStart', getISOString(pickupDate, pickupTime));
+           queryParams.append('availabilityEnd', getISOString(dropoffDate, dropoffTime));
+       } catch (e) {
+           console.error("Invalid date format", e);
+       }
+    }
+    
+    navigate(`/search?${queryParams.toString()}`);
+  };
+
   // Navigate to search with optional filter query params when pills are tapped
   const handleFilterNavigate = (label) => {
     setActiveFilter(label);
@@ -1116,7 +1155,7 @@ const ModuleTestPage = () => {
               <motion.button 
                 whileTap={{ scale: 0.96 }}
                 className="w-full mt-3.5 py-3 bg-[#1C205C] text-white rounded-full font-bold text-xs shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
-                onClick={() => navigate('/search')}
+                onClick={handleBookingSearch}
               >
                 <span>Search Your Car</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
