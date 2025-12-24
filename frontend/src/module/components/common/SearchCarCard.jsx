@@ -3,6 +3,7 @@ import { colors } from '../../theme/colors';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useInViewAnimation from '../../hooks/useInViewAnimation';
+import { useFavorites } from '../../../context/FavoritesContext';
 
 /**
  * SearchCarCard Component - Car card for search page
@@ -12,7 +13,8 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
   const navigate = useNavigate();
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const isFav = isFavorite(car.id);
 
   // Horizontal layout for Popular Cars section (matches second image)
   if (horizontal) {
@@ -107,36 +109,50 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
         />
         
         {/* Heart Icon - Top Left */}
-        <motion.button 
-          className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center"
+        <button 
+          className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center touch-target"
           onClick={(e) => {
             e.stopPropagation();
-            setIsFavorite(!isFavorite);
-            setIsAnimating(true);
-            setTimeout(() => setIsAnimating(false), 300);
-          }}
-          animate={isAnimating ? {
-            scale: [1, 1.3, 1],
-          } : {}}
-          transition={{
-            duration: 0.3,
-            ease: "easeOut"
+            const wasFav = toggleFavorite(car);
+            if (wasFav) {
+              setIsAnimating(true);
+              setTimeout(() => setIsAnimating(false), 800);
+            }
           }}
         >
-          <svg 
-            className={`w-5 h-5 md:w-6 md:h-6 ${isFavorite ? 'text-red-500' : 'text-white md:text-gray-700'}`}
-            fill={isFavorite ? 'currentColor' : 'none'}
-            stroke="currentColor" 
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
-            />
-          </svg>
-        </motion.button>
+          <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+            {/* Sparkles Burst */}
+            <div className="sparkles-container">
+              {[...Array(8)].map((_, i) => (
+                <span 
+                  key={i} 
+                  className={`sparkle-burst ${isAnimating ? 'active' : ''}`} 
+                  style={{ 
+                    transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
+                  }} 
+                />
+              ))}
+            </div>
+            
+            {/* Heart Icon */}
+            <svg 
+              className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                isFav ? 'text-red-500 heart-icon liked' : 'text-white md:text-gray-700 heart-icon'
+              }`}
+              fill={isFav ? 'currentColor' : 'none'}
+              stroke="currentColor" 
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              style={{ overflow: 'visible' }}
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+              />
+            </svg>
+          </div>
+        </button>
       </div>
 
       {/* Car Details - Compact on mobile, more spacious on desktop */}

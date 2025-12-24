@@ -162,6 +162,12 @@ const ModuleProfile1Page = () => {
       path: "/bookings",
     },
     {
+      id: "favorites",
+      title: "My Favorites",
+      description: "Your curated collection of premium cars.",
+      path: "/favorites",
+    },
+    {
       id: "settings",
       title: "Settings",
       description: "Manage your account settings and preferences.",

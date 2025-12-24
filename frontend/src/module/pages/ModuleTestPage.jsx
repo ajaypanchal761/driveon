@@ -12,6 +12,7 @@ import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
 import { useLocation } from "../../hooks/useLocation";
+import { useFavorites } from '../../context/FavoritesContext';
 
 // Use existing car images from assets
 import carImg1 from "../../assets/car_banImg1.jpg";
@@ -385,18 +386,9 @@ const ModuleTestPage = () => {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const searchInputRef = useRef(null);
-  const [favoriteStates, setFavoriteStates] = useState({});
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [animatingStates, setAnimatingStates] = useState({});
   const [isLocationExpanded, setIsLocationExpanded] = useState(false);
-
-  const performSearch = () => {
-    const trimmed = searchValue.trim();
-    if (trimmed) {
-      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
-    } else {
-      navigate("/search");
-    }
-  };
 
   const handleBookingSearch = () => {
     let queryParams = new URLSearchParams();
@@ -408,6 +400,30 @@ const ModuleTestPage = () => {
     }
 
     if (pickupDate && dropoffDate) {
+       const convertTo24Hour = (timeStr) => {
+           if (!timeStr) return "";
+           const parts = timeStr.trim().split(' ');
+           if (parts.length !== 2) return timeStr; // Assume already 24h or invalid
+           const [time, period] = parts;
+           let [hours, minutes] = time.split(':').map(Number);
+           if (period === 'PM' && hours !== 12) hours += 12;
+           if (period === 'AM' && hours === 12) hours = 0;
+           return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+       };
+
+       // Save to localStorage for BookNowPage to pick up
+       try {
+           const bookingDates = {
+               pickupDate: pickupDate,
+               pickupTime: convertTo24Hour(pickupTime),
+               dropDate: dropoffDate,
+               dropTime: convertTo24Hour(dropoffTime)
+           };
+           localStorage.setItem('selectedBookingDates', JSON.stringify(bookingDates));
+       } catch (e) {
+           console.error("Failed to save booking dates", e);
+       }
+
        const getISOString = (dateStr, timeStr) => {
            const [year, month, day] = dateStr.split('-').map(Number);
            let hours = 10;
@@ -435,6 +451,15 @@ const ModuleTestPage = () => {
     }
     
     navigate(`/search?${queryParams.toString()}`);
+  };
+
+  const performSearch = () => {
+    const trimmed = searchValue.trim();
+    if (trimmed) {
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    } else {
+      navigate("/search");
+    }
   };
 
   // Navigate to search with optional filter query params when pills are tapped
@@ -1335,54 +1360,58 @@ const ModuleTestPage = () => {
                       transition={{ duration: 0.5 }}
                       whileHover={{ scale: 1.35, rotate: 2 }}
                     />
-                    <motion.button
-                      className="absolute -top-1 left-1.5 md:left-2 z-10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFavoriteStates((prev) => ({
-                          ...prev,
-                          [car.id]: !prev[car.id],
-                        }));
-                        setAnimatingStates((prev) => ({
-                          ...prev,
-                          [car.id]: true,
-                        }));
-                        setTimeout(() => {
-                          setAnimatingStates((prev) => ({
-                            ...prev,
-                            [car.id]: false,
-                          }));
-                        }, 300);
-                      }}
-                      animate={
-                        animatingStates[car.id]
-                          ? {
-                              scale: [1, 1.3, 1],
-                            }
-                          : {}
-                      }
-                      transition={{
-                        duration: 0.3,
-                        ease: "easeOut",
-                      }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <svg
-                        className={`w-5 h-5 md:w-6 md:h-6 ${
-                          favoriteStates[car.id] ? "text-red-500" : "text-white"
-                        }`}
-                        fill={favoriteStates[car.id] ? "currentColor" : "none"}
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
+                      <button
+                        className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const wasFav = toggleFavorite(car);
+                          if (wasFav) {
+                            setAnimatingStates((prev) => ({
+                              ...prev,
+                              [car.id]: true,
+                            }));
+                            setTimeout(() => {
+                              setAnimatingStates((prev) => ({
+                                ...prev,
+                                [car.id]: false,
+                              }));
+                            }, 800);
+                          }
+                        }}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
-                    </motion.button>
+                        <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+                          <div className="sparkles-container">
+                            {[...Array(8)].map((_, i) => (
+                              <span 
+                                key={i} 
+                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
+                                style={{ 
+                                  transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
+                                }} 
+                              />
+                            ))}
+                          </div>
+                          
+                          <svg
+                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                              isFavorite(car.id) 
+                                ? "text-red-500 heart-icon liked" 
+                                : "text-white heart-icon"
+                            }`}
+                            fill={isFavorite(car.id) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                            style={{ overflow: 'visible' }}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                          </svg>
+                        </div>
+                      </button>
                   </div>
                   <div className="p-2 md:p-3 lg:p-4">
                     <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
@@ -1704,58 +1733,58 @@ const ModuleTestPage = () => {
                         transition={{ duration: 0.5 }}
                         whileHover={{ scale: 1.35, rotate: 2 }}
                       />
-                      <motion.button
-                        className="absolute -top-1 left-1.5 z-10"
+                      <button
+                        className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setFavoriteStates((prev) => ({
-                            ...prev,
-                            [car.id]: !prev[car.id],
-                          }));
-                          setAnimatingStates((prev) => ({
-                            ...prev,
-                            [car.id]: true,
-                          }));
-                          setTimeout(() => {
+                          const wasFav = toggleFavorite(car);
+                          if (wasFav) {
                             setAnimatingStates((prev) => ({
                               ...prev,
-                              [car.id]: false,
+                              [car.id]: true,
                             }));
-                          }, 300);
-                        }}
-                        animate={
-                          animatingStates[car.id]
-                            ? {
-                                scale: [1, 1.3, 1],
-                              }
-                            : {}
-                        }
-                        transition={{
-                          duration: 0.3,
-                          ease: "easeOut",
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <svg
-                          className={`w-5 h-5 ${
-                            favoriteStates[car.id]
-                              ? "text-red-500"
-                              : "text-white"
-                          }`}
-                          fill={
-                            favoriteStates[car.id] ? "currentColor" : "none"
+                            setTimeout(() => {
+                              setAnimatingStates((prev) => ({
+                                ...prev,
+                                [car.id]: false,
+                              }));
+                            }, 800);
                           }
-                          stroke="currentColor"
-                          strokeWidth={2}
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
-                      </motion.button>
+                        }}
+                      >
+                        <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+                          <div className="sparkles-container">
+                            {[...Array(8)].map((_, i) => (
+                              <span 
+                                key={i} 
+                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
+                                style={{ 
+                                  transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
+                                }} 
+                              />
+                            ))}
+                          </div>
+                          
+                          <svg
+                            className={`w-5 h-5 transition-colors duration-200 ${
+                              isFavorite(car.id) 
+                                ? "text-red-500 heart-icon liked" 
+                                : "text-white heart-icon"
+                            }`}
+                            fill={isFavorite(car.id) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                            style={{ overflow: 'visible' }}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                          </svg>
+                        </div>
+                      </button>
                     </div>
                     <div className="p-2 md:p-3">
                       <h3 className="text-xs md:text-sm font-bold text-black mb-1">

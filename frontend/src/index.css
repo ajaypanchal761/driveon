@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./animations.css";
 
 /* Mobile-First Base Styles */
 @layer base {

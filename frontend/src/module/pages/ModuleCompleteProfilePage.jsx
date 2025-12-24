@@ -540,7 +540,6 @@ const ModuleCompleteProfilePage = () => {
                   backgroundColor: colors.backgroundSecondary,
                   color: colors.textPrimary,
                 }}
-                key={`name-${user?.name || formData.name || 'empty'}`}
               />
               {errors.name && (
                 <p className="text-xs mt-1" style={{ color: colors.error }}>{errors.name}</p>
@@ -563,7 +562,6 @@ const ModuleCompleteProfilePage = () => {
                   backgroundColor: colors.backgroundSecondary,
                   color: colors.textPrimary,
                 }}
-                key={`email-${user?.email || formData.email || Date.now()}`}
               />
               {errors.email && (
                 <p className="text-xs mt-1" style={{ color: colors.error }}>{errors.email}</p>
@@ -587,7 +585,6 @@ const ModuleCompleteProfilePage = () => {
                   backgroundColor: colors.backgroundSecondary,
                   color: colors.textPrimary,
                 }}
-                key={`phone-${user?.phone || formData.phone || Date.now()}`}
               />
               {errors.phone && (
                 <p className="text-xs mt-1" style={{ color: colors.error }}>{errors.phone}</p>
@@ -814,7 +811,7 @@ const ModuleCompleteProfilePage = () => {
       </div>
 
       {/* Navigation Buttons */}
-      <div className="fixed md:relative md:max-w-3xl md:mx-auto bottom-16 left-0 right-0 px-4 md:px-6 lg:px-8 xl:px-12 py-4 md:py-6 bg-white md:bg-transparent border-t md:border-t-0 z-40" style={{ borderColor: colors.borderMedium }}>
+      <div className="fixed md:relative md:max-w-3xl md:mx-auto bottom-16 left-0 right-0 px-4 md:px-6 lg:px-8 xl:px-12 py-4 md:py-6 bg-white md:bg-transparent border-t md:border-t-0 z-40 md:mt-8" style={{ borderColor: colors.borderMedium }}>
         <div className="flex gap-3 md:gap-4">
           <button
             type="button"

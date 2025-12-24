@@ -57,6 +57,7 @@ const CategoryPage = lazy(() => import("../module/pages/CategoryPage"));
 const BrandPage = lazy(() => import("../module/pages/BrandPage"));
 const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfilePage"));
 const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
+const ModuleFavoritesPage = lazy(() => import("../module/pages/ModuleFavoritesPage"));
 
 // NewUI pages (new car booking platform)
 const NewUIHomePage = lazy(() => import("../module/newui/pages/HomePage"));
@@ -266,6 +267,10 @@ const router = createBrowserRouter([
       {
         path: "/profile/support",
         element: <ModuleSupportPage />,
+      },
+      {
+        path: "/favorites",
+        element: <ModuleFavoritesPage />,
       },
       {
         path: "/bookings",

@@ -25,6 +25,8 @@ export const getAllCars = async (req, res) => {
       isPopular,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      availabilityStart,
+      availabilityEnd,
     } = req.query;
 
     // Build query
@@ -33,26 +35,36 @@ export const getAllCars = async (req, res) => {
       isAvailable: isAvailable === 'true' || isAvailable === true,
     };
 
-    // Date range availability filter
-    if (req.query.startDate && req.query.endDate) {
-      const start = new Date(req.query.startDate);
-      const end = new Date(req.query.endDate);
+    // Availability Filter (Date Range)
+    if (availabilityStart && availabilityEnd) {
+      const searchStart = new Date(availabilityStart);
+      const searchEnd = new Date(availabilityEnd);
 
-      // Find bookings that overlap with the requested period
-      // Statuses that block availability: pending, confirmed, active
-      const bookedCarIds = await Booking.find({
-        status: { $in: ['pending', 'confirmed', 'active'] },
-        $or: [
-          {
-            // Booking overlaps with requested period
-            'tripStart.date': { $lt: end },
-            'tripEnd.date': { $gt: start }
-          }
-        ]
-      }).distinct('car');
+      console.log('--- Availability Debug ---');
+      console.log('Search Start:', searchStart);
+      console.log('Search End:', searchEnd);
 
-      if (bookedCarIds.length > 0) {
-        query._id = { $nin: bookedCarIds };
+      if (!isNaN(searchStart.getTime()) && !isNaN(searchEnd.getTime())) {
+        // Find bookings that overlap with the requested dates
+        const conflictingBookings = await Booking.find({
+          status: { $in: ['pending', 'confirmed', 'active'] },
+          $or: [
+            {
+              'tripStart.date': { $lte: searchEnd },
+              'tripEnd.date': { $gte: searchStart },
+            }
+          ],
+        }).select('car');
+
+        console.log('Conflicting Bookings Found:', conflictingBookings.length);
+        const excludedCarIds = conflictingBookings.map(b => b.car);
+        console.log('Excluded Car IDs:', excludedCarIds);
+        
+        if (excludedCarIds.length > 0) {
+          query._id = { $nin: excludedCarIds };
+        }
+      } else {
+        console.log('Invalid dates provided');
       }
     }
 

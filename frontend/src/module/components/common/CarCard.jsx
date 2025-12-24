@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { colors } from '../../theme/colors';
 import useInViewAnimation from '../../hooks/useInViewAnimation';
+import { useFavorites } from '../../../context/FavoritesContext';
 
 /**
  * CarCard Component - Exact match to design
@@ -12,7 +13,8 @@ const CarCard = ({ car, index = 0 }) => {
   const navigate = useNavigate();
   const [imageRef, isImageInView] = useInViewAnimation({ threshold: 0.1 });
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const isFav = isFavorite(car.id);
 
   const handleOpenDetails = () => {
     try {
@@ -58,37 +60,51 @@ const CarCard = ({ car, index = 0 }) => {
         />
         
         {/* Heart Icon - Top Left */}
-        <motion.button 
-          className="absolute -top-1 left-1.5 md:-top-1 md:left-2 z-10"
+        <button 
+          className="absolute -top-1 left-1.5 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
           onClick={(e) => {
             e.stopPropagation();
-            setIsFavorite(!isFavorite);
-            setIsAnimating(true);
-            setTimeout(() => setIsAnimating(false), 300);
+            const wasFav = toggleFavorite(car);
+            if (wasFav) { // If it became favorite (toggle returns true if added)
+              setIsAnimating(true);
+              setTimeout(() => setIsAnimating(false), 800);
+            }
           }}
-          animate={isAnimating ? {
-            scale: [1, 1.3, 1],
-          } : {}}
-          transition={{
-            duration: 0.3,
-            ease: "easeOut"
-          }}
-          whileTap={{ scale: 0.95 }}
         >
-          <svg 
-            className={`w-5 h-5 md:w-6 md:h-6 ${isFavorite ? 'text-red-500' : 'text-white'}`}
-            fill={isFavorite ? 'currentColor' : 'none'}
-            stroke="currentColor" 
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
-            />
-          </svg>
-        </motion.button>
+          <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+            {/* Sparkles Burst */}
+            <div className="sparkles-container">
+              {[...Array(8)].map((_, i) => (
+                <span 
+                  key={i} 
+                  className={`sparkle-burst ${isAnimating ? 'active' : ''}`} 
+                  style={{ 
+                    transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
+                    // We can randomize or alternate delays if we want, but CSS animation handles the explosion
+                  }} 
+                />
+              ))}
+            </div>
+            
+            {/* Heart Icon */}
+            <svg 
+              className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                isFav ? 'text-red-500 heart-icon liked' : 'text-white heart-icon'
+              }`}
+              fill={isFav ? 'currentColor' : 'none'}
+              stroke="currentColor" 
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              style={{ overflow: 'visible' }} // Allow scale to overflow slightly
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+              />
+            </svg>
+          </div>
+        </button>
       </div>
 
       {/* Car Details */}

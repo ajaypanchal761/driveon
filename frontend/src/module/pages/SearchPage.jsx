@@ -46,6 +46,7 @@ const SearchPage = () => {
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [isLocationExpanded, setIsLocationExpanded] = useState(false);
 
   // Get authentication state
   const { isAuthenticated } = useAppSelector((state) => state.auth);
@@ -286,24 +287,19 @@ const SearchPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
-        // Prepare query params with availability dates
-        const queryParams = {
+        const availabilityStart = searchParams.get('availabilityStart');
+        const availabilityEnd = searchParams.get('availabilityEnd');
+
+        // Fetch latest active cars
+        const carsResponse = await carService.getCars({
           limit: 12,
           sortBy: 'createdAt',
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
-        };
-
-        const availabilityStart = searchParams.get('availabilityStart');
-        const availabilityEnd = searchParams.get('availabilityEnd');
-        
-        if (availabilityStart) queryParams.startDate = availabilityStart;
-        if (availabilityEnd) queryParams.endDate = availabilityEnd;
-
-        // Fetch latest active cars
-        const carsResponse = await carService.getCars(queryParams);
+          availabilityStart: availabilityStart || undefined,
+          availabilityEnd: availabilityEnd || undefined,
+        });
 
         let cars = [];
         if (carsResponse.success && carsResponse.data?.cars) {
@@ -542,7 +538,7 @@ const SearchPage = () => {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get('availabilityStart'), searchParams.get('availabilityEnd')]);
+  }, [searchParams]);
 
   // Handle search
   const handleSearch = (query) => {
@@ -662,7 +658,24 @@ const SearchPage = () => {
       });
     }
 
+    // Filter by availability
+    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
+      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
+      const selectedTo = new Date(appliedFilters.availableTo).getTime();
 
+      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
+        filtered = filtered.filter((car) => {
+          // If the car has explicit bookings data, check for overlap
+          const bookings = car.bookings || car.bookingsMap || [];
+          const hasOverlap = bookings.some(booking => {
+            const bookingStart = new Date(booking.startDate || booking.start).getTime();
+            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
+            return selectedFrom < bookingEnd && selectedTo > bookingStart;
+          });
+          return !hasOverlap;
+        });
+      }
+    }
 
     // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
@@ -776,7 +789,23 @@ const SearchPage = () => {
       });
     }
 
+    // Filter by availability
+    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
+      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
+      const selectedTo = new Date(appliedFilters.availableTo).getTime();
 
+      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
+        filtered = filtered.filter((car) => {
+          const bookings = car.bookings || car.bookingsMap || [];
+          const hasOverlap = bookings.some(booking => {
+            const bookingStart = new Date(booking.startDate || booking.start).getTime();
+            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
+            return selectedFrom < bookingEnd && selectedTo > bookingStart;
+          });
+          return !hasOverlap;
+        });
+      }
+    }
 
     // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
@@ -813,20 +842,24 @@ const SearchPage = () => {
             {/* Location pill */}
             <button
               type="button"
-              className="flex items-center justify-between rounded-full px-4 py-1.5 text-[11px] flex-shrink-0"
+              className="flex items-center justify-between rounded-full px-3 py-1 text-[10px] flex-shrink-0"
               style={{
-                backgroundColor: colors.backgroundTertiary,
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                backdropFilter: "blur(4px)",
                 color: colors.textWhite,
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                maxWidth: isLocationExpanded ? "75%" : "auto",
+                transition: "all 0.3s ease"
               }}
-              onClick={() => navigate("/module-location")}
+              onClick={() => setIsLocationExpanded(!isLocationExpanded)}
             >
-              <span className="flex items-center gap-2 min-w-0">
+              <span className="flex items-center gap-1.5 min-w-0">
                 <span
-                  className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white text-[10px]"
+                  className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-white text-[9px] flex-shrink-0"
                   style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   <svg
-                    className="w-3 h-3"
+                    className="w-2.5 h-2.5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -845,10 +878,12 @@ const SearchPage = () => {
                     />
                   </svg>
                 </span>
-                <span className="truncate max-w-[140px]">{currentLocation || 'Getting location...'}</span>
+                <span className={`leading-tight ${isLocationExpanded ? "text-left break-words whitespace-normal" : "truncate max-w-[120px]"}`}>
+                  {currentLocation || "Getting location..."}
+                </span>
               </span>
               <svg
-                className="w-3 h-3 text-gray-300 flex-shrink-0 ml-2"
+                className={`w-3 h-3 text-gray-300 flex-shrink-0 ml-1.5 transition-transform duration-200 ${isLocationExpanded ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
