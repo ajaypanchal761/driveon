@@ -173,15 +173,26 @@ export const createBooking = async (req, res) => {
     }
 
     // Check for conflicting bookings
+    // Statuses that block availability: pending, confirmed, active
+    // We check if any booking overlaps with the requested period [startDate, endDate]
     const conflictingBooking = await Booking.findOne({
       car: carId,
       status: { $in: ['pending', 'confirmed', 'active'] },
       $or: [
         {
-          'tripStart.date': { $lte: endDate },
-          'tripEnd.date': { $gte: startDate },
+          // Existing booking starts during requested period
+          'tripStart.date': { $gte: startDate, $lt: endDate }
         },
-      ],
+        {
+          // Existing booking ends during requested period
+          'tripEnd.date': { $gt: startDate, $lte: endDate }
+        },
+        {
+          // Existing booking creates a wrapper around requested period
+          'tripStart.date': { $lte: startDate },
+          'tripEnd.date': { $gte: endDate }
+        }
+      ]
     });
 
     if (conflictingBooking) {

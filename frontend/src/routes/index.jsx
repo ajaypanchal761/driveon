@@ -115,6 +115,23 @@ const AdminLoginPage = lazy(() =>
 );
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 
+// CRM Pages
+const CrmLayout = lazy(() => import("../components/crm/layout/CrmLayout"));
+const CrmDashboardPage = lazy(() => import("../pages/crm/CrmDashboardPage"));
+const CrmCarListPage = lazy(() => import("../pages/crm/CrmCarListPage"));
+const CrmCarDetailsPage = lazy(() => import("../pages/crm/CrmCarDetailsPage"));
+const CrmStaffListPage = lazy(() => import("../pages/crm/CrmStaffListPage"));
+const CrmStaffDetailsPage = lazy(() => import("../pages/crm/CrmStaffDetailsPage"));
+const CrmCarMovementPage = lazy(() => import("../pages/crm/CrmCarMovementPage"));
+const CrmSalaryPage = lazy(() => import("../pages/crm/CrmSalaryPage"));
+const CrmExpensePage = lazy(() => import("../pages/crm/CrmExpensePage"));
+const CrmWashingPage = lazy(() => import("../pages/crm/CrmWashingPage"));
+const CrmAccidentPage = lazy(() => import("../pages/crm/CrmAccidentPage"));
+const CrmUsersPage = lazy(() => import("../pages/crm/CrmUsersPage"));
+const CrmReportsPage = lazy(() => import("../pages/crm/CrmReportsPage"));
+const CrmSettingsPage = lazy(() => import("../pages/crm/CrmSettingsPage"));
+const CrmPlaceholderPage = lazy(() => import("../pages/crm/CrmPlaceholderPage"));
+
 /**
  * ModuleResponsiveHome Component
  * - Mobile view: show ModuleTestPage (module-test UI)
@@ -455,6 +472,69 @@ const router = createBrowserRouter([
             element: <AdminProfilePage />,
           },
         ],
+      },
+    ],
+  },
+  // CRM Routes
+  {
+    path: "/crm",
+    element: <CrmLayout />,
+    children: [
+      {
+        path: "dashboard",
+        element: <CrmDashboardPage />,
+      },
+      {
+        path: "cars",
+        element: <CrmCarListPage />,
+      },
+      {
+        path: "car-details/:id",
+        element: <CrmCarDetailsPage />,
+      },
+      {
+        path: "movement",
+        element: <CrmCarMovementPage />,
+      },
+      {
+        path: "staff",
+        element: <CrmStaffListPage />,
+      },
+      {
+        path: "staff-details/:id",
+        element: <CrmStaffDetailsPage />,
+      },
+      {
+        path: "salary",
+        element: <CrmSalaryPage />,
+      },
+      {
+        path: "expenses",
+        element: <CrmExpensePage />,
+      },
+      {
+        path: "washing",
+        element: <CrmWashingPage />,
+      },
+      {
+        path: "accident",
+        element: <CrmAccidentPage />,
+      },
+      {
+        path: "users",
+        element: <CrmUsersPage />,
+      },
+      {
+        path: "reports",
+        element: <CrmReportsPage />,
+      },
+      {
+        path: "settings",
+        element: <CrmSettingsPage />,
+      },
+      {
+        path: "",
+        element: <Navigate to="dashboard" replace />,
       },
     ],
   },

@@ -292,6 +292,7 @@ const SearchPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+<<<<<<< HEAD
         // Clear existing data to prevent flickering of old results
         setAllRecommendCars([]);
         setAllPopularCars([]);
@@ -338,16 +339,34 @@ const SearchPage = () => {
         // Build backend query params
         const queryParams = {
           limit: 100, // Increase limit to allow client-side filtering of unsupported fields
+=======
+        
+        // Prepare query params with availability dates
+        const queryParams = {
+          limit: 12,
+>>>>>>> origin/payal
           sortBy: 'createdAt',
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
+<<<<<<< HEAD
           availabilityStart: appliedFilters.availableFrom,
           availabilityEnd: appliedFilters.availableTo,
           pickupTime: pickupTime,
           dropoffTime: dropoffTime,
         };
 
+=======
+        };
+
+        const availabilityStart = searchParams.get('availabilityStart');
+        const availabilityEnd = searchParams.get('availabilityEnd');
+        
+        if (availabilityStart) queryParams.startDate = availabilityStart;
+        if (availabilityEnd) queryParams.endDate = availabilityEnd;
+
+        // Fetch latest active cars
+>>>>>>> origin/payal
         const carsResponse = await carService.getCars(queryParams);
 
         let cars = [];
@@ -591,7 +610,7 @@ const SearchPage = () => {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedFilters.availableFrom, appliedFilters.availableTo]);
+  }, [searchParams.get('availabilityStart'), searchParams.get('availabilityEnd')]);
 
   // Handle search
   const handleSearch = (query) => {
@@ -711,24 +730,7 @@ const SearchPage = () => {
       });
     }
 
-    // Filter by availability
-    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
-      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
-      const selectedTo = new Date(appliedFilters.availableTo).getTime();
 
-      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
-        filtered = filtered.filter((car) => {
-          // If the car has explicit bookings data, check for overlap
-          const bookings = car.bookings || car.bookingsMap || [];
-          const hasOverlap = bookings.some(booking => {
-            const bookingStart = new Date(booking.startDate || booking.start).getTime();
-            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
-            return selectedFrom < bookingEnd && selectedTo > bookingStart;
-          });
-          return !hasOverlap;
-        });
-      }
-    }
 
     // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {
@@ -842,23 +844,7 @@ const SearchPage = () => {
       });
     }
 
-    // Filter by availability
-    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
-      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
-      const selectedTo = new Date(appliedFilters.availableTo).getTime();
 
-      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
-        filtered = filtered.filter((car) => {
-          const bookings = car.bookings || car.bookingsMap || [];
-          const hasOverlap = bookings.some(booking => {
-            const bookingStart = new Date(booking.startDate || booking.start).getTime();
-            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
-            return selectedFrom < bookingEnd && selectedTo > bookingStart;
-          });
-          return !hasOverlap;
-        });
-      }
-    }
 
     // Filter by search query (case-insensitive, supports partial words)
     if (searchQuery.trim()) {

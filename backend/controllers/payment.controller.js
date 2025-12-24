@@ -708,7 +708,7 @@ export const verifyRazorpayPayment = async (req, res) => {
       } else if (booking.paidAmount > 0 && booking.paidAmount < advanceTarget) {
         // Handle case where UI amount was different (e.g. 1 day vs 2 days calc mismatch)
         // We trust the payment received and update DB to reflect this as the agreed advance
-        console.log('⚠️ Advance payment mismatch (UI vs DB) - Syncing DB to Paid Amount:', {
+        console.log('Advance payment mismatch (UI vs DB) - Syncing DB to Paid Amount:', {
           paid: booking.paidAmount,
           storedAdvance: advanceTarget
         });
@@ -770,7 +770,7 @@ export const verifyRazorpayPayment = async (req, res) => {
         confirmedAt: booking.confirmedAt,
       });
     } catch (saveError) {
-      console.error('❌ Error saving booking to database:', saveError);
+      console.error('Error saving booking to database:', saveError);
       throw saveError;
     }
 
@@ -809,9 +809,10 @@ export const verifyRazorpayPayment = async (req, res) => {
  * @route   ALL /api/payments/razorpay/callback
  * @access  Public
  */
+
 export const razorpayCallback = async (req, res) => {
   try {
-    console.log('🔔 Razorpay callback received:', {
+    console.log('Razorpay callback received:', {
       method: req.method,
       query: req.query,
       body: req.body,

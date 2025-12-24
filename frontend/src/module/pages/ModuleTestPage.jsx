@@ -8,6 +8,7 @@ import "swiper/css/pagination";
 import BottomNavbar from "../components/layout/BottomNavbar";
 import { colors } from "../theme/colors";
 import FilterDropdown from "../components/common/FilterDropdown";
+import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
 import { useLocation } from "../../hooks/useLocation";
@@ -78,10 +79,9 @@ const ModuleTestPage = () => {
   const bannerPauseTimeoutRef = useRef(null);
 
   const bannerCars = useMemo(() => [
-    { image: bannerCar1, alt: "Car 1" },
-    { image: bannerCar2, alt: "Car 2" },
-    { image: bannerCar3, alt: "Car 3" },
-    { image: bannerCar4, alt: "Car 4" },
+    { image: bannerCar1, alt: "Toyota Innova" },
+    { image: carImg6, alt: "Hyundai Creta" },
+    { image: nearbyImg1, alt: "Maruti Swift Dzire" },
   ], []);
 
   // Banner scroll handling
@@ -396,6 +396,45 @@ const ModuleTestPage = () => {
     } else {
       navigate("/search");
     }
+  };
+
+  const handleBookingSearch = () => {
+    let queryParams = new URLSearchParams();
+    
+    // Pass existing search value if any
+    const trimmed = searchValue.trim();
+    if (trimmed) {
+      queryParams.append('q', trimmed);
+    }
+
+    if (pickupDate && dropoffDate) {
+       const getISOString = (dateStr, timeStr) => {
+           const [year, month, day] = dateStr.split('-').map(Number);
+           let hours = 10;
+           let minutes = 30; // Default time
+           if (timeStr) {
+               const parts = timeStr.trim().split(' ');
+               if (parts.length === 2) {
+                   const [time, period] = parts;
+                   const [h, m] = time.split(':').map(Number);
+                   hours = h;
+                   minutes = m;
+                   if (period === 'PM' && hours !== 12) hours += 12;
+                   if (period === 'AM' && hours === 12) hours = 0;
+               }
+           }
+           return new Date(year, month - 1, day, hours, minutes).toISOString();
+       };
+       
+       try {
+           queryParams.append('availabilityStart', getISOString(pickupDate, pickupTime));
+           queryParams.append('availabilityEnd', getISOString(dropoffDate, dropoffTime));
+       } catch (e) {
+           console.error("Invalid date format", e);
+       }
+    }
+    
+    navigate(`/search?${queryParams.toString()}`);
   };
 
   // Navigate to search with optional filter query params when pills are tapped
@@ -1081,27 +1120,19 @@ const ModuleTestPage = () => {
           {/* MOBILE PREMIUM BOOKING CARD */}
           <div className="md:hidden -mt-3 mb-5 px-1 relative z-30">
             <div className="bg-white rounded-[1.5rem] p-3.5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] border border-gray-100 relative">
-              <div className="grid grid-cols-2 gap-y-2.5 gap-x-3.5 relative">
+              <div className="flex flex-col gap-2.5 relative mt-1">
                 {/* Pickup Section */}
                 <div 
                   className="flex flex-col cursor-pointer group" 
                   onClick={() => { setCalendarTarget('pickup'); setIsCalendarOpen(true); }}
                 >
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip Start Date</span>
-                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
-                    <span className="text-[13px] font-bold text-[#1C205C]">{pickupDate ? formatDateDisplay(pickupDate) : "dd-mm-yyyy"}</span>
-                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path></svg>
-                  </div>
-                </div>
-
-                <div 
-                  className="flex flex-col cursor-pointer group" 
-                  onClick={() => { setTimeTarget('pickup'); setIsTimeOpen(true); }}
-                >
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip Start Time</span>
-                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
-                    <span className="text-[13px] font-bold text-[#1C205C]">{pickupTime || "hh:mm"}</span>
-                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <span className="text-[10px] font-extrabold text-[#1C205C] mb-1 ml-2 tracking-wide">Pickup Date & Time</span>
+                  <div className="w-full bg-white rounded-full px-4 py-2.5 border border-[#1C205C] hover:bg-gray-50 transition-all shadow-sm">
+                    <span className="text-xs font-bold text-[#1C205C] block text-center min-h-[1rem] flex items-center justify-center tracking-wide">
+                      {pickupDate 
+                        ? `${new Date(pickupDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • ${pickupTime || "10:30 AM"}` 
+                        : "Select Pickup Date & Time"}
+                    </span>
                   </div>
                 </div>
 
@@ -1110,64 +1141,21 @@ const ModuleTestPage = () => {
                   className="flex flex-col cursor-pointer group" 
                   onClick={() => { setCalendarTarget('dropoff'); setIsCalendarOpen(true); }}
                 >
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip End Date</span>
-                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
-                    <span className="text-[13px] font-bold text-[#1C205C]">{dropoffDate ? formatDateDisplay(dropoffDate) : "dd-mm-yyyy"}</span>
-                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"></path></svg>
-                  </div>
-                </div>
-
-                <div 
-                  className="flex flex-col cursor-pointer group" 
-                  onClick={() => { setTimeTarget('dropoff'); setIsTimeOpen(true); }}
-                >
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Trip End Time</span>
-                  <div className="flex items-center justify-between bg-gray-50/50 rounded-lg px-2.5 py-2 border border-transparent hover:border-indigo-100 hover:bg-white transition-all">
-                    <span className="text-[13px] font-bold text-[#1C205C]">{dropoffTime || "hh:mm"}</span>
-                    <svg className="w-4 h-4 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <span className="text-[10px] font-extrabold text-[#1C205C] mb-1 ml-2 tracking-wide">Drop Date & Time</span>
+                  <div className="w-full bg-white rounded-full px-4 py-2.5 border border-[#1C205C] hover:bg-gray-50 transition-all shadow-sm">
+                    <span className="text-xs font-bold text-[#1C205C] block text-center min-h-[1rem] flex items-center justify-center tracking-wide">
+                      {dropoffDate 
+                        ? `${new Date(dropoffDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • ${dropoffTime || "10:30 AM"}` 
+                        : "Select Dropoff Date & Time"}
+                    </span>
                   </div>
                 </div>
               </div>
 
               <motion.button 
                 whileTap={{ scale: 0.96 }}
-                className="w-full mt-3.5 py-3 bg-[#1C205C] text-white rounded-xl font-bold text-xs shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
-                onClick={() => {
-                  // Validate inputs
-                  if (!pickupDate || !pickupTime || !dropoffDate || !dropoffTime) {
-                    alert('Please select both pickup and drop-off dates and times.');
-                    return;
-                  }
-
-                  // Combine date and time
-                  const startDateTimeStr = `${pickupDate} ${pickupTime}`;
-                  const endDateTimeStr = `${dropoffDate} ${dropoffTime}`;
-                  
-                  // Simple Date parsing (assuming standard format, if not, adjusts needed)
-                  // If times are like "10:30 AM", we need to parse them correctly
-                  const parseDateTime = (dateStr, timeStr) => {
-                    const [time, period] = timeStr.trim().split(/\s+/);
-                    let [hours, minutes] = time.split(':').map(Number);
-                    if (period && period.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-                    if (period && period.toLowerCase() === 'am' && hours === 12) hours = 0;
-                    return new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
-                  };
-
-                  const startDate = parseDateTime(pickupDate, pickupTime);
-                  const endDate = parseDateTime(dropoffDate, dropoffTime);
-
-                  if (startDate >= endDate) {
-                    alert('Drop-off time must be after pickup time.');
-                    return;
-                  }
-
-                  // Navigate with query params
-                  const params = new URLSearchParams();
-                  params.append('availabilityStart', startDate.toISOString());
-                  params.append('availabilityEnd', endDate.toISOString());
-                  
-                  navigate(`/search?${params.toString()}`);
-                }}
+                className="w-full mt-3.5 py-3 bg-[#1C205C] text-white rounded-full font-bold text-xs shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+                onClick={handleBookingSearch}
               >
                 <span>Search Your Car</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
@@ -1289,7 +1277,12 @@ const ModuleTestPage = () => {
             `}</style>
           </motion.div>
 
-          {/* BEST CARS GRID (Moved Here) */}
+          {/* BANNER SECTION - Mobile Only (Reused Component) */}
+          <div className="block md:hidden mt-2 px-1">
+            <ReturningCarBanner />
+          </div>
+
+          {/* BEST CARS GRID */}
           <motion.div
             className="mt-4 px-1"
             initial={{ opacity: 0, y: 20 }}
@@ -1849,108 +1842,134 @@ const ModuleTestPage = () => {
         <BottomNavbar />
       </div>
 
+      {/* UNIFIED DATE-TIME PICKER MODAL (Replaces separate Calendar & Time Modals) */}
       {isCalendarOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-[320px] rounded-2xl shadow-2xl border p-5 relative" 
-            style={{ backgroundColor: "rgb(255, 255, 255)", borderColor: "rgb(229, 231, 235)" }}
+            className="bg-white w-[340px] rounded-3xl shadow-2xl overflow-hidden" 
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold" style={{ color: "rgb(28, 32, 92)" }}>
-                {calendarTarget === 'pickup' ? 'Pick-up Date' : 'Return Date'}
-              </h3>
-              <button 
-                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors" 
-                style={{ color: "rgb(28, 32, 92)" }}
-                onClick={() => setIsCalendarOpen(false)}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-            
-            <div className="flex items-center justify-between mb-4">
-              <button 
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" 
-                style={{ color: "rgb(28, 32, 92)" }}
-                onClick={() => {
-                  const newDate = new Date(currentMonth);
-                  newDate.setMonth(newDate.getMonth() - 1);
-                  setCurrentMonth(newDate);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-                </svg>
-              </button>
-              <h4 className="text-sm font-bold capitalize" style={{ color: "rgb(28, 32, 92)" }}>
-                {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </h4>
-              <button 
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" 
-                style={{ color: "rgb(28, 32, 92)" }}
-                onClick={() => {
-                  const newDate = new Date(currentMonth);
-                  newDate.setMonth(newDate.getMonth() + 1);
-                  setCurrentMonth(newDate);
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                <div key={day} className="text-center text-[10px] font-bold py-1" style={{ color: "rgb(156, 163, 175)" }}>{day}</div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
-                <div key={`empty-${i}`} />
-              ))}
-              
-              {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
-                const day = i + 1;
-                const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                const isPast = d < today;
-                
-                const isSelected = (calendarTarget === 'pickup' && pickupDate === dateString) || 
-                                   (calendarTarget === 'dropoff' && dropoffDate === dateString);
-
-                return (
+            <div className="p-4">
+              {/* Time Section */}
+              {/* Time Section - Trigger Button */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold mb-2" style={{color: "rgb(28, 32, 92)"}}>Time</label>
+                <div className="flex justify-center">
                   <button 
-                    key={day}
                     type="button" 
-                    disabled={isPast}
-                    className={`p-1.5 rounded-lg text-[11px] font-bold transition-all relative ${
-                      isPast ? 'cursor-not-allowed opacity-30 text-gray-300' : 
-                      isSelected ? 'bg-[#1C205C] text-white shadow-lg' : 'hover:bg-gray-100 text-[#1C205C]'
-                    }`}
-                    onClick={() => {
-                      if (calendarTarget === 'pickup') setPickupDate(dateString);
-                      else setDropoffDate(dateString);
-                      setIsCalendarOpen(false);
-                    }}
+                    onClick={() => setIsTimeOpen(true)}
+                    className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity" 
+                    style={{borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(28, 32, 92)", color: "rgb(255, 255, 255)"}}
                   >
-                    {day}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span className="font-semibold text-sm">{`${selectedHour}:${selectedMinute} ${selectedPeriod}`}</span>
                   </button>
-                );
-              })}
+                </div>
+              </div>
+
+              {/* Calendar Section */}
+              <div className="mb-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <button className="p-1.5 rounded-lg hover:bg-gray-100" onClick={() => {
+                        const newDate = new Date(currentMonth);
+                        newDate.setMonth(newDate.getMonth() - 1);
+                        setCurrentMonth(newDate);
+                  }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+                  </button>
+                  <h4 className="text-base font-semibold" style={{color: "rgb(28, 32, 92)"}}>{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h4>
+                  <button className="p-1.5 rounded-lg hover:bg-gray-100" onClick={() => {
+                        const newDate = new Date(currentMonth);
+                        newDate.setMonth(newDate.getMonth() + 1);
+                        setCurrentMonth(newDate);
+                  }}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1 mb-4">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                     <div key={day} className="text-center text-xs font-semibold py-1" style={{color: "rgb(102, 102, 102)"}}>{day}</div>
+                  ))}
+                  
+                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  
+                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                    const day = i + 1;
+                    const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    const isPast = d < today;
+                    
+                    // Check if this date is the temporary selected one locally
+                    // Or reuse the existing state variable if we want immediate feedback
+                    // Let's use a local temporary selection concept or just update the main state directly?
+                    // User probably expects "Done" to confirm. But showing selection state is important.
+                    // Let's deduce selection from `pickupDate`/`dropoffDate` unless we introduce a `tempDate`.
+                    // For simplicity, we can update `tempDate` state inside this component if we extracted it, but here we can just "select" it visibly. 
+                    // Wait, logic: user selects day, then clicks Done. 
+                    // Let's use a hidden local state or just checking against target?
+                    // I'll assume we update the main state directly on click (so it highlights immediately) but user confirms with Done. 
+                    // Actually, safer to update main state on click like before, but user can Cancel to revert? 
+                    // The previous implementation updated on click. Let's keep that simple flow, and Done/Cancel just closes.
+                    
+                    const isSelected = (calendarTarget === 'pickup' && pickupDate === dateString) || 
+                                       (calendarTarget === 'dropoff' && dropoffDate === dateString);
+
+                    return (
+                        <button 
+                            key={day}
+                            type="button" 
+                            disabled={isPast}
+                            className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                isPast ? 'cursor-not-allowed bg-transparent text-gray-300' : 
+                                isSelected ? 'bg-[#1C205C] text-white shadow-md' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'
+                            }`}
+                            onClick={() => {
+                                if (calendarTarget === 'pickup') setPickupDate(dateString);
+                                else setDropoffDate(dateString);
+                            }}
+                        >
+                            {day}
+                        </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button 
+                    className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm hover:bg-gray-50 transition-colors" 
+                    style={{borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(255, 255, 255)", color: "rgb(28, 32, 92)"}}
+                    onClick={() => setIsCalendarOpen(false)}
+                >
+                    Cancel
+                </button>
+                <button 
+                    className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity" 
+                    style={{backgroundColor: "rgb(28, 32, 92)"}}
+                    onClick={() => {
+                        // Confirm Time selection to state
+                        const timeStr = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
+                        if (calendarTarget === 'pickup') setPickupTime(timeStr);
+                        else setDropoffTime(timeStr);
+                        setIsCalendarOpen(false);
+                    }}
+                >
+                    Done
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
       )}
-
+      
       {/* Filters popup - Using shared FilterDropdown component */}
       <FilterDropdown
         isOpen={isFilterOpen}
@@ -1967,37 +1986,27 @@ const ModuleTestPage = () => {
         locations={filterOptions.locations}
       />
 
+      {/* TIME PICKER OVERLAY MODAL */}
       {isTimeOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-[280px] rounded-2xl shadow-2xl border p-5" 
-            style={{ backgroundColor: "rgb(255, 255, 255)", borderColor: "rgb(229, 231, 235)" }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-[300px] bg-white rounded-3xl p-6 shadow-2xl relative"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold" style={{ color: "rgb(28, 32, 92)" }}>Select Time</h3>
-              <button 
-                className="p-1 px-1.5 rounded-full hover:bg-gray-100 transition-colors" 
-                style={{ color: "rgb(28, 32, 92)" }}
-                onClick={() => setIsTimeOpen(false)}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
+            <h3 className="text-lg font-bold mb-4 text-center" style={{color: "rgb(28, 32, 92)"}}>Select Time</h3>
             
-            <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="flex items-center justify-center gap-4 mb-6">
+              {/* Hour Column */}
               <div className="flex flex-col items-center">
-                <label className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "rgb(156, 163, 175)" }}>Hour</label>
-                <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto scrollbar-hide px-1">
-                  {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(h => (
+                <label className="text-xs font-semibold mb-2" style={{color: "rgb(102, 102, 102)"}}>Hour</label>
+                <div className="flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-hide px-1">
+                  {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
                     <button 
                       key={h}
                       type="button" 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedHour === h.padStart(2, '0') ? 'bg-[#1C205C] text-white' : 'hover:bg-gray-100 text-[#1C205C]'}`}
-                      onClick={() => setSelectedHour(h.padStart(2, '0'))}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === h ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
+                      onClick={() => setSelectedHour(h)}
                     >
                       {h}
                     </button>
@@ -2005,16 +2014,17 @@ const ModuleTestPage = () => {
                 </div>
               </div>
               
-              <span className="text-xl font-bold mt-6" style={{ color: "rgb(28, 32, 92)" }}>:</span>
+              <span className="text-2xl font-bold mt-8" style={{color: "rgb(28, 32, 92)"}}>:</span>
               
+              {/* Minute Column */}
               <div className="flex flex-col items-center">
-                <label className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "rgb(156, 163, 175)" }}>Minute</label>
-                <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto scrollbar-hide px-1">
-                  {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                <label className="text-xs font-semibold mb-2" style={{color: "rgb(102, 102, 102)"}}>Minute</label>
+                <div className="flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-hide px-1">
+                   {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
                     <button 
                       key={m}
                       type="button" 
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedMinute === m ? 'bg-[#1C205C] text-white' : 'hover:bg-gray-100 text-[#1C205C]'}`}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === m ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
                       onClick={() => setSelectedMinute(m)}
                     >
                       {m}
@@ -2023,36 +2033,48 @@ const ModuleTestPage = () => {
                 </div>
               </div>
               
-              <div className="flex flex-col items-center ml-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "rgb(156, 163, 175)" }}>Period</label>
+              {/* Period Column */}
+              <div className="flex flex-col items-center">
+                <label className="text-xs font-semibold mb-2" style={{color: "rgb(102, 102, 102)"}}>Period</label>
                 <div className="flex flex-col gap-2">
-                  {["AM", "PM"].map(p => (
-                    <button 
-                      key={p}
-                      type="button" 
-                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${selectedPeriod === p ? 'bg-[#1C205C] text-white' : 'hover:bg-gray-100 text-[#1C205C]'}`}
-                      onClick={() => setSelectedPeriod(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
+                    {["AM", "PM"].map(p => (
+                      <button 
+                        key={p}
+                        type="button" 
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === p ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
+                        onClick={() => setSelectedPeriod(p)}
+                      >
+                        {p}
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>
+            
+            {/* Selected Time Display */}
+            <div className="mb-6 p-3 rounded-xl text-center shadow-sm" style={{backgroundColor: "rgb(248, 248, 248)"}}>
+                <span className="text-xl font-bold" style={{color: "rgb(28, 32, 92)"}}>
+                    {`${selectedHour} : ${selectedMinute} ${selectedPeriod ? selectedPeriod.toLowerCase() : 'am'}`}
+                </span>
+            </div>
 
-            <button 
-              type="button" 
-              className="w-full py-3 rounded-xl font-bold text-xs transition-opacity hover:opacity-90 shadow-lg mb-2" 
-              style={{ backgroundColor: "rgb(28, 32, 92)", color: "rgb(255, 255, 255)" }}
-              onClick={() => {
-                const timeStr = formatTimeDisplay();
-                if (timeTarget === 'pickup') setPickupTime(timeStr);
-                else setDropoffTime(timeStr);
-                setIsTimeOpen(false);
-              }}
-            >
-              Confirm Time
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button 
+                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm hover:bg-gray-50 transition-colors" 
+                  style={{borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(255, 255, 255)", color: "rgb(28, 32, 92)"}}
+                  onClick={() => setIsTimeOpen(false)}
+              >
+                  Cancel
+              </button>
+              <button 
+                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity" 
+                  style={{backgroundColor: "rgb(28, 32, 92)"}}
+                  onClick={() => setIsTimeOpen(false)}
+              >
+                  Done
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

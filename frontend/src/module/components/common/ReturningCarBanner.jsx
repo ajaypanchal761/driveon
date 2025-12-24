@@ -471,9 +471,16 @@ const ReturningCarBanner = () => {
                 style={{ scrollSnapAlign: "center" }}
               >
                 {/* Left Side - Text Content */}
+<<<<<<< HEAD
                 <div
                   className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
                     }`}
+=======
+                <div 
+                  className={`flex-1 min-w-0 pr-3 transition-all duration-300 ease-out ${
+                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
+                  }`}
+>>>>>>> origin/payal
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <svg
@@ -511,9 +518,15 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side */}
                 <div
+<<<<<<< HEAD
                   className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
                   style={{
                     width: "40%",
+=======
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300 ease-out"
+                  style={{ 
+                    width: "40%", 
+>>>>>>> origin/payal
                     minWidth: "120px",
                     transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
                     opacity: index === currentCarIndex ? 1 : 0.8
@@ -524,12 +537,13 @@ const ReturningCarBanner = () => {
                     alt={car.name}
                     className="w-full h-auto object-contain"
                     draggable={false}
+                    loading="eager"
                     style={{
                       objectFit: "contain",
                       maxHeight: "250px",
                       width: "100%",
                       transform: index === currentCarIndex ? "scale(1.25)" : "scale(1)",
-                      transition: "transform 0.7s ease-out"
+                      transition: "transform 0.3s ease-out"
                     }}
                   />
                 </div>
@@ -586,9 +600,16 @@ const ReturningCarBanner = () => {
                 style={{ scrollSnapAlign: "center" }}
               >
                 {/* Left Side - Text Content */}
+<<<<<<< HEAD
                 <div
                   className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
                     }`}
+=======
+                <div 
+                  className={`flex-1 min-w-0 pr-6 transition-all duration-300 ease-out ${
+                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
+                  }`}
+>>>>>>> origin/payal
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <svg
@@ -625,9 +646,15 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side */}
                 <div
+<<<<<<< HEAD
                   className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
                   style={{
                     width: "45%",
+=======
+                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300 ease-out"
+                  style={{ 
+                    width: "45%", 
+>>>>>>> origin/payal
                     minWidth: "280px",
                     transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
                     opacity: index === currentCarIndex ? 1 : 0.8
@@ -638,12 +665,13 @@ const ReturningCarBanner = () => {
                     alt={car.name}
                     className="w-full h-auto object-contain"
                     draggable={false}
+                    loading="eager"
                     style={{
                       objectFit: "contain",
                       maxHeight: "340px",
                       width: "100%",
                       transform: index === currentCarIndex ? "scale(1.15)" : "scale(1)",
-                      transition: "transform 0.7s ease-out"
+                      transition: "transform 0.3s ease-out"
                     }}
                   />
                 </div>

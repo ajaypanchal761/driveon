@@ -23,12 +23,8 @@ export const getAllCars = async (req, res) => {
       isAvailable = true,
       isFeatured,
       isPopular,
-      availabilityStart,
-      availabilityEnd,
       sortBy = 'createdAt',
       sortOrder = 'desc',
-      startDate,
-      endDate,
     } = req.query;
 
     // Build query
@@ -37,108 +33,26 @@ export const getAllCars = async (req, res) => {
       isAvailable: isAvailable === 'true' || isAvailable === true,
     };
 
-    // Availability Filter (Database Check + Time Verification)
-    // Handle various frontend parameter names for dates and times
-    const reqStartDate = availabilityStart || startDate || req.query.pickupDate;
-    const reqEndDate = availabilityEnd || endDate || req.query.dropoffDate;
-    const reqStartTime = req.query.pickupTime || '00:00 am'; // Default to start of day if not provided
-    const reqEndTime = req.query.dropoffTime || '11:59 pm';  // Default to end of day if not provided
+    // Date range availability filter
+    if (req.query.startDate && req.query.endDate) {
+      const start = new Date(req.query.startDate);
+      const end = new Date(req.query.endDate);
 
-    // Helper to parse dates (handles DD-MM-YYYY and ISO)
-    const parseDate = (dateStr) => {
-      if (!dateStr) return null;
-      if (dateStr instanceof Date) return dateStr;
-
-      // Check for DD-MM-YYYY format (e.g., 23-12-2025)
-      if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(dateStr)) {
-        const parts = dateStr.split(/[-/]/);
-        return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-      }
-      return new Date(dateStr);
-    };
-
-    // Helper to combine Date and Time string into full Date object
-    // Time format expected: "10:30 am" or "10:30 pm"
-    const parseDateTime = (dateObj, timeStr) => {
-      if (!dateObj || isNaN(dateObj.getTime())) return null;
-
-      const dateTime = new Date(dateObj);
-      dateTime.setHours(0, 0, 0, 0); // Reset time part
-
-      if (!timeStr) return dateTime;
-
-      try {
-        const [time, period] = timeStr.toLowerCase().split(' ');
-        let [hours, minutes] = time.split(':').map(Number);
-
-        if (period === 'pm' && hours !== 12) hours += 12;
-        if (period === 'am' && hours === 12) hours = 0;
-
-        dateTime.setHours(hours, minutes, 0, 0);
-      } catch (e) {
-        console.error('Error parsing time:', timeStr, e);
-      }
-
-      return dateTime;
-    };
-
-    if (reqStartDate && reqEndDate) {
-      const startDateObj = parseDate(reqStartDate);
-      let endDateObj = parseDate(reqEndDate);
-
-      if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime())) {
-        // Set end date to end of day to capture all potential bookings on that day
-        endDateObj.setHours(23, 59, 59, 999);
-
-        // Create full datetime objects for the request
-        const requestStart = parseDateTime(startDateObj, reqStartTime);
-        const requestEnd = parseDateTime(endDateObj, reqEndTime);
-
-        console.log('🔍 Checking availability for:', {
-          reqDate: reqStartDate, reqTime: reqStartTime,
-          parsedStart: requestStart.toLocaleString(),
-          parsedEnd: requestEnd.toLocaleString(),
-          dbQueryEnd: endDateObj.toLocaleString()
-        });
-
-        // 1. Initial DB Query: Find bookings that overlap on DATES (broad filter)
-        // We still use the date fields for initial filtering to be efficient
-        const potentialConflicts = await Booking.find({
-          status: { $in: ['confirmed', 'active', 'pending'] },
-          $or: [
-            {
-              'tripStart.date': { $lte: endDateObj },
-              'tripEnd.date': { $gte: startDateObj }
-            }
-          ]
-        }).select('car tripStart tripEnd'); // Select tripStart/tripEnd to check times
-
-        // 2. Precise Filter: Check exact time overlaps in memory
-        const bookedCarIds = potentialConflicts.filter(booking => {
-          // Construct booking full start/end times
-          // Note: Booking model stores date as Date and time as String ("HH:mm am/pm")
-          // We use the same parseDateTime helper
-          const bookingStart = parseDateTime(new Date(booking.tripStart.date), booking.tripStart.time);
-          const bookingEnd = parseDateTime(new Date(booking.tripEnd.date), booking.tripEnd.time);
-
-          // Overlap condition: (StartA < EndB) && (EndA > StartB)
-          const isOverlapping = (requestStart < bookingEnd) && (requestEnd > bookingStart);
-
-          if (isOverlapping) {
-            console.log(`❌ Collision found for Car ${booking.car}:`);
-            console.log(`   Req: ${requestStart.toLocaleString()} - ${requestEnd.toLocaleString()}`);
-            console.log(`   Bkg: ${bookingStart.toLocaleString()} - ${bookingEnd.toLocaleString()}`);
+      // Find bookings that overlap with the requested period
+      // Statuses that block availability: pending, confirmed, active
+      const bookedCarIds = await Booking.find({
+        status: { $in: ['pending', 'confirmed', 'active'] },
+        $or: [
+          {
+            // Booking overlaps with requested period
+            'tripStart.date': { $lt: end },
+            'tripEnd.date': { $gt: start }
           }
+        ]
+      }).distinct('car');
 
-          return isOverlapping;
-        }).map(b => b.car);
-
-        if (bookedCarIds.length > 0) {
-          console.log(`❌ Excluding ${bookedCarIds.length} booked cars due to time overlap`);
-          query._id = { $nin: bookedCarIds };
-        } else {
-          console.log('✅ No time overlaps found (Dates matched, but times were clear)');
-        }
+      if (bookedCarIds.length > 0) {
+        query._id = { $nin: bookedCarIds };
       }
     }
 
