@@ -9,9 +9,9 @@ import CustomSelect from './CustomSelect';
  * Dropdown with all filter options based on document.txt specifications
  * Includes: Brand, Model, Seats, Fuel Type, Transmission, Color, Price Range, Rating, Location, Availability, Features, Car Type
  */
-const FilterDropdown = ({ 
-  isOpen, 
-  onClose, 
+const FilterDropdown = ({
+  isOpen,
+  onClose,
   onApplyFilters,
   initialFilters, // Track currently applied filters
   brands,
@@ -56,7 +56,7 @@ const FilterDropdown = ({
     const handleClickOutside = (event) => {
       // Only close on mobile (when dropdown is visible)
       const isMobile = window.innerWidth < 768;
-      
+
       if (!isMobile) {
         // Desktop: Don't close on click outside
         return;
@@ -65,13 +65,13 @@ const FilterDropdown = ({
       // Check if click is outside the dropdown
       if (dropdownRef.current) {
         const clickedElement = event.target;
-        
+
         // Check if the click target is inside the dropdown or any of its children
         const isClickInside = dropdownRef.current.contains(clickedElement);
-        
+
         // Check if click is on the filter button that opened the modal (should not close)
         const isFilterButton = clickedElement.closest('[aria-label="Open filters"]');
-        
+
         // Only close if click is truly outside (not inside dropdown, not on filter button)
         if (!isClickInside && !isFilterButton) {
           onClose();
@@ -122,9 +122,9 @@ const FilterDropdown = ({
         ...prev,
         [key]: value
       };
-      
 
-      
+
+
       return updatedFilters;
     });
   };
@@ -183,14 +183,14 @@ const FilterDropdown = ({
         {isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={onClose}
             />
-            
+
             {/* Modal Content */}
             <motion.div
               ref={dropdownRef}
@@ -199,7 +199,7 @@ const FilterDropdown = ({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={`relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-[2rem] shadow-2xl flex flex-col md:max-w-xl`}
-              style={{ 
+              style={{
                 backgroundColor: colors.backgroundSecondary,
               }}
             >
@@ -350,9 +350,9 @@ const FilterDropdown = ({
     return (
       <>
         {/* Header */}
-        <div 
+        <div
           className="sticky top-0 z-20 px-3 md:px-4 py-2 md:py-3 flex items-center justify-between border-b"
-          style={{ 
+          style={{
             backgroundColor: colors.backgroundSecondary,
             borderColor: colors.borderForm
           }}
@@ -385,7 +385,7 @@ const FilterDropdown = ({
         </div>
 
         {/* Content */}
-        <div 
+        <div
           className="p-3 md:p-4 space-y-3 md:space-y-4"
           onMouseDown={(e) => {
             // Prevent clicks inside filter content from closing the modal
@@ -420,7 +420,7 @@ const FilterDropdown = ({
               onClick={(e) => e.stopPropagation()}
               placeholder="Enter model name"
               className="w-full px-2.5 py-1.5 rounded-lg border text-xs"
-              style={{ 
+              style={{
                 borderColor: colors.borderForm,
                 backgroundColor: colors.backgroundSecondary,
                 color: colors.textPrimary
@@ -454,19 +454,18 @@ const FilterDropdown = ({
                 <button
                   key={fuel}
                   onClick={() => handleFilterChange('fuelType', filters.fuelType === fuel ? '' : fuel)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    filters.fuelType === fuel
-                      ? 'text-white'
-                      : 'border'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.fuelType === fuel
+                    ? 'text-white'
+                    : 'border'
+                    }`}
                   style={
                     filters.fuelType === fuel
                       ? { backgroundColor: colors.backgroundTertiary }
-                      : { 
-                          borderColor: colors.borderForm,
-                          color: colors.textPrimary,
-                          backgroundColor: colors.backgroundSecondary
-                        }
+                      : {
+                        borderColor: colors.borderForm,
+                        color: colors.textPrimary,
+                        backgroundColor: colors.backgroundSecondary
+                      }
                   }
                 >
                   {fuel}
@@ -485,19 +484,18 @@ const FilterDropdown = ({
                 <button
                   key={trans}
                   onClick={() => handleFilterChange('transmission', filters.transmission === trans ? '' : trans)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    filters.transmission === trans
-                      ? 'text-white'
-                      : 'border'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.transmission === trans
+                    ? 'text-white'
+                    : 'border'
+                    }`}
                   style={
                     filters.transmission === trans
                       ? { backgroundColor: colors.backgroundTertiary }
-                      : { 
-                          borderColor: colors.borderForm,
-                          color: colors.textPrimary,
-                          backgroundColor: colors.backgroundSecondary
-                        }
+                      : {
+                        borderColor: colors.borderForm,
+                        color: colors.textPrimary,
+                        backgroundColor: colors.backgroundSecondary
+                      }
                   }
                 >
                   {trans}
@@ -534,7 +532,7 @@ const FilterDropdown = ({
                 onChange={(e) => handlePriceChange('min', e.target.value)}
                 placeholder="Min"
                 className="w-24 px-3 py-2 rounded-lg border text-sm"
-                style={{ 
+                style={{
                   borderColor: colors.borderForm,
                   backgroundColor: colors.backgroundSecondary,
                   color: colors.textPrimary
@@ -546,7 +544,7 @@ const FilterDropdown = ({
                 onChange={(e) => handlePriceChange('max', e.target.value)}
                 placeholder="Max"
                 className="w-24 px-3 py-2 rounded-lg border text-sm"
-                style={{ 
+                style={{
                   borderColor: colors.borderForm,
                   backgroundColor: colors.backgroundSecondary,
                   color: colors.textPrimary
@@ -565,22 +563,21 @@ const FilterDropdown = ({
                 <button
                   key={rating}
                   onClick={() => handleFilterChange('rating', filters.rating === rating ? '' : rating)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    filters.rating === rating
-                      ? 'text-white'
-                      : 'border'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.rating === rating
+                    ? 'text-white'
+                    : 'border'
+                    }`}
                   style={
                     filters.rating === rating
                       ? { backgroundColor: colors.backgroundTertiary }
-                      : { 
-                          borderColor: colors.borderForm,
-                          color: colors.textPrimary,
-                          backgroundColor: colors.backgroundSecondary
-                        }
+                      : {
+                        borderColor: colors.borderForm,
+                        color: colors.textPrimary,
+                        backgroundColor: colors.backgroundSecondary
+                      }
                   }
                 >
-                  {rating} ⭐
+                  {rating}
                 </button>
               ))}
             </div>
@@ -596,19 +593,18 @@ const FilterDropdown = ({
                 <button
                   key={type}
                   onClick={() => handleFilterChange('carType', filters.carType === type ? '' : type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    filters.carType === type
-                      ? 'text-white'
-                      : 'border'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.carType === type
+                    ? 'text-white'
+                    : 'border'
+                    }`}
                   style={
                     filters.carType === type
                       ? { backgroundColor: colors.backgroundTertiary }
-                      : { 
-                          borderColor: colors.borderForm,
-                          color: colors.textPrimary,
-                          backgroundColor: colors.backgroundSecondary
-                        }
+                      : {
+                        borderColor: colors.borderForm,
+                        color: colors.textPrimary,
+                        backgroundColor: colors.backgroundSecondary
+                      }
                   }
                 >
                   {type}
@@ -616,9 +612,6 @@ const FilterDropdown = ({
               ))}
             </div>
           </div>
-
-
-
 
 
           {/* Features */}
@@ -631,19 +624,18 @@ const FilterDropdown = ({
                 <button
                   key={feature}
                   onClick={() => handleFeatureToggle(feature)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    filters.features.includes(feature)
-                      ? 'text-white'
-                      : 'border'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filters.features.includes(feature)
+                    ? 'text-white'
+                    : 'border'
+                    }`}
                   style={
                     filters.features.includes(feature)
                       ? { backgroundColor: colors.backgroundTertiary }
-                      : { 
-                          borderColor: colors.borderForm,
-                          color: colors.textPrimary,
-                          backgroundColor: colors.backgroundSecondary
-                        }
+                      : {
+                        borderColor: colors.borderForm,
+                        color: colors.textPrimary,
+                        backgroundColor: colors.backgroundSecondary
+                      }
                   }
                 >
                   {feature}
@@ -654,9 +646,9 @@ const FilterDropdown = ({
         </div>
 
         {/* Footer Actions */}
-        <div 
+        <div
           className="sticky bottom-0 px-3 md:px-4 py-2 md:py-3 flex gap-2 border-t"
-          style={{ 
+          style={{
             backgroundColor: colors.backgroundSecondary,
             borderColor: colors.borderForm
           }}
@@ -664,7 +656,7 @@ const FilterDropdown = ({
           <button
             onClick={handleReset}
             className="flex-1 px-3 py-2 rounded-lg font-medium text-xs border transition-colors"
-            style={{ 
+            style={{
               borderColor: colors.borderForm,
               color: colors.textPrimary,
               backgroundColor: colors.backgroundSecondary

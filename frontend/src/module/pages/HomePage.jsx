@@ -10,6 +10,7 @@ import BrandCard from "../components/common/BrandCard";
 import CarCard from "../components/common/CarCard";
 import BannerAd from "../../components/common/BannerAd";
 import ReturningCarBanner from "../components/common/ReturningCarBanner";
+import CouponCarBanner from "../components/common/CouponCarBanner";
 import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
@@ -56,6 +57,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [headerHeight, setHeaderHeight] = useState(100); // Default height
+  const [showCouponBanner, setShowCouponBanner] = useState(false);
 
   // Swiper refs for programmatic control
   const mobileBannerSwiperRef = useRef(null);
@@ -1039,8 +1041,13 @@ const HomePage = () => {
       >
         {/* Web container - max-width and centered on larger screens */}
         <div className="max-w-7xl mx-auto">
-          {/* Promotional Banner Carousel */}
-          <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden">
+          {/* Returning Car Banner - Moved to Top per user request */}
+          <div className="mb-3 md:mb-6 block md:hidden">
+            <ReturningCarBanner />
+          </div>
+
+          {/* Promotional Banner Carousel - Moved below per user request */}
+          <div className="mb-6 relative block md:hidden">
             {bestCars.length > 0 && promotionalBanner.title && (
               <Swiper
                 modules={[Pagination, Keyboard, Mousewheel, Autoplay]}
@@ -1050,7 +1057,7 @@ const HomePage = () => {
                   mobileBannerSwiperRef.current = swiper;
                 }}
                 pagination={{
-                  el: ".mobile-banner-pagination",
+                  el: ".mobile-banner-pagination-bottom",
                   clickable: true,
                   bulletClass: "swiper-pagination-bullet-custom",
                   bulletActiveClass: "swiper-pagination-bullet-active-custom",
@@ -1065,7 +1072,6 @@ const HomePage = () => {
                 loop={true}
                 className="w-full rounded-2xl md:rounded-3xl overflow-hidden"
                 style={{ background: colors.backgroundDark }}
-                onClick={() => navigate("/search")}
               >
                 {bestCars.map((slide, index) => (
                   <SwiperSlide key={slide.id || index} className="!w-full">
@@ -1078,15 +1084,6 @@ const HomePage = () => {
                         <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
                           {promotionalBanner.subtitle}
                         </p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/search");
-                          }}
-                          className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
-                        >
-                          Discover More
-                        </button>
                       </div>
 
                       {/* Right Side - Car Image */}
@@ -1110,32 +1107,8 @@ const HomePage = () => {
             )}
 
             {/* Pagination Dots - Outside Banner */}
-            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4"></div>
-
-            {/* Custom Pagination Styles */}
-            <style>{`
-            .swiper-pagination-bullet-custom {
-              width: 8px;
-              height: 8px;
-              background: ${colors.overlayBlackDark};
-              opacity: 1;
-              margin: 0 4px;
-              transition: all 0.3s ease;
-              border-radius: 50%;
-              cursor: pointer;
-              display: inline-block;
-            }
-            .swiper-pagination-bullet-active-custom {
-              background: ${colors.brandBlack};
-              width: 10px;
-              height: 10px;
-            }
-          `}</style>
+            <div className="mobile-banner-pagination-bottom flex justify-center items-center gap-2 mt-4"></div>
           </div>
-
-          {/* Returning Car Banner - Shows cars returning soon from other users */}
-          <ReturningCarBanner />
-
           {/* Brands Section - Hidden on web view */}
           {brands.length > 0 && (
             <div className="mb-6 md:mb-8 lg:mb-12 xl:mb-16 md:-mt-24 md:hidden">
@@ -1409,6 +1382,11 @@ const HomePage = () => {
                 </div>
               )}
 
+              {/* Dynamic Coupon Banner - Placed above Nearby Cars */}
+              <div className="mb-4">
+                <CouponCarBanner />
+              </div>
+
               {/* Nearby Section - Mobile Only */}
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -1462,6 +1440,12 @@ const HomePage = () => {
 
             {/* Web View - Nearby Section (No white card background) */}
             <div className="hidden md:block -mt-4 md:-mt-6 lg:-mt-8 xl:-mt-10 mb-8 md:mb-12 lg:mb-16 xl:mb-20">
+
+              {/* Dynamic Coupon Banner - Web View */}
+              <div className="mb-8">
+                <CouponCarBanner />
+              </div>
+
               <div className="flex items-center justify-between mb-4 md:mb-6 lg:mb-8">
                 <h2 className="text-xl md:text-2xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-bold text-black">
                   Nearby

@@ -223,27 +223,25 @@ const ReturningCarBanner = () => {
     };
   }, [returningCars.length]);
 
-  useEffect(() => {
-    if (autoScrollIntervalRef.current) {
-      clearInterval(autoScrollIntervalRef.current);
-      autoScrollIntervalRef.current = null;
-    }
-    if (returningCars.length <= 1) return;
-    autoScrollIntervalRef.current = setInterval(() => {
-      if (isPausedRef.current) return;
-      const container = getScrollContainer();
-      if (!container) return;
-      const currentIdx = currentIndexRef.current;
-      const nextIndex = (currentIdx + 1) % returningCars.length;
-      const cardWidth = container.clientWidth;
-      isAutoScrollingRef.current = true;
-      container.scrollTo({ left: nextIndex * cardWidth, behavior: "smooth" });
-      setTimeout(() => { isAutoScrollingRef.current = false; }, 800);
-    }, 3000);
-    return () => {
-      if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
-    };
-  }, [returningCars.length]);
+  // Auto-scroll disabled per user request
+  /*
+  if (returningCars.length <= 1) return;
+  autoScrollIntervalRef.current = setInterval(() => {
+    if (isPausedRef.current) return;
+    const container = getScrollContainer();
+    if (!container) return;
+    const currentIdx = currentIndexRef.current;
+    const nextIndex = (currentIdx + 1) % returningCars.length;
+    const cardWidth = container.clientWidth;
+    isAutoScrollingRef.current = true;
+    container.scrollTo({ left: nextIndex * cardWidth, behavior: "smooth" });
+    setTimeout(() => { isAutoScrollingRef.current = false; }, 800);
+  }, 3000);
+  return () => {
+    if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
+  };
+  */
+
 
   const goToIndex = (index) => {
     const container = getScrollContainer();
@@ -471,16 +469,9 @@ const ReturningCarBanner = () => {
                 style={{ scrollSnapAlign: "center" }}
               >
                 {/* Left Side - Text Content */}
-<<<<<<< HEAD
                 <div
                   className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
                     }`}
-=======
-                <div 
-                  className={`flex-1 min-w-0 pr-3 transition-all duration-300 ease-out ${
-                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
-                  }`}
->>>>>>> origin/payal
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <svg
@@ -518,15 +509,9 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side */}
                 <div
-<<<<<<< HEAD
                   className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
                   style={{
                     width: "40%",
-=======
-                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300 ease-out"
-                  style={{ 
-                    width: "40%", 
->>>>>>> origin/payal
                     minWidth: "120px",
                     transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
                     opacity: index === currentCarIndex ? 1 : 0.8
@@ -600,16 +585,9 @@ const ReturningCarBanner = () => {
                 style={{ scrollSnapAlign: "center" }}
               >
                 {/* Left Side - Text Content */}
-<<<<<<< HEAD
                 <div
                   className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
                     }`}
-=======
-                <div 
-                  className={`flex-1 min-w-0 pr-6 transition-all duration-300 ease-out ${
-                    index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
-                  }`}
->>>>>>> origin/payal
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <svg
@@ -646,15 +624,9 @@ const ReturningCarBanner = () => {
 
                 {/* Right Side */}
                 <div
-<<<<<<< HEAD
                   className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
                   style={{
                     width: "45%",
-=======
-                  className="flex-shrink-0 flex items-center justify-center transition-all duration-300 ease-out"
-                  style={{ 
-                    width: "45%", 
->>>>>>> origin/payal
                     minWidth: "280px",
                     transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
                     opacity: index === currentCarIndex ? 1 : 0.8

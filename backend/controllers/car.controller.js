@@ -35,24 +35,80 @@ export const getAllCars = async (req, res) => {
 
     // Date range availability filter
     if (req.query.startDate && req.query.endDate) {
-      const start = new Date(req.query.startDate);
-      const end = new Date(req.query.endDate);
+      const requestedStart = new Date(req.query.startDate);
+      const requestedEnd = new Date(req.query.endDate);
 
-      // Find bookings that overlap with the requested period
-      // Statuses that block availability: pending, confirmed, active
-      const bookedCarIds = await Booking.find({
+      console.log('--- DEBUG: Checking Availability (Robust) ---');
+      console.log('Request Start:', requestedStart);
+      console.log('Request End:', requestedEnd);
+
+      // 1. Broad fetch: Get all bookings that *might* overlap based on just the date part.
+      // We look for any booking where the date range intersects with our date range.
+      // This is a superset of actual conflicts.
+      const candidateBookings = await Booking.find({
         status: { $in: ['pending', 'confirmed', 'active'] },
         $or: [
           {
-            // Booking overlaps with requested period
-            'tripStart.date': { $lt: end },
-            'tripEnd.date': { $gt: start }
+            // Booking date matches or overlaps
+            'tripStart.date': { $lte: requestedEnd },
+            'tripEnd.date': { $gte: requestedStart }
           }
         ]
-      }).distinct('car');
+      }).select('car tripStart tripEnd status');
 
-      if (bookedCarIds.length > 0) {
-        query._id = { $nin: bookedCarIds };
+      const bookedCarIds = new Set();
+
+      // 2. Precise check: Filter in memory using time components
+      for (const booking of candidateBookings) {
+        // Helper to combine date and time
+        const getFullDateTime = (dateObj, timeStr) => {
+          if (!dateObj) return null;
+          const dt = new Date(dateObj);
+
+          if (timeStr && typeof timeStr === 'string') {
+            const parts = timeStr.trim().split(':'); // Handle "HH:MM"
+            if (parts.length >= 2) {
+              const hours = parseInt(parts[0], 10);
+              const minutes = parseInt(parts[1], 10);
+              if (!isNaN(hours) && !isNaN(minutes)) {
+                dt.setHours(hours, minutes, 0, 0);
+              }
+            } else if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+              // Handle "10:30 AM" format if present (legacy support)
+              const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+              if (match) {
+                let h = parseInt(match[1], 10);
+                const m = parseInt(match[2], 10);
+                const period = match[3].toUpperCase();
+                if (period === 'PM' && h < 12) h += 12;
+                if (period === 'AM' && h === 12) h = 0;
+                dt.setHours(h, m, 0, 0);
+              }
+            }
+          } else {
+            // If no time string (legacy), assume start of day for start, end of day for end?
+            // Actually unsafe to assume, but let's default to the date object itself (usually 00:00Z)
+          }
+          return dt;
+        };
+
+        const bookingStart = getFullDateTime(booking.tripStart.date, booking.tripStart.time);
+        const bookingEnd = getFullDateTime(booking.tripEnd.date, booking.tripEnd.time);
+
+        if (bookingStart && bookingEnd) {
+          // Strict overlap check:
+          // Overlap exists if (StartA < EndB) and (EndA > StartB)
+          if (bookingStart < requestedEnd && bookingEnd > requestedStart) {
+            console.log(`Conflict found for Car ${booking.car}: Booking ${booking._id} (${bookingStart.toISOString()} - ${bookingEnd.toISOString()}) vs Request (${requestedStart.toISOString()} - ${requestedEnd.toISOString()})`);
+            bookedCarIds.add(booking.car.toString());
+          }
+        }
+      }
+
+      console.log('Booked Car IDs Found (Precise):', Array.from(bookedCarIds));
+
+      if (bookedCarIds.size > 0) {
+        query._id = { $nin: Array.from(bookedCarIds) };
       }
     }
 

@@ -292,7 +292,6 @@ const SearchPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-<<<<<<< HEAD
         // Clear existing data to prevent flickering of old results
         setAllRecommendCars([]);
         setAllPopularCars([]);
@@ -311,12 +310,22 @@ const SearchPage = () => {
           if (!timeStr) return new Date(`${dateStr}T00:00:00`);
 
           try {
-            // timeStr expected format: "HH:MM am/pm"
-            const [timePart, period] = timeStr.trim().split(' ');
-            let [hours, minutes] = timePart.split(':').map(Number);
+            const trimmedTime = timeStr.trim();
+            let hours, minutes;
 
-            if (period.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-            if (period.toLowerCase() === 'am' && hours === 12) hours = 0;
+            // Check if 12-hour format with AM/PM
+            if (/am|pm/i.test(trimmedTime)) {
+              const [timePart, period] = trimmedTime.split(' ');
+              [hours, minutes] = timePart.split(':').map(Number);
+              const isPM = period && period.toLowerCase() === 'pm';
+              const isAM = period && period.toLowerCase() === 'am';
+
+              if (isPM && hours !== 12) hours += 12;
+              if (isAM && hours === 12) hours = 0;
+            } else {
+              // 24-hour format
+              [hours, minutes] = trimmedTime.split(':').map(Number);
+            }
 
             const date = new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
             return date;
@@ -339,34 +348,13 @@ const SearchPage = () => {
         // Build backend query params
         const queryParams = {
           limit: 100, // Increase limit to allow client-side filtering of unsupported fields
-=======
-        
-        // Prepare query params with availability dates
-        const queryParams = {
-          limit: 12,
->>>>>>> origin/payal
           sortBy: 'createdAt',
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
-<<<<<<< HEAD
-          availabilityStart: appliedFilters.availableFrom,
-          availabilityEnd: appliedFilters.availableTo,
-          pickupTime: pickupTime,
-          dropoffTime: dropoffTime,
+          startDate: startDateStr || appliedFilters.availableFrom,
+          endDate: endDateStr || appliedFilters.availableTo,
         };
-
-=======
-        };
-
-        const availabilityStart = searchParams.get('availabilityStart');
-        const availabilityEnd = searchParams.get('availabilityEnd');
-        
-        if (availabilityStart) queryParams.startDate = availabilityStart;
-        if (availabilityEnd) queryParams.endDate = availabilityEnd;
-
-        // Fetch latest active cars
->>>>>>> origin/payal
         const carsResponse = await carService.getCars(queryParams);
 
         let cars = [];
@@ -469,10 +457,6 @@ const SearchPage = () => {
         });
 
         setBrands(dynamicBrands);
-
-        // ... rest of the option building code stays same implicitly as it depends on cars
-        // But for safety, I will include the option building code as well to close the block properly
-
 
         // Extract unique filter options from cars data
         const uniqueBrands = Array.from(
@@ -610,7 +594,14 @@ const SearchPage = () => {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get('availabilityStart'), searchParams.get('availabilityEnd')]);
+  }, [
+    searchParams.get('availabilityStart'),
+    searchParams.get('availabilityEnd'),
+    searchParams.get('pickupDate'),
+    searchParams.get('pickupTime'),
+    searchParams.get('dropoffDate'),
+    searchParams.get('dropoffTime')
+  ]);
 
   // Handle search
   const handleSearch = (query) => {
