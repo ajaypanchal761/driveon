@@ -103,6 +103,7 @@ const CarDetailsPage = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [activeTab, setActiveTab] = useState('offers');
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [mobileSwiper, setMobileSwiper] = useState(null);
   const [offers, setOffers] = useState([]);
   const [faqs, setFaqs] = useState([]);
   const [cancellationPolicy, setCancellationPolicy] = useState(null);
@@ -3327,6 +3328,7 @@ const CarDetailsPage = () => {
                   el: '.car-pagination-dots',
                 }}
                 onSlideChange={(swiper) => setCurrentImageIndex(swiper.activeIndex)}
+                onSwiper={setMobileSwiper}
                 keyboard={{ enabled: true }}
                 mousewheel={{ enabled: true, forceToAxis: true, sensitivity: 1 }}
                 speed={300}
@@ -3521,6 +3523,47 @@ const CarDetailsPage = () => {
               }
             `}</style>
             </div>
+
+            {/* Mobile/Tablet Thumbnail Row - Added based on User Request */}
+            {carImages && carImages.length > 1 && (
+              <div className="md:hidden w-full px-4 mb-4">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2">
+                  {carImages.map((image, index) => {
+                    const imageKey = typeof image === 'string' ? image : (image?.url || image?.path || `img-${index}`);
+                    return (
+                      <div
+                        key={`mobile-thumbnail-${imageKey}-${index}`}
+                        className={`flex-shrink-0 relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                          currentImageIndex === index ? '' : 'opacity-60'
+                        }`}
+                        style={{
+                          backgroundColor: colors.backgroundPrimary,
+                          border: currentImageIndex === index ? `2px solid ${colors.backgroundTertiary}` : '1px solid #e5e7eb',
+                          width: '64px',
+                          height: '64px'
+                        }}
+                        onClick={() => {
+                          setCurrentImageIndex(index);
+                          if (mobileSwiper) mobileSwiper.slideTo(index);
+                        }}
+                      >
+                        <div className="w-full h-full flex items-center justify-center p-1 bg-white">
+                          <img
+                            src={image}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-contain"
+                            draggable={false}
+                            onError={(e) => {
+                              e.target.src = carImg1;
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Tablet: Main Image with Thumbnails (hidden on lg+) */}
             <div className="hidden md:block lg:hidden w-full px-6">
