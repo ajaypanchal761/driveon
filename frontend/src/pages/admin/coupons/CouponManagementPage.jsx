@@ -15,7 +15,7 @@ import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelec
 const CouponManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // State management
   const [coupons, setCoupons] = useState([]);
   const [filteredCoupons, setFilteredCoupons] = useState([]);
@@ -24,7 +24,7 @@ const CouponManagementPage = () => {
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     status: 'all', // all, active, expired, used
@@ -65,7 +65,7 @@ const CouponManagementPage = () => {
           dateRange: filters.dateRange,
           search: searchQuery,
         });
-        
+
         if (response.success && response.data?.coupons) {
           setCoupons(response.data.coupons);
         } else {
@@ -94,7 +94,7 @@ const CouponManagementPage = () => {
             limit: 1000, // Get all active cars
             status: 'active',
           });
-          
+
           if (response.success && response.data?.cars) {
             setCars(response.data.cars);
           } else {
@@ -159,7 +159,7 @@ const CouponManagementPage = () => {
       const date = new Date(dateStr);
       return date.toISOString().split('T')[0];
     };
-    
+
     // Handle carIds - convert single carId to array or use existing array
     let carIds = [];
     if (coupon.carIds && Array.isArray(coupon.carIds)) {
@@ -167,7 +167,7 @@ const CouponManagementPage = () => {
     } else if (coupon.carId) {
       carIds = [coupon.carId._id || coupon.carId];
     }
-    
+
     setCouponForm({
       code: coupon.code,
       discountType: coupon.discountType,
@@ -190,8 +190,8 @@ const CouponManagementPage = () => {
   const handleSaveCoupon = async () => {
     try {
       // Validate required fields
-      if (!couponForm.code || !couponForm.discountValue || 
-          !couponForm.validityStart || !couponForm.validityEnd || !couponForm.usageLimit) {
+      if (!couponForm.code || !couponForm.discountValue ||
+        !couponForm.validityStart || !couponForm.validityEnd || !couponForm.usageLimit) {
         toastUtils.error('Please fill all required fields');
         return;
       }
@@ -544,14 +544,14 @@ const CouponManagementPage = () => {
                   <div className="text-xs text-gray-600">
                     Applicable to:{' '}
                     {coupon.applicableTo === 'car_id'
-                      ? `Cars: ${coupon.carIds && Array.isArray(coupon.carIds) 
-                          ? `${coupon.carIds.length} car(s) selected`
-                          : coupon.carId 
+                      ? `Cars: ${coupon.carIds && Array.isArray(coupon.carIds)
+                        ? `${coupon.carIds.length} car(s) selected`
+                        : coupon.carId
                           ? '1 car'
                           : 'N/A'}`
                       : coupon.applicableTo === 'user_id'
-                      ? `User ID: ${coupon.userId?._id || coupon.userId || 'N/A'}`
-                      : 'N/A'}
+                        ? `User ID: ${coupon.userId?._id || coupon.userId || 'N/A'}`
+                        : 'N/A'}
                   </div>
                 </div>
 
@@ -572,11 +572,10 @@ const CouponManagementPage = () => {
                   </button>
                   <button
                     onClick={() => handleToggleCoupon(coupon._id || coupon.id)}
-                    className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      coupon.isActive
-                        ? 'bg-gray-600 text-white hover:bg-gray-700'
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
+                    className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors ${coupon.isActive
+                      ? 'bg-gray-600 text-white hover:bg-gray-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
                   >
                     {coupon.isActive ? 'Deactivate' : 'Activate'}
                   </button>
@@ -611,6 +610,7 @@ const CouponManagementPage = () => {
           onSave={handleSaveCoupon}
           cars={cars}
           loadingCars={loadingCars}
+          isEditMode={!!selectedCoupon}
         />
       )}
 
@@ -631,7 +631,7 @@ const CouponManagementPage = () => {
 /**
  * Coupon Modal Component
  */
-const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], loadingCars = false }) => {
+const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], loadingCars = false, isEditMode = false }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -640,7 +640,7 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
       >
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">
-            {couponForm.code ? 'Edit Coupon' : 'Create Coupon'}
+            {isEditMode ? 'Edit Coupon' : 'Create Coupon'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

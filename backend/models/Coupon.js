@@ -14,7 +14,7 @@ const couponSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
       index: true,
-      match: [/^[A-Z0-9]+$/, 'Coupon code must contain only uppercase letters and numbers'],
+      match: [/^[A-Z0-9\s()\-]+$/, 'Coupon code must contain only uppercase letters, numbers, spaces, parentheses and hyphens'],
     },
 
     // Discount Details
@@ -48,7 +48,7 @@ const couponSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'Validity end date is required'],
       validate: {
-        validator: function(value) {
+        validator: function (value) {
           return value > this.validityStart;
         },
         message: 'Validity end date must be after start date',
@@ -122,7 +122,7 @@ couponSchema.index({ applicableTo: 1, carType: 1 });
 couponSchema.index({ isActive: 1, validityEnd: 1 });
 
 // Virtual to check if coupon is valid
-couponSchema.virtual('isValid').get(function() {
+couponSchema.virtual('isValid').get(function () {
   const now = new Date();
   return (
     this.isActive &&
@@ -133,9 +133,9 @@ couponSchema.virtual('isValid').get(function() {
 });
 
 // Method to check if coupon can be applied
-couponSchema.methods.canBeApplied = function(amount, carId, userId, carType) {
+couponSchema.methods.canBeApplied = function (amount, carId, userId, carType) {
   const now = new Date();
-  
+
   // Check if coupon is active
   if (!this.isActive) {
     return { valid: false, message: 'This coupon is not active' };
@@ -205,7 +205,7 @@ couponSchema.methods.canBeApplied = function(amount, carId, userId, carType) {
 };
 
 // Method to calculate discount amount
-couponSchema.methods.calculateDiscount = function(amount) {
+couponSchema.methods.calculateDiscount = function (amount) {
   let discount = 0;
 
   if (this.discountType === 'percentage') {
@@ -226,7 +226,7 @@ couponSchema.methods.calculateDiscount = function(amount) {
 };
 
 // Method to increment usage count
-couponSchema.methods.incrementUsage = async function() {
+couponSchema.methods.incrementUsage = async function () {
   if (this.usedCount < this.usageLimit) {
     this.usedCount += 1;
     await this.save();

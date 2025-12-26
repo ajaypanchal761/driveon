@@ -125,5 +125,19 @@ export const couponService = {
       throw error;
     }
   },
+
+  /**
+   * Get car specific coupons (User)
+   * @returns {Promise}
+   */
+  getCarSpecificCoupons: async () => {
+    try {
+      const response = await api.get('/common/coupons/car-specific');
+      return response.data;
+    } catch (error) {
+      console.error('Get car specific coupons error:', error);
+      throw error;
+    }
+  },
 };
 

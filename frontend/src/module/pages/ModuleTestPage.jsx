@@ -11,6 +11,7 @@ import FilterDropdown from "../components/common/FilterDropdown";
 import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
+import { couponService } from "../../services/coupon.service";
 import { useLocation } from "../../hooks/useLocation";
 import { useFavorites } from '../../context/FavoritesContext';
 
@@ -79,22 +80,92 @@ const ModuleTestPage = () => {
   const isBannerPausedRef = useRef(false);
   const bannerPauseTimeoutRef = useRef(null);
 
-  const bannerCars = useMemo(() => [
-    { image: bannerCar1, alt: "Toyota Innova" },
-    { image: carImg6, alt: "Hyundai Creta" },
-    { image: nearbyImg1, alt: "Maruti Swift Dzire" },
-  ], []);
+  // Dynamic Banner State
+  const [bannerCars, setBannerCars] = useState([]);
+
+  // Fetch dynamic coupon banners
+  useEffect(() => {
+    const fetchCouponBanners = async () => {
+      try {
+        const response = await couponService.getCarSpecificCoupons();
+        if (response.success && response.data?.coupons && response.data.coupons.length > 0) {
+          const activeCoupons = response.data.coupons.filter(c => c.cars && c.cars.length > 0);
+
+          if (activeCoupons.length > 0) {
+            const dynamicBanners = activeCoupons.map(coupon => {
+              const car = coupon.cars[0];
+              let carImage = bannerCar1; // Fallback
+
+              if (car.images && car.images.length > 0) {
+                const img = car.images.find(i => i.isPrimary) || car.images[0];
+                const imgUrl = typeof img === 'string' ? img : (img.url || img.path);
+                if (imgUrl) {
+                  carImage = imgUrl.startsWith('http') ? imgUrl : `${import.meta.env.VITE_API_BASE_URL || ""}${imgUrl}`;
+                }
+              }
+
+              return {
+                image: carImage,
+                alt: car.model || "Car",
+                title: coupon.code, // Coupon Code as Title
+                subtitle: coupon.description || "Special Discount Available",
+                buttonText: "Book Now"
+              };
+            });
+
+            setBannerCars(dynamicBanners);
+          } else {
+            // Revert to static if no active coupons with cars found
+            setBannerCars([
+              {
+                image: bannerCar1,
+                alt: "Toyota Innova",
+                title: "20% Off Your First Ride!",
+                subtitle: "Experience Seamless Car Rentals.",
+                buttonText: "Discover More"
+              }
+            ]);
+          }
+        } else {
+          // No coupons at all, revert to static
+          setBannerCars([
+            {
+              image: bannerCar1,
+              alt: "Toyota Innova",
+              title: "20% Off Your First Ride!",
+              subtitle: "Experience Seamless Car Rentals.",
+              buttonText: "Discover More"
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch coupon banners", error);
+        // Fallback on error
+        setBannerCars([
+          {
+            image: bannerCar1,
+            alt: "Toyota Innova",
+            title: "20% Off Your First Ride!",
+            subtitle: "Experience Seamless Car Rentals.",
+            buttonText: "Discover More"
+          }
+        ]);
+      }
+    };
+
+    fetchCouponBanners();
+  }, []);
 
   // Banner scroll handling
   useEffect(() => {
     const handleScroll = () => {
       const container = bannerScrollRef.current;
       if (!container) return;
-      
+
       const scrollLeft = container.scrollLeft;
       const cardWidth = container.clientWidth;
       const newIndex = Math.round(scrollLeft / cardWidth);
-      
+
       if (newIndex >= 0 && newIndex < bannerCars.length) {
         setCurrentBannerIndex(newIndex);
       }
@@ -118,21 +189,23 @@ const ModuleTestPage = () => {
 
   // Banner auto-scroll
   useEffect(() => {
+    if (bannerCars.length <= 1) return;
+
     const interval = setInterval(() => {
       if (isBannerPausedRef.current) return;
-      
+
       const container = bannerScrollRef.current;
       if (!container) return;
-      
+
       const nextIndex = (currentBannerIndex + 1) % bannerCars.length;
       const cardWidth = container.clientWidth;
-      
+
       isBannerAutoScrollingRef.current = true;
       container.scrollTo({
         left: nextIndex * cardWidth,
         behavior: "smooth"
       });
-      
+
       setTimeout(() => {
         isBannerAutoScrollingRef.current = false;
       }, 500);
@@ -147,7 +220,7 @@ const ModuleTestPage = () => {
 
     isBannerPausedRef.current = true;
     if (bannerPauseTimeoutRef.current) clearTimeout(bannerPauseTimeoutRef.current);
-    
+
     isBannerAutoScrollingRef.current = true;
     const cardWidth = container.clientWidth;
     container.scrollTo({
@@ -325,12 +398,12 @@ const ModuleTestPage = () => {
       fuelType.toLowerCase() === "petrol"
         ? "Petrol"
         : fuelType.toLowerCase() === "diesel"
-        ? "Diesel"
-        : fuelType.toLowerCase() === "electric"
-        ? "Electric"
-        : fuelType.toLowerCase() === "hybrid"
-        ? "Hybrid"
-        : fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
+          ? "Diesel"
+          : fuelType.toLowerCase() === "electric"
+            ? "Electric"
+            : fuelType.toLowerCase() === "hybrid"
+              ? "Hybrid"
+              : fuelType.charAt(0).toUpperCase() + fuelType.slice(1).toLowerCase();
 
     // Normalize transmission
     const transmission = car.transmission || "";
@@ -338,11 +411,11 @@ const ModuleTestPage = () => {
       transmission.toLowerCase() === "automatic"
         ? "Automatic"
         : transmission.toLowerCase() === "manual"
-        ? "Manual"
-        : transmission.toLowerCase() === "cvt"
-        ? "CVT"
-        : transmission.charAt(0).toUpperCase() +
-          transmission.slice(1).toLowerCase();
+          ? "Manual"
+          : transmission.toLowerCase() === "cvt"
+            ? "CVT"
+            : transmission.charAt(0).toUpperCase() +
+            transmission.slice(1).toLowerCase();
 
     return {
       id: car._id || car.id,
@@ -392,7 +465,7 @@ const ModuleTestPage = () => {
 
   const handleBookingSearch = () => {
     let queryParams = new URLSearchParams();
-    
+
     // Pass existing search value if any
     const trimmed = searchValue.trim();
     if (trimmed) {
@@ -400,56 +473,56 @@ const ModuleTestPage = () => {
     }
 
     if (pickupDate && dropoffDate) {
-       const convertTo24Hour = (timeStr) => {
-           if (!timeStr) return "";
-           const parts = timeStr.trim().split(' ');
-           if (parts.length !== 2) return timeStr; // Assume already 24h or invalid
-           const [time, period] = parts;
-           let [hours, minutes] = time.split(':').map(Number);
-           if (period === 'PM' && hours !== 12) hours += 12;
-           if (period === 'AM' && hours === 12) hours = 0;
-           return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-       };
+      const convertTo24Hour = (timeStr) => {
+        if (!timeStr) return "";
+        const parts = timeStr.trim().split(' ');
+        if (parts.length !== 2) return timeStr; // Assume already 24h or invalid
+        const [time, period] = parts;
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      };
 
-       // Save to localStorage for BookNowPage to pick up
-       try {
-           const bookingDates = {
-               pickupDate: pickupDate,
-               pickupTime: convertTo24Hour(pickupTime),
-               dropDate: dropoffDate,
-               dropTime: convertTo24Hour(dropoffTime)
-           };
-           localStorage.setItem('selectedBookingDates', JSON.stringify(bookingDates));
-       } catch (e) {
-           console.error("Failed to save booking dates", e);
-       }
+      // Save to localStorage for BookNowPage to pick up
+      try {
+        const bookingDates = {
+          pickupDate: pickupDate,
+          pickupTime: convertTo24Hour(pickupTime),
+          dropDate: dropoffDate,
+          dropTime: convertTo24Hour(dropoffTime)
+        };
+        localStorage.setItem('selectedBookingDates', JSON.stringify(bookingDates));
+      } catch (e) {
+        console.error("Failed to save booking dates", e);
+      }
 
-       const getISOString = (dateStr, timeStr) => {
-           const [year, month, day] = dateStr.split('-').map(Number);
-           let hours = 10;
-           let minutes = 30; // Default time
-           if (timeStr) {
-               const parts = timeStr.trim().split(' ');
-               if (parts.length === 2) {
-                   const [time, period] = parts;
-                   const [h, m] = time.split(':').map(Number);
-                   hours = h;
-                   minutes = m;
-                   if (period === 'PM' && hours !== 12) hours += 12;
-                   if (period === 'AM' && hours === 12) hours = 0;
-               }
-           }
-           return new Date(year, month - 1, day, hours, minutes).toISOString();
-       };
-       
-       try {
-           queryParams.append('availabilityStart', getISOString(pickupDate, pickupTime));
-           queryParams.append('availabilityEnd', getISOString(dropoffDate, dropoffTime));
-       } catch (e) {
-           console.error("Invalid date format", e);
-       }
+      const getISOString = (dateStr, timeStr) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        let hours = 10;
+        let minutes = 30; // Default time
+        if (timeStr) {
+          const parts = timeStr.trim().split(' ');
+          if (parts.length === 2) {
+            const [time, period] = parts;
+            const [h, m] = time.split(':').map(Number);
+            hours = h;
+            minutes = m;
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+          }
+        }
+        return new Date(year, month - 1, day, hours, minutes).toISOString();
+      };
+
+      try {
+        queryParams.append('availabilityStart', getISOString(pickupDate, pickupTime));
+        queryParams.append('availabilityEnd', getISOString(dropoffDate, dropoffTime));
+      } catch (e) {
+        console.error("Invalid date format", e);
+      }
     }
-    
+
     navigate(`/search?${queryParams.toString()}`);
   };
 
@@ -535,82 +608,82 @@ const ModuleTestPage = () => {
 
             // If no API logo, map specific brand/model names to correct logos
             if (!brandLogo) {
-            // Indian brands/models
-            if (lowerName.includes('alto') || lowerName.includes('800')) {
-              brandLogo = logo2; // Maruti/Toyota logo for Alto
-              displayName = 'Maruti Suzuki';
-            } else if (lowerName.includes('xuv') || lowerName.includes('500')) {
-              brandLogo = logo9; // Mahindra logo for XUV
-              displayName = 'Mahindra';
-            } else if (lowerName.includes('swift') || lowerName.includes('dzire')) {
-              brandLogo = logo2; // Maruti logo for Swift/Dzire
-              displayName = 'Maruti Suzuki';
-            } else if (lowerName.includes('hyundai')) {
-              brandLogo = logo6; // Hyundai logo (different from KIA)
-              displayName = 'Hyundai';
-            } else if (lowerName.includes('kia')) {
-              brandLogo = logo1; // KIA logo
-              displayName = 'Kia';
-            } else if (lowerName.includes('toyota')) {
-              brandLogo = logo2; // Toyota logo
-              displayName = 'Toyota';
-            } else if (lowerName.includes('mahindra')) {
-              brandLogo = logo9; // Mahindra logo
-              displayName = 'Mahindra';
-            } else if (lowerName.includes('maruti')) {
-              brandLogo = logo2; // Maruti logo
-              displayName = 'Maruti Suzuki';
-            } else if (lowerName.includes('tata')) {
-              brandLogo = logo3; // Tata logo
-              displayName = 'Tata';
-            } else if (lowerName.includes('honda')) {
-              brandLogo = logo8; // Honda logo
-              displayName = 'Honda';
-            } else if (lowerName.includes('nissan')) {
-              brandLogo = logo11; // Nissan logo
-              displayName = 'Nissan';
-            } else if (lowerName.includes('ford')) {
-              brandLogo = logo4; // Ford logo
-              displayName = 'Ford';
-            } else if (lowerName.includes('chevrolet')) {
-              brandLogo = logo5; // Chevrolet logo
-              displayName = 'Chevrolet';
-            } else if (lowerName.includes('ferrari')) {
-              brandLogo = logo10; // Ferrari logo
-              displayName = 'Ferrari';
-            } else if (lowerName.includes('lamborghini')) {
-              brandLogo = logo5; // Lamborghini logo
-              displayName = 'Lamborghini';
-            } else if (lowerName.includes('bmw')) {
-              brandLogo = logo11; // BMW logo
-              displayName = 'BMW';
-            } else if (lowerName.includes('audi')) {
-              brandLogo = logo10; // Audi logo
-              displayName = 'Audi';
-            } else if (lowerName.includes('tesla')) {
-              brandLogo = logo4; // Tesla logo
-              displayName = 'Tesla';
-            } else {
-              // Try exact match from brandLogos map
-              brandLogo = brandLogos[normalizedName];
-              
-              // Try case-insensitive match
-              if (!brandLogo) {
-                const brandKey = Object.keys(brandLogos).find(
-                  key => key.toLowerCase() === normalizedName.toLowerCase()
-                );
-                if (brandKey) {
-                  brandLogo = brandLogos[brandKey];
-                  displayName = brandKey;
+              // Indian brands/models
+              if (lowerName.includes('alto') || lowerName.includes('800')) {
+                brandLogo = logo2; // Maruti/Toyota logo for Alto
+                displayName = 'Maruti Suzuki';
+              } else if (lowerName.includes('xuv') || lowerName.includes('500')) {
+                brandLogo = logo9; // Mahindra logo for XUV
+                displayName = 'Mahindra';
+              } else if (lowerName.includes('swift') || lowerName.includes('dzire')) {
+                brandLogo = logo2; // Maruti logo for Swift/Dzire
+                displayName = 'Maruti Suzuki';
+              } else if (lowerName.includes('hyundai')) {
+                brandLogo = logo6; // Hyundai logo (different from KIA)
+                displayName = 'Hyundai';
+              } else if (lowerName.includes('kia')) {
+                brandLogo = logo1; // KIA logo
+                displayName = 'Kia';
+              } else if (lowerName.includes('toyota')) {
+                brandLogo = logo2; // Toyota logo
+                displayName = 'Toyota';
+              } else if (lowerName.includes('mahindra')) {
+                brandLogo = logo9; // Mahindra logo
+                displayName = 'Mahindra';
+              } else if (lowerName.includes('maruti')) {
+                brandLogo = logo2; // Maruti logo
+                displayName = 'Maruti Suzuki';
+              } else if (lowerName.includes('tata')) {
+                brandLogo = logo3; // Tata logo
+                displayName = 'Tata';
+              } else if (lowerName.includes('honda')) {
+                brandLogo = logo8; // Honda logo
+                displayName = 'Honda';
+              } else if (lowerName.includes('nissan')) {
+                brandLogo = logo11; // Nissan logo
+                displayName = 'Nissan';
+              } else if (lowerName.includes('ford')) {
+                brandLogo = logo4; // Ford logo
+                displayName = 'Ford';
+              } else if (lowerName.includes('chevrolet')) {
+                brandLogo = logo5; // Chevrolet logo
+                displayName = 'Chevrolet';
+              } else if (lowerName.includes('ferrari')) {
+                brandLogo = logo10; // Ferrari logo
+                displayName = 'Ferrari';
+              } else if (lowerName.includes('lamborghini')) {
+                brandLogo = logo5; // Lamborghini logo
+                displayName = 'Lamborghini';
+              } else if (lowerName.includes('bmw')) {
+                brandLogo = logo11; // BMW logo
+                displayName = 'BMW';
+              } else if (lowerName.includes('audi')) {
+                brandLogo = logo10; // Audi logo
+                displayName = 'Audi';
+              } else if (lowerName.includes('tesla')) {
+                brandLogo = logo4; // Tesla logo
+                displayName = 'Tesla';
+              } else {
+                // Try exact match from brandLogos map
+                brandLogo = brandLogos[normalizedName];
+
+                // Try case-insensitive match
+                if (!brandLogo) {
+                  const brandKey = Object.keys(brandLogos).find(
+                    key => key.toLowerCase() === normalizedName.toLowerCase()
+                  );
+                  if (brandKey) {
+                    brandLogo = brandLogos[brandKey];
+                    displayName = brandKey;
+                  }
+                }
+
+                // Use fallback brand logo if still not found
+                if (!brandLogo) {
+                  brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
                 }
               }
-              
-              // Use fallback brand logo if still not found
-              if (!brandLogo) {
-                brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
-              }
             }
-          }
 
             return {
               id: index + 1,
@@ -849,7 +922,7 @@ const ModuleTestPage = () => {
   // ... (Header update happens in second chunk below or same tool call if possible?)
   // Tool supports multiple chunks? Yes but `replace_file_content` is single chunk? No, `replace_file_content` is SINGLE contiguous block.
   // `multi_replace_file_content` is needed for non-contiguous.
-  
+
   // I will use `replace_file_content` for `formatTimeDisplay` first, then another for the Header JSX.
   // Actually, I can use `multi_replace_file_content`.
 
@@ -1077,57 +1150,57 @@ const ModuleTestPage = () => {
 
         {/* Date/Time Search Bar - Premium Glassmorphism */}
 
-            <motion.div
-              className="w-full relative z-20 hidden md:block"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+        <motion.div
+          className="w-full relative z-20 hidden md:block"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          {!isSearchActive ? (
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setIsSearchActive(true)}
+              className="w-full bg-white/10 backdrop-blur-md rounded-2xl p-3 flex items-center justify-between border border-white/20 shadow-lg"
             >
-              {!isSearchActive ? (
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setIsSearchActive(true)}
-                  className="w-full bg-white/10 backdrop-blur-md rounded-2xl p-3 flex items-center justify-between border border-white/20 shadow-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    <span className="text-white/80 text-sm font-medium">Search your dream car...</span>
-                  </div>
-                </motion.button>
-              ) : (
-                <motion.div
-                  className="w-full bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                >
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Search brand, model..."
-                    className="flex-1 bg-transparent text-gray-800 placeholder-gray-400 text-sm font-medium focus:outline-none px-2"
-                    onChange={(e) => handleSearch(e.target.value)}
-                  />
-                  <button
-                    onClick={() => {
-                        setIsSearchActive(false);
-                        handleSearch('');
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold text-gray-600"
-                  >
-                    Cancel
-                  </button>
-                </motion.div>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <span className="text-white/80 text-sm font-medium">Search your dream car...</span>
+              </div>
+            </motion.button>
+          ) : (
+            <motion.div
+              className="w-full bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search brand, model..."
+                className="flex-1 bg-transparent text-gray-800 placeholder-gray-400 text-sm font-medium focus:outline-none px-2"
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <button
+                onClick={() => {
+                  setIsSearchActive(false);
+                  handleSearch('');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-semibold text-gray-600"
+              >
+                Cancel
+              </button>
             </motion.div>
+          )}
+        </motion.div>
       </div>
 
       {/* CONTENT */}
@@ -1143,7 +1216,7 @@ const ModuleTestPage = () => {
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           {/* MOBILE PREMIUM BOOKING CARD */}
-          <motion.div 
+          <motion.div
             className="md:hidden -mt-3 mb-6 px-1 relative z-30"
             initial="hidden"
             animate="visible"
@@ -1167,8 +1240,8 @@ const ModuleTestPage = () => {
 
               <div className="flex flex-col gap-4 relative z-10">
                 {/* Pickup Section */}
-                <motion.div 
-                  className="flex flex-col cursor-pointer group" 
+                <motion.div
+                  className="flex flex-col cursor-pointer group"
                   onClick={() => { setCalendarTarget('pickup'); setIsCalendarOpen(true); }}
                   whileTap={{ scale: 0.98 }}
                   variants={{
@@ -1187,7 +1260,7 @@ const ModuleTestPage = () => {
                     </div>
                     <div className="flex flex-col">
                       <span className={`text-sm font-bold block ${pickupDate ? 'text-[#1C205C]' : 'text-gray-400'}`}>
-                        {pickupDate 
+                        {pickupDate
                           ? new Date(pickupDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                           : "Select Date"}
                       </span>
@@ -1202,8 +1275,8 @@ const ModuleTestPage = () => {
                 </motion.div>
 
                 {/* Return Section */}
-                <motion.div 
-                  className="flex flex-col cursor-pointer group" 
+                <motion.div
+                  className="flex flex-col cursor-pointer group"
                   onClick={() => { setCalendarTarget('dropoff'); setIsCalendarOpen(true); }}
                   whileTap={{ scale: 0.98 }}
                   variants={{
@@ -1212,17 +1285,17 @@ const ModuleTestPage = () => {
                   }}
                 >
                   <label className="text-[11px] font-bold text-gray-500 mb-2 ml-1 flex items-center gap-1.5 uppercase tracking-wider">
-                     <svg className="w-3.5 h-3.5 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <svg className="w-3.5 h-3.5 text-[#1C205C]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     Return Details
                   </label>
                   <div className="w-full bg-gray-50 group-hover:bg-blue-50/50 rounded-2xl px-4 py-3 border border-transparent group-hover:border-blue-200 transition-all duration-300 flex items-center gap-3 relative overflow-hidden">
-                     <div className="absolute inset-0 bg-blue-50/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none"></div>
-                     <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-[#1C205C]">
+                    <div className="absolute inset-0 bg-blue-50/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none"></div>
+                    <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-[#1C205C]">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
                     <div className="flex flex-col">
                       <span className={`text-sm font-bold block ${dropoffDate ? 'text-[#1C205C]' : 'text-gray-400'}`}>
-                        {dropoffDate 
+                        {dropoffDate
                           ? new Date(dropoffDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                           : "Select Date"}
                       </span>
@@ -1230,14 +1303,14 @@ const ModuleTestPage = () => {
                         {dropoffTime || "Select Time"}
                       </span>
                     </div>
-                     <div className="ml-auto text-blue-900/40 transform group-hover:translate-x-1 transition-transform">
+                    <div className="ml-auto text-blue-900/40 transform group-hover:translate-x-1 transition-transform">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
                     </div>
                   </div>
                 </motion.div>
               </div>
 
-             <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.02, boxShadow: "0 20px 25px -5px rgba(28, 32, 92, 0.4)" }}
                 whileTap={{ scale: 0.95 }}
                 variants={{
@@ -1269,15 +1342,15 @@ const ModuleTestPage = () => {
                 <motion.button
                   key={cat.id}
                   type="button"
-                className="flex-shrink-0 w-24"
-                onClick={() => {
-                  // Navigate to category page
-                  // Use carType if available, otherwise convert label to lowercase
-                  const categoryName = cat.carType 
-                    ? cat.carType.toLowerCase() 
-                    : (cat.label || '').toLowerCase().replace(/\s+/g, '-');
-                  navigate(`/category/${categoryName}`);
-                }}
+                  className="flex-shrink-0 w-24"
+                  onClick={() => {
+                    // Navigate to category page
+                    // Use carType if available, otherwise convert label to lowercase
+                    const categoryName = cat.carType
+                      ? cat.carType.toLowerCase()
+                      : (cat.label || '').toLowerCase().replace(/\s+/g, '-');
+                    navigate(`/category/${categoryName}`);
+                  }}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
@@ -1317,7 +1390,7 @@ const ModuleTestPage = () => {
                 World Class
               </span>
             </div>
-            
+
             <div className="relative overflow-hidden w-full -mx-1 px-1">
               {/* Fade masks */}
               <div className="absolute top-0 left-0 w-8 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
@@ -1384,354 +1457,351 @@ const ModuleTestPage = () => {
           </div>
 
           {/* BEST CARS GRID */}
-          <motion.div
-            className="mt-4 px-1"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.25 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-black">Best Cars</h2>
-              <motion.button
-                type="button"
-                className="text-sm text-gray-600 font-semibold"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/search")}
+          {/* BEST CARS GRID */}
+          {!isLoading && (
+            <>
+              <motion.div
+                className="mt-4 px-1"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.25 }}
               >
-                View All
-              </motion.button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {(filteredBestCars.length ? filteredBestCars : bestCars).map((car, index) => (
-                <motion.div
-                  key={car.id}
-                  className="w-full rounded-xl overflow-hidden cursor-pointer"
-                  style={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
-                  whileHover={{
-                    scale: 1.03,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                  }}
-                  onClick={() => navigate(`/car-details/${car.id}`)}
-                >
-                  <div
-                    className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
-                    style={{ backgroundColor: "#f0f0f0" }}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-black">Best Cars</h2>
+                  <motion.button
+                    type="button"
+                    className="text-sm text-gray-600 font-semibold"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate("/search")}
                   >
-                    <motion.img
-                      alt={car.name}
-                      src={car.image}
-                      className="w-full h-full object-contain z-10"
-                      style={{ opacity: 1 }}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1.25, opacity: 1 }}
-                      transition={{ duration: 0.5 }}
-                      whileHover={{ scale: 1.35, rotate: 2 }}
-                    />
-                      <button
-                        className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const wasFav = toggleFavorite(car);
-                          if (wasFav) {
-                            setAnimatingStates((prev) => ({
-                              ...prev,
-                              [car.id]: true,
-                            }));
-                            setTimeout(() => {
+                    View All
+                  </motion.button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {(filteredBestCars.length ? filteredBestCars : bestCars).map((car, index) => (
+                    <motion.div
+                      key={car.id}
+                      className="w-full rounded-xl overflow-hidden cursor-pointer"
+                      style={{
+                        backgroundColor: "#ffffff",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                      }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
+                      whileHover={{
+                        scale: 1.03,
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      }}
+                      onClick={() => navigate(`/car-details/${car.id}`)}
+                    >
+                      <div
+                        className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
+                        style={{ backgroundColor: "#f0f0f0" }}
+                      >
+                        <motion.img
+                          alt={car.name}
+                          src={car.image}
+                          className="w-full h-full object-contain z-10"
+                          style={{ opacity: 1 }}
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1.25, opacity: 1 }}
+                          transition={{ duration: 0.5 }}
+                          whileHover={{ scale: 1.35, rotate: 2 }}
+                        />
+                        <button
+                          className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const wasFav = toggleFavorite(car);
+                            if (wasFav) {
                               setAnimatingStates((prev) => ({
                                 ...prev,
-                                [car.id]: false,
+                                [car.id]: true,
                               }));
-                            }, 800);
-                          }
-                        }}
-                      >
-                        <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
-                          <div className="sparkles-container">
-                            {[...Array(8)].map((_, i) => (
-                              <span 
-                                key={i} 
-                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
-                                style={{ 
-                                  transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                                }} 
-                              />
-                            ))}
-                          </div>
-                          
-                          <svg
-                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
-                              isFavorite(car.id) 
-                                ? "text-red-500 heart-icon liked" 
+                              setTimeout(() => {
+                                setAnimatingStates((prev) => ({
+                                  ...prev,
+                                  [car.id]: false,
+                                }));
+                              }, 800);
+                            }
+                          }}
+                        >
+                          <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+                            <div className="sparkles-container">
+                              {[...Array(8)].map((_, i) => (
+                                <span
+                                  key={i}
+                                  className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`}
+                                  style={{
+                                    transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            <svg
+                              className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${isFavorite(car.id)
+                                ? "text-red-500 heart-icon liked"
                                 : "text-white heart-icon"
-                            }`}
-                            fill={isFavorite(car.id) ? "currentColor" : "none"}
-                            stroke="currentColor"
-                            strokeWidth={2}
+                                }`}
+                              fill={isFavorite(car.id) ? "currentColor" : "none"}
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              viewBox="0 0 24 24"
+                              style={{ overflow: 'visible' }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                              />
+                            </svg>
+                          </div>
+                        </button>
+                      </div>
+                      <div className="p-2 md:p-3 lg:p-4">
+                        <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
+                          {car.name}
+                        </h3>
+                        <div className="flex items-center gap-1 mb-1 md:mb-1.5">
+                          <span className="text-xs md:text-sm font-semibold text-black">
+                            {car.rating}
+                          </span>
+                          <svg
+                            className="w-3.5 h-3.5 md:w-4 md:h-4"
+                            fill="#FF6B35"
                             viewBox="0 0 24 24"
-                            style={{ overflow: 'visible' }}
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex items-center gap-1 mb-1.5 md:mb-2">
+                          <svg
+                            className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                              strokeWidth={2}
+                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                             />
                           </svg>
+                          <span className="text-[10px] md:text-xs text-gray-500">
+                            {car.location}
+                          </span>
                         </div>
-                      </button>
-                  </div>
-                  <div className="p-2 md:p-3 lg:p-4">
-                    <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
-                      {car.name}
-                    </h3>
-                    <div className="flex items-center gap-1 mb-1 md:mb-1.5">
-                      <span className="text-xs md:text-sm font-semibold text-black">
-                        {car.rating}
-                      </span>
-                      <svg
-                        className="w-3.5 h-3.5 md:w-4 md:h-4"
-                        fill="#FF6B35"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex items-center gap-1 mb-1.5 md:mb-2">
-                      <svg
-                        className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      <span className="text-[10px] md:text-xs text-gray-500">
-                        {car.location}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-1.5 md:mt-2">
-                      <div className="flex items-center gap-1">
-                        <svg
-                          className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
-                          />
-                        </svg>
-                        <span className="text-[10px] md:text-xs text-gray-500">
-                          {car.seats}
-                        </span>
+                        <div className="flex items-center justify-between mt-1.5 md:mt-2">
+                          <div className="flex items-center gap-1">
+                            <svg
+                              className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
+                              />
+                            </svg>
+                            <span className="text-[10px] md:text-xs text-gray-500">
+                              {car.seats}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] md:text-xs text-gray-500">
+                              {car.price}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] md:text-xs text-gray-500">
-                          {car.price}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* META ROW */}
-          <div className="flex items-center justify-between mt-1 px-1">
-            <span className="text-xs text-gray-500">
-              {totalCarsCount || 0} available
-            </span>
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs text-gray-600"
-            >
-              <span>Popular</span>
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* FEATURED CAR CARD */}
-          {activeFeaturedCar && (
-            <motion.div
-              className="px-1"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <motion.div
-                className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
-                whileHover={{
-                  scale: 1.02,
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-                }}
-                transition={{ duration: 0.3 }}
-                onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
-              >
-                <div className="w-full h-48 bg-gray-100 overflow-hidden">
-                  <motion.img
-                    src={activeFeaturedCar.image}
-                    alt={activeFeaturedCar.name}
-                    className="w-full h-full object-cover"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ duration: 0.4 }}
-                  />
-                </div>
-                <div className="px-4 pt-3 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900">
-                        {activeFeaturedCar.name}
-                      </h3>
-                      <p className="mt-1 text-xs font-semibold text-gray-700">
-                        {activeFeaturedCar.price}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
-                        style={{ backgroundColor: colors.backgroundTertiary }}
-                      >
-                        <svg
-                          className="w-3 h-3 text-yellow-400"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <span>{activeFeaturedCar.rating}</span>
-                      </span>
-                    </div>
-                  </div>
+                    </motion.div>
+                  ))}
                 </div>
               </motion.div>
-            </motion.div>
+
+              {/* META ROW */}
+              <div className="flex items-center justify-between mt-1 px-1">
+                <span className="text-xs text-gray-500">
+                  {totalCarsCount || 0} available
+                </span>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-xs text-gray-600"
+                >
+                  <span>Popular</span>
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* FEATURED CAR CARD */}
+              {activeFeaturedCar && (
+                <motion.div
+                  className="px-1"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                  <motion.div
+                    className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
+                    whileHover={{
+                      scale: 1.02,
+                      boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+                    }}
+                    transition={{ duration: 0.3 }}
+                    onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
+                  >
+                    <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                      <motion.img
+                        src={activeFeaturedCar.image}
+                        alt={activeFeaturedCar.name}
+                        className="w-full h-full object-cover"
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.4 }}
+                      />
+                    </div>
+                    <div className="px-4 pt-3 pb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900">
+                            {activeFeaturedCar.name}
+                          </h3>
+                          <p className="mt-1 text-xs font-semibold text-gray-700">
+                            {activeFeaturedCar.price}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
+                            style={{ backgroundColor: colors.backgroundTertiary }}
+                          >
+                            <svg
+                              className="w-3 h-3 text-yellow-400"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                            <span>{activeFeaturedCar.rating}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </>
           )}
 
           {/* BANNER SECTION - Between Featured Car and Best Cars */}
-          <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
-            <div 
-              className="w-full rounded-2xl md:rounded-3xl overflow-hidden relative"
-              style={{ background: "rgb(41, 70, 87)" }}
-            >
+          {bannerCars.length > 0 && (
+            <div className="mb-3 md:mb-6 relative overflow-hidden rounded-2xl md:rounded-3xl block md:hidden mt-4 px-1">
               <div
-                ref={bannerScrollRef}
-                className="flex overflow-x-auto overflow-y-hidden scroll-smooth w-full"
-                style={{
-                  scrollSnapType: "x mandatory",
-                  touchAction: "pan-x",
-                  scrollbarWidth: "none",
-                  msOverflowStyle: "none",
-                  WebkitOverflowScrolling: "touch"
-                }}
+                className="w-full rounded-2xl md:rounded-3xl overflow-hidden relative"
+                style={{ background: "rgb(41, 70, 87)" }}
               >
-                {bannerCars.map((car, index) => (
-                  <div
-                    key={index}
-                    className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56"
-                    style={{ scrollSnapAlign: "center" }}
-                  >
-                    <div 
-                      className={`flex-shrink-0 w-1/3 z-10 transition-all duration-700 ease-out ${
-                        index === currentBannerIndex ? "opacity-100 translate-y-0" : "opacity-60 translate-y-4"
-                      }`}
+                <div
+                  ref={bannerScrollRef}
+                  className="flex overflow-x-auto overflow-y-hidden scroll-smooth w-full"
+                  style={{
+                    scrollSnapType: "x mandatory",
+                    touchAction: "pan-x",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                    WebkitOverflowScrolling: "touch"
+                  }}
+                >
+                  {bannerCars.map((car, index) => (
+                    <div
+                      key={index}
+                      className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56"
+                      style={{ scrollSnapAlign: "center" }}
                     >
-                      <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
-                        20% Off Your First Ride!
-                      </h2>
-                      <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
-                        Experience Seamless Car Rentals.
-                      </p>
-                      <button
-                        className="px-2 md:px-2.5 py-0.5 md:py-1 rounded-md font-medium text-xs transition-all hover:opacity-90 bg-white text-black border-2 border-white whitespace-nowrap"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // navigate("/search"); // Disabled on mobile
+                      <div
+                        className={`flex-shrink-0 w-1/3 z-10 transition-all duration-700 ease-out ${index === currentBannerIndex ? "opacity-100 translate-y-0" : "opacity-60 translate-y-4"
+                          }`}
+                      >
+                        <h2 className="text-sm md:text-base lg:text-lg font-bold mb-1 text-white whitespace-nowrap">
+                          {car.title}
+                        </h2>
+                        <p className="text-xs md:text-xs lg:text-sm mb-2 md:mb-3 text-white">
+                          {car.subtitle}
+                        </p>
+
+                      </div>
+                      <div
+                        className="flex-1 flex items-center justify-end h-full relative transition-all duration-700 ease-out"
+                        style={{
+                          transform: index === currentBannerIndex ? "scale(1)" : "scale(0.9)",
+                          opacity: index === currentBannerIndex ? 1 : 0.8
                         }}
                       >
-                        Discover More
-                      </button>
+                        <img
+                          alt={car.alt}
+                          className="h-full max-h-full w-auto object-contain"
+                          draggable="false"
+                          src={car.image}
+                          style={{
+                            maxWidth: "100%",
+                            objectFit: "contain",
+                            transform: index === currentBannerIndex ? "translateX(15px) scale(1)" : "translateX(30px) scale(0.9)",
+                            transition: "transform 0.7s ease-out"
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div 
-                      className="flex-1 flex items-center justify-end h-full relative transition-all duration-700 ease-out"
-                      style={{
-                        transform: index === currentBannerIndex ? "scale(1)" : "scale(0.9)",
-                        opacity: index === currentBannerIndex ? 1 : 0.8
-                      }}
-                    >
-                      <img
-                        alt={car.alt}
-                        className="h-full max-h-full w-auto object-contain"
-                        draggable="false"
-                        src={car.image}
-                        style={{
-                          maxWidth: "100%",
-                          objectFit: "contain",
-                          transform: index === currentBannerIndex ? "translateX(15px) scale(1)" : "translateX(30px) scale(0.9)",
-                          transition: "transform 0.7s ease-out"
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4">
-              {bannerCars.map((_, index) => (
-                <span
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    goToBannerIndex(index);
-                  }}
-                  className={`swiper-pagination-bullet-custom ${
-                    index === currentBannerIndex ? "swiper-pagination-bullet-active-custom" : ""
-                  }`}
-                />
-              ))}
-            </div>
-            <style>{`
+              {bannerCars.length > 1 && (
+                <div className="mobile-banner-pagination flex justify-center items-center gap-2 mt-4">
+                  {bannerCars.map((_, index) => (
+                    <span
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        goToBannerIndex(index);
+                      }}
+                      className={`swiper-pagination-bullet-custom ${index === currentBannerIndex ? "swiper-pagination-bullet-active-custom" : ""
+                        }`}
+                    />
+                  ))}
+                </div>
+              )}
+              <style>{`
               .swiper-pagination-bullet-custom {
                 width: 8px;
                 height: 8px;
@@ -1749,7 +1819,8 @@ const ModuleTestPage = () => {
                 height: 10px;
               }
             `}</style>
-          </div>
+            </div>
+          )}
 
 
 
@@ -1830,22 +1901,21 @@ const ModuleTestPage = () => {
                         <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
                           <div className="sparkles-container">
                             {[...Array(8)].map((_, i) => (
-                              <span 
-                                key={i} 
-                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
-                                style={{ 
+                              <span
+                                key={i}
+                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`}
+                                style={{
                                   transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                                }} 
+                                }}
                               />
                             ))}
                           </div>
-                          
+
                           <svg
-                            className={`w-5 h-5 transition-colors duration-200 ${
-                              isFavorite(car.id) 
-                                ? "text-red-500 heart-icon liked" 
-                                : "text-white heart-icon"
-                            }`}
+                            className={`w-5 h-5 transition-colors duration-200 ${isFavorite(car.id)
+                              ? "text-red-500 heart-icon liked"
+                              : "text-white heart-icon"
+                              }`}
                             fill={isFavorite(car.id) ? "currentColor" : "none"}
                             stroke="currentColor"
                             strokeWidth={2}
@@ -1948,120 +2018,121 @@ const ModuleTestPage = () => {
 
       {/* UNIFIED DATE-TIME PICKER MODAL (Replaces separate Calendar & Time Modals) */}
       {/* UNIFIED DATE-TIME PICKER MODAL (Replaces separate Calendar & Time Modals) */}
-      {isCalendarOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white w-[340px] rounded-3xl shadow-2xl overflow-hidden" 
-          >
-            <div className="p-4">
-              {/* Time Section */}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2" style={{color: "rgb(28, 32, 92)"}}>Time</label>
-                <div className="flex justify-center">
-                  <button 
-                    type="button" 
-                    onClick={() => setIsTimeOpen(true)}
-                    className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity" 
-                    style={{borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(28, 32, 92)", color: "rgb(255, 255, 255)"}}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span className="font-semibold text-sm">{`${selectedHour}:${selectedMinute} ${selectedPeriod}`}</span>
-                  </button>
+      {
+        isCalendarOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="bg-white w-[340px] rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-4">
+                {/* Time Section */}
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "rgb(28, 32, 92)" }}>Time</label>
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsTimeOpen(true)}
+                      className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+                      style={{ borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(28, 32, 92)", color: "rgb(255, 255, 255)" }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      <span className="font-semibold text-sm">{`${selectedHour}:${selectedMinute} ${selectedPeriod}`}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Calendar Section */}
-              <div className="mb-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <button className="p-1.5 rounded-lg hover:bg-gray-100" onClick={() => {
-                        const newDate = new Date(currentMonth);
-                        newDate.setMonth(newDate.getMonth() - 1);
-                        setCurrentMonth(newDate);
-                  }}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
-                  </button>
-                  <h4 className="text-base font-semibold" style={{color: "rgb(28, 32, 92)"}}>{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h4>
-                  <button className="p-1.5 rounded-lg hover:bg-gray-100" onClick={() => {
-                        const newDate = new Date(currentMonth);
-                        newDate.setMonth(newDate.getMonth() + 1);
-                        setCurrentMonth(newDate);
-                  }}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-7 gap-1 mb-4">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                     <div key={day} className="text-center text-xs font-semibold py-1" style={{color: "rgb(102, 102, 102)"}}>{day}</div>
-                  ))}
-                  
-                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
-                    <div key={`empty-${i}`} />
-                  ))}
-                  
-                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
-                    const day = i + 1;
-                    const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                    
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
-                    const isPast = d < today;
-                    
-                    const isSelected = (calendarTarget === 'pickup' && pickupDate === dateString) || 
-                                       (calendarTarget === 'dropoff' && dropoffDate === dateString);
+                {/* Calendar Section */}
+                <div className="mb-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <button className="p-1.5 rounded-lg hover:bg-gray-100" onClick={() => {
+                      const newDate = new Date(currentMonth);
+                      newDate.setMonth(newDate.getMonth() - 1);
+                      setCurrentMonth(newDate);
+                    }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <h4 className="text-base font-semibold" style={{ color: "rgb(28, 32, 92)" }}>{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h4>
+                    <button className="p-1.5 rounded-lg hover:bg-gray-100" onClick={() => {
+                      const newDate = new Date(currentMonth);
+                      newDate.setMonth(newDate.getMonth() + 1);
+                      setCurrentMonth(newDate);
+                    }}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                  </div>
 
-                    return (
-                        <button 
-                            key={day}
-                            type="button" 
-                            disabled={isPast}
-                            className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                isPast ? 'cursor-not-allowed bg-transparent text-gray-300' : 
-                                isSelected ? 'bg-[#1C205C] text-white shadow-md' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'
+                  <div className="grid grid-cols-7 gap-1 mb-4">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                      <div key={day} className="text-center text-xs font-semibold py-1" style={{ color: "rgb(102, 102, 102)" }}>{day}</div>
+                    ))}
+
+                    {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                      <div key={`empty-${i}`} />
+                    ))}
+
+                    {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                      const day = i + 1;
+                      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                      const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isPast = d < today;
+
+                      const isSelected = (calendarTarget === 'pickup' && pickupDate === dateString) ||
+                        (calendarTarget === 'dropoff' && dropoffDate === dateString);
+
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={isPast}
+                          className={`p-1.5 rounded-lg text-xs font-semibold transition-all ${isPast ? 'cursor-not-allowed bg-transparent text-gray-300' :
+                            isSelected ? 'bg-[#1C205C] text-white shadow-md' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'
                             }`}
-                            onClick={() => {
-                                if (calendarTarget === 'pickup') setPickupDate(dateString);
-                                else setDropoffDate(dateString);
-                            }}
+                          onClick={() => {
+                            if (calendarTarget === 'pickup') setPickupDate(dateString);
+                            else setDropoffDate(dateString);
+                          }}
                         >
-                            {day}
+                          {day}
                         </button>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                    style={{ borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(255, 255, 255)", color: "rgb(28, 32, 92)" }}
+                    onClick={() => setIsCalendarOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                    style={{ backgroundColor: "rgb(28, 32, 92)" }}
+                    onClick={() => {
+                      // Confirm Time selection to state
+                      const timeStr = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
+                      if (calendarTarget === 'pickup') setPickupTime(timeStr);
+                      else setDropoffTime(timeStr);
+                      setIsCalendarOpen(false);
+                    }}
+                  >
+                    Done
+                  </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )
+      }
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button 
-                    className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm hover:bg-gray-50 transition-colors" 
-                    style={{borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(255, 255, 255)", color: "rgb(28, 32, 92)"}}
-                    onClick={() => setIsCalendarOpen(false)}
-                >
-                    Cancel
-                </button>
-                <button 
-                    className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity" 
-                    style={{backgroundColor: "rgb(28, 32, 92)"}}
-                    onClick={() => {
-                        // Confirm Time selection to state
-                        const timeStr = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
-                        if (calendarTarget === 'pickup') setPickupTime(timeStr);
-                        else setDropoffTime(timeStr);
-                        setIsCalendarOpen(false);
-                    }}
-                >
-                    Done
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-      
       {/* Filters popup - Using shared FilterDropdown component */}
       <FilterDropdown
         isOpen={isFilterOpen}
@@ -2079,98 +2150,100 @@ const ModuleTestPage = () => {
       />
 
       {/* TIME PICKER OVERLAY MODAL */}
-      {isTimeOpen && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-[300px] bg-white rounded-3xl p-6 shadow-2xl relative"
-          >
-            <h3 className="text-lg font-bold mb-4 text-center" style={{color: "rgb(28, 32, 92)"}}>Select Time</h3>
-            
-            <div className="flex items-center justify-center gap-4 mb-6">
-              {/* Hour Column */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs font-semibold mb-2" style={{color: "rgb(102, 102, 102)"}}>Hour</label>
-                <div className="flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-hide px-1">
-                  {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
-                    <button 
-                      key={h}
-                      type="button" 
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === h ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
-                      onClick={() => setSelectedHour(h)}
-                    >
-                      {h}
-                    </button>
-                  ))}
+      {
+        isTimeOpen && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-[300px] bg-white rounded-3xl p-6 shadow-2xl relative"
+            >
+              <h3 className="text-lg font-bold mb-4 text-center" style={{ color: "rgb(28, 32, 92)" }}>Select Time</h3>
+
+              <div className="flex items-center justify-center gap-4 mb-6">
+                {/* Hour Column */}
+                <div className="flex flex-col items-center">
+                  <label className="text-xs font-semibold mb-2" style={{ color: "rgb(102, 102, 102)" }}>Hour</label>
+                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-hide px-1">
+                    {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                      <button
+                        key={h}
+                        type="button"
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === h ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
+                        onClick={() => setSelectedHour(h)}
+                      >
+                        {h}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              
-              <span className="text-2xl font-bold mt-8" style={{color: "rgb(28, 32, 92)"}}>:</span>
-              
-              {/* Minute Column */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs font-semibold mb-2" style={{color: "rgb(102, 102, 102)"}}>Minute</label>
-                <div className="flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-hide px-1">
-                   {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
-                    <button 
-                      key={m}
-                      type="button" 
-                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === m ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
-                      onClick={() => setSelectedMinute(m)}
-                    >
-                      {m}
-                    </button>
-                  ))}
+
+                <span className="text-2xl font-bold mt-8" style={{ color: "rgb(28, 32, 92)" }}>:</span>
+
+                {/* Minute Column */}
+                <div className="flex flex-col items-center">
+                  <label className="text-xs font-semibold mb-2" style={{ color: "rgb(102, 102, 102)" }}>Minute</label>
+                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-hide px-1">
+                    {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === m ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
+                        onClick={() => setSelectedMinute(m)}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              
-              {/* Period Column */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs font-semibold mb-2" style={{color: "rgb(102, 102, 102)"}}>Period</label>
-                <div className="flex flex-col gap-2">
+
+                {/* Period Column */}
+                <div className="flex flex-col items-center">
+                  <label className="text-xs font-semibold mb-2" style={{ color: "rgb(102, 102, 102)" }}>Period</label>
+                  <div className="flex flex-col gap-2">
                     {["AM", "PM"].map(p => (
-                      <button 
+                      <button
                         key={p}
-                        type="button" 
+                        type="button"
                         className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === p ? 'bg-[#1C205C] text-white' : 'bg-transparent text-[#1C205C] hover:bg-gray-100'}`}
                         onClick={() => setSelectedPeriod(p)}
                       >
                         {p}
                       </button>
                     ))}
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {/* Selected Time Display */}
-            <div className="mb-6 p-3 rounded-xl text-center shadow-sm" style={{backgroundColor: "rgb(248, 248, 248)"}}>
-                <span className="text-xl font-bold" style={{color: "rgb(28, 32, 92)"}}>
-                    {`${selectedHour} : ${selectedMinute} ${selectedPeriod ? selectedPeriod.toLowerCase() : 'am'}`}
-                </span>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button 
-                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm hover:bg-gray-50 transition-colors" 
-                  style={{borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(255, 255, 255)", color: "rgb(28, 32, 92)"}}
+              {/* Selected Time Display */}
+              <div className="mb-6 p-3 rounded-xl text-center shadow-sm" style={{ backgroundColor: "rgb(248, 248, 248)" }}>
+                <span className="text-xl font-bold" style={{ color: "rgb(28, 32, 92)" }}>
+                  {`${selectedHour} : ${selectedMinute} ${selectedPeriod ? selectedPeriod.toLowerCase() : 'am'}`}
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                  style={{ borderColor: "rgb(28, 32, 92)", backgroundColor: "rgb(255, 255, 255)", color: "rgb(28, 32, 92)" }}
                   onClick={() => setIsTimeOpen(false)}
-              >
+                >
                   Cancel
-              </button>
-              <button 
-                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity" 
-                  style={{backgroundColor: "rgb(28, 32, 92)"}}
+                </button>
+                <button
+                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: "rgb(28, 32, 92)" }}
                   onClick={() => setIsTimeOpen(false)}
-              >
+                >
                   Done
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </div>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 
