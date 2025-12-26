@@ -187,13 +187,13 @@ export const getReturningCars = async (req, res) => {
   try {
     // Import models dynamically to avoid circular dependencies
     const Booking = (await import('../models/Booking.js')).default;
-    
+
     // Get current time
     const now = new Date();
-    
+
     // Find active bookings that are ending within the next 6 hours
     const sixHoursFromNow = new Date(now.getTime() + 6 * 60 * 60 * 1000);
-    
+
     const activeBookings = await Booking.find({
       status: 'confirmed',
       tripStatus: 'active',
@@ -281,7 +281,7 @@ export const getReturningCars = async (req, res) => {
 export const searchPlaces = async (req, res) => {
   try {
     console.log('🔍 Search places request received:', { query: req.query.query, lat: req.query.lat, lng: req.query.lng });
-    
+
     const { query, lat, lng } = req.query;
 
     if (!query || query.trim() === '') {
@@ -302,7 +302,7 @@ export const searchPlaces = async (req, res) => {
 
     // Build Google Places API URL
     let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&language=en`;
-    
+
     // Add location bias if coordinates provided
     if (lat && lng) {
       url += `&location=${lat},${lng}&radius=50000`;
@@ -324,7 +324,7 @@ export const searchPlaces = async (req, res) => {
         hasResponse: !!error.response,
         hasRequest: !!error.request,
       });
-      
+
       if (error.response) {
         // API returned error response
         return res.status(error.response.status || 500).json({
@@ -407,6 +407,89 @@ export const searchPlaces = async (req, res) => {
       success: false,
       message: 'Error searching places',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+/**
+ * @desc    Get coupons applicable to specific cars
+ * @route   GET /api/common/coupons/car-specific
+ * @access  Public
+ */
+export const getCarSpecificCoupons = async (req, res) => {
+  try {
+    const Booking = (await import('../models/Booking.js')).default;
+    const Coupon = (await import('../models/Coupon.js')).default;
+
+    // Get active coupons that are applicable to specific cars or car types
+    // We want coupons that are:
+    // 1. Active
+    // 2. Valid date range
+    // 3. Not exhausted usage limit
+    // 4. Specific to car_id or car_type
+
+    const now = new Date();
+
+    const coupons = await Coupon.find({
+      isActive: true,
+      validityStart: { $lte: now },
+      validityEnd: { $gte: now },
+      $or: [
+        { applicableTo: 'car_id' },
+        { applicableTo: 'car_type' }
+      ]
+    })
+      .populate({
+        path: 'carId',
+        select: 'brand model images pricePerDay'
+      })
+      .populate({
+        path: 'carIds',
+        select: 'brand model images pricePerDay'
+      })
+      .sort({ createdAt: -1 });
+
+    // Filter out coupons that have reached usage limit
+    const validCoupons = coupons.filter(coupon => coupon.usedCount < coupon.usageLimit);
+
+    // Format response
+    const formattedCoupons = validCoupons.map(coupon => {
+      let cars = [];
+
+      if (coupon.applicableTo === 'car_id') {
+        if (coupon.carIds && coupon.carIds.length > 0) {
+          cars = coupon.carIds.filter(car => car); // Filter out nulls from population
+        } else if (coupon.carId) {
+          cars = [coupon.carId];
+        }
+      }
+
+      // Filter out any cars that might still be null or missing essential data
+      cars = cars.filter(c => c && c.brand);
+
+      return {
+        _id: coupon._id,
+        code: coupon.code,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        applicableTo: coupon.applicableTo,
+        carType: coupon.carType,
+        cars: cars, // Array of car objects
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        coupons: formattedCoupons
+      }
+    });
+  } catch (error) {
+    console.error('Get car specific coupons error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching car specific coupons',
+      error: error.message
     });
   }
 };

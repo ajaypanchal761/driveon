@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFavorites } from '../../../context/FavoritesContext';
 
 /**
  * CarCard Component
@@ -8,10 +10,16 @@ import { useNavigate } from 'react-router-dom';
 const CarCard = ({ car }) => {
   const navigate = useNavigate();
   const { name, image, rating = 0, weeklyPrice, carId } = car;
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Ensure we have a valid ID for favoriting
+  const id = carId || car.id || car._id;
+  const isFav = isFavorite(id);
 
   const handleCardClick = () => {
-    if (carId) {
-      navigate(`/cars/${carId}`);
+    if (id) {
+      navigate(`/cars/${id}`);
     }
   };
 
@@ -35,26 +43,45 @@ const CarCard = ({ car }) => {
       />
       {/* Favorite Icon - Red heart outline */}
       <button 
-        className="absolute top-3 right-3 flex items-center justify-center z-10"
+        className="absolute top-3 right-3 flex items-center justify-center z-10 touch-target"
         onClick={(e) => {
           e.stopPropagation();
-          // TODO: Add favorite functionality
+          const wasFav = toggleFavorite(car); // Toggle logic
+          if (wasFav) {
+             setIsAnimating(true);
+             setTimeout(() => setIsAnimating(false), 800);
+          }
         }}
       >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          style={{ color: '#DC2626' }}
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-          />
-        </svg>
+        <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+            {/* Sparkles Burst */}
+            <div className="sparkles-container">
+              {[...Array(8)].map((_, i) => (
+                <span 
+                  key={i} 
+                  className={`sparkle-burst ${isAnimating ? 'active' : ''}`} 
+                  style={{ '--angle': `${i * 45}deg` }} 
+                />
+              ))}
+            </div>
+            
+            <svg
+              className={`w-4 h-4 transition-colors duration-200 ${
+                isFav ? 'text-red-600 heart-icon liked' : 'text-gray-400 heart-icon'
+              }`}
+              fill={isFav ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              style={{ overflow: 'visible' }} // Allow scale to overflow
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+              />
+            </svg>
+        </div>
       </button>
 
       {/* Car Details - Compact, No Extra Spacing */}

@@ -6,6 +6,7 @@ import {
   getBannerOverlay,
   searchPlaces,
   getReturningCars,
+  getCarSpecificCoupons,
 } from '../controllers/common.controller.js';
 import { getAddOnServicesPrices } from '../controllers/addonServices.controller.js';
 
@@ -19,6 +20,7 @@ router.get('/faqs', getFAQs);
 router.get('/places/search', searchPlaces);
 router.get('/addon-services/prices', getAddOnServicesPrices);
 router.get('/returning-cars', getReturningCars);
+router.get('/coupons/car-specific', getCarSpecificCoupons);
 
 export default router;
 

@@ -237,12 +237,41 @@ export const checkPaymentStatus = async (req, res) => {
         transaction.phonePeTransactionId = paymentStatus.phonePeTransactionId;
 
         booking.paidAmount += transaction.amount;
-        booking.remainingAmount = booking.pricing.finalPrice - booking.paidAmount;
+        // Fix floating point precision issues
+        booking.paidAmount = Math.round(booking.paidAmount * 100) / 100;
 
-        if (booking.paymentOption === 'full' && booking.paidAmount >= booking.pricing.finalPrice) {
-          booking.paymentStatus = 'paid';
-        } else if (booking.paymentOption === 'advance' && booking.paidAmount >= booking.pricing.advancePayment) {
-          booking.paymentStatus = 'partial';
+        // Handle remaining amount calculation
+        if (booking.paymentOption === 'advance') {
+          const advanceTarget = booking.pricing.advancePayment;
+          // Check if we hit the advance target (within small margin)
+          if (Math.abs(booking.paidAmount - advanceTarget) < 1) {
+            booking.paidAmount = advanceTarget; // Force exact match
+            booking.paymentStatus = 'partial';
+            booking.remainingAmount = booking.pricing.remainingPayment;
+          } else if (booking.paidAmount > 0 && booking.paidAmount < advanceTarget) {
+            // Handle inconsistent UI/DB amount sync
+            booking.pricing.advancePayment = booking.paidAmount;
+            booking.pricing.finalPrice = booking.paidAmount;
+            booking.pricing.remainingPayment = Math.round((booking.pricing.totalPrice - booking.paidAmount) * 100) / 100;
+
+            booking.paymentStatus = 'partial';
+            booking.remainingAmount = booking.pricing.remainingPayment;
+          } else {
+            // If partial but not full advance, just use default logic
+            booking.remainingAmount = booking.pricing.remainingPayment;
+          }
+        } else {
+          // Full payment or default
+          const fullTarget = booking.pricing.finalPrice;
+
+          // Update remaining amount
+          booking.remainingAmount = Math.round((fullTarget - booking.paidAmount) * 100) / 100;
+
+          if (booking.paidAmount >= fullTarget || Math.abs(booking.paidAmount - fullTarget) < 1) {
+            booking.paidAmount = fullTarget; // Force exact match
+            booking.paymentStatus = 'paid';
+            booking.remainingAmount = 0;
+          }
         }
 
         if (booking.status === 'pending') {
@@ -395,11 +424,51 @@ export const createRazorpayOrder = async (req, res) => {
     // Generate transaction ID
     const transactionId = razorpayService.generateTransactionId('TXN');
 
+    // Determine amount to pay based on payment status
+    // For pending bookings, ALWAYS use the finalPrice from DB to ensure consistency
+    let amountToPay = parseFloat(amount);
+
+    if (booking.paymentStatus === 'pending') {
+      // Determine correct amount based on payment option
+      if (booking.paymentOption === 'advance') {
+        // Use the amount from the request (Frontend) to ensure it matches the UI display
+        // There might be a slight mismatch in totalDays calculation between FE/BE
+        amountToPay = parseFloat(amount);
+
+        console.log('ℹ️ Using requested ADVANCE payment amount (UI Match):', {
+          requestedAmount: amount,
+          dbAdvancePrice: booking.pricing.advancePayment,
+          dbFinalPrice: booking.pricing.finalPrice,
+          paymentOption: booking.paymentOption
+        });
+
+        // Fallback to DB advance payment if requested amount is invalid or zero
+        if (!amountToPay || amountToPay <= 0) {
+          amountToPay = booking.pricing.advancePayment;
+          console.log('⚠️ Invalid requested amount, falling back to DB Advance Payment');
+        }
+      } else {
+        amountToPay = booking.pricing.finalPrice;
+        console.log('ℹ️ Enforcing FULL payment amount from DB:', {
+          requestedAmount: amount,
+          dbFinalPrice: booking.pricing.finalPrice,
+          paymentOption: booking.paymentOption
+        });
+      }
+    } else if (booking.paymentStatus === 'partial') {
+      // For partial payments (remaining balance), use remaining amount from DB
+      console.log('ℹ️ Enforcing remaining amount from DB:', {
+        requestedAmount: amount,
+        dbRemainingAmount: booking.remainingAmount
+      });
+      amountToPay = booking.remainingAmount;
+    }
+
     // Create Razorpay order
     let order;
     try {
       order = await razorpayService.createOrder({
-        amount: parseFloat(amount),
+        amount: amountToPay,
         receipt: `booking_${booking.bookingId}_${Date.now()}`,
         notes: {
           booking_id: booking._id.toString(),
@@ -464,7 +533,7 @@ export const createRazorpayOrder = async (req, res) => {
     booking.transactions.push({
       transactionId,
       razorpayOrderId: order.id,
-      amount: parseFloat(amount),
+      amount: amountToPay,
       status: 'pending',
       paymentMethod: 'razorpay',
     });
@@ -623,15 +692,57 @@ export const verifyRazorpayPayment = async (req, res) => {
     // Update booking payment status
     const previousPaidAmount = booking.paidAmount;
     booking.paidAmount += transaction.amount;
-    booking.remainingAmount = booking.pricing.finalPrice - booking.paidAmount;
 
-    if (booking.paymentOption === 'full' && booking.paidAmount >= booking.pricing.finalPrice) {
-      booking.paymentStatus = 'paid';
-      console.log('✅ Full payment completed - setting paymentStatus to paid');
-    } else if (booking.paymentOption === 'advance' && booking.paidAmount >= booking.pricing.advancePayment) {
-      booking.paymentStatus = 'partial';
-      booking.remainingAmount = booking.pricing.remainingPayment;
-      console.log('✅ Advance payment completed - setting paymentStatus to partial');
+    // Fix floating point precision issues
+    booking.paidAmount = Math.round(booking.paidAmount * 100) / 100;
+
+    // Handle remaining amount calculation
+    if (booking.paymentOption === 'advance') {
+      const advanceTarget = booking.pricing.advancePayment;
+      // Check if we hit the advance target (within small margin) or if we accepted a different UI amount
+      if (Math.abs(booking.paidAmount - advanceTarget) < 1) {
+        booking.paidAmount = advanceTarget; // Force exact match
+        booking.paymentStatus = 'partial';
+        booking.remainingAmount = booking.pricing.remainingPayment;
+        console.log('✅ Advance payment matched exactly - setting paymentStatus to partial');
+      } else if (booking.paidAmount > 0 && booking.paidAmount < advanceTarget) {
+        // Handle case where UI amount was different (e.g. 1 day vs 2 days calc mismatch)
+        // We trust the payment received and update DB to reflect this as the agreed advance
+        console.log('Advance payment mismatch (UI vs DB) - Syncing DB to Paid Amount:', {
+          paid: booking.paidAmount,
+          storedAdvance: advanceTarget
+        });
+
+        // Update Pricing Schema to match reality
+        booking.pricing.advancePayment = booking.paidAmount;
+        booking.pricing.finalPrice = booking.paidAmount; // For advance option, finalPrice is the advance amount
+
+        // Recalculate remaining payment based on Total Price
+        // user still owes the rest of the Total Price
+        booking.pricing.remainingPayment = Math.round((booking.pricing.totalPrice - booking.paidAmount) * 100) / 100;
+
+        booking.paymentStatus = 'partial';
+        booking.remainingAmount = booking.pricing.remainingPayment;
+        console.log('✅ Synced DB Pricing with Paid Amount - setting paymentStatus to partial');
+      } else {
+        // If partial but not full advance (rare for single transaction), just calc remaining
+        // This logic assumes remainingAmount tracks "Amount left to pay for this stage" or "Total"?
+        // Keeping previous logic behavior but fixing the "0" overwrite issue
+        booking.remainingAmount = booking.pricing.remainingPayment;
+      }
+    } else {
+      // Full payment or default
+      const fullTarget = booking.pricing.finalPrice;
+
+      // Update remaining amount based on target - paid
+      booking.remainingAmount = Math.round((fullTarget - booking.paidAmount) * 100) / 100;
+
+      if (booking.paidAmount >= fullTarget || Math.abs(booking.paidAmount - fullTarget) < 1) {
+        booking.paidAmount = fullTarget; // Force exact match
+        booking.paymentStatus = 'paid';
+        booking.remainingAmount = 0;
+        console.log('✅ Full payment matched exactly - setting paymentStatus to paid');
+      }
     }
 
     // Keep booking status as pending after payment (don't auto-confirm)
@@ -659,7 +770,7 @@ export const verifyRazorpayPayment = async (req, res) => {
         confirmedAt: booking.confirmedAt,
       });
     } catch (saveError) {
-      console.error('❌ Error saving booking to database:', saveError);
+      console.error('Error saving booking to database:', saveError);
       throw saveError;
     }
 
@@ -698,9 +809,10 @@ export const verifyRazorpayPayment = async (req, res) => {
  * @route   ALL /api/payments/razorpay/callback
  * @access  Public
  */
+
 export const razorpayCallback = async (req, res) => {
   try {
-    console.log('🔔 Razorpay callback received:', {
+    console.log('Razorpay callback received:', {
       method: req.method,
       query: req.query,
       body: req.body,

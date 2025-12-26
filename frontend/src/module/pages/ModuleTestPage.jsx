@@ -485,13 +485,45 @@ const ModuleTestPage = () => {
   };
 
   // Fetch dynamic data from API
+  // Fetch dynamic data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
 
-        // Fetch categories (car types) with counts
-        const carTypesResponse = await carService.getTopCarTypes({ limit: 10 });
+        const nearbyParams = { limit: 3 };
+        if (coordinates && coordinates.lat && coordinates.lng) {
+          nearbyParams.latitude = coordinates.lat;
+          nearbyParams.longitude = coordinates.lng;
+        }
+
+        // Fire critical requests in parallel first for faster render
+        const [
+          carTypesResponse,
+          brandsResponse,
+          nearbyResponse,
+          bestCarsResponse
+        ] = await Promise.all([
+          carService.getTopCarTypes({ limit: 10 }),
+          carService.getTopBrands({ limit: 10 }),
+          carService.getNearbyCars(nearbyParams),
+          carService.getCars({
+            limit: 2,
+            sortBy: "averageRating",
+            sortOrder: "desc",
+            status: "active",
+            isAvailable: true,
+          })
+        ]);
+
+        // Start fetching filter data in background (don't await yet)
+        const allCarsPromise = carService.getCars({
+          limit: 100,
+          status: "active",
+          isAvailable: true,
+        });
+
+        // Process Categories
         if (carTypesResponse.success && carTypesResponse.data?.carTypes) {
           const carTypes = carTypesResponse.data.carTypes.map(
             (type, index) => ({
@@ -507,8 +539,7 @@ const ModuleTestPage = () => {
           setCategories(carTypes);
         }
 
-        // Fetch top brands
-        const brandsResponse = await carService.getTopBrands({ limit: 10 });
+        // Process Brands
         if (brandsResponse.success && brandsResponse.data?.brands) {
           const brandsData = brandsResponse.data.brands.map((brand, index) => {
             const brandName = brand.name || brand.brand || brand || "";
@@ -622,15 +653,7 @@ const ModuleTestPage = () => {
           setBrands(brandsData);
         }
 
-        // Fetch nearby cars (using user's coordinates if available)
-        const nearbyParams = {
-          limit: 3,
-        };
-        if (coordinates && coordinates.lat && coordinates.lng) {
-          nearbyParams.latitude = coordinates.lat;
-          nearbyParams.longitude = coordinates.lng;
-        }
-        const nearbyResponse = await carService.getNearbyCars(nearbyParams);
+        // Process Nearby Cars
         if (nearbyResponse.success && nearbyResponse.data?.cars) {
           const nearbyCarsData = nearbyResponse.data.cars
             .slice(0, 3)
@@ -638,14 +661,7 @@ const ModuleTestPage = () => {
           setNearbyCars(nearbyCarsData);
         }
 
-        // Fetch best cars (latest/featured cars)
-        const bestCarsResponse = await carService.getCars({
-          limit: 2,
-          sortBy: "averageRating",
-          sortOrder: "desc",
-          status: "active",
-          isAvailable: true,
-        });
+        // Process Best/Featured Cars
         if (bestCarsResponse.success && bestCarsResponse.data?.cars) {
           const bestCarsData = bestCarsResponse.data.cars
             .slice(0, 2)
@@ -658,21 +674,20 @@ const ModuleTestPage = () => {
           }
         }
 
-        // Fetch all cars to extract filter options
-        const allCarsResponse = await carService.getCars({
-          limit: 100, // Get more cars to extract filter options
-          status: "active",
-          isAvailable: true,
-        });
+        // Stop loading spinner as soon as critical content is ready
+        setIsLoading(false);
 
+        // Now process filter data in background
+        const allCarsResponse = await allCarsPromise;
+
+        // Process All Cars & Filters
         if (allCarsResponse.success && allCarsResponse.data?.pagination) {
           setTotalCarsCount(allCarsResponse.data.pagination.total || 0);
         }
 
-        // Extract filter options from all cars and store cars for filtering
         if (allCarsResponse.success && allCarsResponse.data?.cars) {
           const cars = allCarsResponse.data.cars;
-
+          
           // Store all cars for filtering
           const transformedAllCars = cars.map((car, index) =>
             transformCarData(car, index)
@@ -814,8 +829,9 @@ const ModuleTestPage = () => {
       } catch (error) {
         console.error("Error fetching data:", error);
         // Keep default/empty data on error
-      } finally {
         setIsLoading(false);
+      } finally {
+        // Background loading complete
       }
     };
 
@@ -1001,7 +1017,7 @@ const ModuleTestPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col max-md:h-screen max-md:overflow-hidden"
+      className="min-h-screen max-md:h-screen max-md:overflow-hidden w-full flex flex-col relative"
       style={{ backgroundColor: colors.backgroundTertiary }}
     >
       {/* TOP COMPACT HEADER - matches reference */}
@@ -1132,12 +1148,12 @@ const ModuleTestPage = () => {
 
       {/* CONTENT */}
       <main
-        className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
+        className="flex-1 pb-safe flex flex-col max-md:overflow-hidden"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* Floating white card container like reference */}
         <motion.div
-          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-28 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0 max-md:rounded-t-3xl"
+          className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-32 space-y-4 flex-1 max-md:overflow-y-auto"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -1598,7 +1614,7 @@ const ModuleTestPage = () => {
               className="px-1"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
             >
               <motion.div
                 className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
@@ -1759,7 +1775,7 @@ const ModuleTestPage = () => {
             className="mt-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-black">Nearby Cars</h2>

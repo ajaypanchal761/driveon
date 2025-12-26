@@ -127,9 +127,7 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
                 <span 
                   key={i} 
                   className={`sparkle-burst ${isAnimating ? 'active' : ''}`} 
-                  style={{ 
-                    transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                  }} 
+                  style={{ '--angle': `${i * 45}deg` }} 
                 />
               ))}
             </div>

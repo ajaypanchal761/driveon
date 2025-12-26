@@ -122,6 +122,8 @@ const SearchPage = () => {
     features: [],
     availableFrom: '',
     availableTo: '',
+    pickupTime: '',
+    dropoffTime: '',
   });
 
   // Track if filters should auto-open (e.g., when coming from home pills)
@@ -144,6 +146,8 @@ const SearchPage = () => {
     const maxPrice = searchParams.get('maxPrice');
     const availabilityStart = searchParams.get('availabilityStart');
     const availabilityEnd = searchParams.get('availabilityEnd');
+    const pickupTime = searchParams.get('pickupTime');
+    const dropoffTime = searchParams.get('dropoffTime');
     const brandParam = searchParams.get('brand');
     const modelParam = searchParams.get('model');
 
@@ -156,6 +160,8 @@ const SearchPage = () => {
         },
         availableFrom: availabilityStart || prev.availableFrom,
         availableTo: availabilityEnd || prev.availableTo,
+        pickupTime: pickupTime || prev.pickupTime,
+        dropoffTime: dropoffTime || prev.dropoffTime,
         brand: brandParam || prev.brand,
         model: modelParam || prev.model,
       }));
@@ -163,7 +169,7 @@ const SearchPage = () => {
       if (brandParam) {
         setSelectedBrand(brandParam);
       }
-      
+
       // Auto-open filters if we have specific filter params (not just search query)
       if (minPrice || maxPrice || brandParam || modelParam) {
         setShouldOpenFilters(true);
@@ -824,7 +830,7 @@ const SearchPage = () => {
     <>
       {/* Mobile View - DO NOT MODIFY */}
       <div
-        className="min-h-screen w-full flex flex-col md:hidden max-md:h-screen max-md:overflow-hidden"
+        className="min-h-screen max-md:h-screen max-md:overflow-hidden w-full flex flex-col md:hidden relative"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* TOP COMPACT HEADER - matches module-test page */}
@@ -980,13 +986,13 @@ const SearchPage = () => {
 
         {/* CONTENT */}
         <main
-          className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
+          className="flex-1 pb-20 flex flex-col max-md:overflow-hidden"
           style={{ backgroundColor: colors.backgroundTertiary }}
         >
           {/* Floating white card container */}
           <motion.div
-            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-52 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0"
-            style={{ minHeight: '100vh' }} // ensure full height on mobile even with little content
+            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-32 space-y-4 flex-1 max-md:overflow-y-auto"
+            style={{ minHeight: 'calc(100vh - 120px)' }} // ensure full height on mobile even with little content
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}

@@ -78,10 +78,7 @@ const CarCard = ({ car, index = 0 }) => {
                 <span 
                   key={i} 
                   className={`sparkle-burst ${isAnimating ? 'active' : ''}`} 
-                  style={{ 
-                    transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                    // We can randomize or alternate delays if we want, but CSS animation handles the explosion
-                  }} 
+                  style={{ '--angle': `${i * 45}deg` }} 
                 />
               ))}
             </div>

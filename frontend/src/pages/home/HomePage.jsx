@@ -6,6 +6,7 @@ import { carService } from "../../services/car.service";
 import { userService } from "../../services/user.service";
 import { updateUser } from "../../store/slices/userSlice";
 import { useLocation as useUserLocation } from "../../hooks/useLocation";
+import { useFavorites } from "../../context/FavoritesContext";
 // Import car images from assets folder
 import carBannerImage from "../../assets/car_img1-removebg-preview.png";
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -35,6 +36,9 @@ const HomePage = () => {
     isAuthenticated,
     user?._id || user?.id
   );
+
+  const [animatingStates, setAnimatingStates] = useState({});
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [topCarTypes, setTopCarTypes] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -1219,27 +1223,46 @@ const HomePage = () => {
                     </div>
 
                     {/* Heart Icon - Top Left */}
+                    {/* Heart Icon - Top Left */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Handle favorite toggle if needed
+                        const wasFav = toggleFavorite(car);
+                        if (wasFav) {
+                          setAnimatingStates(prev => ({ ...prev, [car.id]: true }));
+                          setTimeout(() => setAnimatingStates(prev => ({ ...prev, [car.id]: false })), 800);
+                        }
                       }}
-                      className="absolute top-2 left-2 md:top-3 md:left-3 z-10"
+                      className="absolute top-2 left-2 md:top-3 md:left-3 z-10 touch-target flex items-center justify-center pl-0"
                       aria-label="Add to favorites"
                     >
-                      <svg
-                        className="w-5 h-5 md:w-6 md:h-6 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
+                      <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+                        <div className="sparkles-container">
+                          {[...Array(8)].map((_, i) => (
+                            <span 
+                              key={i} 
+                              className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
+                              style={{ '--angle': `${i * 45}deg` }} 
+                            />
+                          ))}
+                        </div>
+                        <svg
+                          className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                            isFavorite(car.id) ? 'text-red-500 heart-icon liked' : 'text-white heart-icon'
+                          }`}
+                          fill={isFavorite(car.id) ? 'currentColor' : 'none'}
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          viewBox="0 0 24 24"
+                          style={{ overflow: 'visible' }}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                      </div>
                     </button>
                   </div>
 
