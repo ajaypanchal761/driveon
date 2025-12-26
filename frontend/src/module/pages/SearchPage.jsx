@@ -293,59 +293,6 @@ const SearchPage = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Clear existing data to prevent flickering of old results
-        setAllRecommendCars([]);
-        setAllPopularCars([]);
-
-        // Date Parsing Logic
-        const pickupDate = searchParams.get('pickupDate');
-        const pickupTime = searchParams.get('pickupTime');
-        const dropoffDate = searchParams.get('dropoffDate');
-        const dropoffTime = searchParams.get('dropoffTime');
-
-        let startDateStr = undefined;
-        let endDateStr = undefined;
-
-        const parseTime = (dateStr, timeStr) => {
-          if (!dateStr) return null;
-          if (!timeStr) return new Date(`${dateStr}T00:00:00`);
-
-          try {
-            const trimmedTime = timeStr.trim();
-            let hours, minutes;
-
-            // Check if 12-hour format with AM/PM
-            if (/am|pm/i.test(trimmedTime)) {
-              const [timePart, period] = trimmedTime.split(' ');
-              [hours, minutes] = timePart.split(':').map(Number);
-              const isPM = period && period.toLowerCase() === 'pm';
-              const isAM = period && period.toLowerCase() === 'am';
-
-              if (isPM && hours !== 12) hours += 12;
-              if (isAM && hours === 12) hours = 0;
-            } else {
-              // 24-hour format
-              [hours, minutes] = trimmedTime.split(':').map(Number);
-            }
-
-            const date = new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
-            return date;
-          } catch (e) {
-            console.error("Error parsing time", e);
-            return new Date(dateStr);
-          }
-        };
-
-        if (pickupDate) {
-          const start = parseTime(pickupDate, pickupTime);
-          if (start && !isNaN(start.getTime())) startDateStr = start.toISOString();
-        }
-
-        if (dropoffDate) {
-          const end = parseTime(dropoffDate, dropoffTime);
-          if (end && !isNaN(end.getTime())) endDateStr = end.toISOString();
-        }
-
         const availabilityStart = searchParams.get('availabilityStart');
         const availabilityEnd = searchParams.get('availabilityEnd');
 
@@ -356,11 +303,11 @@ const SearchPage = () => {
           sortOrder: 'desc',
           status: 'active',
           isAvailable: true,
-          startDate: startDateStr || appliedFilters.availableFrom || availabilityStart,
-          endDate: endDateStr || appliedFilters.availableTo || availabilityEnd,
-          availabilityStart: availabilityStart || undefined,
-          availabilityEnd: availabilityEnd || undefined
+          availabilityStart: availabilityStart || appliedFilters.availableFrom || undefined,
+          availabilityEnd: availabilityEnd || appliedFilters.availableTo || undefined
         };
+
+        // Fetch latest active cars
         const carsResponse = await carService.getCars(queryParams);
 
         let cars = [];
@@ -886,7 +833,7 @@ const SearchPage = () => {
     <>
       {/* Mobile View - DO NOT MODIFY */}
       <div
-        className="min-h-screen w-full flex flex-col md:hidden max-md:h-screen max-md:overflow-hidden"
+        className="min-h-screen max-md:h-screen max-md:overflow-hidden w-full flex flex-col md:hidden relative"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
         {/* TOP COMPACT HEADER - matches module-test page */}
@@ -959,7 +906,7 @@ const SearchPage = () => {
                 />
               </svg>
             </button>
-          </div >
+          </div>
 
           {/* Search Bar Section - In Header */}
           < motion.div
@@ -1042,14 +989,14 @@ const SearchPage = () => {
         </div >
 
         {/* CONTENT */}
-        < main
-          className="flex-1 pb-0 max-md:flex max-md:flex-col max-md:overflow-hidden"
+        <main
+          className="flex-1 pb-20 flex flex-col max-md:overflow-hidden"
           style={{ backgroundColor: colors.backgroundTertiary }}
         >
           {/* Floating white card container */}
-          < motion.div
-            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-52 space-y-4 max-md:flex-1 max-md:overflow-y-auto max-md:mt-0"
-            style={{ minHeight: '100vh' }} // ensure full height on mobile even with little content
+          <motion.div
+            className="mt-3 rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.5)] px-4 pt-4 pb-32 space-y-4 flex-1 max-md:overflow-y-auto"
+            style={{ minHeight: 'calc(100vh - 120px)' }} // ensure full height on mobile even with little content
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}

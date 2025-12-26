@@ -43,7 +43,6 @@ const AdminSidebar = () => {
         </svg>
       ),
       path: '/admin/kyc',
-      badge: 23, // Pending KYC count
     },
     {
       id: 'guarantors',

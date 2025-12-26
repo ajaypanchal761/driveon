@@ -122,7 +122,7 @@ const FilterDropdown = ({
         ...prev,
         [key]: value
       };
-
+      
       // Save dates to localStorage when availableFrom or availableTo changes
       if (key === 'availableFrom' || key === 'availableTo') {
         try {
@@ -152,6 +152,7 @@ const FilterDropdown = ({
           console.error('Error saving dates to localStorage:', error);
         }
       }
+      
       return updatedFilters;
     });
   };

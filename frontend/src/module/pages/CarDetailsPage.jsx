@@ -2332,36 +2332,48 @@ const CarDetailsPage = () => {
                 )}
 
                 {/* Heart Icon - Top Left */}
-                <motion.button
+                <button
                   onClick={() => {
-                    setIsFavorite(!isFavorite);
-                    setIsAnimating(true);
-                    setTimeout(() => setIsAnimating(false), 300);
+                    const wasFav = !isFavorite;
+                    setIsFavorite(wasFav);
+                    if (wasFav) {
+                      setIsAnimating(true);
+                      setTimeout(() => setIsAnimating(false), 800);
+                    }
                   }}
-                  className="absolute top-2 left-4 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                  className="absolute top-2 left-4 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform touch-target"
                   style={{ backgroundColor: colors.overlayWhite }}
-                  animate={isAnimating ? {
-                    scale: [1, 1.3, 1],
-                  } : {}}
-                  transition={{
-                    duration: 0.3,
-                    ease: "easeOut"
-                  }}
                 >
-                  <svg
-                    className={`w-7 h-7 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-600'}`}
-                    fill={isFavorite ? 'currentColor' : 'none'}
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                </motion.button>
+                  <div className="like-button-container" style={{ width: '28px', height: '28px' }}>
+                    {/* Sparkles Burst */}
+                    <div className="sparkles-container">
+                      {[...Array(8)].map((_, i) => (
+                        <span 
+                          key={i} 
+                          className={`sparkle-burst ${isAnimating ? 'active' : ''}`} 
+                          style={{ '--angle': `${i * 45}deg` }} 
+                        />
+                      ))}
+                    </div>
+                    
+                    <svg
+                      className={`w-7 h-7 transition-colors duration-200 ${
+                        isFavorite ? 'text-red-500 heart-icon liked' : 'text-gray-600 heart-icon'
+                      }`}
+                      fill={isFavorite ? 'currentColor' : 'none'}
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                      style={{ overflow: 'visible' }}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
+                  </div>
+                </button>
               </div>
 
               {/* Thumbnail Row - Below Main Image */}
