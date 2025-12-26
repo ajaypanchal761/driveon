@@ -9,8 +9,9 @@ import BottomNavbar from "../components/layout/BottomNavbar";
 import BrandCard from "../components/common/BrandCard";
 import CarCard from "../components/common/CarCard";
 import BannerAd from "../../components/common/BannerAd";
-import ReturningCarBanner from "../components/common/ReturningCarBanner";
+
 import CouponCarBanner from "../components/common/CouponCarBanner";
+import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
@@ -56,7 +57,7 @@ import downloadRemoveBgPreview from "../../assets/download-removebg-preview.png"
 const HomePage = () => {
   const navigate = useNavigate();
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
-  const [headerHeight, setHeaderHeight] = useState(100); // Default height
+  // const [headerHeight, setHeaderHeight] = useState(100); // Removed to use CSS var for performance
   const [showCouponBanner, setShowCouponBanner] = useState(false);
 
   // Swiper refs for programmatic control
@@ -75,7 +76,14 @@ const HomePage = () => {
 
   // Dynamic data states
   const [brands, setBrands] = useState([]);
-  const [heroBanners, setHeroBanners] = useState([]);
+  const [heroBanners, setHeroBanners] = useState([
+    {
+      gradient: "linear-gradient(135deg, #f8f8f8, #d0d4d7)",
+      title: "Easy Rentals,",
+      subtitle: "Anywhere You Go.",
+      cta: "Find Perfect Car To DriveOn",
+    }
+  ]);
   const [faqs, setFaqs] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -348,159 +356,21 @@ const HomePage = () => {
   };
 
   // Fetch brands, hero banners, and FAQs from API
-  useEffect(() => {
-    const fetchDynamicData = async () => {
-      try {
-        setDataLoading(true);
+  // Data fetching logic moved to unified effect at the bottom to prevent double-rendering
 
-        // Fetch brands from API (no static fallback)
-        try {
-          const brandsResponse = await carService.getTopBrands({ limit: 10 });
-          const apiBrands = (brandsResponse.success && brandsResponse.data?.brands
-            ? brandsResponse.data.brands
-            : []
-          )
-            .map((brand, idx) => {
-              const name = (brand.name || brand.brand || brand.model || "").trim();
-              const fallbackLogo = resolveBrandLogo(name);
-              const rawLogo =
-                brand.logo ||
-                brand.brandLogo ||
-                brand.logoUrl ||
-                brand.image ||
-                fallbackLogo ||
-                "";
-              const mappedLogo = getLogoUrl(rawLogo);
-              const finalLogo = mappedLogo || fallbackLogo;
 
-              return {
-                id: brand._id || brand.id || name || idx,
-                name,
-                logo: finalLogo,
-                fallbackLogo,
-              };
-            })
-            .filter((b) => b.name);
+  // Auto-rotate hero banner - Disabled as per requirement to keep static "Easy Rentals" banner
+  // useEffect(() => {
+  //   if (!heroBanners.length) return;
 
-          setBrands(apiBrands);
-        } catch (error) {
-          console.error('Error fetching brands:', error);
-          setBrands([]);
-        }
+  //   const interval = setInterval(() => {
+  //     setCurrentHeroIndex((prevIndex) =>
+  //       prevIndex + 1 < heroBanners.length ? prevIndex + 1 : 0
+  //     );
+  //   }, 5000);
 
-        // Fetch hero banners from API (only text data, image stays static)
-        try {
-          const bannersResponse = await commonService.getHeroBanners();
-          if (bannersResponse.success && bannersResponse.data?.banners?.length > 0) {
-            setHeroBanners(
-              bannersResponse.data.banners.map((banner) => ({
-                gradient: banner.gradient || "",
-                title: banner.title || "",
-                subtitle: banner.subtitle || "",
-                cta: banner.cta || "",
-              }))
-            );
-          } else {
-            setHeroBanners([]);
-          }
-        } catch (error) {
-          console.error('Error fetching hero banners:', error);
-          setHeroBanners([]);
-        }
-
-        // Fetch FAQs from API
-        try {
-          const faqsResponse = await commonService.getFAQs();
-          if (faqsResponse.success && faqsResponse.data?.faqs?.length > 0) {
-            setFaqs(faqsResponse.data.faqs);
-          } else {
-            setFaqs([]);
-          }
-        } catch (error) {
-          console.error('Error fetching FAQs:', error);
-          setFaqs([]);
-        }
-
-        // Fetch featured car for AVAILABLE section
-        try {
-          const featuredResponse = await carService.getCars({
-            limit: 1,
-            featured: true,
-            status: 'active',
-            isAvailable: true,
-          });
-          if (featuredResponse.success && featuredResponse.data?.cars?.length > 0) {
-            const car = featuredResponse.data.cars[0];
-            const transformedCar = transformCarData(car, 0);
-            setFeaturedCar(transformedCar);
-          } else {
-            // Fallback: Get first available car
-            const fallbackResponse = await carService.getCars({
-              limit: 1,
-              status: 'active',
-              isAvailable: true,
-            });
-            if (fallbackResponse.success && fallbackResponse.data?.cars?.length > 0) {
-              const car = fallbackResponse.data.cars[0];
-              const transformedCar = transformCarData(car, 0);
-              setFeaturedCar(transformedCar);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching featured car:', error);
-        }
-
-        // Fetch promotional banner content
-        try {
-          const promoResponse = await commonService.getPromotionalBanner();
-          if (promoResponse.success && promoResponse.data) {
-            setPromotionalBanner({
-              title: promoResponse.data.title || "",
-              subtitle: promoResponse.data.subtitle || "",
-            });
-          } else {
-            setPromotionalBanner({ title: "", subtitle: "" });
-          }
-        } catch (error) {
-          console.error('Error fetching promotional banner:', error);
-          setPromotionalBanner({ title: "", subtitle: "" });
-        }
-
-        // Fetch banner overlay text
-        try {
-          const overlayResponse = await commonService.getBannerOverlay();
-          if (overlayResponse.success && overlayResponse.data) {
-            setBannerOverlay({
-              title: overlayResponse.data.title || "",
-              subtitle: overlayResponse.data.subtitle || "",
-            });
-          } else {
-            setBannerOverlay({ title: "", subtitle: "" });
-          }
-        } catch (error) {
-          console.error('Error fetching banner overlay:', error);
-          setBannerOverlay({ title: "", subtitle: "" });
-        }
-      } finally {
-        setDataLoading(false);
-      }
-    };
-
-    fetchDynamicData();
-  }, []);
-
-  // Auto-rotate hero banner using dynamic heroBanners
-  useEffect(() => {
-    if (!heroBanners.length) return;
-
-    const interval = setInterval(() => {
-      setCurrentHeroIndex((prevIndex) =>
-        prevIndex + 1 < heroBanners.length ? prevIndex + 1 : 0
-      );
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [heroBanners]);
+  //   return () => clearInterval(interval);
+  // }, [heroBanners]);
 
   const currentHero = heroBanners[currentHeroIndex] || {};
   const heroTitle = currentHero.title || "";
@@ -558,40 +428,158 @@ const HomePage = () => {
   };
 
   // Fetch latest cars from API
+  // Combined data fetching to prevent waterfall/double-rendering
   useEffect(() => {
-    const fetchLatestCars = async () => {
+    const fetchAllData = async () => {
       try {
+        // Set loading states initially
+        setDataLoading(true);
         setCarsLoading(true);
 
-        // Fetch latest cars sorted by createdAt (descending)
-        const response = await carService.getCars({
-          limit: 5,
-          sortBy: 'createdAt',
-          sortOrder: 'desc',
-          status: 'active',
-          isAvailable: true,
-        });
+        // Execute all promises in parallel
+        const results = await Promise.allSettled([
+          // 0: Brands
+          carService.getTopBrands({ limit: 10 }),
+          // 1: FAQs
+          commonService.getFAQs(),
+          // 2: Featured Car (Available section)
+          carService.getCars({ limit: 1, featured: true, status: 'active', isAvailable: true }),
+          // 3: Promotional Banner
+          commonService.getPromotionalBanner(),
+          // 4: Banner Overlay
+          commonService.getBannerOverlay(),
+          // 5: Latest Cars (Best Cars & Nearby)
+          carService.getCars({ limit: 5, sortBy: 'createdAt', sortOrder: 'desc', status: 'active', isAvailable: true }),
+        ]);
 
-        if (response.success && response.data?.cars) {
-          const cars = response.data.cars;
+        // --- Process Brands (Index 0) ---
+        if (results[0].status === 'fulfilled') {
+          try {
+            const brandsResponse = results[0].value;
+            const apiBrands = (brandsResponse.success && brandsResponse.data?.brands
+              ? brandsResponse.data.brands
+              : []
+            )
+              .map((brand, idx) => {
+                const name = (brand.name || brand.brand || brand.model || "").trim();
+                const fallbackLogo = resolveBrandLogo(name);
+                const rawLogo =
+                  brand.logo ||
+                  brand.brandLogo ||
+                  brand.logoUrl ||
+                  brand.image ||
+                  fallbackLogo ||
+                  "";
+                const mappedLogo = getLogoUrl(rawLogo);
+                const finalLogo = mappedLogo || fallbackLogo;
 
-          // Best Cars - First 2 latest cars
-          const bestCarsData = cars.slice(0, 2).map((car, index) => transformCarData(car, index));
-          setBestCars(bestCarsData);
-
-          // Nearby Cars - Next 3 cars
-          const nearbyCarsData = cars.slice(2, 5).map((car, index) => transformCarData(car, index + 2));
-          setNearbyCars(nearbyCarsData);
+                return {
+                  id: brand._id || brand.id || name || idx,
+                  name,
+                  logo: finalLogo,
+                  fallbackLogo,
+                };
+              })
+              .filter((b) => b.name);
+            setBrands(apiBrands);
+          } catch (e) {
+            console.error('Error processing brands:', e);
+            setBrands([]);
+          }
+        } else {
+          setBrands([]);
         }
+
+        // --- Process FAQs (Index 1) ---
+        if (results[1].status === 'fulfilled') {
+          const faqsResponse = results[1].value;
+          if (faqsResponse.success && faqsResponse.data?.faqs?.length > 0) {
+            setFaqs(faqsResponse.data.faqs);
+          } else {
+            setFaqs([]);
+          }
+        } else {
+          setFaqs([]);
+        }
+
+        // --- Process Featured Car (Index 2) ---
+        if (results[2].status === 'fulfilled') {
+          const featuredResponse = results[2].value;
+          if (featuredResponse.success && featuredResponse.data?.cars?.length > 0) {
+            const car = featuredResponse.data.cars[0];
+            const transformedCar = transformCarData(car, 0);
+            setFeaturedCar(transformedCar);
+          } else {
+            // Use fallback fetch if specialized fetch failed/empty
+            try {
+              const fallbackResponse = await carService.getCars({
+                limit: 1,
+                status: 'active',
+                isAvailable: true,
+              });
+              if (fallbackResponse.success && fallbackResponse.data?.cars?.length > 0) {
+                const car = fallbackResponse.data.cars[0];
+                const transformedCar = transformCarData(car, 0);
+                setFeaturedCar(transformedCar);
+              }
+            } catch (e) { console.error('Fallback featured car fetch failed', e); }
+          }
+        }
+
+        // --- Process Promotional Banner (Index 3) ---
+        if (results[3].status === 'fulfilled') {
+          const promoResponse = results[3].value;
+          if (promoResponse.success && promoResponse.data) {
+            setPromotionalBanner({
+              title: promoResponse.data.title || "",
+              subtitle: promoResponse.data.subtitle || "",
+            });
+          } else {
+            setPromotionalBanner({ title: "", subtitle: "" });
+          }
+        } else {
+          setPromotionalBanner({ title: "", subtitle: "" });
+        }
+
+        // --- Process Banner Overlay (Index 4) ---
+        if (results[4].status === 'fulfilled') {
+          const overlayResponse = results[4].value;
+          if (overlayResponse.success && overlayResponse.data) {
+            setBannerOverlay({
+              title: overlayResponse.data.title || "",
+              subtitle: overlayResponse.data.subtitle || "",
+            });
+          } else {
+            setBannerOverlay({ title: "", subtitle: "" });
+          }
+        } else {
+          setBannerOverlay({ title: "", subtitle: "" });
+        }
+
+        // --- Process Latest Cars (Index 5) ---
+        if (results[5].status === 'fulfilled') {
+          const response = results[5].value;
+          if (response.success && response.data?.cars) {
+            const cars = response.data.cars;
+            // Best Cars - First 2 latest cars
+            const bestCarsData = cars.slice(0, 2).map((car, index) => transformCarData(car, index));
+            setBestCars(bestCarsData);
+            // Nearby Cars - Next 3 cars
+            const nearbyCarsData = cars.slice(2, 5).map((car, index) => transformCarData(car, index + 2));
+            setNearbyCars(nearbyCarsData);
+          }
+        }
+
       } catch (error) {
-        console.error('Error fetching latest cars:', error);
-        // Keep empty arrays on error - will show nothing instead of hardcoded data
+        console.error("Critical error in HomePage data fetching:", error);
       } finally {
+        // Unify loading state updates
+        setDataLoading(false);
         setCarsLoading(false);
       }
     };
 
-    fetchLatestCars();
+    fetchAllData();
   }, []);
 
   return (
@@ -601,7 +589,7 @@ const HomePage = () => {
     >
       {/* Header - Only visible on mobile - Sticky at top */}
       <div className="md:hidden">
-        <Header onHeightChange={setHeaderHeight} />
+        <Header />
       </div>
 
       {/* Web Header - Only visible on web */}
@@ -720,7 +708,7 @@ const HomePage = () => {
               <h1
                 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold mb-2 md:mb-3 lg:mb-4 leading-tight transition-all duration-1000 ease-in-out"
                 style={{
-                  animation: "fadeInUp 1s ease-in-out",
+                  // animation: "fadeInUp 1s ease-in-out", // Removed to prevent re-animation on state updates
                 }}
               >
                 {heroTitle && (
@@ -748,7 +736,7 @@ const HomePage = () => {
                 <div
                   className="flex items-center gap-2 md:gap-3 mt-3 md:mt-4 lg:mt-5 mb-4 md:mb-6 transition-all duration-1000 ease-in-out"
                   style={{
-                    animation: "fadeInUp 1s ease-in-out",
+                    // animation: "fadeInUp 1s ease-in-out",
                   }}
                 >
                   <span
@@ -796,7 +784,7 @@ const HomePage = () => {
                   objectFit: "contain",
                   transformOrigin: "center bottom",
                   filter: "drop-shadow(0 10px 30px rgba(0, 0, 0, 0.1))",
-                  animation: "fadeInUp 1s ease-in-out",
+                  // animation: "fadeInUp 1s ease-in-out",
                 }}
                 draggable={false}
               />
@@ -1036,12 +1024,15 @@ const HomePage = () => {
       <div
         className="px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 relative z-10 md:pt-0"
         style={{
-          paddingTop: `calc(0.5rem + ${headerHeight}px)`,
+          paddingTop: `calc(0.5rem + var(--mobile-header-height, 100px))`,
         }}
       >
         {/* Web container - max-width and centered on larger screens */}
         <div className="max-w-7xl mx-auto">
-          {/* Returning Car Banner - Moved to Top per user request */}
+
+
+
+          {/* Returning Car Banner - Active on Mobile */}
           <div className="mb-3 md:mb-6 block md:hidden">
             <ReturningCarBanner />
           </div>
@@ -1193,6 +1184,11 @@ const HomePage = () => {
           `}</style>
             </div>
           )}
+
+          {/* Dynamic Coupon Banner - Moved out of Best Cars section */}
+          <div className="block md:hidden mb-4">
+            <CouponCarBanner />
+          </div>
 
           {/* Best Cars Section */}
           <div className="relative">
@@ -1382,10 +1378,7 @@ const HomePage = () => {
                 </div>
               )}
 
-              {/* Dynamic Coupon Banner - Placed above Nearby Cars */}
-              <div className="mb-4">
-                <CouponCarBanner />
-              </div>
+
 
               {/* Nearby Section - Mobile Only */}
               <div className="mt-2">

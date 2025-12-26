@@ -35,9 +35,14 @@ const Header = ({ onHeightChange }) => {
   // Measure header height and notify parent
   useEffect(() => {
     const updateHeight = () => {
-      if (headerRef.current && onHeightChange) {
+      if (headerRef.current) {
         const height = headerRef.current.offsetHeight;
-        onHeightChange(height);
+        // Set CSS variable for performance (avoids React state re-renders in parent)
+        document.documentElement.style.setProperty('--mobile-header-height', `${height}px`);
+
+        if (onHeightChange) {
+          onHeightChange(height);
+        }
       }
     };
 

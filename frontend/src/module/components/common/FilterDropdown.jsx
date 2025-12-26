@@ -123,8 +123,35 @@ const FilterDropdown = ({
         [key]: value
       };
 
-
-
+      // Save dates to localStorage when availableFrom or availableTo changes
+      if (key === 'availableFrom' || key === 'availableTo') {
+        try {
+          // Parse date format (YYYY-MM-DDTHH:mm) to separate date and time
+          if (value) {
+            const [datePart, timePart] = value.split('T');
+            const dates = {
+              pickupDate: key === 'availableFrom' ? datePart : (updatedFilters.availableFrom ? updatedFilters.availableFrom.split('T')[0] : ''),
+              pickupTime: key === 'availableFrom' ? timePart : (updatedFilters.availableFrom ? updatedFilters.availableFrom.split('T')[1] : ''),
+              dropDate: key === 'availableTo' ? datePart : (updatedFilters.availableTo ? updatedFilters.availableTo.split('T')[0] : ''),
+              dropTime: key === 'availableTo' ? timePart : (updatedFilters.availableTo ? updatedFilters.availableTo.split('T')[1] : ''),
+            };
+            localStorage.setItem('selectedBookingDates', JSON.stringify(dates));
+          } else {
+            // If clearing a date, update localStorage accordingly
+            const existingDates = JSON.parse(localStorage.getItem('selectedBookingDates') || '{}');
+            if (key === 'availableFrom') {
+              existingDates.pickupDate = '';
+              existingDates.pickupTime = '';
+            } else {
+              existingDates.dropDate = '';
+              existingDates.dropTime = '';
+            }
+            localStorage.setItem('selectedBookingDates', JSON.stringify(existingDates));
+          }
+        } catch (error) {
+          console.error('Error saving dates to localStorage:', error);
+        }
+      }
       return updatedFilters;
     });
   };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { commonService } from '../../../services/common.service';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CouponCarBanner = ({ onDataAvailability }) => {
@@ -9,10 +9,9 @@ const CouponCarBanner = ({ onDataAvailability }) => {
     useEffect(() => {
         const fetchCoupons = async () => {
             try {
-                const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-                const response = await axios.get(`${base}/api/common/coupons/car-specific`);
-                console.log('Coupon API Response:', response.data);
-                if (response.data.success && response.data.data.coupons) {
+                const response = await commonService.getCarSpecificCoupons();
+                console.log('Coupon API Response:', response);
+                if (response.success && response.data.coupons) {
                     // Filter only valid coupons that have car data
                     const validCoupons = response.data.data.coupons.filter(c => c.cars && c.cars.length > 0 && c.cars[0] && c.cars[0].brand);
                     setCoupons(validCoupons);

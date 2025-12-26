@@ -1113,7 +1113,7 @@ const BookNowPage = () => {
                     ? `${formatDisplayDate(pickupDate)} • ${formatDisplayTime(
                       pickupTime
                     )}`
-                    : "Select Date & Time"}
+                    : "Select Pickup Date & Time"}
                 </div>
               </button>
             </div>
@@ -1149,7 +1149,7 @@ const BookNowPage = () => {
                     ? `${formatDisplayDate(dropDate)} • ${formatDisplayTime(
                       dropTime
                     )}`
-                    : "Select Date & Time"}
+                    : "Select Dropoff Date & Time"}
                 </div>
               </button>
             </div>
@@ -1930,13 +1930,13 @@ const BookNowPage = () => {
             <div className="space-y-3">
               {/* Driver */}
               <div
-                className="flex items-center justify-between p-3 rounded-lg border-2"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
                 style={{
                   borderColor: colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{
@@ -1979,7 +1979,7 @@ const BookNowPage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   {addOnServices.driver > 0 && (
                     <span
                       className="text-xs font-semibold mr-2"
@@ -2055,13 +2055,13 @@ const BookNowPage = () => {
 
               {/* Bodyguard */}
               <div
-                className="flex items-center justify-between p-3 rounded-lg border-2"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
                 style={{
                   borderColor: colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{
@@ -2104,7 +2104,7 @@ const BookNowPage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   {addOnServices.bodyguard > 0 && (
                     <span
                       className="text-xs font-semibold mr-2"
@@ -2180,13 +2180,13 @@ const BookNowPage = () => {
 
               {/* Gun men */}
               <div
-                className="flex items-center justify-between p-3 rounded-lg border-2"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
                 style={{
                   borderColor: colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{
@@ -2229,7 +2229,7 @@ const BookNowPage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   {addOnServices.gunmen > 0 && (
                     <span
                       className="text-xs font-semibold mr-2"
@@ -2305,13 +2305,13 @@ const BookNowPage = () => {
 
               {/* Bouncer */}
               <div
-                className="flex items-center justify-between p-3 rounded-lg border-2"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
                 style={{
                   borderColor: colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{
@@ -2354,7 +2354,7 @@ const BookNowPage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   {addOnServices.bouncer > 0 && (
                     <span
                       className="text-xs font-semibold mr-2"

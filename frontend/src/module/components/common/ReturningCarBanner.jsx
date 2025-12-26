@@ -27,7 +27,7 @@ const ReturningCarBanner = () => {
   const [isDynamicVisible, setIsDynamicVisible] = useState(false);
   const [dynamicState, setDynamicState] = useState('hidden'); // 'hidden', 'returning', 'available'
   const [remainingTimeText, setRemainingTimeText] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Default to true to prevent static flash
+  const [isLoading, setIsLoading] = useState(false); // Default to false to show static banner immediately
 
   // Standard carousel state
   const [currentCarIndex, setCurrentCarIndex] = useState(0);
@@ -60,11 +60,11 @@ const ReturningCarBanner = () => {
   useEffect(() => {
     const fetchLatestBooking = async () => {
       if (!isAuthenticated) {
-        setIsLoading(false);
+        // setIsLoading(false);
         return;
       }
 
-      setIsLoading(true);
+      // setIsLoading(true); // Removed to prevent flashing/unmounting of static banner
       try {
         const response = await bookingService.getBookings({
           limit: 10,
@@ -93,7 +93,7 @@ const ReturningCarBanner = () => {
       } catch (error) {
         console.error("Error fetching booking for banner:", error);
       } finally {
-        setIsLoading(false);
+        // setIsLoading(false);
       }
     };
 
@@ -135,12 +135,19 @@ const ReturningCarBanner = () => {
     // If Now >= EndTime -> Static "Available Now"
 
     if (now < endDate) {
-      setDynamicState('returning');
-      setDynamicBooking(booking);
-
       // Calculate remaining time
       const diffMs = endDate - now;
       const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+
+      // Only show if 2 hours or less remaining
+      if (diffMs > 2 * 60 * 60 * 1000) {
+        setDynamicState('hidden');
+        return;
+      }
+
+      setDynamicState('returning');
+      setDynamicBooking(booking);
+
       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
       let timeText = "";
@@ -150,8 +157,8 @@ const ReturningCarBanner = () => {
 
       setRemainingTimeText(timeText.trim());
     } else {
-      setDynamicState('hidden');
-      setDynamicBooking(null);
+      setDynamicState('available');
+      setDynamicBooking(booking); // Keep the booking data to show car details
     }
   };
 
