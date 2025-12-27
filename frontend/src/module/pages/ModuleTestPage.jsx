@@ -1453,7 +1453,7 @@ const ModuleTestPage = () => {
                       whileHover={{ scale: 1.35, rotate: 2 }}
                     />
                       <button
-                        className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
+                        className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center touch-target"
                         onClick={(e) => {
                           e.stopPropagation();
                           const wasFav = toggleFavorite(car);
@@ -1477,9 +1477,7 @@ const ModuleTestPage = () => {
                               <span 
                                 key={i} 
                                 className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
-                                style={{ 
-                                  transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                                }} 
+                                style={{ '--angle': `${i * 45}deg` }} 
                               />
                             ))}
                           </div>
@@ -1488,7 +1486,7 @@ const ModuleTestPage = () => {
                             className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
                               isFavorite(car.id) 
                                 ? "text-red-500 heart-icon liked" 
-                                : "text-white heart-icon"
+                                : "text-white md:text-gray-700 heart-icon"
                             }`}
                             fill={isFavorite(car.id) ? "currentColor" : "none"}
                             stroke="currentColor"
@@ -1825,7 +1823,7 @@ const ModuleTestPage = () => {
                         whileHover={{ scale: 1.35, rotate: 2 }}
                       />
                       <button
-                        className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
+                        className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center touch-target"
                         onClick={(e) => {
                           e.stopPropagation();
                           const wasFav = toggleFavorite(car);
@@ -1849,18 +1847,16 @@ const ModuleTestPage = () => {
                               <span 
                                 key={i} 
                                 className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
-                                style={{ 
-                                  transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                                }} 
+                                style={{ '--angle': `${i * 45}deg` }} 
                               />
                             ))}
                           </div>
                           
                           <svg
-                            className={`w-5 h-5 transition-colors duration-200 ${
+                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
                               isFavorite(car.id) 
                                 ? "text-red-500 heart-icon liked" 
-                                : "text-white heart-icon"
+                                : "text-white md:text-gray-700 heart-icon"
                             }`}
                             fill={isFavorite(car.id) ? "currentColor" : "none"}
                             stroke="currentColor"
