@@ -70,29 +70,7 @@ const AdminHeader = () => {
       {/* Right Side - Admin Info & Actions */}
       <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 flex-shrink-0">
         
-        {/* Switch to CRM Button */}
-        <button
-          onClick={() => navigate('/crm/dashboard')}
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors border text-sm font-medium"
-          style={{
-            borderColor: colors.borderMedium,
-            color: colors.textPrimary,
-            backgroundColor: colors.backgroundSecondary
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colors.backgroundTertiary;
-            e.currentTarget.style.color = colors.textWhite;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
-            e.currentTarget.style.color = colors.textPrimary;
-          }}
-        >
-          <svg className="w-4 h-4" fill="none" viteBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          CRM Panel
-        </button>
+
 
         {/* Notifications Icon */}
         <button

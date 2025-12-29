@@ -1551,7 +1551,7 @@ const ModuleTestPage = () => {
                         whileHover={{ scale: 1.35, rotate: 2 }}
                       />
                       <button
-                        className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
+                        className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center touch-target"
                         onClick={(e) => {
                           e.stopPropagation();
                           const wasFav = toggleFavorite(car);
@@ -1572,21 +1572,20 @@ const ModuleTestPage = () => {
                         <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
                           <div className="sparkles-container">
                             {[...Array(8)].map((_, i) => (
-                              <span
-                                key={i}
-                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`}
-                                style={{
-                                  transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                                }}
+                              <span 
+                                key={i} 
+                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
+                                style={{ '--angle': `${i * 45}deg` }} 
                               />
                             ))}
                           </div>
 
                           <svg
-                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${isFavorite(car.id)
-                              ? "text-red-500 heart-icon liked"
-                              : "text-white heart-icon"
-                              }`}
+                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                              isFavorite(car.id) 
+                                ? "text-red-500 heart-icon liked" 
+                                : "text-white md:text-gray-700 heart-icon"
+                            }`}
                             fill={isFavorite(car.id) ? "currentColor" : "none"}
                             stroke="currentColor"
                             strokeWidth={2}
@@ -1897,129 +1896,133 @@ const ModuleTestPage = () => {
               </motion.button>
             </div>
             <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0">
-              {isLoading
-                ? Array.from({ length: 3 }).map((_, index) => (
-                  <div
-                    key={`skel-nearby-${index}`}
-                    className="min-w-[280px] flex-shrink-0 bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm"
-                  >
-                    <div className="w-full h-28 bg-gray-200 animate-pulse" />
-                    <div className="p-2 md:p-3">
-                      <div className="w-3/4 h-4 bg-gray-200 animate-pulse rounded mb-2" />
-                      <div className="flex gap-2 mb-2">
-                        <div className="w-8 h-3 bg-gray-200 animate-pulse rounded" />
-                        <div className="w-12 h-3 bg-gray-200 animate-pulse rounded" />
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <div className="w-12 h-3 bg-gray-200 animate-pulse rounded" />
-                        <div className="w-16 h-3 bg-gray-200 animate-pulse rounded" />
-                      </div>
-                    </div>
-                  </div>
-                ))
-                : (filteredNearbyCars.length ? filteredNearbyCars : nearbyCars).map((car, index) => (
+              {(filteredNearbyCars.length ? filteredNearbyCars : nearbyCars).map((car, index) => (
+                <motion.div
+                  key={car.id}
+                  className="min-w-[280px] flex-shrink-0"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
+                >
                   <motion.div
-                    key={car.id}
-                    className="min-w-[280px] flex-shrink-0"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
+                    className="w-full rounded-xl overflow-hidden cursor-pointer"
+                    style={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e5e7eb",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    }}
+                    whileHover={{
+                      scale: 1.02,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    }}
+                    onClick={() => navigate(`/car-details/${car.id}`)}
                   >
-                    <motion.div
-                      className="w-full rounded-xl overflow-hidden cursor-pointer"
-                      style={{
-                        backgroundColor: "#ffffff",
-                        border: "1px solid #e5e7eb",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      }}
-                      whileHover={{
-                        scale: 1.02,
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                      }}
-                      onClick={() => navigate(`/car-details/${car.id}`)}
+                    <div
+                      className="relative w-full h-28 flex items-center justify-center rounded-t-xl overflow-hidden"
+                      style={{ backgroundColor: "#f0f0f0" }}
                     >
-                      <div
-                        className="relative w-full h-28 flex items-center justify-center rounded-t-xl overflow-hidden"
-                        style={{ backgroundColor: "#f0f0f0" }}
-                      >
-                        <motion.img
-                          src={car.image}
-                          alt={car.name}
-                          className="w-full h-full object-contain z-10"
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1.25, opacity: 1 }}
-                          transition={{ duration: 0.5 }}
-                          whileHover={{ scale: 1.35, rotate: 2 }}
-                        />
-                        <button
-                          className="absolute -top-1 -left-1 md:-top-1 md:left-2 z-10 touch-target flex items-center justify-center"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const wasFav = toggleFavorite(car);
-                            if (wasFav) {
+                      <motion.img
+                        src={car.image}
+                        alt={car.name}
+                        className="w-full h-full object-contain z-10"
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1.25, opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        whileHover={{ scale: 1.35, rotate: 2 }}
+                      />
+                      <button
+                        className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center touch-target"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const wasFav = toggleFavorite(car);
+                          if (wasFav) {
+                            setAnimatingStates((prev) => ({
+                              ...prev,
+                              [car.id]: true,
+                            }));
+                            setTimeout(() => {
                               setAnimatingStates((prev) => ({
                                 ...prev,
-                                [car.id]: true,
+                                [car.id]: false,
                               }));
-                              setTimeout(() => {
-                                setAnimatingStates((prev) => ({
-                                  ...prev,
-                                  [car.id]: false,
-                                }));
-                              }, 800);
-                            }
-                          }}
-                        >
-                          <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
-                            <div className="sparkles-container">
-                              {[...Array(8)].map((_, i) => (
-                                <span
-                                  key={i}
-                                  className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`}
-                                  style={{
-                                    transform: `rotate(${i * 45}deg) translate(-50%, -50%)`,
-                                  }}
-                                />
-                              ))}
-                            </div>
-
-                            <svg
-                              className={`w-5 h-5 transition-colors duration-200 ${isFavorite(car.id)
-                                ? "text-red-500 heart-icon liked"
-                                : "text-white heart-icon"
-                                }`}
-                              fill={isFavorite(car.id) ? "currentColor" : "none"}
-                              stroke="currentColor"
-                              strokeWidth={2}
-                              viewBox="0 0 24 24"
-                              style={{ overflow: 'visible' }}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            }, 800);
+                          }
+                        }}
+                      >
+                        <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+                          <div className="sparkles-container">
+                            {[...Array(8)].map((_, i) => (
+                              <span 
+                                key={i} 
+                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
+                                style={{ '--angle': `${i * 45}deg` }} 
                               />
-                            </svg>
+                            ))}
                           </div>
-                        </button>
-                      </div>
-                      <div className="p-2 md:p-3">
-                        <h3 className="text-xs md:text-sm font-bold text-black mb-1">
-                          {car.name}
-                        </h3>
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-xs md:text-sm font-semibold text-black">
-                            {car.rating}
-                          </span>
+                          
                           <svg
-                            className="w-3.5 h-3.5"
-                            fill="#FF6B35"
+                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                              isFavorite(car.id) 
+                                ? "text-red-500 heart-icon liked" 
+                                : "text-white md:text-gray-700 heart-icon"
+                            }`}
+                            fill={isFavorite(car.id) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth={2}
                             viewBox="0 0 24 24"
+                            style={{ overflow: 'visible' }}
                           >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
                           </svg>
                         </div>
-                        <div className="flex items-center gap-1 mb-1.5">
+                      </button>
+                    </div>
+                    <div className="p-2 md:p-3">
+                      <h3 className="text-xs md:text-sm font-bold text-black mb-1">
+                        {car.name}
+                      </h3>
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="text-xs md:text-sm font-semibold text-black">
+                          {car.rating}
+                        </span>
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="#FF6B35"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex items-center gap-1 mb-1.5">
+                        <svg
+                          className="w-3 h-3 text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        <span className="text-[10px] md:text-xs text-gray-500">
+                          {car.location}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <div className="flex items-center gap-1">
                           <svg
                             className="w-3 h-3 text-gray-500"
                             fill="none"
@@ -2030,54 +2033,29 @@ const ModuleTestPage = () => {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
                             />
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
                             />
                           </svg>
                           <span className="text-[10px] md:text-xs text-gray-500">
-                            {car.location}
+                            {car.seats}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between mt-1.5">
-                          <div className="flex items-center gap-1">
-                            <svg
-                              className="w-3 h-3 text-gray-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
-                              />
-                            </svg>
-                            <span className="text-[10px] md:text-xs text-gray-500">
-                              {car.seats}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] md:text-xs text-gray-500">
-                              {car.price}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] md:text-xs text-gray-500">
+                            {car.price}
+                          </span>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   </motion.div>
-                ))}
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         </motion.div>
