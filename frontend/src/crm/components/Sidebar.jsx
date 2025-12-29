@@ -14,6 +14,7 @@ import {
   MdSettings,
   MdKeyboardArrowDown,
   MdKeyboardArrowRight,
+  MdKeyboardArrowLeft,
   MdCircle
 } from 'react-icons/md';
 import { premiumColors } from '../../theme/colors';
@@ -330,7 +331,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* User Profile / Footer */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 shrink-0">
-           <div className="flex items-center gap-3">
+           <div className="flex flex-col gap-3">
+              <NavLink 
+                to="/admin/dashboard" 
+                className="flex items-center gap-2 px-3 py-2 bg-indigo-900 text-white rounded-xl hover:bg-indigo-800 transition-colors shadow-sm w-full"
+                style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+              >
+                  <MdKeyboardArrowLeft size={20} />
+                  <span className="text-sm font-medium">Back to Admin</span>
+              </NavLink>
+              <div className="flex items-center gap-3 ml-1">
               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                  <span className="text-gray-500 font-bold">A</span>
               </div>
@@ -339,6 +349,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                  <p className="text-xs text-gray-500">Manager</p>
               </div>
            </div>
+        </div>
         </div>
       </div>
     </aside>
