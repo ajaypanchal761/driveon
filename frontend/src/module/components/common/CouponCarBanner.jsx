@@ -11,7 +11,7 @@ const CouponCarBanner = ({ onDataAvailability }) => {
             try {
                 // Ensure base URL doesn't have trailing /api for consistent path construction
                 const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-                const base = rawBase.replace(/\/api\/?$/, ''); 
+                const base = rawBase.replace(/\/api\/?$/, '');
                 const response = await axios.get(`${base}/api/common/coupons/car-specific`);
                 console.log('Coupon API Response:', response.data);
                 if (response.data.success && response.data.data.coupons) {
