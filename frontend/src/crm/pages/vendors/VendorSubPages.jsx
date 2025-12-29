@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   MdPerson, 
   MdStore, 
@@ -17,11 +17,31 @@ import {
   MdMoreVert,
   MdCheckCircle,
   MdSearch,
-  MdDownload
+  MdDownload,
+  MdClose,
+  MdAdd
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 // --- Shared Components ---
+
+// Reusing SimpleModal pattern
+const SimpleModal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative m-4">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+                        <MdClose size={20} className="text-gray-500" />
+                    </button>
+                </div>
+                {children}
+            </div>
+        </div>
+    );
+};
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -29,6 +49,10 @@ const StatusBadge = ({ status }) => {
     'Inactive': 'bg-red-50 text-red-700 border-red-200',
     'Pending': 'bg-orange-50 text-orange-700 border-orange-200',
     'Verified': 'bg-blue-50 text-blue-700 border-blue-200',
+    'Payout': 'bg-red-50 text-red-600 border-red-200',
+    'Commission': 'bg-green-50 text-green-600 border-green-200',
+    'Processing': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    'Completed': 'bg-green-50 text-green-700 border-green-200',
   };
   return (
     <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}>
@@ -102,17 +126,10 @@ const PaymentRow = ({ payment }) => (
         <td className="px-6 py-4 text-gray-500">{payment.refId}</td>
         <td className="px-6 py-4 font-bold text-gray-900">₹ {payment.amount.toLocaleString()}</td>
         <td className="px-6 py-4">
-            <span className={`px-2 py-1 rounded-full text-xs font-bold ${payment.type === 'Payout' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                {payment.type}
-            </span>
+            <StatusBadge status={payment.type} />
         </td>
         <td className="px-6 py-4">
-             <span className={`px-2 py-1 rounded-full text-xs font-bold ${payment.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                 {payment.status}
-             </span>
-        </td>
-        <td className="px-6 py-4 text-right">
-             <button className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"><MdMoreVert /></button>
+             <StatusBadge status={payment.status} />
         </td>
     </motion.tr>
 );
@@ -132,11 +149,10 @@ const MOCK_PAYMENTS = [
     { id: 103, date: "20 Dec 2025", vendor: "Elite Wheels", refId: "TXN-882155", amount: 150000, type: "Payout", status: "Processing", verified: true },
 ];
 
-const MOCK_PERFORMANCE = [
-    { id: 1, metric: "On-Time Arrival", value: "98%", change: "+2%", icon: MdCheckCircle, color: "text-green-500", bg: "bg-green-50" },
-    { id: 2, metric: "Avg Customer Rating", value: "4.7/5", change: "+0.2", icon: MdStar, color: "text-yellow-500", bg: "bg-yellow-50" },
-    { id: 3, metric: "Trip Completion", value: "95%", change: "-1%", icon: MdTrendingUp, color: "text-blue-500", bg: "bg-blue-50" },
-    { id: 4, metric: "Maintainance Adherence", value: "88%", change: "0%", icon: MdBuild, color: "text-purple-500", bg: "bg-purple-50" },
+const MOCK_HISTORY_LOGS = [
+    { id: 1, date: "20 Dec 2025", vendor: "Elite Wheels", action: "Partnered", detail: "Joined as Premium Partner", status: "Verified" },
+    { id: 2, date: "15 Dec 2025", vendor: "City Cabs Inc", action: "Fleet Update", detail: "Added 5 new vehicles", status: "Active" },
+    { id: 3, date: "10 Dec 2025", vendor: "Rajesh Motors", action: "Payout", detail: "Monthly settlement processed", status: "Completed" },
 ];
 
 const MOCK_CAR_USAGE = [
@@ -149,30 +165,122 @@ import { MdBuild } from 'react-icons/md';
 
 // --- Pages ---
 
-export const AllVendorsPage = () => (
-    <div className="space-y-6">
-         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-             <div>
-                 <h1 className="text-2xl font-bold text-gray-900">Vendor Directory</h1>
-                 <p className="text-gray-500 text-sm">Manage car providers, drivers, and partners.</p>
+export const AllVendorsPage = () => {
+    const [vendors, setVendors] = useState(MOCK_VENDORS);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [newVendor, setNewVendor] = useState({ name: '', type: 'Car Provider', phone: '', email: '', image: 'https://randomuser.me/api/portraits/lego/1.jpg', balance: 0, cars: 0, rating: 5.0, verified: false });
+
+    const filteredVendors = vendors.filter(vendor => 
+        vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.type.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleAddVendor = () => {
+        if (!newVendor.name || !newVendor.phone) return;
+        setVendors([...vendors, { ...newVendor, id: Date.now() }]);
+        setIsAddModalOpen(false);
+        setNewVendor({ name: '', type: 'Car Provider', phone: '', email: '', image: 'https://randomuser.me/api/portraits/lego/1.jpg', balance: 0, cars: 0, rating: 5.0, verified: false });
+    };
+
+    return (
+        <div className="space-y-6">
+             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                 <div className="flex-1">
+                     <h1 className="text-2xl font-bold text-gray-900">Vendor Directory</h1>
+                     <p className="text-gray-500 text-sm">Manage car providers, drivers, and partners.</p>
+                 </div>
+                 <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                     <div className="relative flex-1 md:w-64">
+                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                         <input 
+                            type="text"
+                            placeholder="Search vendors..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                         />
+                     </div>
+                     <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-medium flex items-center justify-center gap-2">
+                         <MdFilterList /> Filter
+                     </button>
+                     <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                     >
+                         <MdStore /> Add Vendor
+                     </button>
+                 </div>
              </div>
-             <div className="flex gap-3">
-                 <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-medium flex items-center gap-2">
-                     <MdFilterList /> Filter
-                 </button>
-                 <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center gap-2">
-                     <MdStore /> Add Vendor
-                 </button>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 {filteredVendors.map(vendor => (
+                     <VendorCard key={vendor.id} vendor={vendor} />
+                 ))}
              </div>
-         </div>
-         
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {MOCK_VENDORS.map(vendor => (
-                 <VendorCard key={vendor.id} vendor={vendor} />
-             ))}
-         </div>
-    </div>
-);
+
+             {filteredVendors.length === 0 && (
+                <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                    <h3 className="text-lg font-bold text-gray-800">No vendors found</h3>
+                    <p className="text-gray-500">Try searching for something else.</p>
+                </div>
+             )}
+
+             <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Vendor">
+                 <div className="space-y-4">
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            value={newVendor.name}
+                            onChange={(e) => setNewVendor({...newVendor, name: e.target.value})}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                         <select 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            value={newVendor.type}
+                            onChange={(e) => setNewVendor({...newVendor, type: e.target.value})}
+                         >
+                             <option>Car Provider</option>
+                             <option>Fleet Partner</option>
+                             <option>Driver Partner</option>
+                             <option>Premium Partner</option>
+                         </select>
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            value={newVendor.phone}
+                            onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                         <input 
+                            type="email" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            value={newVendor.email}
+                            onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
+                         />
+                     </div>
+                     <button 
+                        onClick={handleAddVendor}
+                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                     >
+                         Onboard Vendor
+                     </button>
+                 </div>
+             </SimpleModal>
+        </div>
+    );
+};
 
 export const VendorPaymentsPage = () => (
     <div className="space-y-6">
@@ -212,7 +320,6 @@ export const VendorPaymentsPage = () => (
                          <th className="px-6 py-4">Amount</th>
                          <th className="px-6 py-4">Type</th>
                          <th className="px-6 py-4">Status</th>
-                         <th className="px-6 py-4 text-right">Action</th>
                      </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-100 text-sm">
@@ -234,36 +341,29 @@ export const VendorHistoryPage = () => (
              </div>
          </div>
          
-         <div className="bg-white p-10 rounded-2xl border border-gray-100 shadow-sm text-center">
-             <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                 <MdHistory size={40} />
-             </div>
-             <h3 className="text-lg font-bold text-gray-800">Timeline view coming soon</h3>
-             <p className="text-gray-500 mt-2">We are aggregating historical data for deeper insights.</p>
-         </div>
-    </div>
-);
-
-export const VendorPerformancePage = () => (
-    <div className="space-y-6">
-         <div>
-             <h1 className="text-2xl font-bold text-gray-900">Vendor Performance</h1>
-             <p className="text-gray-500 text-sm">Quality metrics and service delivery analysis.</p>
-         </div>
-
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {MOCK_PERFORMANCE.map(stat => (
-                 <div key={stat.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                      <div className="flex justify-between items-start mb-4">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color}`}>
-                              <stat.icon size={24} />
-                          </div>
-                          <span className={`${stat.change.includes('+') ? 'text-green-600' : 'text-red-500'} text-xs font-bold bg-gray-50 px-2 py-1 rounded-md`}>{stat.change}</span>
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-                      <p className="text-gray-500 text-xs font-bold uppercase mt-1">{stat.metric}</p>
-                 </div>
-             ))}
+         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full text-left">
+                <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <tr>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Vendor</th>
+                        <th className="px-6 py-4">Action</th>
+                        <th className="px-6 py-4">Detail</th>
+                        <th className="px-6 py-4">Status</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                    {MOCK_HISTORY_LOGS.map(log => (
+                        <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 font-bold text-gray-700">{log.date}</td>
+                            <td className="px-6 py-4 font-medium text-gray-900">{log.vendor}</td>
+                            <td className="px-6 py-4 text-indigo-600 font-bold">{log.action}</td>
+                            <td className="px-6 py-4 text-gray-600">{log.detail}</td>
+                            <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
          </div>
     </div>
 );

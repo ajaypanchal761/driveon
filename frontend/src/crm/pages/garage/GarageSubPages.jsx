@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   MdStore, 
   MdBuild, 
@@ -17,11 +17,30 @@ import {
   MdReceipt,
   MdWarning,
   MdCheckCircle,
-  MdAccessTime
+  MdAccessTime,
+  MdClose,
+  MdAdd
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
 // --- Shared Components ---
+
+const SimpleModal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative m-4">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+                        <MdClose size={20} className="text-gray-500" />
+                    </button>
+                </div>
+                {children}
+            </div>
+        </div>
+    );
+};
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -40,7 +59,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const GarageCard = ({ garage }) => (
+const GarageCard = ({ garage, onDetails }) => (
     <motion.div 
        initial={{ opacity: 0, y: 10 }}
        animate={{ opacity: 1, y: 0 }}
@@ -74,8 +93,12 @@ const GarageCard = ({ garage }) => (
         </div>
 
         <div className="flex gap-2 mt-4 pt-4 border-t border-gray-50">
-            <button className="flex-1 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors">Call Now</button>
-            <button className="flex-1 py-2 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">Details</button>
+            <button 
+                onClick={() => onDetails(garage)}
+                className="w-full py-2 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+                View Details
+            </button>
         </div>
     </motion.div>
 );
@@ -151,97 +174,328 @@ const MOCK_PARTS = [
     { id: 3, name: "Motul 5W40 Engine Oil", category: "Fluid", stock: 15, cost: 3500, supplier: "Lube Distributors" },
 ];
 
-const MOCK_ALERTS = [
-    { id: 1, car: "Toyota Innova Crysta", reg: "PB 01 1234", alert: "Oil Change Due", dueIn: "150 km", severity: "High" },
-    { id: 2, car: "Mahindra Thar", reg: "PB 65 9876", alert: "Insurance Expiry", dueIn: "5 Days", severity: "Critical" },
-    { id: 3, car: "Maruti Swift", reg: "PB 10 5678", alert: "Tyre Rotation", dueIn: "500 km", severity: "Medium" },
-];
+
 
 // --- Pages ---
 
-export const AllGaragesPage = () => (
-    <div className="space-y-6">
-         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-             <div>
-                 <h1 className="text-2xl font-bold text-gray-900">Partner Garages</h1>
-                 <p className="text-gray-500 text-sm">Network of authorized service centers.</p>
-             </div>
-             <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center gap-2">
-                 <MdStore /> Add Garage
-             </button>
-         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {MOCK_GARAGES.map(active => (
-                 <GarageCard key={active.id} garage={active} />
-             ))}
-         </div>
-    </div>
-);
+export const AllGaragesPage = () => {
+    const [garages, setGarages] = useState(MOCK_GARAGES);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedGarage, setSelectedGarage] = useState(null);
+    const [newGarage, setNewGarage] = useState({ name: '', location: '', phone: '', specialist: '', rating: '4.0' });
+    const [searchTerm, setSearchTerm] = useState('');
 
-export const ActiveRepairsPage = () => (
-    <div className="space-y-6">
-         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-             <div>
-                 <h1 className="text-2xl font-bold text-gray-900">Active Repairs</h1>
-                 <p className="text-gray-500 text-sm">Real-time status of vehicles in garage.</p>
-             </div>
-         </div>
-         <div className="space-y-4">
-             {MOCK_REPAIRS.map(repair => (
-                 <RepairItem key={repair.id} repair={repair} />
-             ))}
-         </div>
-    </div>
-);
+    const filteredGarages = garages.filter(garage => 
+        garage.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        garage.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        garage.specialist.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-export const ServiceHistoryPage = () => (
-    <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Service Logs</h1>
-                <p className="text-gray-500 text-sm">Archive of all maintenance activities.</p>
-            </div>
-            <div className="flex gap-3">
-                 <div className="relative">
-                      <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input type="text" placeholder="Search logs..." className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500" />
+    const handleAddGarage = () => {
+        if (!newGarage.name || !newGarage.location) return;
+        setGarages([...garages, { ...newGarage, id: Date.now() }]);
+        setIsAddModalOpen(false);
+        setNewGarage({ name: '', location: '', phone: '', specialist: '', rating: '4.0' });
+    };
+
+    const handleViewDetails = (garage) => {
+        setSelectedGarage(garage);
+        setIsDetailsModalOpen(true);
+    };
+
+    return (
+        <div className="space-y-6">
+             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                 <div className="flex-1">
+                     <h1 className="text-2xl font-bold text-gray-900">Partner Garages</h1>
+                     <p className="text-gray-500 text-sm">Network of authorized service centers.</p>
                  </div>
-                 <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-medium">Export CSV</button>
+                 <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                     <div className="relative flex-1 md:w-64">
+                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                         <input 
+                            type="text"
+                            placeholder="Search garages..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                         />
+                     </div>
+                     <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                     >
+                         <MdStore /> Add Garage
+                     </button>
+                 </div>
+             </div>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 {filteredGarages.map(active => (
+                     <GarageCard key={active.id} garage={active} onDetails={handleViewDetails} />
+                 ))}
+             </div>
+
+             {filteredGarages.length === 0 && (
+                <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
+                        <MdSearch size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800">No results found</h3>
+                    <p className="text-gray-500">No garages match your search for "{searchTerm}"</p>
+                </div>
+             )}
+
+             {/* Add Garage Modal */}
+             <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Garage">
+                 <div className="space-y-4">
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Garage Name</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            placeholder="e.g. Speed Auto Works"
+                            value={newGarage.name}
+                            onChange={(e) => setNewGarage({...newGarage, name: e.target.value})}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            placeholder="e.g. Sector 15, Noida"
+                            value={newGarage.location}
+                            onChange={(e) => setNewGarage({...newGarage, location: e.target.value})}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            placeholder="+91..."
+                            value={newGarage.phone}
+                            onChange={(e) => setNewGarage({...newGarage, phone: e.target.value})}
+                         />
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Specialist In</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            placeholder="e.g. Engine, Denting"
+                            value={newGarage.specialist}
+                            onChange={(e) => setNewGarage({...newGarage, specialist: e.target.value})}
+                         />
+                     </div>
+                     <button 
+                        onClick={handleAddGarage}
+                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                     >
+                         Add Garage
+                     </button>
+                 </div>
+             </SimpleModal>
+
+             {/* Garage Details Modal */}
+             <SimpleModal isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} title="Garage Details">
+                 {selectedGarage && (
+                     <div className="space-y-4">
+                         <div className="flex items-center gap-4 mb-4">
+                             <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400">
+                                 <MdStore size={40} />
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-xl text-gray-900">{selectedGarage.name}</h4>
+                                 <div className="flex items-center gap-1 text-sm text-gray-500">
+                                     <MdLocationOn /> {selectedGarage.location}
+                                 </div>
+                             </div>
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                             <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                 <p className="text-xs text-gray-400 uppercase font-bold">Contact</p>
+                                 <p className="font-medium text-gray-800">{selectedGarage.phone}</p>
+                             </div>
+                             <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                 <p className="text-xs text-gray-400 uppercase font-bold">Rating</p>
+                                 <div className="flex items-center gap-1 font-medium text-gray-800">
+                                     <MdStar className="text-yellow-500" /> {selectedGarage.rating}
+                                 </div>
+                             </div>
+                         </div>
+                         <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                             <p className="text-xs text-indigo-400 uppercase font-bold mb-1">Specialization</p>
+                             <div className="flex items-center gap-2 text-indigo-800 font-medium">
+                                 <MdBuild /> {selectedGarage.specialist}
+                             </div>
+                         </div>
+
+                     </div>
+                 )}
+             </SimpleModal>
+        </div>
+    );
+};
+
+export const ActiveRepairsPage = () => {
+    const [repairs, setRepairs] = useState(MOCK_REPAIRS);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newRepair, setNewRepair] = useState({
+        car: 'Toyota Innova Crysta',
+        reg: 'PB 01 1234',
+        garage: 'Bosch Car Service',
+        issue: '',
+        progress: 0,
+        completionDate: 'Tomorrow'
+    });
+
+    const handleAddRepair = () => {
+         if (!newRepair.issue) return;
+         setRepairs([{ ...newRepair, id: Date.now() }, ...repairs]);
+         setIsAddModalOpen(false);
+         setNewRepair({ car: 'Toyota Innova Crysta', reg: 'PB 01 1234', garage: 'Bosch Car Service', issue: '', progress: 0, completionDate: 'Tomorrow' });
+    };
+
+    return (
+        <div className="space-y-6">
+             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                 <div>
+                     <h1 className="text-2xl font-bold text-gray-900">Active Repairs</h1>
+                     <p className="text-gray-500 text-sm">Real-time status of vehicles in garage.</p>
+                 </div>
+                 <button 
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center gap-2"
+                 >
+                     <MdAdd /> Logs New Repair
+                 </button>
+             </div>
+             <div className="space-y-4">
+                 {repairs.length > 0 ? (
+                     repairs.map(repair => (
+                         <RepairItem key={repair.id} repair={repair} />
+                     ))
+                 ) : (
+                     <div className="text-center py-10 text-gray-400">
+                         No active repairs found.
+                     </div>
+                 )}
+             </div>
+
+             {/* Add Repair Modal */}
+             <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Log New Repair">
+                 <div className="space-y-4">
+                    <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle</label>
+                         <select 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            value={newRepair.car}
+                            onChange={(e) => setNewRepair({...newRepair, car: e.target.value})}
+                         >
+                             <option>Toyota Innova Crysta</option>
+                             <option>Mahindra Thar</option>
+                             <option>Maruti Swift</option>
+                         </select>
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Garage</label>
+                         <select 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                            value={newRepair.garage}
+                            onChange={(e) => setNewRepair({...newRepair, garage: e.target.value})}
+                         >
+                             {MOCK_GARAGES.map(g => <option key={g.id}>{g.name}</option>)}
+                         </select>
+                     </div>
+                     <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">Issue / Service Type</label>
+                         <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            placeholder="e.g. Brake Pad Replacement"
+                            value={newRepair.issue}
+                            onChange={(e) => setNewRepair({...newRepair, issue: e.target.value})}
+                         />
+                     </div>
+                     <button 
+                        onClick={handleAddRepair}
+                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                     >
+                         Start Repair Log
+                     </button>
+                 </div>
+             </SimpleModal>
+        </div>
+    );
+};
+
+export const ServiceHistoryPage = () => {
+    const [history, setHistory] = useState(MOCK_HISTORY);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredHistory = history.filter(log => 
+        log.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        log.garage.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.service.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Service Logs</h1>
+                    <p className="text-gray-500 text-sm">Archive of all maintenance activities.</p>
+                </div>
+                <div className="flex gap-3">
+                     <div className="relative">
+                          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input 
+                            type="text" 
+                            placeholder="Search logs..." 
+                            className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500" 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                     </div>
+                </div>
+            </div>
+    
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                 <table className="w-full text-left">
+                     <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                         <tr>
+                             <th className="px-6 py-4">Date</th>
+                             <th className="px-6 py-4">Vehicle</th>
+                             <th className="px-6 py-4">Garage</th>
+                             <th className="px-6 py-4">Service Details</th>
+                             <th className="px-6 py-4">Cost</th>
+                             <th className="px-6 py-4">Status</th>
+                             <th className="px-6 py-4"></th>
+                         </tr>
+                     </thead>
+                     <tbody className="divide-y divide-gray-100 text-sm">
+                         {filteredHistory.map((log) => (
+                             <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                                 <td className="px-6 py-4 font-bold text-gray-800">{log.date}</td>
+                                 <td className="px-6 py-4 text-gray-700 font-medium">{log.car}</td>
+                                 <td className="px-6 py-4 text-gray-500">{log.garage}</td>
+                                 <td className="px-6 py-4 text-gray-600">{log.service}</td>
+                                 <td className="px-6 py-4 font-bold text-gray-900">₹ {log.cost.toLocaleString()}</td>
+                                 <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
+                                 <td className="px-6 py-4 text-right">
+                                     <button className="text-indigo-600 hover:text-indigo-800"><MdReceipt size={20} /></button>
+                                 </td>
+                             </tr>
+                         ))}
+                     </tbody>
+                 </table>
             </div>
         </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-             <table className="w-full text-left">
-                 <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                     <tr>
-                         <th className="px-6 py-4">Date</th>
-                         <th className="px-6 py-4">Vehicle</th>
-                         <th className="px-6 py-4">Garage</th>
-                         <th className="px-6 py-4">Service Details</th>
-                         <th className="px-6 py-4">Cost</th>
-                         <th className="px-6 py-4">Status</th>
-                         <th className="px-6 py-4"></th>
-                     </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-100 text-sm">
-                     {MOCK_HISTORY.map((log) => (
-                         <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                             <td className="px-6 py-4 font-bold text-gray-800">{log.date}</td>
-                             <td className="px-6 py-4 text-gray-700 font-medium">{log.car}</td>
-                             <td className="px-6 py-4 text-gray-500">{log.garage}</td>
-                             <td className="px-6 py-4 text-gray-600">{log.service}</td>
-                             <td className="px-6 py-4 font-bold text-gray-900">₹ {log.cost.toLocaleString()}</td>
-                             <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
-                             <td className="px-6 py-4 text-right">
-                                 <button className="text-indigo-600 hover:text-indigo-800"><MdReceipt size={20} /></button>
-                             </td>
-                         </tr>
-                     ))}
-                 </tbody>
-             </table>
-        </div>
-    </div>
-);
+    );
+};
 
 export const PartsCostPage = () => (
     <div className="space-y-6">
@@ -250,6 +504,9 @@ export const PartsCostPage = () => (
                  <h1 className="text-2xl font-bold text-gray-900">Inventory & Parts Cost</h1>
                  <p className="text-gray-500 text-sm">Track spare parts inventory and pricing.</p>
              </div>
+             <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2">
+                 <MdFilterList /> Filter
+             </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -277,88 +534,4 @@ export const PartsCostPage = () => (
     </div>
 );
 
-export const WarrantyPage = () => (
-    <div className="space-y-6">
-         <div>
-             <h1 className="text-2xl font-bold text-gray-900">Warranty & Insurance</h1>
-             <p className="text-gray-500 text-sm">Active policies and warranty coverages.</p>
-         </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {/* Policy Card */}
-             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4 active-policy">
-                 <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center shrink-0">
-                     <MdSecurity size={24} />
-                 </div>
-                 <div className="flex-1">
-                     <div className="flex justify-between items-start">
-                         <div>
-                             <h4 className="font-bold text-gray-900">Zero Dep Insurance</h4>
-                             <p className="text-sm text-gray-500">Toyota Innova Crysta (PB 01 1234)</p>
-                         </div>
-                         <StatusBadge status="Valid" />
-                     </div>
-                     <div className="mt-4 p-3 bg-gray-50 rounded-xl text-sm flex justify-between">
-                         <span className="text-gray-500">Policy No: <span className="text-gray-800 font-mono">POL-8829283</span></span>
-                         <span className="text-gray-500">Exp: <span className="text-gray-800 font-bold">12 Oct 2026</span></span>
-                     </div>
-                 </div>
-             </div>
-             
-             {/* Expiring Card */}
-             <div className="bg-white p-6 rounded-2xl border border-l-4 border-l-yellow-400 border-gray-100 shadow-sm flex items-start gap-4">
-                 <div className="w-12 h-12 bg-yellow-50 text-yellow-600 rounded-xl flex items-center justify-center shrink-0">
-                     <MdWarning size={24} />
-                 </div>
-                 <div className="flex-1">
-                     <div className="flex justify-between items-start">
-                         <div>
-                             <h4 className="font-bold text-gray-900">Battery Warranty</h4>
-                             <p className="text-sm text-gray-500">Mahindra Thar (PB 65 9876)</p>
-                         </div>
-                         <StatusBadge status="Expiring Soon" />
-                     </div>
-                     <div className="mt-4 p-3 bg-yellow-50/50 rounded-xl text-sm flex justify-between">
-                         <span className="text-gray-500">Vendor: Exide</span>
-                         <span className="text-red-500 font-bold">Exp: 3 Days Left</span>
-                     </div>
-                 </div>
-             </div>
-         </div>
-    </div>
-);
-
-export const MaintenanceAlertsPage = () => (
-    <div className="space-y-6">
-         <div>
-             <h1 className="text-2xl font-bold text-gray-900">Maintenance Alerts</h1>
-             <p className="text-gray-500 text-sm">Scheduled tasks and urgent attention required.</p>
-         </div>
-         
-         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
-             {MOCK_ALERTS.map(alert => (
-                 <div key={alert.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                     <div className="flex items-center gap-4">
-                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${alert.severity === 'Critical' ? 'bg-red-100 text-red-600' : alert.severity === 'High' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                             <MdNotificationsActive size={20} />
-                         </div>
-                         <div>
-                             <h4 className="font-bold text-gray-900">{alert.alert}</h4>
-                             <p className="text-sm text-gray-500">{alert.car} <span className="text-gray-300">•</span> {alert.reg}</p>
-                         </div>
-                     </div>
-                     
-                     <div className="flex items-center gap-6">
-                         <div className="text-right">
-                             <p className="text-xs text-gray-400 font-bold uppercase">Due In</p>
-                             <p className={`text-sm font-bold ${alert.severity === 'Critical' ? 'text-red-600' : 'text-gray-800'}`}>{alert.dueIn}</p>
-                         </div>
-                         <button className="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold text-sm rounded-lg hover:bg-indigo-100">
-                             Schedule
-                         </button>
-                     </div>
-                 </div>
-             ))}
-         </div>
-    </div>
-);

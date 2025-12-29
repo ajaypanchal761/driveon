@@ -53,6 +53,12 @@ const AccidentActiveCases = () => {
         }
     };
 
+    const filteredAccidents = MOCK_ACCIDENTS.filter(item => 
+        item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.reg.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.location.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -106,7 +112,7 @@ const AccidentActiveCases = () => {
   
         {/* Cards Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_ACCIDENTS.map((item, index) => (
+          {filteredAccidents.map((item, index) => (
             <div 
                 key={item.id} 
                 onClick={() => navigate(`/crm/cars/accidents/${item.id}`)}
@@ -150,6 +156,12 @@ const AccidentActiveCases = () => {
             </div>
           ))}
         </div>
+
+        {filteredAccidents.length === 0 && (
+            <div className="p-10 text-center text-gray-500 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+                No active accident cases found matching "{searchTerm}"
+            </div>
+        )}
       </div>
     );
 };

@@ -48,6 +48,11 @@ const MOCK_CLOSED_CASES = [
 const AccidentClosedCases = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
+    const filteredCases = MOCK_CLOSED_CASES.filter(item => 
+        item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.reg.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -113,7 +118,7 @@ const AccidentClosedCases = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
-              {MOCK_CLOSED_CASES.map((item) => (
+              {filteredCases.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                   <td className="p-4">
                     <div className="font-bold text-gray-900">{item.car}</div>
@@ -143,6 +148,11 @@ const AccidentClosedCases = () => {
               ))}
             </tbody>
           </table>
+          {filteredCases.length === 0 && (
+            <div className="p-10 text-center text-gray-500">
+                No closed cases found matching "{searchTerm}"
+            </div>
+          )}
         </div>
       </div>
     );

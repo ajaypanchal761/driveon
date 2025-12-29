@@ -14,7 +14,8 @@ import {
   MdNotificationsActive,
   MdFlashOn,
   MdClose,
-  MdGroup
+  MdGroup,
+  MdSearch
 } from 'react-icons/md';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
@@ -205,28 +206,46 @@ export const SettingsOverviewPage = () => {
 
 export const LocationsPage = () => {
     const [cities, setCities] = useState(MOCK_CITIES);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const toggleCity = (id) => {
         setCities(cities.map(c => c.id === id ? { ...c, status: !c.status } : c));
     };
 
+    const filteredCities = cities.filter(city => 
+        city.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        city.state.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                 <div>
+                 <div className="flex-1">
                      <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Cities & Locations</h1>
                      <p className="text-gray-500 text-sm">Manage operational cities and pickup hubs.</p>
                  </div>
-                 <button 
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
-                    style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
-                 >
-                     <MdAdd size={20} /> Add City
-                 </button>
+                 <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
+                    <div className="relative w-full md:w-64">
+                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                         <input 
+                            type="text"
+                            placeholder="Search cities..."
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                         />
+                    </div>
+                    <button 
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
+                    >
+                        <MdAdd size={20} /> Add City
+                    </button>
+                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {cities.map((city) => (
+                {filteredCities.map((city) => (
                     <motion.div 
                         key={city.id}
                         layout
@@ -275,42 +294,192 @@ export const LocationsPage = () => {
     );
 };
 
-export const ExpenseCategoriesPage = () => (
-    <div className="space-y-6">
-        <div className="flex justify-between items-end">
-             <div>
-                 <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Expense Categories</h1>
-                 <p className="text-gray-500 text-sm">Classify your outgoing payments.</p>
-             </div>
-             <button 
-                className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all"
-                style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}
-             >
-                 <MdAdd size={20} /> New Category
-             </button>
-        </div>
+const AddExpenseModal = ({ isOpen, onClose, onSave, initialData = null }) => {
+    const [name, setName] = useState('');
+    const [icon, setIcon] = useState('💰');
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {EXPENSE_CATS.map(cat => (
+    React.useEffect(() => {
+        if (initialData) {
+            setName(initialData.name);
+            setIcon(initialData.icon);
+        } else {
+            setName('');
+            setIcon('💰');
+        }
+    }, [initialData, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ name, icon, id: initialData?.id });
+    };
+
+    const icons = ['⛽', '🔧', '💰', '🏢', '📢', '📦', '🛒', '🍔', '✈️', '🚕'];
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
                 <motion.div 
-                    key={cat.id}
-                    whileHover={{ y: -5 }}
-                    className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center cursor-pointer hover:shadow-md transition-all"
-                    style={{ borderColor: 'transparent' }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
                 >
-                    <div 
-                        className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-3`}
-                        style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05) }}
-                    >
-                        {cat.icon}
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Edit Category' : 'New Category'}</h2>
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                             <MdClose size={24} />
+                        </button>
                     </div>
-                    <h4 className="font-bold text-gray-800">{cat.name}</h4>
-                    <p className="text-xs text-gray-400 mt-1">12 Transactions</p>
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Category Name</label>
+                            <input 
+                                type="text" 
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                placeholder="e.g. Electricity Bill"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-3">Select Icon</label>
+                            <div className="grid grid-cols-5 gap-3">
+                                {icons.map(emoji => (
+                                    <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={() => setIcon(emoji)}
+                                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-all ${icon === emoji ? 'bg-indigo-600 text-white scale-110 shadow-lg' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="pt-4 flex justify-end gap-3">
+                            <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-50 rounded-xl">Cancel</button>
+                            <button 
+                                type="submit" 
+                                className="px-5 py-2.5 text-white font-bold rounded-xl shadow-lg hover:bg-opacity-90 transition-all"
+                                style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                            >
+                                {initialData ? 'Save Changes' : 'Add Category'}
+                            </button>
+                        </div>
+                    </form>
                 </motion.div>
-            ))}
+            </div>
+        </AnimatePresence>
+    );
+};
+
+export const ExpenseCategoriesPage = () => {
+    const [categories, setCategories] = useState(EXPENSE_CATS);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const handleSaveCategory = ({ name, icon, id }) => {
+        if (id) {
+            setCategories(categories.map(c => c.id === id ? { ...c, name, icon } : c));
+        } else {
+            const newCat = {
+                id: Date.now(),
+                name,
+                icon,
+                color: "bg-indigo-50 text-indigo-600"
+            };
+            setCategories([...categories, newCat]);
+        }
+        setIsModalOpen(false);
+        setEditingCategory(null);
+    };
+
+    const handleDelete = (e, id) => {
+        e.stopPropagation();
+        if (window.confirm('Delete this category?')) {
+            setCategories(categories.filter(c => c.id !== id));
+        }
+    };
+
+    const filteredCategories = categories.filter(cat => 
+        cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="space-y-6">
+            <AddExpenseModal 
+                isOpen={isModalOpen} 
+                onClose={() => { setIsModalOpen(false); setEditingCategory(null); }} 
+                onSave={handleSaveCategory} 
+                initialData={editingCategory}
+            />
+
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                 <div className="flex-1">
+                     <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Expense Categories</h1>
+                     <p className="text-gray-500 text-sm">Classify your outgoing payments.</p>
+                 </div>
+                 <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
+                    <div className="relative w-full md:w-64">
+                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                         <input 
+                            type="text"
+                            placeholder="Search categories..."
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                         />
+                    </div>
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-md shadow-indigo-100 whitespace-nowrap"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT, color: 'white' }}
+                    >
+                        <MdAdd size={20} /> New Category
+                    </button>
+                 </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {filteredCategories.map(cat => (
+                    <motion.div 
+                        key={cat.id}
+                        layout
+                        whileHover={{ y: -5 }}
+                        onClick={() => { setEditingCategory(cat); setIsModalOpen(true); }}
+                        className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center cursor-pointer hover:shadow-md transition-all relative group"
+                    >
+                        <button 
+                            onClick={(e) => handleDelete(e, cat.id)}
+                            className="absolute top-2 right-2 p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <MdDelete size={18} />
+                        </button>
+                        <div 
+                            className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-3 transition-transform group-hover:scale-110`}
+                            style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05) }}
+                        >
+                            {cat.icon}
+                        </div>
+                        <h4 className="font-bold text-gray-800">{cat.name}</h4>
+                        <p className="text-xs text-gray-400 mt-1">12 Transactions</p>
+                    </motion.div>
+                ))}
+            </div>
+
+            {filteredCategories.length === 0 && (
+                <div className="p-12 text-center text-gray-500 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+                    No categories found matching "{searchTerm}"
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 export const SalaryRulesPage = () => (
     <div className="space-y-6">
@@ -363,6 +532,7 @@ export const RolesAccessPage = () => {
     const [roles, setRoles] = useState(ROLES_DATA);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleSaveRole = ({ roleName, accessLevel, id }) => {
         if (id) {
@@ -393,6 +563,11 @@ export const RolesAccessPage = () => {
         setIsModalOpen(true);
     };
 
+    const filteredRoles = roles.filter(r => 
+        r.role.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        r.access.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
     <div className="space-y-6">
         <AddRoleModal 
@@ -402,18 +577,30 @@ export const RolesAccessPage = () => {
             initialData={editingRole}
         />
 
-        <div className="flex justify-between items-end">
-             <div>
+        <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+             <div className="flex-1">
                  <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Roles & Permissions</h1>
                  <p className="text-gray-500 text-sm">Control who sees what.</p>
              </div>
-             <button 
-                onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95"
-                style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
-             >
-                 <MdSecurity size={18} /> Add Role
-             </button>
+             <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
+                <div className="relative w-full md:w-64">
+                     <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                     <input 
+                        type="text"
+                        placeholder="Search roles..."
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                     />
+                </div>
+                <button 
+                    onClick={openAddModal}
+                    className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 whitespace-nowrap"
+                    style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
+                >
+                    <MdSecurity size={18} /> Add Role
+                </button>
+             </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -427,7 +614,7 @@ export const RolesAccessPage = () => {
                      </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-100 text-sm">
-                     {roles.map((role) => (
+                     {filteredRoles.map((role) => (
                          <tr key={role.id} className="hover:bg-gray-50 transition-colors group">
                              <td className="px-6 py-4 font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{role.role}</td>
                              <td className="px-6 py-4">

@@ -1569,14 +1569,6 @@ export const FollowUpCalendarPage = () => {
                                      </button>
                                  </div>
                                  <p className="font-medium text-gray-700 mb-3">{event.title}</p>
-                                 {event.status === 'Pending' && (
-                                     <button 
-                                        onClick={() => handleCall(event.title)}
-                                        className="w-full py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2"
-                                     >
-                                         <MdCall size={14} /> Call Now
-                                     </button>
-                                 )}
                              </div>
                          ))
                      ) : (

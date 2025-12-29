@@ -763,10 +763,20 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
      const [editingAttendance, setEditingAttendance] = useState(null);
      const [dateFilter, setDateFilter] = useState('Date: Today');
      const [roleFilter, setRoleFilter] = useState('Staff: All');
+     const [searchTerm, setSearchTerm] = useState('');
 
      // Filter Logic
      const getFilteredAttendance = () => {
          let data = [...attendanceList];
+
+         // Search Filter
+         if (searchTerm) {
+             const lowerSearch = searchTerm.toLowerCase();
+             data = data.filter(item => 
+                 item.name.toLowerCase().includes(lowerSearch) || 
+                 item.role.toLowerCase().includes(lowerSearch)
+             );
+         }
 
          // 1. Filter by Role
          if (roleFilter !== 'Staff: All') {
@@ -907,6 +917,16 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
    
          {/* Filters */}
          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-80">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text"
+                    placeholder="Search name or role..."
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
             <div className="flex gap-3 w-full md:w-auto">
                <select 
                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
@@ -1023,6 +1043,7 @@ export const SalaryPage = () => {
     const [salaryList, setSalaryList] = useState(MOCK_SALARY_DATA);
     const [monthFilter, setMonthFilter] = useState('Month: December');
     const [staffFilter, setStaffFilter] = useState('Staff: All');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handlePayNow = (id) => {
         setSalaryList(salaryList.map(item => {
@@ -1112,17 +1133,19 @@ export const SalaryPage = () => {
         doc.save(`Payslip_${item.name.replace(/ /g, '_')}_${monthFilter.replace('Month: ', '')}.pdf`);
     };
 
-    const getFilteredSalary = () => {
-        let data = [...salaryList];
+    const filteredSalary = salaryList.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              item.role.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        let matchesStaff = true;
         if (staffFilter !== 'Staff: All') {
             const keyword = staffFilter === 'Drivers' ? 'Driver' : 'Sales';
-            data = data.filter(item => item.role && item.role.includes(keyword));
+            matchesStaff = item.role && item.role.includes(keyword);
         }
-        return data;
-    };
+        
+        return matchesSearch && matchesStaff;
+    });
 
-    const filteredSalary = getFilteredSalary();
-  
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -1139,8 +1162,22 @@ export const SalaryPage = () => {
   
         {/* Filters */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+           <div className="relative w-full md:w-80">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text"
+                    placeholder="Search staff name..."
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+           </div>
            <div className="flex gap-3 w-full md:w-auto">
-              <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
+              <select 
+                className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+                value={staffFilter}
+                onChange={(e) => setStaffFilter(e.target.value)}
+              >
                 <option>Staff: All</option>
                 <option>Sales</option>
                 <option>Drivers</option>
@@ -1554,7 +1591,6 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
                  <th className="p-4">Rating</th>
                  <th className="p-4">Review Date</th>
                  <th className="p-4">Feedback Summary</th>
-                 <th className="p-4 text-right">Action</th>
                </tr>
              </thead>
              <tbody className="divide-y divide-gray-100 text-sm">
@@ -1564,7 +1600,14 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
                      <div className="font-bold text-gray-900">{item.name}</div>
                      <div className="text-xs text-gray-500">{item.role}</div>
                    </td>
-
+                   <td className="p-4">
+                      <div className="flex items-center gap-1 text-amber-400">
+                         {[...Array(5)].map((_, i) => (
+                             <MdStar key={i} size={16} className={i < item.rating ? "text-amber-400" : "text-gray-200"} />
+                         ))}
+                         <span className="text-gray-600 text-xs font-bold ml-1">({item.rating}/5)</span>
+                      </div>
+                   </td>
                    <td className="p-4 text-gray-600 font-medium">
                      {item.date}
                      <div className="text-xs text-gray-400">by {item.reviewer}</div>
@@ -1572,15 +1615,10 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
                    <td className="p-4 text-gray-600 italic">
                      "{item.summary}"
                    </td>
-                   <td className="p-4 text-right">
-                     <button className="text-indigo-600 hover:underline text-xs font-bold">Full Report</button>
-                   </td>
                  </tr>
                ))}
              </tbody>
            </table>
-           
-
            
            {filteredPerformanceList.length === 0 && (
               <div className="p-10 text-center text-gray-500">No performance reviews found.</div>
@@ -1673,6 +1711,32 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
          }
      };
  
+     const [assignedToFilter, setAssignedToFilter] = useState('Assigned To: All');
+     const [statusFilter, setStatusFilter] = useState('Status: Pending');
+
+     const getFilteredTasks = () => {
+         let data = [...tasksList];
+
+         // Filter by Assigned To
+         if (assignedToFilter !== 'Assigned To: All') {
+             if (assignedToFilter === 'Sales') {
+                 data = data.filter(item => item.assignedTo.includes('Sales'));
+             } else if (assignedToFilter === 'Garage') {
+                 data = data.filter(item => item.assignedTo.includes('Mechanic')); // Assuming Garage = Mechanic
+             }
+         }
+
+         // Filter by Status
+         if (statusFilter !== 'All') {
+             const status = statusFilter === 'Status: Pending' ? 'Pending' : 'Done';
+             data = data.filter(item => item.status === status);
+         }
+
+         return data;
+     };
+
+     const filteredTasksList = getFilteredTasks();
+ 
      return (
        <div className="space-y-6">
          <AddTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddTask} />
@@ -1698,12 +1762,20 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
          {/* Filters */}
          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-3 w-full md:w-auto">
-               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
+               <select 
+                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+                 value={assignedToFilter}
+                 onChange={(e) => setAssignedToFilter(e.target.value)}
+               >
                  <option>Assigned To: All</option>
                  <option>Sales</option>
                  <option>Garage</option>
                </select>
-               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
+               <select 
+                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+                 value={statusFilter}
+                 onChange={(e) => setStatusFilter(e.target.value)}
+               >
                  <option>Status: Pending</option>
                  <option>Completed</option>
                  <option>All</option>
@@ -1724,7 +1796,7 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
                </tr>
              </thead>
              <tbody className="divide-y divide-gray-100 text-sm">
-               {tasksList.map((item) => (
+               {filteredTasksList.map((item) => (
                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                    <td className="p-4">
                      <div className="font-bold text-gray-900">{item.title}</div>
@@ -1760,10 +1832,11 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
              </tbody>
            </table>
            
-           {tasksList.length === 0 && (
+           {filteredTasksList.length === 0 && (
               <div className="p-10 text-center text-gray-500">No tasks found.</div>
            )}
          </div>
        </div>
      );
  };
+
