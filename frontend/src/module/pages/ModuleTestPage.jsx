@@ -1877,8 +1877,6 @@ const ModuleTestPage = () => {
           )}
 
 
-
-
           {/* NEARBY CARS SECTION (horizontal cards) */}
           <motion.div
             className="mt-4"
@@ -2320,6 +2318,7 @@ const ModuleTestPage = () => {
     </div >
   );
 };
+
 
 export default ModuleTestPage;
 
