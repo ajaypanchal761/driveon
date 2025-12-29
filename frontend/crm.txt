@@ -1,0 +1,307 @@
+# 🚘 **FULL & FINAL CRM FRONTEND FLOW (ANTI-GRAVITY IMPLEMENTATION BLUEPRINT)**
+
+**SYSTEM LOCATION**
+
+```
+After Login → Admin Panel → CRM Tab
+```
+
+**CRM PURPOSE**
+
+```
+Owner & Admin can manage:
+Leads, Staff, Attendance, Salary, Vendors, Garage, Car Profit/Loss, Finance, Reports
+```
+
+---
+
+## 📊 **1️⃣ DASHBOARD (SMART COMMAND CENTER — ACTION-BASED UI)**
+
+**Action Alerts (show as cards)**
+
+```
+• Salary Pending
+• Vendor Payment Due
+• Car Idle > X days
+• Car Insurance Expiring Soon
+• Car Fitness / PUC Expiring Soon
+• Garage Bill Pending
+```
+
+**Quick Actions (buttons / floating action)**
+
+```
+• Add Enquiry
+• Add Expense
+• Mark Attendance
+• Add Vendor Payment
+• Schedule Maintenance
+• Assign Task to Staff
+```
+
+**Card → Navigation Mapping**
+
+```
+Salary Pending → Staff Operations > Salary (filtered: pending)
+Vendor Payment Due → Vendors > Payments
+Car Insurance Expiring → Cars > Documents (filtered: insurance expiry)
+Car Idle → Cars > Idle Cars
+Upcoming Maintenance → Garage & Maintenance > Active Repairs
+```
+
+---
+
+## 📞 **2️⃣ ENQUIRIES (LEAD → BOOKING → MONEY FLOW)**
+
+**Sidebar**
+
+```
+Enquiries
+ ├─ All Enquiries
+ ├─ New
+ ├─ In Progress
+ ├─ Follow-ups
+ ├─ Converted
+ ├─ Closed
+ ├─ Enquiry Analytics
+ └─ Follow-up Calendar
+```
+
+**Screen Interactions**
+
+```
+Add enquiry → assign staff → add notes → follow-up reminders
+Status flow: New → In Progress → Converted / Lost
+If converted → Create / Link Booking
+```
+
+---
+
+## 👥 **3️⃣ STAFF OPERATIONS (MERGED — ATTENDANCE → SALARY → PERFORMANCE)**
+
+**Sidebar**
+
+```
+Staff Operations
+ ├─ Staff Directory
+ ├─ Roles & Designation
+ ├─ Attendance Tracker
+ ├─ Salary (Auto Based on Attendance)
+ ├─ Advances
+ ├─ Performance
+ └─ Staff Tasks / Allocation
+```
+
+**Dynamic Flow**
+
+```
+Staff added → salary rule set (per day / per month / per shift)
+Daily attendance mark → attendance auto recalculates salary
+Add advances → auto deduct in salary
+Generate monthly payroll → review → Mark Paid
+Salary paid → Finance Expenses auto update
+```
+
+**Attendance Rules**
+
+```
+Present = +1 day
+Absent = no payment
+Leave = 50% optional (config)
+Advance = auto deduction
+```
+
+---
+
+## 🚗 **4️⃣ CARS (COMPLETE LIFE CYCLE — ACCIDENT MERGED INSIDE)**
+
+**Sidebar**
+
+```
+Cars
+ ├─ All Cars
+ ├─ Live Status
+ ├─ Idle Cars
+ ├─ Car Timeline
+ ├─ Profit / Loss
+ ├─ Car Health Score
+ ├─ Documents (Insurance, Fitness/PUC, RC)
+ └─ Accident & Recovery
+      ├─ Active Cases
+      ├─ Add Accident Case
+      ├─ Insurance Claims
+      ├─ Recovery Tracking
+      ├─ Closed Cases
+      └─ Loss Recovery Summary
+```
+
+**Dynamic Linking**
+
+```
+Garage repair cost → adds to car timeline + expenses
+Vendor payout → adds to car timeline + expenses
+Salary portion (per booking) → adds to car cost
+Accident loss/claim → updates car P&L
+```
+
+**Car Timeline Visual Flow**
+
+```
+[Booking] — [Accident] — [Repair Job] — [Insurance Claim] — [Returned] — [Next Booking]
+```
+
+---
+
+## 📅 **5️⃣ BOOKINGS & DEALS (REVENUE SNAPSHOT)**
+
+```
+Bookings & Deals
+ ├─ Active
+ ├─ Upcoming
+ ├─ Completed
+ ├─ Cancelled
+ ├─ Payment Status
+ └─ Booking Profit View
+```
+
+**Per Booking Profit**
+
+```
+Net Profit = Booking Amount - (Staff Cost + Vendor Cost + Maintenance Cost)
+```
+
+---
+
+## 🏭 **6️⃣ GARAGE & MAINTENANCE (REPAIR TRACK & COST)**
+
+```
+Garage & Maintenance
+ ├─ All Garages
+ ├─ Active Repairs
+ ├─ Service History
+ ├─ Parts Cost
+ ├─ Warranty / Insurance
+ └─ Maintenance Alerts
+```
+
+**Flow**
+
+```
+Add repair job → select car → cost added → invoice uploaded
+→ auto updates: car P&L + finance + booking (if applicable)
+```
+
+---
+
+## 🧑‍💼 **7️⃣ VENDORS (COST PARTNERS)**
+
+```
+Vendors
+ ├─ All Vendors
+ ├─ Vendor Payments
+ ├─ Vendor History
+ ├─ Vendor Performance
+ └─ Vendor Car Usage
+```
+
+**Vendor → Car Usage**
+
+```
+Vendor car used days, revenue share, cost → auto profit comparison
+```
+
+---
+
+## 💰 **8️⃣ FINANCE (RESULTS OF ALL OPERATIONS)**
+
+```
+Finance
+ ├─ Income Overview
+ ├─ Expenses Overview
+ ├─ Pending Payments
+ ├─ Profit / Loss Summary
+ └─ Cash Flow
+```
+
+**Auto Mapping**
+
+```
+Salary Paid → Expense
+Vendor Pay → Expense
+Garage Cost → Expense
+Booking Complete → Income
+Accident → Loss or Claim Recovery
+```
+
+---
+
+## 📊 **9️⃣ REPORTS (OWNER DECISIONS)**
+
+```
+Reports
+ ├─ Daily
+ ├─ Monthly
+ ├─ Yearly
+ ├─ Car-wise
+ ├─ Staff-wise
+ ├─ Vendor-wise
+ ├─ Custom
+ └─ Comparison
+      • Car vs Car
+      • Vendor vs Vendor
+      • Staff Cost vs Profit
+```
+
+---
+
+## 📤 **🔟 EXPORT & TOOLS**
+
+```
+Export & Tools
+ ├─ Excel Export
+ ├─ PDF Export
+ ├─ Notes
+ ├─ Reminders
+ ├─ Calculator
+ └─ Audit Logs
+```
+
+---
+
+## ⚙️ **1️⃣1 SETTINGS (BUSINESS CONTROL)**
+
+```
+Settings
+ ├─ Cities & Locations
+ ├─ Expense Categories
+ ├─ Salary Rules
+ ├─ Roles & Access
+ ├─ Alerts & Limits
+ └─ Automation Rules
+```
+
+---
+
+# 🔁 **END-TO-END DYNAMIC FLOW SUMMARY (CORE BUSINESS CHAIN)**
+
+```
+Enquiry → Assign Staff → Convert → Booking
+Booking → Car usage
+Car usage → Vendor + Garage + Staff cost add
+Attendance → Auto Salary
+Salary Paid → Expense update
+Accident → Cost + Claim add
+Everything → Car Timeline → Car P&L
+Car P&L + Booking P&L → Finance Summary
+Finance → Reports → Export
+Owner → Decision
+```
+
+---
+
+# 🧠 **3-line CRM system logic**
+
+```
+Attendance controls salary
+Costs control car P&L
+P&L controls business decisions
