@@ -7,13 +7,40 @@ import {
   MdEventAvailable, 
   MdBuild, 
   MdAssignment,
+  MdBarChart,
+  MdDownload,
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { premiumColors } from '../../theme/colors';
 import { rgba } from 'polished';
 
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell
+} from 'recharts';
+
 const DashboardPage = () => {
   const navigate = useNavigate();
+
+  // Mock Data for Charts
+  const REVENUE_DATA = [
+    { name: 'Jan', revenue: 4000, expenses: 2400 },
+    { name: 'Feb', revenue: 3000, expenses: 1398 },
+    { name: 'Mar', revenue: 2000, expenses: 9800 },
+    { name: 'Apr', revenue: 2780, expenses: 3908 },
+    { name: 'May', revenue: 1890, expenses: 4800 },
+    { name: 'Jun', revenue: 2390, expenses: 3800 },
+    { name: 'Jul', revenue: 3490, expenses: 4300 },
+  ];
+
+  const FLEET_DISTRIBUTION = [
+    { name: 'Hatchback', value: 35 },
+    { name: 'Sedan', value: 25 },
+    { name: 'SUV', value: 30 },
+    { name: 'Luxury', value: 10 },
+  ];
+
+  const COLORS = ['#1C205C', '#4F46E5', '#818CF8', '#C7D2FE'];
 
   // Local Mock Data for Dashboard Counters
   const DASHBOARD_STATS = {
@@ -225,8 +252,140 @@ const DashboardPage = () => {
            ))}
         </motion.div>
       </section>
-      
-      {/* 3. Recent Activity & Garage */}
+
+      {/* 3. Performance Overview */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
+          >
+              <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                         <MdBarChart size={24} />
+                      </div>
+                      <div>
+                          <h3 className="text-lg font-bold text-gray-800">Business Analytics</h3>
+                          <p className="text-xs text-gray-400">Real-time revenue & expense tracking</p>
+                      </div>
+                  </div>
+                  <button className="flex items-center gap-2 px-4 py-2 border border-blue-100 text-[#1C205C] rounded-xl text-xs font-bold hover:bg-blue-50 transition-all shadow-sm">
+                      <MdDownload /> Export Report
+                  </button>
+              </div>
+
+              <div className="flex gap-4 mb-6">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
+                      <div className="w-3 h-3 rounded-full bg-indigo-600"></div> Revenue
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                      <div className="w-3 h-3 rounded-full bg-red-400"></div> Expenses
+                  </div>
+              </div>
+
+              <div className="h-80 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <defs>
+                              <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor={premiumColors.primary.DEFAULT} stopOpacity={0.1}/>
+                                  <stop offset="95%" stopColor={premiumColors.primary.DEFAULT} stopOpacity={0}/>
+                              </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                          <XAxis 
+                            dataKey="name" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 10, fill: '#94a3b8' }} 
+                            dy={10}
+                          />
+                          <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 10, fill: '#94a3b8' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="revenue" 
+                            stroke={premiumColors.primary.DEFAULT} 
+                            strokeWidth={3}
+                            fillOpacity={1} 
+                            fill="url(#colorRev)" 
+                            animationDuration={2000}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="expenses" 
+                            stroke="#f87171" 
+                            strokeWidth={3}
+                            fillOpacity={0}
+                            strokeDasharray="5 5"
+                            animationDuration={2000}
+                          />
+                      </AreaChart>
+                  </ResponsiveContainer>
+              </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col"
+          >
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Fleet Popularity</h3>
+              <p className="text-xs text-gray-400 mb-6">Booking distribution by car type</p>
+              
+              <div className="flex-1 flex flex-col justify-center items-center">
+                  <div className="h-64 w-full relative">
+                      <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                              <Pie
+                                  data={FLEET_DISTRIBUTION}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={60}
+                                  outerRadius={80}
+                                  paddingAngle={5}
+                                  dataKey="value"
+                                  animationDuration={1500}
+                              >
+                                  {FLEET_DISTRIBUTION.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  ))}
+                              </Pie>
+                              <Tooltip />
+                          </PieChart>
+                      </ResponsiveContainer>
+                      {/* Center Text for Donut */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-2xl font-bold text-gray-800">1.2K</span>
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Bookings</span>
+                      </div>
+                  </div>
+                  
+                  <div className="w-full space-y-3 mt-6">
+                      {FLEET_DISTRIBUTION.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx] }}></div>
+                                  <span className="text-xs font-semibold text-gray-600">{item.name}</span>
+                              </div>
+                              <span className="text-xs font-bold text-gray-800">{item.value}%</span>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </motion.div>
+      </section>
+
+      {/* 4. Recent Activity & Garage */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <h3 className="font-semibold text-gray-800 mb-4">Recent Enquiries</h3>

@@ -142,60 +142,95 @@ const MOCK_PROFIT = [
 // --- Pages ---
 
 export const ActiveBookingsPage = () => {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-         <div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Active</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Active Bookings</h1>
-            <p className="text-gray-500 text-sm">Monitor live trips and ongoing rentals.</p>
-         </div>
-         <div className="flex gap-3">
-             <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 font-medium text-gray-700 flex items-center gap-2">
-                 <MdFilterList /> Filter
-             </button>
-             <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold">
-                 + Create Booking
-             </button>
-         </div>
-      </div>
+    const [searchTerm, setSearchTerm] = useState('');
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_ACTIVE.map(item => (
-              <BookingCard 
-                 key={item.id} 
-                 booking={item} 
-                 type="active"
-                 actions={
-                    <>
-                       <button className="px-3 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg">Track GPS</button>
-                       <button className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-lg">Extend</button>
-                    </>
-                 } 
-               />
-          ))}
-      </div>
-    </div>
-  );
+    const filteredActive = MOCK_ACTIVE.filter(item => 
+        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.regNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Active</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900">Active Bookings</h1>
+                    <p className="text-gray-500 text-sm">Monitor live trips and ongoing rentals.</p>
+                </div>
+                <div className="relative w-full md:w-80">
+                    <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                        type="text"
+                        placeholder="Search vehicle, customer..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredActive.map(item => (
+                    <BookingCard 
+                        key={item.id} 
+                        booking={item} 
+                        type="active"
+                        actions={null} 
+                    />
+                ))}
+            </div>
+
+            {filteredActive.length === 0 && (
+                <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
+                        <MdSearch size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800">No active bookings found</h3>
+                    <p className="text-gray-500">No match for "{searchTerm}"</p>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export const UpcomingBookingsPage = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredUpcoming = MOCK_UPCOMING.filter(item => 
+        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.regNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-           <div>
+           <div className="flex-1">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                 <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Upcoming</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Upcoming Trips</h1>
               <p className="text-gray-500 text-sm">Scheduled bookings ready for dispatch.</p>
            </div>
+           <div className="relative w-full md:w-80">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text"
+                    placeholder="Search upcoming trips..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </div>
   
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {MOCK_UPCOMING.map(item => (
+            {filteredUpcoming.map(item => (
                 <BookingCard 
                    key={item.id} 
                    booking={item} 
@@ -209,25 +244,51 @@ export const UpcomingBookingsPage = () => {
                  />
             ))}
         </div>
+
+        {filteredUpcoming.length === 0 && (
+            <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                <h3 className="text-lg font-bold text-gray-800">No upcoming bookings found</h3>
+                <p className="text-gray-500">Try searching for something else.</p>
+            </div>
+        )}
       </div>
     );
 };
 
 export const CompletedBookingsPage = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredCompleted = MOCK_COMPLETED.filter(item => 
+        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.regNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-           <div>
+           <div className="flex-1">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                 <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Completed</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Booking History</h1>
               <p className="text-gray-500 text-sm">Archive of all completed trips.</p>
            </div>
+           <div className="relative w-full md:w-80">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text"
+                    placeholder="Search history..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </div>
   
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {MOCK_COMPLETED.map(item => (
+            {filteredCompleted.map(item => (
                 <BookingCard 
                    key={item.id} 
                    booking={item} 
@@ -240,25 +301,51 @@ export const CompletedBookingsPage = () => {
                  />
             ))}
         </div>
+
+        {filteredCompleted.length === 0 && (
+            <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                <h3 className="text-lg font-bold text-gray-800">No completed bookings found</h3>
+                <p className="text-gray-500">Try searching for something else.</p>
+            </div>
+        )}
       </div>
     );
 };
 
 export const CancelledBookingsPage = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredCancelled = MOCK_CANCELLED.filter(item => 
+        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.regNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-           <div>
+           <div className="flex-1">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                 <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Cancelled</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Cancelled Bookings</h1>
               <p className="text-gray-500 text-sm">Trips cancelled by customers or admin.</p>
            </div>
+           <div className="relative w-full md:w-80">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text"
+                    placeholder="Search cancelled bookings..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </div>
   
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {MOCK_CANCELLED.map(item => (
+            {filteredCancelled.map(item => (
                 <BookingCard 
                    key={item.id} 
                    booking={item} 
@@ -271,17 +358,43 @@ export const CancelledBookingsPage = () => {
                  />
             ))}
         </div>
+
+        {filteredCancelled.length === 0 && (
+            <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                <h3 className="text-lg font-bold text-gray-800">No cancelled bookings found</h3>
+                <p className="text-gray-500">Try searching for something else.</p>
+            </div>
+        )}
       </div>
     );
 };
 
 export const BookingPaymentStatusPage = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredPayments = MOCK_PAYMENTS.filter(payment => 
+        payment.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        payment.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.method.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.status.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                <div>
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold text-gray-900">Payment Status</h1>
                     <p className="text-gray-500 text-sm">Track payments collection.</p>
+                </div>
+                <div className="relative w-full md:w-80">
+                    <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                        type="text"
+                        placeholder="Search payments..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
              </div>
 
@@ -299,7 +412,7 @@ export const BookingPaymentStatusPage = () => {
                          </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100 text-sm">
-                         {MOCK_PAYMENTS.map((payment) => (
+                         {filteredPayments.map((payment) => (
                              <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                                  <td className="px-6 py-4 font-bold text-indigo-600">{payment.bookingId}</td>
                                  <td className="px-6 py-4 font-medium text-gray-900">{payment.customer}</td>
@@ -316,18 +429,39 @@ export const BookingPaymentStatusPage = () => {
                          ))}
                      </tbody>
                  </table>
+                 {filteredPayments.length === 0 && (
+                    <div className="p-12 text-center text-gray-500">
+                        No payments match your search.
+                    </div>
+                 )}
              </div>
         </div>
     );
 };
 
 export const BookingProfitViewPage = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredProfit = MOCK_PROFIT.filter(item => 
+        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                <div>
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold text-gray-900">Profitability Analysis</h1>
                     <p className="text-gray-500 text-sm">Net profit margins per vehicle booking.</p>
+                </div>
+                <div className="relative w-full md:w-80">
+                    <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                        type="text"
+                        placeholder="Search vehicle..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
              </div>
              

@@ -91,6 +91,7 @@ import locationRoutes from "./routes/location.routes.js";
 import commonRoutes from "./routes/common.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import referralRoutes from "./routes/referral.routes.js";
+import crmRoutes from "./routes/crm.routes.js";
 
 // Socket.IO Configuration
 const io = new Server(server, {
@@ -284,6 +285,7 @@ app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api", locationRoutes);
 app.use("/api", referralRoutes);
+app.use("/api/crm", crmRoutes);
 
 // Basic route
 app.get("/", (req, res) => {

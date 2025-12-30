@@ -31,36 +31,69 @@ const ATTENDANCE_MOCK = {
 const StaffPage = () => {
   const [activeTab, setActiveTab] = useState('Directory'); // Directory, Attendance, Payroll
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Tab Components
-  const StaffDirectory = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      {MOCK_STAFF.map(staff => (
-        <div key={staff.id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
-          <img src={staff.avatar} alt={staff.name} className="w-14 h-14 rounded-full object-cover bg-gray-200" />
-          <div className="flex-1">
-             <div className="flex justify-between items-start">
-               <h3 className="font-bold text-gray-800 text-lg">{staff.name}</h3>
-               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase
-                 ${staff.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                 {staff.status}
-               </span>
-             </div>
-             <p className="text-sm text-gray-500 font-medium">{staff.role}</p>
-             <div className="mt-3 flex items-center gap-2 text-xs text-gray-400 font-mono bg-gray-50 px-2 py-1 rounded inline-block">
-               Rs. {staff.salaryPerDay}/day
-             </div>
+  const StaffDirectory = () => {
+    const filteredStaff = MOCK_STAFF.filter(staff => 
+        staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        staff.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+            <div className="relative flex-1">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text"
+                    placeholder="Search staff members..."
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-colors">
+                <MdFilterList /> Filter
+            </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredStaff.map(staff => (
+            <div key={staff.id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
+              <img src={staff.avatar} alt={staff.name} className="w-14 h-14 rounded-full object-cover bg-gray-200" />
+              <div className="flex-1">
+                 <div className="flex justify-between items-start">
+                   <h3 className="font-bold text-gray-800 text-lg">{staff.name}</h3>
+                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase
+                     ${staff.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                     {staff.status}
+                   </span>
+                 </div>
+                 <p className="text-sm text-gray-500 font-medium">{staff.role}</p>
+                 <div className="mt-3 flex items-center gap-2 text-xs text-gray-400 font-mono bg-gray-50 px-2 py-1 rounded inline-block">
+                   Rs. {staff.salaryPerDay}/day
+                 </div>
+              </div>
+            </div>
+          ))}
+          
+          {/* Add New Staff Card */}
+          <div className="bg-gray-50 rounded-2xl p-5 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer h-full min-h-[140px]">
+              <MdPersonAdd size={32} />
+              <span className="font-semibold text-sm mt-2">Add New Staff</span>
           </div>
         </div>
-      ))}
-      
-      {/* Add New Staff Card */}
-      <div className="bg-gray-50 rounded-2xl p-5 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer h-full min-h-[140px]">
-          <MdPersonAdd size={32} />
-          <span className="font-semibold text-sm mt-2">Add New Staff</span>
+
+        {filteredStaff.length === 0 && (
+            <div className="p-10 text-center text-gray-500 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+                No staff found matching "{searchTerm}"
+            </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
+
 
   const AttendanceTracker = () => (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

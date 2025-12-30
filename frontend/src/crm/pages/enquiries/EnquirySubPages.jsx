@@ -1564,7 +1564,7 @@ export const FollowUpCalendarPage = () => {
                       {event.status}
                     </button>
                   </div>
-                  <p className="font-medium text-gray-700">{event.title}</p>
+                  <p className="font-medium text-gray-700 mb-3">{event.title}</p>
                 </div>
               ))
             ) : (

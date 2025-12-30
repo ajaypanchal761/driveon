@@ -212,27 +212,23 @@ const CRM_StaffTasks = lazy(() => import("../crm/pages/staff/StaffSubPages").the
 const CRM_CarsPage = lazy(() => import("../crm/pages/CarsPage"));
 // Import Car Subpages
 const CRM_AllCars = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.AllCarsPage })));
-const CRM_LiveStatus = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.LiveStatusPage })));
 const CRM_IdleCars = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.IdleCarsPage })));
-const CRM_CarTimeline = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarTimelinePage })));
+
 const CRM_CarProfit = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarProfitLossPage })));
-const CRM_CarHealth = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarHealthPage })));
+
 const CRM_CarDocs = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarDocumentsPage })));
 // Accident Subpages
 const CRM_AccidentActive = lazy(() => import("../crm/pages/cars/AccidentActiveCases"));
 const CRM_AccidentDetail = lazy(() => import("../crm/pages/cars/AccidentDetailPage").then(module => ({ default: module.AccidentDetailPage })));
 const CRM_AccidentAdd = lazy(() => import("../crm/pages/cars/AccidentAddCase"));
-const CRM_AccidentClaims = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.AccidentClaimsPage })));
-const CRM_AccidentRecovery = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.AccidentRecoveryPage })));
+
 const CRM_AccidentClosed = lazy(() => import("../crm/pages/cars/AccidentClosedCases"));
 const CRM_AccidentSummary = lazy(() => import("../crm/pages/cars/AccidentLossSummary"));
 
 const CRM_BookingsPage = lazy(() => import("../crm/pages/BookingsPage"));
 // Import Booking Subpages
 const CRM_ActiveBookings = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.ActiveBookingsPage })));
-const CRM_UpcomingBookings = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.UpcomingBookingsPage })));
-const CRM_CompletedBookings = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.CompletedBookingsPage })));
-const CRM_CancelledBookings = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.CancelledBookingsPage })));
+
 const CRM_BookingPayments = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.BookingPaymentStatusPage })));
 const CRM_BookingProfit = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.BookingProfitViewPage })));
 
@@ -242,15 +238,13 @@ const CRM_AllGarages = lazy(() => import("../crm/pages/garage/GarageSubPages").t
 const CRM_ActiveRepairs = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.ActiveRepairsPage })));
 const CRM_ServiceHistory = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.ServiceHistoryPage })));
 const CRM_PartsCost = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.PartsCostPage })));
-const CRM_Warranty = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.WarrantyPage })));
-const CRM_MaintenanceAlerts = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.MaintenanceAlertsPage })));
+
 
 const CRM_VendorsPage = lazy(() => import("../crm/pages/VendorsPage"));
 // Import Vendor Subpages
 const CRM_AllVendors = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.AllVendorsPage })));
 const CRM_VendorPayments = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorPaymentsPage })));
 const CRM_VendorHistory = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorHistoryPage })));
-const CRM_VendorPerformance = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorPerformancePage })));
 const CRM_VendorCarUsage = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorCarUsagePage })));
 
 const CRM_FinancePage = lazy(() => import("../crm/pages/FinancePage"));
@@ -266,19 +260,9 @@ const CRM_SettingsPage = lazy(() => import("../crm/pages/SettingsPage"));
 const CRM_DailyReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.DailyReportsPage })));
 const CRM_MonthlyReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.MonthlyReportsPage })));
 const CRM_YearlyReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.YearlyReportsPage })));
-const CRM_CarReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.CarReportsPage })));
-const CRM_StaffReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.StaffReportsPage })));
-const CRM_VendorReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.VendorReportsPage })));
-const CRM_CustomReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.CustomReportsPage })));
-const CRM_ComparisonReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.ComparisonReportsPage })));
 
-// Import Tool Subpages
-const CRM_ExcelExport = lazy(() => import("../crm/pages/tools/ToolsSubPages").then(module => ({ default: module.ExcelExportPage })));
-const CRM_PDFExport = lazy(() => import("../crm/pages/tools/ToolsSubPages").then(module => ({ default: module.PDFExportPage })));
-const CRM_Notes = lazy(() => import("../crm/pages/tools/ToolsSubPages").then(module => ({ default: module.NotesPage })));
-const CRM_Reminders = lazy(() => import("../crm/pages/tools/ToolsSubPages").then(module => ({ default: module.RemindersPage })));
-const CRM_Calculator = lazy(() => import("../crm/pages/tools/ToolsSubPages").then(module => ({ default: module.CalculatorPage })));
-const CRM_AuditLogs = lazy(() => import("../crm/pages/tools/ToolsSubPages").then(module => ({ default: module.AuditLogsPage })));
+
+
 // Import Setting Subpages
 const CRM_SettingsOverview = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.SettingsOverviewPage })));
 const CRM_Locations = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.LocationsPage })));
@@ -383,25 +367,15 @@ const router = createBrowserRouter([
         element: <CRM_AllCars />,
       },
       {
-        path: "cars/live",
-        element: <CRM_LiveStatus />,
-      },
-      {
         path: "cars/idle",
         element: <CRM_IdleCars />,
       },
-      {
-        path: "cars/timeline",
-        element: <CRM_CarTimeline />,
-      },
+
       {
         path: "cars/profit",
         element: <CRM_CarProfit />,
       },
-      {
-        path: "cars/health",
-        element: <CRM_CarHealth />,
-      },
+
       {
         path: "cars/documents",
         element: <CRM_CarDocs />,
@@ -423,14 +397,8 @@ const router = createBrowserRouter([
         path: "cars/accidents/add",
         element: <CRM_AccidentAdd />,
       },
-      {
-        path: "cars/accidents/claims",
-        element: <CRM_AccidentClaims />,
-      },
-      {
-        path: "cars/accidents/recovery",
-        element: <CRM_AccidentRecovery />,
-      },
+
+
       {
         path: "cars/accidents/closed",
         element: <CRM_AccidentClosed />,
@@ -448,18 +416,7 @@ const router = createBrowserRouter([
         path: "bookings/active",
         element: <CRM_ActiveBookings />,
       },
-      {
-        path: "bookings/upcoming",
-        element: <CRM_UpcomingBookings />,
-      },
-      {
-        path: "bookings/completed",
-        element: <CRM_CompletedBookings />,
-      },
-      {
-        path: "bookings/cancelled",
-        element: <CRM_CancelledBookings />,
-      },
+
       {
         path: "bookings/payments",
         element: <CRM_BookingPayments />,
@@ -489,14 +446,7 @@ const router = createBrowserRouter([
         path: "garage/parts",
         element: <CRM_PartsCost />,
       },
-      {
-        path: "garage/warranty",
-        element: <CRM_Warranty />,
-      },
-      {
-        path: "garage/alerts",
-        element: <CRM_MaintenanceAlerts />,
-      },
+
       // VENDOR ROUTES
       {
         path: "vendors",
@@ -514,10 +464,7 @@ const router = createBrowserRouter([
         path: "vendors/history",
         element: <CRM_VendorHistory />,
       },
-      {
-        path: "vendors/performance",
-        element: <CRM_VendorPerformance />,
-      },
+
       {
         path: "vendors/car-usage",
         element: <CRM_VendorCarUsage />,
@@ -564,26 +511,7 @@ const router = createBrowserRouter([
         path: "reports/yearly",
         element: <CRM_YearlyReports />,
       },
-      {
-        path: "reports/car-wise",
-        element: <CRM_CarReports />,
-      },
-      {
-        path: "reports/staff-wise",
-        element: <CRM_StaffReports />,
-      },
-      {
-        path: "reports/vendor-wise",
-        element: <CRM_VendorReports />,
-      },
-      {
-        path: "reports/custom",
-        element: <CRM_CustomReports />,
-      },
-      {
-        path: "reports/comparison",
-        element: <CRM_ComparisonReports />,
-      },
+
       // SETTINGS ROUTES
       {
         path: "settings",
@@ -609,35 +537,7 @@ const router = createBrowserRouter([
         path: "settings/alerts",
         element: <CRM_AlertsLimits />,
       },
-      // TOOLS ROUTES
-      {
-        path: "tools",
-        element: <Navigate to="tools/notes" replace />,
-      },
-      {
-        path: "tools/excel",
-        element: <CRM_ExcelExport />,
-      },
-      {
-        path: "tools/pdf",
-        element: <CRM_PDFExport />,
-      },
-      {
-        path: "tools/notes",
-        element: <CRM_Notes />,
-      },
-      {
-        path: "tools/reminders",
-        element: <CRM_Reminders />,
-      },
-      {
-        path: "tools/calculator",
-        element: <CRM_Calculator />,
-      },
-      {
-        path: "tools/audit-logs",
-        element: <CRM_AuditLogs />,
-      },
+
       {
         path: "*",
         element: <Navigate to="dashboard" replace />,

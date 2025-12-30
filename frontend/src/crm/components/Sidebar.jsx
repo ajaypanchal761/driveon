@@ -69,19 +69,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'Cars',
       subItems: [
         { path: '/crm/cars/all', name: 'All Cars' },
-        { path: '/crm/cars/live', name: 'Live Status' },
         { path: '/crm/cars/idle', name: 'Idle Cars' },
-        { path: '/crm/cars/timeline', name: 'Car Timeline' },
         { path: '/crm/cars/profit', name: 'Profit / Loss' },
-        { path: '/crm/cars/health', name: 'Car Health Score' },
+
         { path: '/crm/cars/documents', name: 'Documents' },
         { 
-          name: 'Accident & Recovery',
+          name: 'Accidents',
           subItems: [
              { path: '/crm/cars/accidents/active', name: 'Active Cases' },
              { path: '/crm/cars/accidents/add', name: 'Add Accident Case' },
-             { path: '/crm/cars/accidents/claims', name: 'Insurance Claims' },
-             { path: '/crm/cars/accidents/recovery', name: 'Recovery Tracking' },
+
              { path: '/crm/cars/accidents/closed', name: 'Closed Cases' },
              { path: '/crm/cars/accidents/summary', name: 'Loss Recovery Summary' },
           ]
@@ -94,9 +91,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'Bookings',
       subItems: [
         { path: '/crm/bookings/active', name: 'Active' },
-        { path: '/crm/bookings/upcoming', name: 'Upcoming' },
-        { path: '/crm/bookings/completed', name: 'Completed' },
-        { path: '/crm/bookings/cancelled', name: 'Cancelled' },
+
         { path: '/crm/bookings/payments', name: 'Payment Status' },
         { path: '/crm/bookings/profit', name: 'Booking Profit View' },
       ]
@@ -110,8 +105,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/garage/active', name: 'Active Repairs' },
         { path: '/crm/garage/history', name: 'Service History' },
         { path: '/crm/garage/parts', name: 'Parts Cost' },
-        { path: '/crm/garage/warranty', name: 'Warranty / Insurance' },
-        { path: '/crm/garage/alerts', name: 'Maintenance Alerts' },
+
       ]
     },
     { 
@@ -122,7 +116,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/vendors/all', name: 'All Vendors' },
         { path: '/crm/vendors/payments', name: 'Vendor Payments' },
         { path: '/crm/vendors/history', name: 'Vendor History' },
-        { path: '/crm/vendors/performance', name: 'Vendor Performance' },
         { path: '/crm/vendors/car-usage', name: 'Vendor Car Usage' },
       ]
     },
@@ -146,26 +139,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/reports/daily', name: 'Daily' },
         { path: '/crm/reports/monthly', name: 'Monthly' },
         { path: '/crm/reports/yearly', name: 'Yearly' },
-        { path: '/crm/reports/car-wise', name: 'Car-wise' },
-        { path: '/crm/reports/staff-wise', name: 'Staff-wise' },
-        { path: '/crm/reports/vendor-wise', name: 'Vendor-wise' },
-        { path: '/crm/reports/custom', name: 'Custom' },
-        { path: '/crm/reports/comparison', name: 'Comparison' },
       ]
     },
-    { 
-      name: 'Export & Tools', 
-      icon: <MdImportExport />,
-      id: 'Tools',
-      subItems: [
-        { path: '/crm/tools/excel', name: 'Excel Export' },
-        { path: '/crm/tools/pdf', name: 'PDF Export' },
-        { path: '/crm/tools/notes', name: 'Notes' },
-        { path: '/crm/tools/reminders', name: 'Reminders' },
-        { path: '/crm/tools/calculator', name: 'Calculator' },
-        { path: '/crm/tools/audit-logs', name: 'Audit Logs' },
-      ]
-    },
+
     { 
       name: 'Settings', 
       icon: <MdSettings />,
