@@ -59,6 +59,10 @@ const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfile
 const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
 const ModuleFavoritesPage = lazy(() => import("../module/pages/ModuleFavoritesPage"));
 
+const EmployeeHomePage = lazy(() => import("../employee/pages/EmployeeHomePage"));
+const EnquiriesListPage = lazy(() => import("../employee/pages/EnquiriesListPage"));
+const EnquiryDetailsPage = lazy(() => import("../employee/pages/EnquiryDetailsPage"));
+
 
 
 
@@ -817,6 +821,20 @@ const router = createBrowserRouter([
         ],
       },
     ],
+  },
+
+  // Employee Routes
+  {
+    path: "/employee",
+    element: <EmployeeHomePage />,
+  },
+  {
+    path: "/employee/enquiries",
+    element: <EnquiriesListPage />,
+  },
+  {
+    path: "/employee/enquiries/:id",
+    element: <EnquiryDetailsPage />,
   },
 
   // 404 Page
