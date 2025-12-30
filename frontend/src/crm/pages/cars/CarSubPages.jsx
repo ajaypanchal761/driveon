@@ -128,7 +128,11 @@ export const AllCarsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">All Cars</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">All Cars</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Vehicle Inventory</h1>
             <p className="text-gray-500 text-sm">Manage your entire fleet and viewing details.</p>
@@ -303,7 +307,11 @@ export const IdleCarsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">Idle Cars</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Idle Cars</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Idle Inventory</h1>
             <p className="text-gray-500 text-sm">Vehicles available for immediate booking.</p>
@@ -467,7 +475,11 @@ export const CarProfitLossPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">Profit & Loss</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Profit & Loss</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Fleet Financial Analysis</h1>
             <p className="text-gray-500 text-sm">Revenue vs Expenses per vehicle breakdown.</p>
@@ -668,7 +680,11 @@ export const CarDocumentsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">Documents</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Documents</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Vehicle Documents</h1>
             <p className="text-gray-500 text-sm">Manage insurance, RC, PUC and other compliance docs.</p>
@@ -960,7 +976,13 @@ export const AccidentActivePage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span>Accidents</span> <span>/</span> <span className="text-gray-800 font-medium">Active</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Active</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Active Accident Cases</h1>
             <p className="text-gray-500 text-sm">Track and manage ongoing accident claims and repairs.</p>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdDateRange, 
   MdTrendingUp, 
@@ -160,10 +161,19 @@ const COMPARISON_DATA = [
 
 // --- Pages ---
 
-export const DailyReportsPage = () => (
+export const DailyReportsPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div className="flex justify-between items-end">
             <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/reports/daily')}>Reports</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Daily</span>
+                </div>
                 <h1 className="text-2xl font-bold text-gray-900">Daily Operations Report</h1>
                 <p className="text-gray-500 text-sm">Real-time tracking for Today, {new Date().toLocaleDateString()}.</p>
             </div>
@@ -200,11 +210,21 @@ export const DailyReportsPage = () => (
         </ReportCard>
     </div>
 );
+}
 
-export const MonthlyReportsPage = () => (
+export const MonthlyReportsPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div className="flex justify-between items-end">
             <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/reports/daily')}>Reports</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Monthly</span>
+                </div>
                 <h1 className="text-2xl font-bold text-gray-900">Monthly Performance</h1>
                 <p className="text-gray-500 text-sm">Financial and operational review for current month.</p>
             </div>
@@ -251,9 +271,19 @@ export const MonthlyReportsPage = () => (
         </div>
     </div>
 );
+}
 
-export const YearlyReportsPage = () => (
+export const YearlyReportsPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+            <span>/</span> 
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/reports/daily')}>Reports</span> 
+            <span>/</span> 
+            <span className="text-gray-800 font-medium">Yearly</span>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center min-h-[400px] text-center p-10 bg-white rounded-2xl border border-gray-100 shadow-sm md:text-left">
             <div>
                  <motion.div 
@@ -273,5 +303,6 @@ export const YearlyReportsPage = () => (
         </div>
     </div>
 );
+}
 
 

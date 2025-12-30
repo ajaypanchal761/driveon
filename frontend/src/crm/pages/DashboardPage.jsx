@@ -46,20 +46,20 @@ const DashboardPage = () => {
   const DASHBOARD_STATS = {
     totalLeads: 24,
     bookings: 8,
-    fleetHealth: '98%',
+    activeRepairs: 3,
     salaryPending: 3,
     insuranceExpiring: 2,
     vendorPending: 1,
     carIdle: 4,
     garagePending: 2,
-    pendingTasks: 5,
+    activeAccidents: 2,
     todayFollowUps: 3
   };
 
   const RECENT_ENQUIRIES = [
     { id: 1, name: "Rahul Kumar", action: "Inquired for Innova Crysta", time: "2m ago", img: "https://randomuser.me/api/portraits/men/32.jpg", type: "New" },
     { id: 2, name: "Priya Sharma", action: "Booked Maruti Swift", time: "15m ago", img: "https://randomuser.me/api/portraits/women/44.jpg", type: "Booking" },
-    { id: 3, name: "Amit Singh", action: "Requested Call Back", time: "1h ago", img: "https://randomuser.me/api/portraits/men/86.jpg", type: "lead" }
+    { id: 3, name: "Amit Singh", action: "Requested Call Back", time: "1h ago", img: "https://randomuser.me/api/portraits/men/86.jpg", type: "Lead" }
   ];
 
   // 1. Action Alerts Data (Mapped to Real Pages)
@@ -96,6 +96,16 @@ const DashboardPage = () => {
     },
     { 
       id: 4, 
+      title: "Active Accidents", 
+      count: DASHBOARD_STATS.activeAccidents, 
+      description: "2 cases in recovery tracking",
+      color: "text-rose-600",
+      bgColor: "bg-rose-50",
+      borderColor: "border-rose-100",
+      path: "/crm/cars/accidents/active" 
+    },
+    { 
+      id: 5, 
       title: "Car Idle > 5 Days", 
       count: DASHBOARD_STATS.carIdle, 
       description: "Assign them to new bookings",
@@ -105,7 +115,7 @@ const DashboardPage = () => {
       path: "/crm/cars/idle" 
     },
     { 
-      id: 5, 
+      id: 6, 
       title: "Garage Bill Pending", 
       count: DASHBOARD_STATS.garagePending, 
       description: "Check Active Repairs",
@@ -118,12 +128,12 @@ const DashboardPage = () => {
 
   // 2. Quick Actions Data (Functional)
   const quickActions = [
-    { label: "Add Enquiry", icon: <MdPersonAdd />, action: () => navigate('/crm/enquiries/new') },
+    { label: "New Enquiry", icon: <MdPersonAdd />, action: () => navigate('/crm/enquiries/new') },
     { label: "Add Expense", icon: <MdAttachMoney />, action: () => navigate('/crm/finance/expenses') },
-    { label: "Mark Attendance", icon: <MdEventAvailable />, action: () => navigate('/crm/staff/attendance') },
-    { label: "Add Vendor Pay", icon: <MdAttachMoney />, action: () => navigate('/crm/vendors/payments') },
-    { label: "Schedule Maint.", icon: <MdBuild />, action: () => navigate('/crm/garage/active') },
-    { label: "Assign Task", icon: <MdAssignment />, action: () => navigate('/crm/staff/tasks') },
+    { label: "Attendance", icon: <MdEventAvailable />, action: () => navigate('/crm/staff/attendance') },
+    { label: "Vendor Pay", icon: <MdAttachMoney />, action: () => navigate('/crm/vendors/payments') },
+    { label: "Active Repairs", icon: <MdBuild />, action: () => navigate('/crm/garage/active') },
+    { label: "Report Accident", icon: <MdWarning />, action: () => navigate('/crm/cars/accidents/add') },
   ];
 
   // Animation Variants
@@ -163,9 +173,9 @@ const DashboardPage = () => {
                 <span className="text-xs text-gray-500 uppercase font-semibold">Bookings</span>
             </div>
             <div className="w-px h-10 bg-gray-300"></div>
-            <div className="text-right cursor-pointer" onClick={() => navigate('/crm/cars/health')}>
-                <span className="block text-2xl font-bold text-green-600">{DASHBOARD_STATS.fleetHealth}</span>
-                <span className="text-xs text-gray-500 uppercase font-semibold">Fleet Health</span>
+            <div className="text-right cursor-pointer" onClick={() => navigate('/crm/garage/active')}>
+                <span className="block text-2xl font-bold text-orange-600">{DASHBOARD_STATS.activeRepairs}</span>
+                <span className="text-xs text-gray-500 uppercase font-semibold">Repairs</span>
             </div>
         </div>
       </div>
@@ -255,11 +265,12 @@ const DashboardPage = () => {
 
       {/* 3. Performance Overview */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div 
+            <motion.div 
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
+            className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm cursor-pointer"
+            onClick={() => navigate('/crm/finance/profit-loss')}
           >
               <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center gap-3">
@@ -271,9 +282,7 @@ const DashboardPage = () => {
                           <p className="text-xs text-gray-400">Real-time revenue & expense tracking</p>
                       </div>
                   </div>
-                  <button className="flex items-center gap-2 px-4 py-2 border border-blue-100 text-[#1C205C] rounded-xl text-xs font-bold hover:bg-blue-50 transition-all shadow-sm">
-                      <MdDownload /> Export Report
-                  </button>
+                  {/* Export Report Button Removed */}
               </div>
 
               <div className="flex gap-4 mb-6">
@@ -337,7 +346,8 @@ const DashboardPage = () => {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col"
+            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col cursor-pointer"
+            onClick={() => navigate('/crm/cars/all')}
           >
               <h3 className="text-lg font-bold text-gray-800 mb-2">Fleet Popularity</h3>
               <p className="text-xs text-gray-400 mb-6">Booking distribution by car type</p>

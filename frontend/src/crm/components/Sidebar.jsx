@@ -184,7 +184,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                    <button
                       onClick={() => toggleSubmenu(item.name)}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group
-                        ${isChildActive ? 'font-medium' : 'text-gray-600 hover:bg-gray-50'}
+                        ${isChildActive ? 'font-bold' : 'font-semibold text-gray-700 hover:bg-gray-50'}
                       `}
                       style={isChildActive ? {
                         backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
@@ -216,7 +216,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                                        e.stopPropagation();
                                        toggleSubmenu(sub.name);
                                      }}
-                                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-all font-medium"
+                                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all font-semibold"
                                   >
                                      <div className="flex items-center">
                                        <span className="mr-2 opacity-50 text-[6px]"><MdCircle /></span>
@@ -236,7 +236,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                                              `flex items-center px-3 py-1.5 rounded-lg text-xs transition-all my-0.5
                                               ${isActive 
                                                 ? 'font-bold' 
-                                                : 'text-gray-500 hover:text-gray-800'
+                                                : 'font-semibold text-gray-600 hover:text-gray-900'
                                               }`
                                            }
                                            style={({ isActive }) => isActive ? {
@@ -260,8 +260,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                                className={({ isActive }) =>
                                  `flex items-center px-3 py-2 rounded-lg text-sm transition-all
                                   ${isActive 
-                                    ? 'font-medium' 
-                                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                                    ? 'font-bold' 
+                                    : 'font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                   }`
                                }
                                style={({ isActive }) => isActive ? {
@@ -287,8 +287,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 rounded-xl transition-all duration-200 group
                   ${isActive 
-                    ? 'font-semibold shadow-sm' 
-                    : 'hover:bg-gray-50 text-gray-600'
+                    ? 'font-bold shadow-sm' 
+                    : 'font-semibold hover:bg-gray-50 text-gray-700'
                   }`
                 }
                 style={({ isActive }) => isActive ? { 

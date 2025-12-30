@@ -19,7 +19,13 @@ const AccidentAddCase = () => {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                  <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span>Accidents</span> <span>/</span> <span className="text-gray-800 font-medium">New Report</span>
+                  <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                  <span>/</span> 
+                  <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+                  <span>/</span> 
+                  <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
+                  <span>/</span> 
+                  <span className="text-gray-800 font-medium">New Report</span>
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Report New Accident</h1>
                 <p className="text-gray-500 text-sm">File a detailed incident report for insurance and repairs.</p>

@@ -173,6 +173,11 @@ export const SettingsOverviewPage = () => {
     return (
         <div className="space-y-8">
             <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Settings</span>
+                </div>
                 <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Settings Dashboard</h1>
                 <p className="text-gray-500 text-sm">Central control panel for your CRM.</p>
             </div>
@@ -202,14 +207,136 @@ export const SettingsOverviewPage = () => {
     );
 };
 
+const AddCityModal = ({ isOpen, onClose, onSave, initialData = null }) => {
+    const [name, setName] = useState('');
+    const [state, setState] = useState('');
+    const [hubs, setHubs] = useState(0);
+
+    React.useEffect(() => {
+        if (initialData) {
+            setName(initialData.name);
+            setState(initialData.state);
+            setHubs(initialData.hubs);
+        } else {
+            setName('');
+            setState('');
+            setHubs(0);
+        }
+    }, [initialData, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ name, state, hubs: parseInt(hubs) || 0, id: initialData?.id });
+        setName('');
+        setState('');
+        setHubs(0);
+    };
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+                >
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Edit City' : 'Add New City'}</h2>
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                             <MdClose size={24} />
+                        </button>
+                    </div>
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">City Name</label>
+                            <input 
+                                type="text" 
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                placeholder="e.g. Mumbai"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">State / UT</label>
+                            <input 
+                                type="text" 
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                placeholder="e.g. Maharashtra"
+                                value={state}
+                                onChange={(e) => setState(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Number of Hubs</label>
+                            <input 
+                                type="number" 
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                value={hubs}
+                                onChange={(e) => setHubs(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="pt-4 flex justify-end gap-3">
+                            <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-50 rounded-xl">Cancel</button>
+                            <button 
+                                type="submit" 
+                                className="px-5 py-2.5 text-white font-bold rounded-xl shadow-lg hover:bg-opacity-90 transition-all"
+                                style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                            >
+                                {initialData ? 'Save Changes' : 'Add City'}
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
+            </div>
+        </AnimatePresence>
+    );
+};
+
 // --- Pages ---
 
 export const LocationsPage = () => {
+    const navigate = useNavigate();
     const [cities, setCities] = useState(MOCK_CITIES);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCity, setEditingCity] = useState(null);
 
     const toggleCity = (id) => {
         setCities(cities.map(c => c.id === id ? { ...c, status: !c.status } : c));
+    };
+
+    const handleSaveCity = (cityData) => {
+        if (cityData.id) {
+            setCities(cities.map(c => c.id === cityData.id ? { ...c, ...cityData } : c));
+        } else {
+            const newCity = {
+                id: Date.now(),
+                ...cityData,
+                status: true
+            };
+            setCities([...cities, newCity]);
+        }
+        setIsModalOpen(false);
+        setEditingCity(null);
+    };
+
+    const openEditModal = (city) => {
+        setEditingCity(city);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteCity = (id) => {
+        if (window.confirm('Are you sure you want to delete this city?')) {
+            setCities(cities.filter(c => c.id !== id));
+        }
     };
 
     const filteredCities = cities.filter(city => 
@@ -219,8 +346,22 @@ export const LocationsPage = () => {
 
     return (
         <div className="space-y-6">
+            <AddCityModal 
+                isOpen={isModalOpen} 
+                onClose={() => { setIsModalOpen(false); setEditingCity(null); }} 
+                onSave={handleSaveCity} 
+                initialData={editingCity}
+            />
+
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Locations</span>
+                    </div>
                      <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Cities & Locations</h1>
                      <p className="text-gray-500 text-sm">Manage operational cities and pickup hubs.</p>
                  </div>
@@ -236,6 +377,7 @@ export const LocationsPage = () => {
                          />
                     </div>
                     <button 
+                        onClick={() => { setEditingCity(null); setIsModalOpen(true); }}
                         className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                         style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
                     >
@@ -284,7 +426,20 @@ export const LocationsPage = () => {
                                 >
                                     {city.hubs} Hubs
                                 </span>
-                                <button className="text-gray-400 hover:text-indigo-600 p-2 rounded-full hover:bg-indigo-50 transition-colors"><MdEdit /></button>
+                                <div className="flex gap-1">
+                                    <button 
+                                        onClick={() => openEditModal(city)}
+                                        className="text-gray-400 hover:text-indigo-600 p-2 rounded-full hover:bg-indigo-50 transition-colors"
+                                    >
+                                        <MdEdit />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDeleteCity(city.id)}
+                                        className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors"
+                                    >
+                                        <MdDelete />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </motion.div>
@@ -378,6 +533,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 };
 
 export const ExpenseCategoriesPage = () => {
+    const navigate = useNavigate();
     const [categories, setCategories] = useState(EXPENSE_CATS);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
@@ -421,6 +577,13 @@ export const ExpenseCategoriesPage = () => {
 
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Expense Categories</span>
+                    </div>
                      <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Expense Categories</h1>
                      <p className="text-gray-500 text-sm">Classify your outgoing payments.</p>
                  </div>
@@ -481,9 +644,18 @@ export const ExpenseCategoriesPage = () => {
     );
 };
 
-export const SalaryRulesPage = () => (
+export const SalaryRulesPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Salary Rules</span>
+            </div>
              <h1 className="text-2xl font-bold text-gray-900">Salary & Deduction Rules</h1>
              <p className="text-gray-500 text-sm">Configure payroll parameters.</p>
         </div>
@@ -527,6 +699,7 @@ export const SalaryRulesPage = () => (
         </div>
     </div>
 );
+}
 
 export const RolesAccessPage = () => {
     const [roles, setRoles] = useState(ROLES_DATA);
@@ -579,8 +752,15 @@ export const RolesAccessPage = () => {
 
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
              <div className="flex-1">
-                 <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Roles & Permissions</h1>
-                 <p className="text-gray-500 text-sm">Control who sees what.</p>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Roles & Access</span>
+                </div>
+                  <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Roles & Permissions</h1>
+                  <p className="text-gray-500 text-sm">Control who sees what.</p>
              </div>
              <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
                 <div className="relative w-full md:w-64">
@@ -659,9 +839,18 @@ export const RolesAccessPage = () => {
     );
 };
 
-export const AlertsLimitsPage = () => (
+export const AlertsLimitsPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Alerts</span>
+            </div>
              <h1 className="text-2xl font-bold text-gray-900">System Alerts</h1>
              <p className="text-gray-500 text-sm">Set thresholds for automated notifications.</p>
         </div>
@@ -689,4 +878,5 @@ export const AlertsLimitsPage = () => (
         </div>
     </div>
 );
+}
 

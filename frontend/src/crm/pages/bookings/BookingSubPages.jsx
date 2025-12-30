@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdSearch, 
   MdFilterList, 
@@ -142,6 +143,7 @@ const MOCK_PROFIT = [
 // --- Pages ---
 
 export const ActiveBookingsPage = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredActive = MOCK_ACTIVE.filter(item => 
@@ -156,7 +158,11 @@ export const ActiveBookingsPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Active</span>
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Active</span>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900">Active Bookings</h1>
                     <p className="text-gray-500 text-sm">Monitor live trips and ongoing rentals.</p>
@@ -198,6 +204,7 @@ export const ActiveBookingsPage = () => {
 };
 
 export const UpcomingBookingsPage = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredUpcoming = MOCK_UPCOMING.filter(item => 
@@ -212,7 +219,11 @@ export const UpcomingBookingsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
            <div className="flex-1">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Upcoming</span>
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Upcoming</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Upcoming Trips</h1>
               <p className="text-gray-500 text-sm">Scheduled bookings ready for dispatch.</p>
@@ -256,6 +267,7 @@ export const UpcomingBookingsPage = () => {
 };
 
 export const CompletedBookingsPage = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredCompleted = MOCK_COMPLETED.filter(item => 
@@ -270,7 +282,11 @@ export const CompletedBookingsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
            <div className="flex-1">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Completed</span>
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Completed</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Booking History</h1>
               <p className="text-gray-500 text-sm">Archive of all completed trips.</p>
@@ -313,6 +329,7 @@ export const CompletedBookingsPage = () => {
 };
 
 export const CancelledBookingsPage = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredCancelled = MOCK_CANCELLED.filter(item => 
@@ -327,7 +344,11 @@ export const CancelledBookingsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
            <div className="flex-1">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <span>Home</span> <span>/</span> <span>Bookings</span> <span>/</span> <span className="text-gray-800 font-medium">Cancelled</span>
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Cancelled</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Cancelled Bookings</h1>
               <p className="text-gray-500 text-sm">Trips cancelled by customers or admin.</p>
@@ -370,6 +391,7 @@ export const CancelledBookingsPage = () => {
 };
 
 export const BookingPaymentStatusPage = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredPayments = MOCK_PAYMENTS.filter(payment => 
@@ -383,6 +405,13 @@ export const BookingPaymentStatusPage = () => {
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Payment Status</span>
+                    </div>
                     <h1 className="text-2xl font-bold text-gray-900">Payment Status</h1>
                     <p className="text-gray-500 text-sm">Track payments collection.</p>
                 </div>
@@ -440,6 +469,7 @@ export const BookingPaymentStatusPage = () => {
 };
 
 export const BookingProfitViewPage = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredProfit = MOCK_PROFIT.filter(item => 
@@ -450,6 +480,13 @@ export const BookingProfitViewPage = () => {
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Profit View</span>
+                    </div>
                     <h1 className="text-2xl font-bold text-gray-900">Profitability Analysis</h1>
                     <p className="text-gray-500 text-sm">Net profit margins per vehicle booking.</p>
                 </div>

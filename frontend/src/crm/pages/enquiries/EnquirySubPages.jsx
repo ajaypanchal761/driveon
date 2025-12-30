@@ -204,7 +204,11 @@ export const AllEnquiriesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">All Enquiries</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+            <span>/</span> 
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+            <span>/</span> 
+            <span className="text-gray-800 font-medium">All Enquiries</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">All Enquiries</h1>
           <p className="text-gray-500 text-sm">Manage and track all customer leads.</p>
@@ -591,7 +595,11 @@ export const NewEnquiriesPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">New Leads</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">New Leads</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">New Enquiries</h1>
             <p className="text-gray-500 text-sm">Fresh leads received today. <span className="text-red-500 font-semibold">Action needed immediately.</span></p>
@@ -734,7 +742,11 @@ export const InProgressEnquiriesPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">In Progress</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">In Progress</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">In Progress</h1>
             <p className="text-gray-500 text-sm">Track active leads moving through the funnel.</p>
@@ -887,7 +899,11 @@ export const FollowUpsEnquiriesPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Follow-ups</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Follow-ups</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Follow-up Leads</h1>
             <p className="text-gray-500 text-sm">Never miss a potential customer. Track your calls.</p>
@@ -1016,7 +1032,11 @@ export const ConvertedEnquiriesPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Converted</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Converted</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Converted Enquiries</h1>
             <p className="text-gray-500 text-sm">Successfully closed leads and generated revenue.</p>
@@ -1142,7 +1162,11 @@ export const ClosedEnquiriesPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Closed</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Closed</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Closed Enquiries</h1>
             <p className="text-gray-500 text-sm">Leads marked as lost or cancelled.</p>
@@ -1254,7 +1278,11 @@ export const EnquiryAnalyticsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Analytics</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Analytics</span>
             </div>
             <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Enquiry Analytics</h1>
             <p className="text-gray-500 text-sm">Real-time insights into lead generation and conversion.</p>
@@ -1497,7 +1525,11 @@ export const FollowUpCalendarPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Calendar</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Calendar</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Follow-up Calendar</h1>
           </div>

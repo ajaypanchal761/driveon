@@ -231,7 +231,11 @@ export const StaffDirectoryPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Directory</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Directory</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Staff Directory</h1>
             <p className="text-gray-500 text-sm">Manage all staff members and their details</p>
@@ -593,7 +597,11 @@ export const RolesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Roles</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+            <span>/</span> 
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+            <span>/</span> 
+            <span className="text-gray-800 font-medium">Roles</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
           <p className="text-gray-500 text-sm">Define what each staff member can see and do.</p>
@@ -900,7 +908,11 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-               <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Attendance</span>
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+               <span>/</span> 
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+               <span>/</span> 
+               <span className="text-gray-800 font-medium">Attendance</span>
              </div>
              <h1 className="text-2xl font-bold text-gray-900">Attendance Tracker</h1>
              <p className="text-gray-500 text-sm">Today: {currentDate}</p>
@@ -1152,7 +1164,11 @@ export const SalaryPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Salary</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Salary</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Salary Management</h1>
             <p className="text-gray-500 text-sm">Manage payrolls and generate payslips.</p>
@@ -1363,7 +1379,11 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-               <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Advances</span>
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+               <span>/</span> 
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+               <span>/</span> 
+               <span className="text-gray-800 font-medium">Advances</span>
              </div>
              <h1 className="text-2xl font-bold text-gray-900">Advances & Loans</h1>
              <p className="text-gray-500 text-sm">Track salary advances and repayment status.</p>
@@ -1548,7 +1568,11 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-               <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Performance</span>
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+               <span>/</span> 
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+               <span>/</span> 
+               <span className="text-gray-800 font-medium">Performance</span>
              </div>
              <h1 className="text-2xl font-bold text-gray-900">Performance Review</h1>
              <p className="text-gray-500 text-sm">Staff ratings and feedback history.</p>
@@ -1744,7 +1768,11 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-               <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Tasks</span>
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+               <span>/</span> 
+               <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+               <span>/</span> 
+               <span className="text-gray-800 font-medium">Tasks</span>
              </div>
              <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
              <p className="text-gray-500 text-sm">Assign and track work allocation.</p>
