@@ -18,12 +18,12 @@ const enquirySchema = new mongoose.Schema(
             lowercase: true,
         },
         carInterested: {
-            type: String, // Can be car name or reference to Car ID
+            type: mongoose.Schema.Types.Mixed, // Support both ObjectId and legacy string names
             trim: true,
         },
         source: {
             type: String,
-            enum: ['Website', 'Referral', 'Walk-in', 'Facebook', 'Phone', 'Social Media', 'Other'],
+            enum: ['Website', 'Referral', 'Walk-in', 'Facebook', 'Phone', 'Phone Call', 'Social Media', 'Other'],
             default: 'Walk-in',
         },
         status: {

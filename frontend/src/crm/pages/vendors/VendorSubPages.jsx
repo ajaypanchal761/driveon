@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdPerson, 
   MdStore, 
@@ -166,6 +167,7 @@ import { MdBuild } from 'react-icons/md';
 // --- Pages ---
 
 export const AllVendorsPage = () => {
+    const navigate = useNavigate();
     const [vendors, setVendors] = useState(MOCK_VENDORS);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -189,6 +191,13 @@ export const AllVendorsPage = () => {
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">All Vendors</span>
+                    </div>
                      <h1 className="text-2xl font-bold text-gray-900">Vendor Directory</h1>
                      <p className="text-gray-500 text-sm">Manage car providers, drivers, and partners.</p>
                  </div>
@@ -282,10 +291,19 @@ export const AllVendorsPage = () => {
     );
 };
 
-export const VendorPaymentsPage = () => (
+export const VendorPaymentsPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
          <div className="flex flex-col md:flex-row justify-between items-end gap-4">
              <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Payments</span>
+                </div>
                  <h1 className="text-2xl font-bold text-gray-900">Payments & Settlements</h1>
                  <p className="text-gray-500 text-sm">Track vendor payouts and commissions.</p>
              </div>
@@ -331,11 +349,21 @@ export const VendorPaymentsPage = () => (
          </div>
     </div>
 );
+}
 
-export const VendorHistoryPage = () => (
+export const VendorHistoryPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
          <div className="flex justify-between items-end">
              <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">History</span>
+                </div>
                  <h1 className="text-2xl font-bold text-gray-900">Vendor History</h1>
                  <p className="text-gray-500 text-sm">Timeline of partnership milestones.</p>
              </div>
@@ -367,10 +395,20 @@ export const VendorHistoryPage = () => (
          </div>
     </div>
 );
+}
 
-export const VendorCarUsagePage = () => (
+export const VendorCarUsagePage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Car Usage</span>
+            </div>
              <h1 className="text-2xl font-bold text-gray-900">Fleet Utilization</h1>
              <p className="text-gray-500 text-sm">Performance of vendor-owned vehicles.</p>
          </div>
@@ -411,3 +449,4 @@ export const VendorCarUsagePage = () => (
          </div>
     </div>
 );
+}

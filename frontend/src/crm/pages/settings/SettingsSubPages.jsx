@@ -1,21 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../../services/api';
 import { AnimatePresence, motion } from 'framer-motion';
-import { 
-  MdLocationCity, 
-  MdAdd, 
-  MdEdit, 
-  MdDelete, 
-  MdAttachMoney, 
-  MdLabel, 
-  MdRule, 
-  MdSecurity, 
-  MdCheckCircle, 
-  MdNotificationsActive,
-  MdFlashOn,
-  MdClose,
-  MdGroup,
-  MdSearch
+import {
+    MdLocationCity,
+    MdAdd,
+    MdEdit,
+    MdDelete,
+    MdAttachMoney,
+    MdLabel,
+    MdRule,
+    MdSecurity,
+    MdCheckCircle,
+    MdNotificationsActive,
+    MdFlashOn,
+    MdClose,
+    MdGroup,
+    MdSearch
 } from 'react-icons/md';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
@@ -23,20 +24,20 @@ import { rgba } from 'polished';
 // --- Shared Components ---
 
 const Toggle = ({ enabled, onToggle }) => (
-    <div 
+    <div
         onClick={onToggle}
         className={`w-12 h-7 rounded-full flex items-center p-1 cursor-pointer transition-colors`}
         style={{ backgroundColor: enabled ? premiumColors.primary.DEFAULT : '#e0e3e8' }}
     >
-        <motion.div 
-            layout 
+        <motion.div
+            layout
             className="w-5 h-5 bg-white rounded-full shadow-sm"
         />
     </div>
 );
 
 const SettingCard = ({ title, subtitle, children, className = "" }) => (
-    <motion.div 
+    <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 ${className}`}
@@ -51,12 +52,7 @@ const SettingCard = ({ title, subtitle, children, className = "" }) => (
 
 // --- Mock Data ---
 
-const MOCK_CITIES = [
-    { id: 1, name: "Chandigarh", state: "UT", status: true, hubs: 4 },
-    { id: 2, name: "Delhi NCR", state: "Delhi", status: true, hubs: 12 },
-    { id: 3, name: "Ludhiana", state: "Punjab", status: false, hubs: 2 },
-    { id: 4, name: "Manali", state: "Himachal", status: true, hubs: 1 },
-];
+// Mock Data MOCK_CITIES removed for backend integration
 
 const EXPENSE_CATS = [
     { id: 1, name: "Fuel", icon: "⛽", color: "bg-orange-50 text-orange-600" },
@@ -100,7 +96,7 @@ const AddRoleModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -110,14 +106,14 @@ const AddRoleModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                         <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Edit Role' : 'Add New Role'}</h2>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
-                             <MdClose size={24} />
+                            <MdClose size={24} />
                         </button>
                     </div>
                     <form onSubmit={handleSubmit} className="p-6 space-y-4">
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Role Name</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                                 placeholder="e.g. Sales Manager"
                                 value={roleName}
@@ -127,7 +123,7 @@ const AddRoleModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Access Level</label>
-                            <select 
+                            <select
                                 className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                                 value={accessLevel}
                                 onChange={(e) => setAccessLevel(e.target.value)}
@@ -142,8 +138,8 @@ const AddRoleModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                         </div>
                         <div className="pt-4 flex justify-end gap-3">
                             <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-50 rounded-xl">Cancel</button>
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 className="px-5 py-2.5 text-white font-bold rounded-xl shadow-lg hover:bg-opacity-90 transition-all"
                                 style={{ backgroundColor: premiumColors.primary.DEFAULT }}
                             >
@@ -173,19 +169,24 @@ export const SettingsOverviewPage = () => {
     return (
         <div className="space-y-8">
             <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                    <span>/</span>
+                    <span className="text-gray-800 font-medium">Settings</span>
+                </div>
                 <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Settings Dashboard</h1>
                 <p className="text-gray-500 text-sm">Central control panel for your CRM.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {menuItems.map((item, i) => (
-                    <motion.div 
+                    <motion.div
                         key={i}
                         onClick={() => navigate(item.path)}
                         whileHover={{ scale: 1.02, y: -2 }}
                         className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-gray-100/50 flex items-center gap-4 cursor-pointer hover:shadow-xl transition-all"
                     >
-                        <div 
+                        <div
                             className="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
                             style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}
                         >
@@ -202,94 +203,313 @@ export const SettingsOverviewPage = () => {
     );
 };
 
+const AddCityModal = ({ isOpen, onClose, onSave, initialData = null }) => {
+    const [name, setName] = useState('');
+    const [state, setState] = useState('');
+    const [hubs, setHubs] = useState(0);
+
+    React.useEffect(() => {
+        if (initialData) {
+            setName(initialData.name);
+            setState(initialData.state);
+            setHubs(initialData.hubs);
+        } else {
+            setName('');
+            setState('');
+            setHubs(0);
+        }
+    }, [initialData, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ name, state, hubs: parseInt(hubs) || 0, id: initialData?.id });
+        setName('');
+        setState('');
+        setHubs(0);
+    };
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+                >
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Edit City' : 'Add New City'}</h2>
+                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+                            <MdClose size={24} />
+                        </button>
+                    </div>
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">City Name</label>
+                            <input
+                                type="text"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                placeholder="e.g. Mumbai"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">State / UT</label>
+                            <input
+                                type="text"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                placeholder="e.g. Maharashtra"
+                                value={state}
+                                onChange={(e) => setState(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Number of Hubs</label>
+                            <input
+                                type="number"
+                                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                value={hubs}
+                                onChange={(e) => setHubs(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="pt-4 flex justify-end gap-3">
+                            <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-50 rounded-xl">Cancel</button>
+                            <button
+                                type="submit"
+                                className="px-5 py-2.5 text-white font-bold rounded-xl shadow-lg hover:bg-opacity-90 transition-all"
+                                style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                            >
+                                {initialData ? 'Save Changes' : 'Add City'}
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
+            </div>
+        </AnimatePresence>
+    );
+};
+
 // --- Pages ---
 
 export const LocationsPage = () => {
-    const [cities, setCities] = useState(MOCK_CITIES);
+    const navigate = useNavigate();
+    const [cities, setCities] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCity, setEditingCity] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const toggleCity = (id) => {
-        setCities(cities.map(c => c.id === id ? { ...c, status: !c.status } : c));
+    React.useEffect(() => {
+        fetchCities();
+    }, []);
+
+    const fetchCities = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get('/crm/settings/cities');
+            if (response.data.success) {
+                const formattedCities = response.data.data.cities.map(city => ({
+                    id: city._id,
+                    name: city.cityName,
+                    state: city.state,
+                    status: city.isActive,
+                    hubs: city.numberOfHubs
+                }));
+                setCities(formattedCities);
+            }
+        } catch (error) {
+            console.error("Error fetching cities:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const filteredCities = cities.filter(city => 
-        city.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const toggleCity = async (id) => {
+        const cityToToggle = cities.find(c => c.id === id);
+        if (!cityToToggle) return;
+
+        try {
+            const response = await api.put(`/crm/settings/cities/${id}`, { isActive: !cityToToggle.status });
+            if (response.data.success) {
+                setCities(cities.map(c => c.id === id ? { ...c, status: !c.status } : c));
+            }
+        } catch (error) {
+            console.error("Error toggling city status:", error);
+        }
+    };
+
+    const handleSaveCity = async (cityData) => {
+        try {
+            const payload = {
+                cityName: cityData.name,
+                state: cityData.state,
+                numberOfHubs: cityData.hubs,
+                isActive: true
+            };
+
+            if (cityData.id) {
+                // Update
+                const response = await api.put(`/crm/settings/cities/${cityData.id}`, payload);
+                if (response.data.success) {
+                    fetchCities();
+                }
+            } else {
+                // Create
+                const response = await api.post('/crm/settings/cities', payload);
+                if (response.data.success) {
+                    fetchCities();
+                }
+            }
+            setIsModalOpen(false);
+            setEditingCity(null);
+        } catch (error) {
+            console.error("Error saving city:", error);
+        }
+    };
+
+    const openEditModal = (city) => {
+        setEditingCity(city);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteCity = async (id) => {
+        if (window.confirm('Are you sure you want to delete this city?')) {
+            try {
+                const response = await api.delete(`/crm/settings/cities/${id}`);
+                if (response.data.success) {
+                    setCities(cities.filter(c => c.id !== id));
+                }
+            } catch (error) {
+                console.error("Error deleting city:", error);
+            }
+        }
+    };
+
+    const filteredCities = cities.filter(city =>
+        city.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         city.state.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div className="space-y-6">
+            <AddCityModal
+                isOpen={isModalOpen}
+                onClose={() => { setIsModalOpen(false); setEditingCity(null); }}
+                onSave={handleSaveCity}
+                initialData={editingCity}
+            />
+
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                 <div className="flex-1">
-                     <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Cities & Locations</h1>
-                     <p className="text-gray-500 text-sm">Manage operational cities and pickup hubs.</p>
-                 </div>
-                 <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span>/</span>
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span>
+                        <span>/</span>
+                        <span className="text-gray-800 font-medium">Locations</span>
+                    </div>
+                    <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Cities & Locations</h1>
+                    <p className="text-gray-500 text-sm">Manage operational cities and pickup hubs.</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
                     <div className="relative w-full md:w-64">
-                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                         <input 
+                        <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
                             type="text"
                             placeholder="Search cities..."
                             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                         />
+                        />
                     </div>
-                    <button 
+                    <button
+                        onClick={() => { setEditingCity(null); setIsModalOpen(true); }}
                         className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                         style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
                     >
                         <MdAdd size={20} /> Add City
                     </button>
-                 </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCities.map((city) => (
-                    <motion.div 
-                        key={city.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        whileHover={{ y: -5 }}
-                        className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group transition-all`}
-                        style={{ borderColor: city.status ? rgba(premiumColors.primary.DEFAULT, 0.2) : '#f0f0f0', backgroundColor: 'white' }}
-                    >
-                        <div 
-                            className={`absolute top-0 right-0 p-10 rounded-bl-full opacity-50`}
-                            style={{ background: city.status ? `linear-gradient(135deg, ${rgba(premiumColors.primary.DEFAULT, 0.05)}, transparent)` : 'transparent' }}
-                        ></div>
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
-                                <div 
-                                    className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner`}
-                                    style={{ 
-                                        backgroundColor: city.status ? rgba(premiumColors.primary.DEFAULT, 0.1) : '#f3f4f6', 
-                                        color: city.status ? premiumColors.primary.DEFAULT : '#9ca3af' 
-                                    }}
-                                >
-                                    <MdLocationCity size={24} />
+            {loading ? (
+                <div className="flex justify-center p-12 w-full col-span-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredCities.map((city) => (
+                        <motion.div
+                            key={city.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            whileHover={{ y: -5 }}
+                            className={`p-6 rounded-2xl border shadow-sm relative overflow-hidden group transition-all`}
+                            style={{ borderColor: city.status ? rgba(premiumColors.primary.DEFAULT, 0.2) : '#f0f0f0', backgroundColor: 'white' }}
+                        >
+                            <div
+                                className={`absolute top-0 right-0 p-10 rounded-bl-full opacity-50`}
+                                style={{ background: city.status ? `linear-gradient(135deg, ${rgba(premiumColors.primary.DEFAULT, 0.05)}, transparent)` : 'transparent' }}
+                            ></div>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div
+                                        className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner`}
+                                        style={{
+                                            backgroundColor: city.status ? rgba(premiumColors.primary.DEFAULT, 0.1) : '#f3f4f6',
+                                            color: city.status ? premiumColors.primary.DEFAULT : '#9ca3af'
+                                        }}
+                                    >
+                                        <MdLocationCity size={24} />
+                                    </div>
+                                    <Toggle enabled={city.status} onToggle={() => toggleCity(city.id)} />
                                 </div>
-                                <Toggle enabled={city.status} onToggle={() => toggleCity(city.id)} />
+                                <h3 className={`text-xl font-bold ${city.status ? 'text-gray-900' : 'text-gray-500'}`}>{city.name}</h3>
+                                <p className="text-sm text-gray-500">{city.state}</p>
+                                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                                    <span
+                                        className={`text-xs font-bold px-2 py-1 rounded-md`}
+                                        style={{
+                                            backgroundColor: city.status ? rgba(premiumColors.primary.DEFAULT, 0.1) : '#f3f4f6',
+                                            color: city.status ? premiumColors.primary.DEFAULT : '#6b7280'
+                                        }}
+                                    >
+                                        {city.hubs} Hubs
+                                    </span>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => openEditModal(city)}
+                                            className="text-gray-400 hover:text-indigo-600 p-2 rounded-full hover:bg-indigo-50 transition-colors"
+                                        >
+                                            <MdEdit />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCity(city.id)}
+                                            className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors"
+                                        >
+                                            <MdDelete />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <h3 className={`text-xl font-bold ${city.status ? 'text-gray-900' : 'text-gray-500'}`}>{city.name}</h3>
-                            <p className="text-sm text-gray-500">{city.state}</p>
-                            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                                <span 
-                                    className={`text-xs font-bold px-2 py-1 rounded-md`}
-                                    style={{ 
-                                        backgroundColor: city.status ? rgba(premiumColors.primary.DEFAULT, 0.1) : '#f3f4f6', 
-                                        color: city.status ? premiumColors.primary.DEFAULT : '#6b7280' 
-                                    }}
-                                >
-                                    {city.hubs} Hubs
-                                </span>
-                                <button className="text-gray-400 hover:text-indigo-600 p-2 rounded-full hover:bg-indigo-50 transition-colors"><MdEdit /></button>
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+
+            {!loading && filteredCities.length === 0 && (
+                <div className="p-12 text-center text-gray-500 bg-white rounded-2xl border-2 border-dashed border-gray-100 col-span-full">
+                    No cities found matching "{searchTerm}"
+                </div>
+            )}
         </div>
     );
 };
@@ -320,7 +540,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -330,14 +550,14 @@ const AddExpenseModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                         <h2 className="text-xl font-bold text-gray-900">{initialData ? 'Edit Category' : 'New Category'}</h2>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
-                             <MdClose size={24} />
+                            <MdClose size={24} />
                         </button>
                     </div>
                     <form onSubmit={handleSubmit} className="p-6 space-y-4">
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Category Name</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                                 placeholder="e.g. Electricity Bill"
                                 value={name}
@@ -362,8 +582,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSave, initialData = null }) => {
                         </div>
                         <div className="pt-4 flex justify-end gap-3">
                             <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-50 rounded-xl">Cancel</button>
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 className="px-5 py-2.5 text-white font-bold rounded-xl shadow-lg hover:bg-opacity-90 transition-all"
                                 style={{ backgroundColor: premiumColors.primary.DEFAULT }}
                             >
@@ -378,99 +598,181 @@ const AddExpenseModal = ({ isOpen, onClose, onSave, initialData = null }) => {
 };
 
 export const ExpenseCategoriesPage = () => {
-    const [categories, setCategories] = useState(EXPENSE_CATS);
+    const navigate = useNavigate();
+    const [categories, setCategories] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
-    const handleSaveCategory = ({ name, icon, id }) => {
-        if (id) {
-            setCategories(categories.map(c => c.id === id ? { ...c, name, icon } : c));
-        } else {
-            const newCat = {
-                id: Date.now(),
-                name,
-                icon,
-                color: "bg-indigo-50 text-indigo-600"
-            };
-            setCategories([...categories, newCat]);
+    React.useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const fetchCategories = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get('/crm/finance/categories');
+            if (response.data.success) {
+                const formattedCats = response.data.data.categories.map(cat => ({
+                    id: cat._id,
+                    name: cat.name,
+                    icon: cat.icon || '💰',
+                    color: "bg-indigo-50 text-indigo-600"
+                }));
+                setCategories(formattedCats);
+            }
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+        } finally {
+            setLoading(false);
         }
-        setIsModalOpen(false);
-        setEditingCategory(null);
     };
 
-    const handleDelete = (e, id) => {
+    const handleSaveCategory = async ({ name, icon, id }) => {
+        try {
+            if (id) {
+                // Since there is no edit route explicitly usually, but let's assume one or just re-create.
+                // Wait, crm.routes.js shows separate routes? No, only GET, POST, DELETE.
+                // It does NOT have PUT for categories in the routes file I saw.
+                // I will use POST to create new. Deleting old and creating new is hacky. 
+                // Let's assume for now we can't edit or we'd need to add PUT.
+                // However, user said "connect", implying use existing. 
+                // Let's check if the backend has an update route.
+                // In crm.routes.js:
+                // router.route('/finance/categories').get(getExpenseCategories).post(createExpenseCategory);
+                // router.delete('/finance/categories/:id', deleteExpenseCategory);
+                // No update route. I will only implement Create and Delete properly. 
+                // For Edit, I will show alert or handle it by delete+create if user insists, but safely I will just not support edit on backend yet or ask to add it.
+                // But the UI has edit. 
+                // I'll proceed with frontend optimistic update or just simple create/delete
+                // Actually, let's just support Create and Delete as per backend.
+                // If I try to edit, I'll delete and create new ?? No that changes ID.
+                // I will just disable Edit saving to backend for now or treat it as local? No, that's bad.
+                // I will add a method to just create new if it's new.
+                // Note: The schemas are simple.
+                // Actually I can add a quick PUT route if needed, but I shouldn't disturb other code.
+                // I will stick to Create and Delete.
+
+                if (id) {
+                    alert("Editing categories is not supported in this version.");
+                    return;
+                }
+
+                const response = await api.post('/crm/finance/categories', { name, icon });
+                if (response.data.success) {
+                    fetchCategories();
+                }
+            } else {
+                const response = await api.post('/crm/finance/categories', { name, icon });
+                if (response.data.success) {
+                    fetchCategories();
+                }
+            }
+            setIsModalOpen(false);
+            setEditingCategory(null);
+        } catch (error) {
+            console.error("Error saving category:", error);
+            alert("Error saving category");
+        }
+    };
+
+    const handleDelete = async (e, id) => {
         e.stopPropagation();
         if (window.confirm('Delete this category?')) {
-            setCategories(categories.filter(c => c.id !== id));
+            try {
+                const response = await api.delete(`/crm/finance/categories/${id}`);
+                if (response.data.success) {
+                    setCategories(categories.filter(c => c.id !== id));
+                }
+            } catch (error) {
+                console.error("Error deleting category:", error);
+            }
         }
     };
 
-    const filteredCategories = categories.filter(cat => 
+    const filteredCategories = categories.filter(cat =>
         cat.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div className="space-y-6">
-            <AddExpenseModal 
-                isOpen={isModalOpen} 
-                onClose={() => { setIsModalOpen(false); setEditingCategory(null); }} 
-                onSave={handleSaveCategory} 
+            <AddExpenseModal
+                isOpen={isModalOpen}
+                onClose={() => { setIsModalOpen(false); setEditingCategory(null); }}
+                onSave={handleSaveCategory}
                 initialData={editingCategory}
             />
 
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                 <div className="flex-1">
-                     <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Expense Categories</h1>
-                     <p className="text-gray-500 text-sm">Classify your outgoing payments.</p>
-                 </div>
-                 <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span>/</span>
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span>
+                        <span>/</span>
+                        <span className="text-gray-800 font-medium">Expense Categories</span>
+                    </div>
+                    <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Expense Categories</h1>
+                    <p className="text-gray-500 text-sm">Classify your outgoing payments.</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
                     <div className="relative w-full md:w-64">
-                         <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                         <input 
+                        <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
                             type="text"
                             placeholder="Search categories..."
                             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                         />
+                        />
                     </div>
-                    <button 
+                    <button
                         onClick={() => setIsModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-md shadow-indigo-100 whitespace-nowrap"
                         style={{ backgroundColor: premiumColors.primary.DEFAULT, color: 'white' }}
                     >
                         <MdAdd size={20} /> New Category
                     </button>
-                 </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {filteredCategories.map(cat => (
-                    <motion.div 
-                        key={cat.id}
-                        layout
-                        whileHover={{ y: -5 }}
-                        onClick={() => { setEditingCategory(cat); setIsModalOpen(true); }}
-                        className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center cursor-pointer hover:shadow-md transition-all relative group"
-                    >
-                        <button 
-                            onClick={(e) => handleDelete(e, cat.id)}
-                            className="absolute top-2 right-2 p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            {loading ? (
+                <div className="flex justify-center p-12 col-span-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {filteredCategories.map(cat => (
+                        <motion.div
+                            key={cat.id}
+                            layout
+                            whileHover={{ y: -5 }}
+                            onClick={() => {
+                                // Edit not fully supported in backend router yet for categories, but we keep UI
+                                // setEditingCategory(cat); setIsModalOpen(true); 
+                                // Just show simple alert for now or allow only View
+                            }}
+                            className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center text-center cursor-pointer hover:shadow-md transition-all relative group"
                         >
-                            <MdDelete size={18} />
-                        </button>
-                        <div 
-                            className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-3 transition-transform group-hover:scale-110`}
-                            style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05) }}
-                        >
-                            {cat.icon}
-                        </div>
-                        <h4 className="font-bold text-gray-800">{cat.name}</h4>
-                        <p className="text-xs text-gray-400 mt-1">12 Transactions</p>
-                    </motion.div>
-                ))}
-            </div>
+                            <button
+                                onClick={(e) => handleDelete(e, cat.id)}
+                                className="absolute top-2 right-2 p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <MdDelete size={18} />
+                            </button>
+                            <div
+                                className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-3 transition-transform group-hover:scale-110`}
+                                style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05) }}
+                            >
+                                {cat.icon}
+                            </div>
+                            <h4 className="font-bold text-gray-800">{cat.name}</h4>
+                            <p className="text-xs text-gray-400 mt-1">Active</p>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
             {filteredCategories.length === 0 && (
                 <div className="p-12 text-center text-gray-500 bg-white rounded-2xl border-2 border-dashed border-gray-100">
@@ -481,76 +783,130 @@ export const ExpenseCategoriesPage = () => {
     );
 };
 
-export const SalaryRulesPage = () => (
-    <div className="space-y-6">
-        <div>
-             <h1 className="text-2xl font-bold text-gray-900">Salary & Deduction Rules</h1>
-             <p className="text-gray-500 text-sm">Configure payroll parameters.</p>
-        </div>
+export const SalaryRulesPage = () => {
+    const navigate = useNavigate();
+    return (
+        <div className="space-y-6">
+            <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                    <span>/</span>
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span>
+                    <span>/</span>
+                    <span className="text-gray-800 font-medium">Salary Rules</span>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900">Salary & Deduction Rules</h1>
+                <p className="text-gray-500 text-sm">Configure payroll parameters.</p>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <SettingCard title="Base Salary Structure" subtitle="Default payout settings">
-                 <div className="space-y-4">
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                         <span className="text-gray-700 font-medium">Driver Daily Allowance</span>
-                         <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ 500 / day</span>
-                     </div>
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                         <span className="text-gray-700 font-medium">Overtime Rate</span>
-                         <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ 100 / hr</span>
-                     </div>
-                     <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                         <span className="text-gray-700 font-medium">Night Halt Charge</span>
-                         <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ 300 / night</span>
-                     </div>
-                 </div>
-            </SettingCard>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SettingCard title="Base Salary Structure" subtitle="Default payout settings">
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span className="text-gray-700 font-medium">Driver Daily Allowance</span>
+                            <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ 500 / day</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span className="text-gray-700 font-medium">Overtime Rate</span>
+                            <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ 100 / hr</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span className="text-gray-700 font-medium">Night Halt Charge</span>
+                            <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ 300 / night</span>
+                        </div>
+                    </div>
+                </SettingCard>
 
-            <SettingCard title="Deduction Logic" subtitle="Auto-deduct based on events">
-                 <div className="space-y-4">
-                     <div className="flex justify-between items-center">
-                         <div>
-                             <h4 className="font-bold text-gray-800">Late Arrival</h4>
-                             <p className="text-xs text-red-500">Deduct ₹50 per 30 mins</p>
-                         </div>
-                         <Toggle enabled={true} />
-                     </div>
-                     <div className="flex justify-between items-center">
-                         <div>
-                             <h4 className="font-bold text-gray-800">Traffic Violation</h4>
-                             <p className="text-xs text-red-500">100% Challan Amount</p>
-                         </div>
-                         <Toggle enabled={true} />
-                     </div>
-                 </div>
-            </SettingCard>
+                <SettingCard title="Deduction Logic" subtitle="Auto-deduct based on events">
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-gray-800">Late Arrival</h4>
+                                <p className="text-xs text-red-500">Deduct ₹50 per 30 mins</p>
+                            </div>
+                            <Toggle enabled={true} />
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-gray-800">Traffic Violation</h4>
+                                <p className="text-xs text-red-500">100% Challan Amount</p>
+                            </div>
+                            <Toggle enabled={true} />
+                        </div>
+                    </div>
+                </SettingCard>
+            </div>
         </div>
-    </div>
-);
+    );
+}
 
 export const RolesAccessPage = () => {
-    const [roles, setRoles] = useState(ROLES_DATA);
+    const navigate = useNavigate();
+    const [roles, setRoles] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
-    const handleSaveRole = ({ roleName, accessLevel, id }) => {
-        if (id) {
-            // Edit existing role
-            setRoles(roles.map(r => r.id === id ? { ...r, role: roleName, access: accessLevel } : r));
-        } else {
-            // Add new role
-            const newRole = {
-                id: roles.length + 1,
-                role: roleName,
-                users: 0,
-                access: accessLevel,
-                avatars: []
-            };
-            setRoles([...roles, newRole]);
+    useEffect(() => {
+        fetchRoles();
+    }, []);
+
+    const fetchRoles = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get('/crm/roles');
+            if (response.data.success) {
+                // Also fetch staff to count users per role ? 
+                // For now, simpler implementation or use aggregation if available.
+                // Let's just fetch roles first.
+                // The mock data had "users" count. We can perhaps fetch all staff and count.
+                const staffRes = await api.get('/crm/staff');
+                let staffData = [];
+                if (staffRes.data.success) {
+                    staffData = staffRes.data.data.staff;
+                }
+
+                const formattedRoles = response.data.data.roles.map(role => {
+                    const usersInRole = staffData.filter(s => s.role === role.roleName);
+                    return {
+                        id: role._id,
+                        role: role.roleName,
+                        users: usersInRole.length,
+                        access: role.accessLevel,
+                        avatars: usersInRole.map(u => u.avatar || `https://ui-avatars.com/api/?name=${u.name}`)
+                    };
+                });
+                setRoles(formattedRoles);
+            }
+        } catch (error) {
+            console.error("Error fetching roles:", error);
+        } finally {
+            setLoading(false);
         }
-        setIsModalOpen(false);
-        setEditingRole(null);
+    };
+
+    const handleSaveRole = async ({ roleName, accessLevel, id }) => {
+        const payload = { roleName, accessLevel };
+        try {
+            if (id) {
+                // Edit
+                const response = await api.put(`/crm/roles/${id}`, payload);
+                if (response.data.success) {
+                    fetchRoles();
+                }
+            } else {
+                // Create
+                const response = await api.post('/crm/roles', payload);
+                if (response.data.success) {
+                    fetchRoles();
+                }
+            }
+            setIsModalOpen(false);
+            setEditingRole(null);
+        } catch (error) {
+            console.error("Error saving role:", error);
+        }
     };
 
     const openEditModal = (role) => {
@@ -563,130 +919,147 @@ export const RolesAccessPage = () => {
         setIsModalOpen(true);
     };
 
-    const filteredRoles = roles.filter(r => 
-        r.role.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredRoles = roles.filter(r =>
+        r.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.access.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
-    <div className="space-y-6">
-        <AddRoleModal 
-            isOpen={isModalOpen} 
-            onClose={() => { setIsModalOpen(false); setEditingRole(null); }} 
-            onSave={handleSaveRole} 
-            initialData={editingRole}
-        />
+        <div className="space-y-6">
+            <AddRoleModal
+                isOpen={isModalOpen}
+                onClose={() => { setIsModalOpen(false); setEditingRole(null); }}
+                onSave={handleSaveRole}
+                initialData={editingRole}
+            />
 
-        <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-             <div className="flex-1">
-                 <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Roles & Permissions</h1>
-                 <p className="text-gray-500 text-sm">Control who sees what.</p>
-             </div>
-             <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
-                <div className="relative w-full md:w-64">
-                     <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                     <input 
-                        type="text"
-                        placeholder="Search roles..."
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                     />
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span>/</span>
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span>
+                        <span>/</span>
+                        <span className="text-gray-800 font-medium">Roles & Access</span>
+                    </div>
+                    <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Roles & Permissions</h1>
+                    <p className="text-gray-500 text-sm">Control who sees what.</p>
                 </div>
-                <button 
-                    onClick={openAddModal}
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 whitespace-nowrap"
-                    style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
-                >
-                    <MdSecurity size={18} /> Add Role
-                </button>
-             </div>
-        </div>
+                <div className="flex flex-col md:flex-row gap-4 items-end w-full md:w-auto">
+                    <div className="relative w-full md:w-64">
+                        <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Search roles..."
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={openAddModal}
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 whitespace-nowrap"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 14px ${rgba(premiumColors.primary.DEFAULT, 0.4)}` }}
+                    >
+                        <MdSecurity size={18} /> Add Role
+                    </button>
+                </div>
+            </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-             <table className="w-full text-left border-collapse">
-                 <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                     <tr>
-                         <th className="px-6 py-4">Role Name</th>
-                         <th className="px-6 py-4">Active Users</th>
-                         <th className="px-6 py-4">Access Level</th>
-                         <th className="px-6 py-4 text-right">Action</th>
-                     </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-100 text-sm">
-                     {filteredRoles.map((role) => (
-                         <tr key={role.id} className="hover:bg-gray-50 transition-colors group">
-                             <td className="px-6 py-4 font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{role.role}</td>
-                             <td className="px-6 py-4">
-                                 <div className="flex -space-x-2">
-                                     {role.avatars && role.avatars.length > 0 ? (
-                                         role.avatars.slice(0, 3).map((avatar, i) => (
-                                             <img 
-                                                key={i} 
-                                                src={avatar} 
-                                                alt="User" 
-                                                className="w-9 h-9 rounded-full border-2 border-white object-cover"
-                                             />
-                                         ))
-                                     ) : (
-                                        <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-gray-400">
-                                            <MdGroup />
-                                        </div>
-                                     )}
-                                     {role.users > 3 && (
-                                        <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-bold text-gray-500">
-                                            +{role.users - 3}
-                                        </div>
-                                     )}
-                                 </div>
-                             </td>
-                             <td className="px-6 py-4 text-gray-600 font-medium">{role.access}</td>
-                             <td className="px-6 py-4 text-right">
-                                 <button 
-                                    onClick={() => openEditModal(role)}
-                                    className="font-bold text-xs hover:underline" 
-                                    style={{ color: premiumColors.primary.DEFAULT }}
-                                 >
-                                    Edit Perms
-                                 </button>
-                             </td>
-                         </tr>
-                     ))}
-                 </tbody>
-             </table>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <tr>
+                            <th className="px-6 py-4">Role Name</th>
+                            <th className="px-6 py-4">Active Users</th>
+                            <th className="px-6 py-4">Access Level</th>
+                            <th className="px-6 py-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm">
+                        {filteredRoles.map((role) => (
+                            <tr key={role.id} className="hover:bg-gray-50 transition-colors group">
+                                <td className="px-6 py-4 font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{role.role}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex -space-x-2">
+                                        {role.avatars && role.avatars.length > 0 ? (
+                                            role.avatars.slice(0, 3).map((avatar, i) => (
+                                                <img
+                                                    key={i}
+                                                    src={avatar}
+                                                    alt="User"
+                                                    className="w-9 h-9 rounded-full border-2 border-white object-cover"
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-gray-400">
+                                                <MdGroup />
+                                            </div>
+                                        )}
+                                        {role.users > 3 && (
+                                            <div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-bold text-gray-500">
+                                                +{role.users - 3}
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-600 font-medium">{role.access}</td>
+                                <td className="px-6 py-4 text-right">
+                                    <button
+                                        onClick={() => openEditModal(role)}
+                                        className="font-bold text-xs hover:underline"
+                                        style={{ color: premiumColors.primary.DEFAULT }}
+                                    >
+                                        Edit Perms
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
     );
 };
 
-export const AlertsLimitsPage = () => (
-    <div className="space-y-6">
-        <div>
-             <h1 className="text-2xl font-bold text-gray-900">System Alerts</h1>
-             <p className="text-gray-500 text-sm">Set thresholds for automated notifications.</p>
-        </div>
+export const AlertsLimitsPage = () => {
+    const navigate = useNavigate();
+    return (
+        <div className="space-y-6">
+            <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                    <span>/</span>
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/settings')}>Settings</span>
+                    <span>/</span>
+                    <span className="text-gray-800 font-medium">Alerts</span>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900">System Alerts</h1>
+                <p className="text-gray-500 text-sm">Set thresholds for automated notifications.</p>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {[
-                 { title: "Low Fuel Alert", desc: "Notify when fuel drops below 15%", enabled: true, icon: MdNotificationsActive, color: "text-orange-500" },
-                 { title: "Speed Limit Warning", desc: "Notify if car exceeds 100 km/h", enabled: true, icon: MdFlashOn, color: "text-red-500" },
-                 { title: "Payment Due Reminder", desc: "Email client 2 days before due date", enabled: false, icon: MdAttachMoney, color: "text-green-500" },
-                 { title: "Maintenance Due", desc: "Alert 500km before service schedule", enabled: true, icon: MdRule, color: "text-blue-500" },
-             ].map((alert, i) => (
-                 <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
-                     <div className={`w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center ${alert.color}`}>
-                         <alert.icon size={24} />
-                     </div>
-                     <div className="flex-1">
-                         <div className="flex justify-between items-start">
-                             <h4 className="font-bold text-gray-900">{alert.title}</h4>
-                             <Toggle enabled={alert.enabled} />
-                         </div>
-                         <p className="text-sm text-gray-500 mt-1">{alert.desc}</p>
-                     </div>
-                 </div>
-             ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                    { title: "Low Fuel Alert", desc: "Notify when fuel drops below 15%", enabled: true, icon: MdNotificationsActive, color: "text-orange-500" },
+                    { title: "Speed Limit Warning", desc: "Notify if car exceeds 100 km/h", enabled: true, icon: MdFlashOn, color: "text-red-500" },
+                    { title: "Payment Due Reminder", desc: "Email client 2 days before due date", enabled: false, icon: MdAttachMoney, color: "text-green-500" },
+                    { title: "Maintenance Due", desc: "Alert 500km before service schedule", enabled: true, icon: MdRule, color: "text-blue-500" },
+                ].map((alert, i) => (
+                    <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
+                        <div className={`w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center ${alert.color}`}>
+                            <alert.icon size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                                <h4 className="font-bold text-gray-900">{alert.title}</h4>
+                                <Toggle enabled={alert.enabled} />
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">{alert.desc}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
-    </div>
-);
+    );
+}
 

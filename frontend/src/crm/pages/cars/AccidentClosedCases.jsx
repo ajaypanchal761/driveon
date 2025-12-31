@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdSearch, 
   MdFilterList, 
@@ -46,6 +47,7 @@ const MOCK_CLOSED_CASES = [
 ];
 
 const AccidentClosedCases = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredCases = MOCK_CLOSED_CASES.filter(item => 
@@ -59,7 +61,13 @@ const AccidentClosedCases = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span>Accidents</span> <span>/</span> <span className="text-gray-800 font-medium">Closed Cases</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Closed Cases</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Closed & Settled Cases</h1>
             <p className="text-gray-500 text-sm">History of resolved accidents and financial settlements.</p>

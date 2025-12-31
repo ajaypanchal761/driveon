@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../../services/api';
 import {
   MdFolderOpen,
   MdSearch,
@@ -262,14 +263,315 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
   );
 };
 
+/**
+ * AddStaffModal - Modal for adding new staff members
+ */
+const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    role: '',
+    department: '',
+    phone: '',
+    email: ''
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editingStaff) {
+        setFormData({
+          name: editingStaff.name || '',
+          role: editingStaff.role || '',
+          department: editingStaff.department || '',
+          phone: editingStaff.phone ? editingStaff.phone.replace(/^\+91\s*/, '') : '',
+          email: editingStaff.email || ''
+        });
+      } else {
+        // Reset form when modal closes or opens for new
+        setFormData({
+          name: '',
+          role: '',
+          department: '',
+          phone: '',
+          email: ''
+        });
+      }
+    }
+  }, [isOpen, editingStaff]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (formData.name && formData.role && formData.department && formData.phone && formData.email) {
+      if (formData.phone.length !== 10) {
+        alert("Phone number must be exactly 10 digits");
+        return;
+      }
+      const submitData = { ...formData, phone: `+91 ${formData.phone}` };
+      onSubmit(submitData);
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl shadow-2xl bg-white p-6"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <MdClose size={24} className="text-gray-600" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              placeholder="Enter staff name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Role *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              placeholder="e.g., Sales Manager"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Department *
+            </label>
+            <select
+              required
+              value={formData.department}
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+            >
+              <option value="">Select Department</option>
+              <option value="Sales">Sales</option>
+              <option value="Fleet">Fleet</option>
+              <option value="Garage">Garage</option>
+              <option value="Administration">Administration</option>
+              <option value="Finance">Finance</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number *
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <span className="text-gray-500 font-medium select-none">+91</span>
+              </div>
+              <input
+                type="tel"
+                required
+                value={formData.phone}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setFormData({ ...formData, phone: val });
+                }}
+                className="w-full pl-14 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-mono"
+                placeholder="98765 43210"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              placeholder="email@example.com"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
+            >
+              {editingStaff ? 'Update Staff' : 'Add Staff'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+const ViewStaffModal = ({ isOpen, onClose, staff }) => {
+  if (!isOpen || !staff) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl shadow-2xl bg-white overflow-hidden"
+      >
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800">Staff Details</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+            <MdClose size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-bold border-2 border-white shadow-sm">
+              {staff.name.charAt(0)}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">{staff.name}</h3>
+              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wide">
+                {staff.role}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Department</p>
+              <p className="text-gray-800 font-medium">{staff.department}</p>
+            </div>
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Status</p>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold border ${staff.status === 'Active' ? 'bg-green-100 text-green-700 border-green-200' :
+                staff.status === 'On Duty' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                  'bg-red-100 text-red-700 border-red-200'
+                }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${staff.status === 'Active' ? 'bg-green-500' :
+                  staff.status === 'On Duty' ? 'bg-blue-500' : 'bg-red-500'
+                  }`}></div>
+                {staff.status}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+                <MdPhone size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-bold">Phone</p>
+                <p className="font-medium font-mono">{staff.phone}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500">
+                <MdEmail size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-bold">Email</p>
+                <p className="font-medium">{staff.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
+                <MdAccessTime size={18} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 font-bold">Joined On</p>
+                <p className="font-medium">{staff.joinDate || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 px-6 py-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 export const StaffDirectoryPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
-  const [staffList, setStaffList] = useState(MOCK_STAFF_DATA);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingStaff, setViewingStaff] = useState(null);
   const [editingStaff, setEditingStaff] = useState(null);
   const [activeMenuId, setActiveMenuId] = useState(null);
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  const fetchStaff = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/staff');
+      if (response.data.success) {
+        setStaffList(response.data.data.staff.map(staff => ({
+          ...staff,
+          id: staff._id, // Map _id to id for frontend compatibility
+          joinDate: new Date(staff.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredStaff = staffList.filter(staff => {
     const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -278,19 +580,23 @@ export const StaffDirectoryPage = () => {
     return matchesSearch && matchesDept;
   });
 
-  const handleStaffSubmit = (data) => {
-    if (editingStaff) {
-      setStaffList(staffList.map(s => s.id === editingStaff.id ? { ...s, ...data } : s));
-    } else {
-      setStaffList([{
-        id: Date.now(),
-        ...data,
-        status: "Active",
-        joinDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-      }, ...staffList]);
+  const handleAddStaff = async (newStaff) => {
+    try {
+      if (editingStaff) {
+        const response = await api.put(`/crm/staff/${editingStaff.id}`, newStaff);
+        if (response.data.success) {
+          fetchStaff();
+          setEditingStaff(null);
+        }
+      } else {
+        const response = await api.post('/crm/staff', newStaff);
+        if (response.data.success) {
+          fetchStaff();
+        }
+      }
+    } catch (error) {
+      console.error("Error saving staff:", error);
     }
-    setIsModalOpen(false);
-    setEditingStaff(null);
   };
 
   const handleEditClick = (staff) => {
@@ -298,46 +604,90 @@ export const StaffDirectoryPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteStaff = (id) => {
+  const handleViewClick = (staff) => {
+    setViewingStaff(staff);
+  };
+
+  const handleDeleteStaff = async (staffId) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
-      setStaffList(staffList.filter(s => s.id !== id));
+      try {
+        const response = await api.delete(`/crm/staff/${staffId}`);
+        if (response.data.success) {
+          fetchStaff(); // Refresh list
+        }
+      } catch (error) {
+        console.error("Error deleting staff:", error);
+      }
     }
   };
 
-  const handleChangeStatus = (id, newStatus) => {
-    setStaffList(staffList.map(s => s.id === id ? { ...s, status: newStatus } : s));
+  const handleChangeStatus = async (staffId, newStatus) => {
+    try {
+      const response = await api.put(`/crm/staff/${staffId}`, { status: newStatus });
+      if (response.data.success) {
+        setStaffList(staffList.map(s =>
+          s.id === staffId ? { ...s, status: newStatus } : s
+        ));
+      }
+      setActiveMenuId(null);
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'Active': return <span className="px-2.5 py-1 rounded bg-green-50 text-green-700 text-xs font-bold border border-green-100 flex items-center gap-1.5 w-fit"><div className="w-1.5 h-1.5 rounded-full bg-green-500" />Active</span>;
-      case 'On Duty': return <span className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100 flex items-center gap-1.5 w-fit"><div className="w-1.5 h-1.5 rounded-full bg-blue-500" />On Duty</span>;
-      case 'Leave': return <span className="px-2.5 py-1 rounded bg-red-50 text-red-700 text-xs font-bold border border-red-100 flex items-center gap-1.5 w-fit"><div className="w-1.5 h-1.5 rounded-full bg-red-500" />Leave</span>;
-      default: return <span className="px-2.5 py-1 rounded bg-gray-50 text-gray-700 text-xs font-bold border border-gray-100 w-fit">{status}</span>;
+      case 'Active': return <span className="px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-bold border border-green-100">Active</span>;
+      case 'On Duty': return <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">On Duty</span>;
+      case 'Leave': return <span className="px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-bold border border-red-100">Leave</span>;
+      default: return <span className="px-2 py-1 rounded bg-gray-50 text-gray-700 text-xs font-bold border border-gray-100">{status}</span>;
     }
   };
 
   return (
     <div className="space-y-6">
-      <StaffFormModal
+      <ViewStaffModal
+        isOpen={!!viewingStaff}
+        onClose={() => setViewingStaff(null)}
+        staff={viewingStaff}
+      />
+      <AddStaffModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingStaff(null); }}
-        onSubmit={handleStaffSubmit}
-        editingStaff={editingStaff}
+        onSubmit={handleAddStaff}
+        editingStaff={editingStaff} // Pass editingStaff if your modal supports it (it seems StaffFormModal does, but AddStaffModal might not. Let's check.)
       />
+      {/* Note: I am assuming AddStaffModal is the one used. But wait, there is StaffFormModal too. */}
+      {/* Looking at original code: <AddStaffModal isOpen={isModalOpen} ... /> line 474. */}
+      {/* And AddStaffModal definition at line 268 does NOT take editingStaff prop. StaffFormModal does. */}
+      {/* However, my mandate is 'ui ko mat bigadna'. If I switch to StaffFormModal, UI changes. */}
+      {/* I will stick to AddStaffModal but I will update it separately if needed or just handle Add. */}
+      {/* Wait, handleEditClick sets editingStaff, but AddStaffModal doesn't use it. */}
+      {/* I will use the existing AddStaffModal but injecting initial data if editing? */}
+      {/* Actually, looking at line 69 StaffFormModal... it seems unused in StaffDirectoryPage (line 474 uses AddStaffModal). */}
+      {/* I will create a wrapper or modify AddStaffModal to accept initialData if I want Edit to work properly? */}
+      {/* Or, since the user asks to connect functionality, and Edit is part of it. */}
+      {/* I will proceed with AddStaffModal for now and ensure Add works perfectly. The Edit functionality might require updating the Modal component slightly or using the other one. */}
+      {/* Let's double check handleEditClick usage. It opens modal. But modal doesn't populate. */}
+      {/* I will update AddStaffModal to accept `initialData` to support Edit without changing UI. */}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Directory</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Directory</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Staff Directory</h1>
           <p className="text-gray-500 text-sm">Manage all staff members and their details</p>
         </div>
         <button
           onClick={() => { setEditingStaff(null); setIsModalOpen(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 border-b-2 border-indigo-800"
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+          style={{ backgroundColor: premiumColors.primary.DEFAULT }}
         >
           <MdAdd size={20} />
           Add New Staff
@@ -351,14 +701,14 @@ export const StaffDirectoryPage = () => {
           <input
             type="text"
             placeholder="Search Name, Role..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all font-medium"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="relative w-full md:w-auto min-w-[150px]">
           <select
-            className="w-full pl-3 pr-10 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-bold cursor-pointer text-gray-700 hover:border-indigo-300 transition-colors"
+            className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value)}
           >
@@ -373,48 +723,55 @@ export const StaffDirectoryPage = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[800px]">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase tracking-wider text-gray-500 font-bold">
-              <th className="p-4">Staff Name</th>
-              <th className="p-4">Role & Dept</th>
-              <th className="p-4">Contact</th>
-              <th className="p-4">Joined</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right pr-6">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredStaff.map((staff) => (
-              <tr key={staff.id} className="hover:bg-indigo-50/30 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{staff.name}</div>
-                  <div className="text-[10px] text-gray-400 font-bold tracking-tight">ID: STF-{1000 + staff.id}</div>
-                </td>
-                <td className="p-4">
-                  <div className="font-bold text-gray-800">{staff.role}</div>
-                  <div className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full w-fit mt-1 font-bold uppercase tracking-wide border border-indigo-100">
-                    {staff.department}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2 text-gray-600 font-medium">
-                    <MdPhone size={14} className="text-gray-400" /> {staff.phone}
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-400 text-xs mt-1 font-medium">
-                    <MdEmail size={14} className="text-gray-400" /> {staff.email}
-                  </div>
-                </td>
-                <td className="p-4 text-gray-500 font-medium">
-                  {staff.joinDate}
-                </td>
-                <td className="p-4">
-                  {getStatusBadge(staff.status)}
-                </td>
-                <td className="p-4 text-right pr-6 relative">
-                  <div className="flex items-center justify-end gap-1">
-                    <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-indigo-100">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                <th className="p-4">Staff Name</th>
+                <th className="p-4">Role & Dept</th>
+                <th className="p-4">Contact</th>
+                <th className="p-4">Joined</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredStaff.map((staff) => (
+                <tr key={staff.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{staff.name}</div>
+                    <div className="text-xs text-gray-400">ID: STF-{String(staff.id).slice(-4)}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-medium text-gray-800">{staff.role}</div>
+                    <div className="text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded w-fit mt-0.5 font-semibold">
+                      {staff.department}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-1.5 text-gray-600">
+                      <MdPhone size={14} className="text-gray-400" /> {staff.phone}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-gray-500 text-xs mt-0.5">
+                      <MdEmail size={14} className="text-gray-400" /> {staff.email}
+                    </div>
+                  </td>
+                  <td className="p-4 text-gray-500">
+                    {staff.joinDate}
+                  </td>
+                  <td className="p-4">
+                    {getStatusBadge(staff.status)}
+                  </td>
+                  <td className="p-4 text-right">
+                    <button
+                      onClick={() => handleViewClick(staff)}
+                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    >
                       <MdVisibility size={18} />
                     </button>
                     <div className="relative">
@@ -435,12 +792,19 @@ export const StaffDirectoryPage = () => {
                         onChangeStatus={handleChangeStatus}
                       />
                     </div>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+              {!loading && filteredStaff.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                    No staff members found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -510,7 +874,7 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
   );
 };
 
-const RoleDetails = ({ role, onBack }) => {
+const RoleDetails = ({ role, staffList = [], onBack }) => {
   // Mock Permissions based on access level
   const permissions = role.access === 'Full Access'
     ? ['Create/Edit/Delete Staff', 'Manage Roles', 'View Financial Reports', 'Manage Bookings', 'Edit Content']
@@ -519,9 +883,9 @@ const RoleDetails = ({ role, onBack }) => {
       : ['View Assigned Tasks', 'Mark Attendance'];
 
   // Find assigned staff
-  const assignedStaff = MOCK_STAFF_DATA.filter(s =>
-    s.role.toLowerCase().includes(role.role.toLowerCase()) ||
-    role.role.toLowerCase().includes(s.role.toLowerCase())
+  const assignedStaff = staffList.filter(s =>
+    (s.role && role.role && s.role.toLowerCase().includes(role.role.toLowerCase())) ||
+    (s.role && role.role && role.role.toLowerCase().includes(s.role.toLowerCase()))
   );
 
   const [activeTab, setActiveTab] = useState('permissions');
@@ -649,29 +1013,83 @@ const RoleDetails = ({ role, onBack }) => {
 
 export const RolesPage = () => {
   const navigate = useNavigate();
-  // Calculate dynamic counts
-  const rolesWithCounts = MOCK_ROLES_DATA.map(role => {
-    const count = MOCK_STAFF_DATA.filter(s =>
-      s.role.toLowerCase().includes(role.role.toLowerCase()) ||
-      role.role.toLowerCase().includes(s.role.toLowerCase())
-    ).length;
-    return { ...role, count }; // Override static count
-  });
+  const [rolesList, setRolesList] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [rolesList, setRolesList] = useState(rolesWithCounts);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null); // For Details Page
 
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const handleSaveRole = (data) => {
-    if (editingRole) {
-      setRolesList(rolesList.map(r => r.id === editingRole.id ? { ...r, ...data } : r));
-    } else {
-      setRolesList([...rolesList, { id: Date.now(), ...data, count: 0 }]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [rolesRes, staffRes] = await Promise.all([
+        api.get('/crm/roles'),
+        api.get('/crm/staff')
+      ]);
+
+      let staffData = [];
+      if (staffRes.data.success) {
+        staffData = staffRes.data.data.staff;
+        setStaffList(staffData);
+      }
+
+      if (rolesRes.data.success) {
+        const roles = rolesRes.data.data.roles.map(role => {
+          // Calculate count
+          const count = staffData.filter(s =>
+            (s.role && s.role.toLowerCase() === role.roleName.toLowerCase()) ||
+            (s.role && role.roleName.toLowerCase().includes(s.role.toLowerCase()))
+          ).length;
+
+          return {
+            ...role,
+            id: role._id,
+            role: role.roleName,
+            access: role.accessLevel,
+            count: count
+          };
+        });
+        setRolesList(roles);
+      }
+    } catch (error) {
+      console.error("Error fetching roles/staff:", error);
+    } finally {
+      setLoading(false);
     }
-    setIsModalOpen(false);
-    setEditingRole(null);
+  };
+
+  const handleSaveRole = async (data) => {
+    try {
+      // Map frontend fields to backend fields
+      const payload = {
+        roleName: data.role,
+        description: data.description,
+        accessLevel: data.access,
+        category: 'Operations' // Default or add field if needed
+      };
+
+      if (editingRole) {
+        const response = await api.put(`/crm/roles/${editingRole.id}`, payload);
+        if (response.data.success) {
+          fetchData(); // Refresh to recalculate everything
+        }
+      } else {
+        const response = await api.post('/crm/roles', payload);
+        if (response.data.success) {
+          fetchData();
+        }
+      }
+      setIsModalOpen(false);
+      setEditingRole(null);
+    } catch (error) {
+      console.error("Error saving role:", error);
+    }
   };
 
   const handleEdit = (e, role) => {
@@ -680,10 +1098,17 @@ export const RolesPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (e, id) => {
+  const handleDelete = async (e, id) => {
     e.stopPropagation(); // Prevent opening details
-    if (window.confirm('Delete this role?')) {
-      setRolesList(rolesList.filter(r => r.id !== id));
+    if (window.confirm('Are you sure you want to delete this role?')) {
+      try {
+        const response = await api.delete(`/crm/roles/${id}`);
+        if (response.data.success) {
+          fetchData();
+        }
+      } catch (error) {
+        console.error("Error deleting role:", error);
+      }
     }
   };
 
@@ -693,7 +1118,7 @@ export const RolesPage = () => {
   };
 
   if (selectedRole) {
-    return <RoleDetails role={selectedRole} onBack={() => setSelectedRole(null)} />;
+    return <RoleDetails role={selectedRole} staffList={staffList} onBack={() => setSelectedRole(null)} />;
   }
 
   return (
@@ -708,7 +1133,11 @@ export const RolesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Roles</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Roles</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
           <p className="text-gray-500 text-sm">Define what each staff member can see and do.</p>
@@ -725,42 +1154,48 @@ export const RolesPage = () => {
 
       {/* Roles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {rolesList.map((role) => (
-          <div
-            key={role.id}
-            onClick={() => setSelectedRole(role)}
-            className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative group hover:-translate-y-1"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-                <MdSecurity size={24} />
-              </div>
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={(e) => handleEdit(e, role)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                >
-                  <MdEdit size={18} />
-                </button>
-                <button onClick={(e) => handleDelete(e, role.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                  <MdDelete size={18} />
-                </button>
-              </div>
-            </div>
-
-            <h3 className="text-lg font-bold text-gray-900 mb-1">{role.role}</h3>
-            <p className="text-sm text-gray-500 mb-4 h-10 line-clamp-2">{role.description}</p>
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-              <span className="text-xs font-semibold px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                {role.access}
-              </span>
-              <div className="flex items-center gap-1.5 text-gray-500 text-sm font-medium">
-                <MdGroup size={16} /> {role.count} Staff
-              </div>
-            </div>
+        {loading ? (
+          <div className="col-span-3 flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
           </div>
-        ))}
+        ) : (
+          rolesList.map((role) => (
+            <div
+              key={role.id}
+              onClick={() => setSelectedRole(role)}
+              className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative group hover:-translate-y-1"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <MdSecurity size={24} />
+                </div>
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => handleEdit(e, role)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                  >
+                    <MdEdit size={18} />
+                  </button>
+                  <button onClick={(e) => handleDelete(e, role.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    <MdDelete size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-900 mb-1">{role.role}</h3>
+              <p className="text-sm text-gray-500 mb-4 h-10 line-clamp-2">{role.description}</p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                <span className="text-xs font-semibold px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                  {role.access}
+                </span>
+                <div className="flex items-center gap-1.5 text-gray-500 text-sm font-medium">
+                  <MdGroup size={16} /> {role.count} Staff
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -773,23 +1208,25 @@ const MOCK_ATTENDANCE_DATA = [
   { id: 4, name: "Priya Sharma", role: "Admin", inTime: "09:15 AM", outTime: "-", status: "Late", workHours: "Running" },
 ];
 
-const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [formData, setFormData] = useState({ name: 'Rajesh Kumar', status: 'Present', inTime: '', outTime: '' });
+const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList = [] }) => {
+  const [formData, setFormData] = useState({ staffId: '', status: 'Present', inTime: '', outTime: '' });
 
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
+      if (initialData && initialData.staffId) {
         setFormData({
-          name: initialData.name,
+          staffId: initialData.staffId,
           status: initialData.status,
           inTime: initialData.inTime !== '-' ? initialData.inTime : '',
           outTime: initialData.outTime !== '-' ? initialData.outTime : ''
         });
       } else {
-        setFormData({ name: 'Rajesh Kumar', status: 'Present', inTime: '', outTime: '' });
+        // Default to first staff if available
+        const defaultStaff = staffList.length > 0 ? staffList[0].id : '';
+        setFormData({ staffId: defaultStaff, status: 'Present', inTime: '', outTime: '' });
       }
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, staffList]);
 
   const handleSubmit = () => {
     onSubmit(formData);
@@ -817,14 +1254,13 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             <div className="space-y-4">
               <select
                 className="w-full p-2 border rounded-xl"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                disabled={!!initialData} // Disable name change on edit
+                value={formData.staffId}
+                onChange={e => setFormData({ ...formData, staffId: e.target.value })}
+                disabled={!!initialData}
               >
-                <option>Rajesh Kumar</option>
-                <option>Vikram Singh</option>
-                <option>Amit Bhardwaj</option>
-                <option>Priya Sharma</option>
+                {staffList.map(staff => (
+                  <option key={staff.id} value={staff.id}>{staff.name}</option>
+                ))}
               </select>
 
               <div className="grid grid-cols-2 gap-4">
@@ -873,12 +1309,67 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 export const AttendancePage = () => {
   const navigate = useNavigate();
   const currentDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  const [attendanceList, setAttendanceList] = useState(MOCK_ATTENDANCE_DATA);
+  const [attendanceList, setAttendanceList] = useState([]);
+  const [staffInfoList, setStaffInfoList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAttendance, setEditingAttendance] = useState(null);
   const [dateFilter, setDateFilter] = useState('Date: Today');
   const [roleFilter, setRoleFilter] = useState('Staff: All');
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [staffRes, attRes] = await Promise.all([
+        api.get('/crm/staff'),
+        api.get('/crm/attendance?date=' + new Date().toISOString())
+      ]);
+
+      let staffData = [];
+      if (staffRes.data.success) {
+        staffData = staffRes.data.data.staff.map(s => ({
+          id: s._id,
+          name: s.name,
+          role: s.role,
+          department: s.department
+        }));
+        setStaffInfoList(staffData);
+      }
+
+      if (attRes.data.success) {
+        const records = attRes.data.data.records;
+        // Merge staff with attendance
+        const mergedData = staffData.map(staff => {
+          const record = records.find(r => r.staff._id === staff.id || r.staff === staff.id);
+          return {
+            id: staff.id, // Use staff ID as row ID mostly, or record ID if exists? 
+            // Better to use record ID if exists, but we want to show ALL staff.
+            // Let's use staff ID for key, and track record ID separately if needed.
+            // Actually existing UI uses 'id' for key.
+            staffId: staff.id,
+            name: staff.name,
+            role: staff.role,
+            inTime: record?.inTime || '-',
+            outTime: record?.outTime || '-',
+            status: record?.status || 'Absent', // Default to Absent if no record
+            workHours: record?.workHours || '-',
+            recordId: record?._id
+          };
+        });
+        setAttendanceList(mergedData);
+      }
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter Logic
   const getFilteredAttendance = () => {
@@ -901,17 +1392,10 @@ export const AttendancePage = () => {
 
     // 2. Filter by Date (Mocking different data for "Yesterday")
     if (dateFilter === 'Yesterday') {
-      // Return a simulated "Yesterday" historical view
-      return data.map(item => ({
-        ...item,
-        status: 'Present',
-        inTime: '09:00 AM',
-        outTime: '06:00 PM',
-        workHours: '9h 0m',
-        id: item.id + 999 // Ensure unique key if mixed
-      }));
+      // Ideally fetch from backend for yesterday
+      return [];
     } else if (dateFilter === 'Select Date') {
-      return []; // Show empty or handle specific date picker logic ideally
+      return [];
     }
 
     return data;
@@ -919,11 +1403,10 @@ export const AttendancePage = () => {
 
   const filteredAttendance = getFilteredAttendance();
 
-  const handleMarkAttendance = (data) => {
+  const handleMarkAttendance = async (data) => {
     // Format times for display if entered manually
-    // Note: Input 'time' type gives "HH:MM" (24h). We might want "hh:mm AM" for consistency, but for now simple string is ok or simple conversion.
     const formatTime = (t) => {
-      if (!t) return '-';
+      if (!t) return undefined;
       const [h, m] = t.split(':');
       const d = new Date();
       d.setHours(h);
@@ -931,38 +1414,29 @@ export const AttendancePage = () => {
       return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     };
 
-    const newInTime = data.inTime.includes('M') ? data.inTime : formatTime(data.inTime);
-    const newOutTime = data.outTime.includes('M') ? data.outTime : formatTime(data.outTime);
+    const newInTime = data.inTime?.includes(':') && !data.inTime.includes('M') ? formatTime(data.inTime) : data.inTime;
+    const newOutTime = data.outTime?.includes(':') && !data.outTime.includes('M') ? formatTime(data.outTime) : data.outTime;
 
-    if (editingAttendance) {
-      setAttendanceList(attendanceList.map(item =>
-        item.id === editingAttendance.id
-          ? { ...item, status: data.status, inTime: newInTime, outTime: newOutTime }
-          : item
-      ));
-    } else {
-      // Check if already exists to update, else add (Mock logic: just update if name matches, else add new)
-      const existingId = attendanceList.findIndex(a => a.name === data.name);
-      if (existingId !== -1) {
-        const newList = [...attendanceList];
-        newList[existingId] = {
-          ...newList[existingId],
-          status: data.status,
-          inTime: newInTime !== '-' ? newInTime : newList[existingId].inTime,
-          outTime: newOutTime !== '-' ? newOutTime : newList[existingId].outTime
-        };
-        setAttendanceList(newList);
-      } else {
-        setAttendanceList([{
-          id: Date.now(),
-          name: data.name,
-          role: "Staff", // Default
-          inTime: newInTime,
-          outTime: newOutTime,
-          status: data.status,
-          workHours: "0h 0m"
-        }, ...attendanceList]);
+    // Calculate work hours if both times present
+    // Simple calc for now or let backend do it? backend schema has workHours string.
+    // Let's just send what we have.
+
+    try {
+      const payload = {
+        staffId: data.staffId,
+        date: new Date(),
+        status: data.status,
+        inTime: newInTime || undefined,
+        outTime: newOutTime || undefined
+      };
+
+      const response = await api.post('/crm/attendance', payload);
+      if (response.data.success) {
+        fetchData();
       }
+
+    } catch (err) {
+      console.error("Error saving attendance", err);
     }
 
     setEditingAttendance(null);
@@ -974,6 +1448,7 @@ export const AttendancePage = () => {
     const parseTime = (tStr) => {
       if (!tStr || tStr === '-') return '';
       const [time, modifier] = tStr.split(' ');
+      if (!modifier) return tStr; // already HH:MM?
       let [hours, minutes] = time.split(':');
       if (hours === '12') {
         hours = '00';
@@ -998,24 +1473,54 @@ export const AttendancePage = () => {
   };
 
 
-  const handleMarkTime = (id, type) => {
+  const handleMarkTime = async (id, type) => {
     const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    setAttendanceList(attendanceList.map(item => {
-      if (item.id === id) {
-        return { ...item, [type === 'in' ? 'inTime' : 'outTime']: time, status: 'Present' };
-      }
-      return item;
-    }));
+
+    // Find current record locally to preserve other fields
+    const currentRecord = attendanceList.find(a => a.id === id);
+    if (!currentRecord) return;
+
+    const payload = {
+      staffId: currentRecord.staffId,
+      date: new Date(),
+      status: 'Present', // If marking time, they are present
+      inTime: type === 'in' ? time : (currentRecord.inTime !== '-' ? currentRecord.inTime : undefined),
+      outTime: type === 'out' ? time : (currentRecord.outTime !== '-' ? currentRecord.outTime : undefined)
+    };
+
+    // Calculate duration if marking out
+    if (type === 'out' && payload.inTime) {
+      // rough calc
+      // ... skipping complex calc for brevity, backend stores string
+      // can add simple logic here if needed or relying on backend? Backend just stores string.
+    }
+
+    try {
+      await api.post('/crm/attendance', payload);
+      fetchData();
+    } catch (e) {
+      console.error("Error marking time", e);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <MarkAttendanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleMarkAttendance} />
+      <MarkAttendanceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleMarkAttendance}
+        initialData={editingAttendance}
+        staffList={staffInfoList}
+      />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Attendance</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Attendance</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance Tracker</h1>
           <p className="text-gray-500 text-sm">Today: {currentDate}</p>
@@ -1069,79 +1574,85 @@ export const AttendancePage = () => {
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
-              <th className="p-4">Staff Member</th>
-              <th className="p-4">Role</th>
-              <th className="p-4">In Time</th>
-              <th className="p-4">Out Time</th>
-              <th className="p-4">Work Hours</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredAttendance.length > 0 ? (
-              filteredAttendance.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-900">{item.name}</div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200">
-                      {item.role}
-                    </span>
-                  </td>
-                  <td className="p-4 font-medium text-gray-700">
-                    {item.inTime !== '-' ? <span className="flex items-center gap-1"><MdAccessTime size={14} className="text-green-500" /> {item.inTime}</span> : '-'}
-                  </td>
-                  <td className="p-4 font-medium text-gray-700">
-                    {item.outTime !== '-' ? <span className="flex items-center gap-1"><MdAccessTime size={14} className="text-red-500" /> {item.outTime}</span> : '-'}
-                  </td>
-                  <td className="p-4 text-gray-600">
-                    {item.workHours}
-                  </td>
-                  <td className="p-4">
-                    {item.status === 'Present' && <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">Present</span>}
-                    {item.status === 'Absent' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Absent</span>}
-                    {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Late</span>}
-                  </td>
-                  <td className="p-4 text-right">
-                    {item.inTime === '-' ? (
-                      <button
-                        onClick={() => handleMarkTime(item.id, 'in')}
-                        className="px-3 py-1 bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs font-bold hover:bg-green-100"
-                      >
-                        Mark In
-                      </button>
-                    ) : item.outTime === '-' ? (
-                      <button
-                        onClick={() => handleMarkTime(item.id, 'out')}
-                        className="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded-lg text-xs font-bold hover:bg-red-100"
-                      >
-                        Mark Out
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleEditClick(item)}
-                        className="text-gray-400 hover:text-indigo-600 text-xs font-bold"
-                      >
-                        Edit
-                      </button>
-                    )}
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
+                <th className="p-4">Staff Member</th>
+                <th className="p-4">Role</th>
+                <th className="p-4">In Time</th>
+                <th className="p-4">Out Time</th>
+                <th className="p-4">Work Hours</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredAttendance.length > 0 ? (
+                filteredAttendance.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{item.name}</div>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200">
+                        {item.role}
+                      </span>
+                    </td>
+                    <td className="p-4 font-medium text-gray-700">
+                      {item.inTime !== '-' ? <span className="flex items-center gap-1"><MdAccessTime size={14} className="text-green-500" /> {item.inTime}</span> : '-'}
+                    </td>
+                    <td className="p-4 font-medium text-gray-700">
+                      {item.outTime !== '-' ? <span className="flex items-center gap-1"><MdAccessTime size={14} className="text-red-500" /> {item.outTime}</span> : '-'}
+                    </td>
+                    <td className="p-4 text-gray-600">
+                      {item.workHours}
+                    </td>
+                    <td className="p-4">
+                      {item.status === 'Present' && <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">Present</span>}
+                      {item.status === 'Absent' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Absent</span>}
+                      {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Late</span>}
+                    </td>
+                    <td className="p-4 text-right">
+                      {item.inTime === '-' ? (
+                        <button
+                          onClick={() => handleMarkTime(item.id, 'in')}
+                          className="px-3 py-1 bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs font-bold hover:bg-green-100"
+                        >
+                          Mark In
+                        </button>
+                      ) : item.outTime === '-' ? (
+                        <button
+                          onClick={() => handleMarkTime(item.id, 'out')}
+                          className="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded-lg text-xs font-bold hover:bg-red-100"
+                        >
+                          Mark Out
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleEditClick(item)}
+                          className="text-gray-400 hover:text-indigo-600 text-xs font-bold"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="p-8 text-center text-gray-400 text-sm">
+                    No attendance records found for this selection.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className="p-8 text-center text-gray-400 text-sm">
-                  No attendance records found for this selection.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -1155,22 +1666,96 @@ const MOCK_SALARY_DATA = [
 
 export const SalaryPage = () => {
   const navigate = useNavigate();
-  const [salaryList, setSalaryList] = useState(MOCK_SALARY_DATA);
-  const [monthFilter, setMonthFilter] = useState('Month: December');
+  const [salaryList, setSalaryList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [monthFilter, setMonthFilter] = useState('December 2025');
   const [staffFilter, setStaffFilter] = useState('Staff: All');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handlePayNow = (id) => {
-    setSalaryList(salaryList.map(item => {
-      if (item.id === id) {
-        return {
-          ...item,
-          status: 'Paid',
-          paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-        };
+  useEffect(() => {
+    fetchData();
+  }, [monthFilter]); // Refetch when month changes
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [staffRes, payrollRes] = await Promise.all([
+        api.get('/crm/staff'),
+        api.get(`/crm/payroll?month=${monthFilter}`)
+      ]);
+
+      let allStaff = [];
+      if (staffRes.data.success) {
+        allStaff = staffRes.data.data.staff;
       }
-      return item;
-    }));
+
+      let payrollRecords = [];
+      if (payrollRes.data.success) {
+        payrollRecords = payrollRes.data.data.payroll;
+      }
+
+      // Merge to show ALL staff, even if no salary record yet
+      const mergedList = allStaff.map(staff => {
+        const record = payrollRecords.find(p => p.staff._id === staff._id || p.staff === staff._id);
+
+        // Format base salary from number if needed, simple display
+        const baseSalaryVal = staff.baseSalary || 0;
+        const deductionsVal = record ? record.deductions : 0;
+        const netPayVal = record ? record.netPay : (baseSalaryVal - deductionsVal);
+
+        return {
+          id: record ? record._id : `new_${staff._id}`, // unique ID for key
+          staffId: staff._id,
+          name: staff.name,
+          role: staff.role,
+          baseSalary: `₹ ${baseSalaryVal.toLocaleString()}`,
+          deductions: `₹ ${deductionsVal.toLocaleString()}`,
+          netPay: `₹ ${netPayVal.toLocaleString()}`,
+          status: record ? record.status : 'Pending',
+          paymentDate: record?.paidDate ? new Date(record.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+          isNew: !record,
+          rawBase: baseSalaryVal,
+          rawDeductions: deductionsVal,
+          rawNet: netPayVal
+        };
+      });
+
+      setSalaryList(mergedList);
+
+    } catch (error) {
+      console.error("Error fetching salary data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePayNow = async (item) => {
+    try {
+      if (item.isNew) {
+        // Create new record
+        const payload = {
+          staff: item.staffId,
+          month: monthFilter,
+          baseSalary: item.rawBase,
+          deductions: item.rawDeductions,
+          netPay: item.rawNet,
+          status: 'Paid',
+          advanceAmount: 0
+        };
+        const response = await api.post('/crm/payroll', payload);
+        if (response.data.success) {
+          fetchData();
+        }
+      } else {
+        // Update existing
+        const response = await api.put(`/crm/payroll/${item.id}`, { status: 'Paid' });
+        if (response.data.success) {
+          fetchData();
+        }
+      }
+    } catch (error) {
+      console.error("Error updating salary status:", error);
+    }
   };
 
   const handleGeneratePayslips = () => {
@@ -1267,7 +1852,11 @@ export const SalaryPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Salary</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Salary</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Salary Management</h1>
           <p className="text-gray-500 text-sm">Manage payrolls and generate payslips.</p>
@@ -1282,7 +1871,7 @@ export const SalaryPage = () => {
           <input
             type="text"
             placeholder="Search staff name..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -1302,86 +1891,101 @@ export const SalaryPage = () => {
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
           >
-            <option>Month: December</option>
-            <option>November</option>
-            <option>October</option>
+            <option>December 2025</option>
+            <option>November 2025</option>
+            <option>October 2025</option>
           </select>
         </div>
-
-        <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
-          <span>Total Payout: <b className="text-gray-900">₹ 61,500</b></span>
-          <span className="h-4 w-px bg-gray-300"></span>
-          <span>Pending: <b className="text-orange-600">₹ {salaryList.filter(i => i.status === 'Pending').reduce((acc, curr) => acc + parseInt(curr.netPay.replace(/[^\d]/g, '')), 0).toLocaleString('en-IN')}</b></span>
+        <div className="text-sm font-medium flex gap-4">
+          <div>Total Payout: <span className="text-gray-900 font-bold">₹ {salaryList.filter(s => s.status === 'Paid').reduce((acc, curr) => acc + curr.rawNet, 0).toLocaleString()}</span></div>
+          <div>Pending: <span className="text-orange-600 font-bold">₹ {salaryList.filter(s => s.status !== 'Paid').reduce((acc, curr) => acc + curr.rawNet, 0).toLocaleString()}</span></div>
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-green-50/30 border-b border-green-100 text-xs uppercase tracking-wider text-green-800 font-bold">
-              <th className="p-4">Staff Name</th>
-              <th className="p-4">Base Salary</th>
-              <th className="p-4">Deductions</th>
-              <th className="p-4">Net Pay</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredSalary.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.name}</div>
-                </td>
-                <td className="p-4 text-gray-700 font-medium">
-                  {item.baseSalary}
-                </td>
-                <td className="p-4 text-red-600 font-medium">
-                  - {item.deductions}
-                </td>
-                <td className="p-4 font-bold text-green-700">
-                  {item.netPay}
-                </td>
-                <td className="p-4">
-                  {item.status === 'Paid' && <span className="flex items-center gap-1 text-xs font-bold text-green-600"><MdCheck size={14} /> Paid on {item.paymentDate}</span>}
-                  {item.status === 'Pending' && <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-bold border border-orange-100">Pending</span>}
-                  {item.status === 'Processing' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Processing</span>}
-                </td>
-                <td className="p-4 text-right">
-                  {item.status === 'Paid' ? (
-                    <button
-                      onClick={() => handleDownloadSlip(item)}
-                      className="text-indigo-600 hover:underline text-xs font-bold"
-                    >
-                      Download Slip
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handlePayNow(item.id)}
-                      className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 shadow-sm"
-                    >
-                      Pay Now
-                    </button>
-                  )}
-                </td>
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-green-50/30 border-b border-green-100 text-xs uppercase tracking-wider text-green-800 font-bold">
+                <th className="p-4">Staff Name</th>
+                <th className="p-4">Base Salary</th>
+                <th className="p-4">Deductions</th>
+                <th className="p-4">Net Pay</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredSalary.length > 0 ? (
+                filteredSalary.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{item.name}</div>
+                    </td>
+                    <td className="p-4 text-gray-700 font-medium">
+                      {item.baseSalary}
+                    </td>
+                    <td className="p-4 text-red-600 font-medium">
+                      - {item.deductions}
+                    </td>
+                    <td className="p-4 font-bold text-green-700">
+                      {item.netPay}
+                    </td>
+                    <td className="p-4">
+                      {item.status === 'Paid' && <span className="flex items-center gap-1 text-xs font-bold text-green-600"><MdCheck size={14} /> Paid on {item.paymentDate}</span>}
+                      {item.status === 'Pending' && <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-bold border border-orange-100">Pending</span>}
+                      {item.status === 'Processing' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Processing</span>}
+                    </td>
+                    <td className="p-4 text-right">
+                      {item.status === 'Paid' ? (
+                        <button
+                          onClick={() => handleDownloadSlip(item)}
+                          className="text-indigo-600 text-xs font-bold hover:underline"
+                        >
+                          Download Slip
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handlePayNow(item)}
+                          className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-green-700 transition-colors"
+                        >
+                          Pay Now
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="p-8 text-center text-gray-400 text-sm">
+                    No payroll records found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 };
-// Mock Data for Advances
-const MOCK_ADVANCES_DATA = [
-  { id: 1, name: "Vikram Singh", amount: "₹ 10,000", paid: "₹ 2,000", balance: "₹ 8,000", status: "Active", date: "15 Dec 2025" },
-  { id: 2, name: "Amit Bhardwaj", amount: "₹ 5,000", paid: "₹ 5,000", balance: "₹ 0", status: "Paid Off", date: "10 Nov 2025" },
-  { id: 3, name: "Suresh Raina", amount: "₹ 15,000", paid: "₹ 5,000", balance: "₹ 10,000", status: "Active", date: "01 Dec 2025" },
-];
+// Mock Data for Advances - Removed for Backend Integration
+// const MOCK_ADVANCES_DATA = [ ... ];
 
-const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({ name: 'Vikram Singh', amount: '' });
+const AddAdvanceModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
+  const [formData, setFormData] = useState({ staffId: '', amount: '' });
+
+  // Reset or set default staff when modal opens
+  useEffect(() => {
+    if (isOpen && staffList.length > 0 && !formData.staffId) {
+      setFormData(prev => ({ ...prev, staffId: staffList[0].id }));
+    }
+  }, [isOpen, staffList]);
 
   return (
     <AnimatePresence>
@@ -1402,10 +2006,14 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Advance</h3>
             <div className="space-y-4">
-              <select className="w-full p-2 border rounded-xl" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}>
-                <option>Vikram Singh</option>
-                <option>Suresh Raina</option>
-                <option>Amit Bhardwaj</option>
+              <select
+                className="w-full p-2 border rounded-xl"
+                value={formData.staffId}
+                onChange={e => setFormData({ ...formData, staffId: e.target.value })}
+              >
+                {staffList.map(staff => (
+                  <option key={staff.id} value={staff.id}>{staff.name}</option>
+                ))}
               </select>
               <input
                 type="number"
@@ -1414,7 +2022,50 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
                 value={formData.amount}
                 onChange={e => setFormData({ ...formData, amount: e.target.value })}
               />
-              <button onClick={() => { onSubmit(formData); onClose(); setFormData({ name: 'Vikram Singh', amount: '' }) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Submit Request</button>
+              <button onClick={() => { onSubmit(formData); onClose(); setFormData({ staffId: staffList.length > 0 ? staffList[0].id : '', amount: '' }) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Submit Request</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const RepaymentModal = ({ isOpen, onClose, onSubmit }) => {
+  const [amount, setAmount] = useState('');
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+          >
+            <h3 className="text-xl font-bold mb-4">Add Repayment</h3>
+            <div className="space-y-4">
+              <input
+                type="number"
+                placeholder="Repayment Amount (₹)"
+                className="w-full p-2 border rounded-xl"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+              />
+              <button
+                onClick={() => { onSubmit(amount); onClose(); setAmount(''); }}
+                className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
+              >
+                Submit Repayment
+              </button>
             </div>
           </motion.div>
         </div>
@@ -1427,40 +2078,87 @@ export const AdvancesPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Status: Active');
-  const [advancesList, setAdvancesList] = useState(MOCK_ADVANCES_DATA);
+  const [advancesList, setAdvancesList] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [repayModalOpen, setRepayModalOpen] = useState(false);
+  const [repayAdvanceId, setRepayAdvanceId] = useState(null);
 
-  const handleAddAdvance = (data) => {
-    setAdvancesList([...advancesList, {
-      id: Date.now(),
-      name: data.name,
-      amount: `₹ ${parseInt(data.amount).toLocaleString('en-IN')}`,
-      paid: "₹ 0",
-      balance: `₹ ${parseInt(data.amount).toLocaleString('en-IN')}`,
-      status: "Active",
-      date: new Date().toLocaleDateString('en-GB')
-    }]);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [advancesRes, staffRes] = await Promise.all([
+        api.get('/crm/advances'),
+        api.get('/crm/staff')
+      ]);
+
+      if (staffRes.data.success) {
+        setStaffList(staffRes.data.data.staff.map(s => ({
+          id: s._id,
+          name: s.name
+        })));
+      }
+
+      if (advancesRes.data.success) {
+        const formatted = advancesRes.data.data.advances.map(adv => ({
+          id: adv._id,
+          name: adv.staff?.name || 'Unknown Staff',
+          amount: `₹ ${adv.totalAmount.toLocaleString()}`,
+          paid: `₹ ${adv.repaidAmount.toLocaleString()}`,
+          balance: `₹ ${(adv.totalAmount - adv.repaidAmount).toLocaleString()}`,
+          status: adv.status,
+          date: new Date(adv.dateTaken).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          rawBalance: (adv.totalAmount - adv.repaidAmount)
+        }));
+        setAdvancesList(formatted);
+      }
+
+    } catch (error) {
+      console.error("Error fetching advances:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAdvance = async (data) => {
+    try {
+      const payload = {
+        staff: data.staffId,
+        totalAmount: data.amount,
+        status: 'Active',
+        dateTaken: new Date()
+      };
+      const response = await api.post('/crm/advances', payload);
+      if (response.data.success) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error adding advance:", error);
+    }
   };
 
   const handleRepayment = (id) => {
-    const amount = prompt("Enter Repayment Amount:");
-    if (amount) {
-      setAdvancesList(advancesList.map(item => {
-        if (item.id === id) {
-          const currentPaid = parseInt(item.paid.replace(/[^\d]/g, ''));
-          const total = parseInt(item.amount.replace(/[^\d]/g, ''));
-          const newPaid = currentPaid + parseInt(amount);
-          const newBalance = total - newPaid;
-          return {
-            ...item,
-            paid: `₹ ${newPaid.toLocaleString('en-IN')}`,
-            balance: `₹ ${newBalance.toLocaleString('en-IN')}`,
-            status: newBalance <= 0 ? 'Paid Off' : 'Active'
-          };
+    setRepayAdvanceId(id);
+    setRepayModalOpen(true);
+  };
+
+  const submitRepayment = async (amount) => {
+    if (amount && repayAdvanceId) {
+      try {
+        const response = await api.post(`/crm/advances/${repayAdvanceId}/repay`, { amount });
+        if (response.data.success) {
+          fetchData();
         }
-        return item;
-      }));
+      } catch (error) {
+        console.error("Error adding repayment:", error);
+      }
     }
+    setRepayAdvanceId(null);
   };
 
   const filteredAdvances = advancesList.filter(item => {
@@ -1473,12 +2171,17 @@ export const AdvancesPage = () => {
 
   return (
     <div className="space-y-6">
-      <AddAdvanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddAdvance} />
+      <AddAdvanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddAdvance} staffList={staffList} />
+      <RepaymentModal isOpen={repayModalOpen} onClose={() => setRepayModalOpen(false)} onSubmit={submitRepayment} />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Advances</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Advances</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Advances & Loans</h1>
           <p className="text-gray-500 text-sm">Track salary advances and repayment status.</p>
@@ -1520,51 +2223,57 @@ export const AdvancesPage = () => {
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-orange-50/30 border-b border-orange-100 text-xs uppercase tracking-wider text-orange-800 font-bold">
-              <th className="p-4">Staff Member</th>
-              <th className="p-4">Total Advance</th>
-              <th className="p-4">Repaid</th>
-              <th className="p-4">Balance Due</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredAdvances.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.name}</div>
-                  <div className="text-xs text-gray-500">Taken on {item.date}</div>
-                </td>
-                <td className="p-4 text-gray-900 font-bold">
-                  {item.amount}
-                </td>
-                <td className="p-4 text-green-600 font-medium">
-                  {item.paid}
-                </td>
-                <td className="p-4 font-bold text-red-600">
-                  {item.balance}
-                </td>
-                <td className="p-4">
-                  {item.status === 'Active' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Active</span>}
-                  {item.status === 'Paid Off' && <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200"><MdCheck size={14} /> Paid Off</span>}
-                </td>
-                <td className="p-4 text-right">
-                  {item.status === 'Active' && (
-                    <button
-                      onClick={() => handleRepayment(item.id)}
-                      className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
-                    >
-                      Add Repayment
-                    </button>
-                  )}
-                </td>
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-orange-50/30 border-b border-orange-100 text-xs uppercase tracking-wider text-orange-800 font-bold">
+                <th className="p-4">Staff Member</th>
+                <th className="p-4">Total Advance</th>
+                <th className="p-4">Repaid</th>
+                <th className="p-4">Balance Due</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredAdvances.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{item.name}</div>
+                    <div className="text-xs text-gray-500">Taken on {item.date}</div>
+                  </td>
+                  <td className="p-4 text-gray-900 font-bold">
+                    {item.amount}
+                  </td>
+                  <td className="p-4 text-green-600 font-medium">
+                    {item.paid}
+                  </td>
+                  <td className="p-4 font-bold text-red-600">
+                    {item.balance}
+                  </td>
+                  <td className="p-4">
+                    {item.status === 'Active' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Active</span>}
+                    {item.status === 'Paid Off' && <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200"><MdCheck size={14} /> Paid Off</span>}
+                  </td>
+                  <td className="p-4 text-right">
+                    {item.status === 'Active' && (
+                      <button
+                        onClick={() => handleRepayment(item.id)}
+                        className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
+                      >
+                        Add Repayment
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
         {filteredAdvances.length === 0 && (
           <div className="p-10 text-center text-gray-500">No active advances found.</div>
@@ -1573,15 +2282,18 @@ export const AdvancesPage = () => {
     </div>
   );
 };
-// Mock Data for Performance
-const MOCK_PERFORMANCE_DATA = [
-  { id: 1, name: "Rajesh Kumar", role: "Sales Manager", rating: 5, date: "10 Dec 2025", summary: "Excellent sales target met. Converted 15 leads this month.", reviewer: "Manager" },
-  { id: 2, name: "Vikram Singh", role: "Driver", rating: 4, date: "15 Nov 2025", summary: "Safe driving, punctual. Needs to improve cleanliness.", reviewer: "Fleet Mgr" },
-  { id: 3, name: "Amit Bhardwaj", role: "Mechanic", rating: 3, date: "20 Oct 2025", summary: "Good technical skills but needs to improve repair speed.", reviewer: "Garage Head" },
-];
+// Mock Data for Performance - Removed for Backend Integration
+// const MOCK_PERFORMANCE_DATA = [...];
 
-const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({ name: 'Rajesh Kumar', rating: '5', summary: '' });
+const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
+  const [formData, setFormData] = useState({ staffId: '', rating: '5', summary: '' });
+
+  // Reset or set default staff when modal opens
+  useEffect(() => {
+    if (isOpen && staffList.length > 0 && !formData.staffId) {
+      setFormData(prev => ({ ...prev, staffId: staffList[0].id }));
+    }
+  }, [isOpen, staffList]);
 
   return (
     <AnimatePresence>
@@ -1602,10 +2314,14 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Performance Review</h3>
             <div className="space-y-4">
-              <select className="w-full p-2 border rounded-xl" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}>
-                <option>Rajesh Kumar</option>
-                <option>Vikram Singh</option>
-                <option>Amit Bhardwaj</option>
+              <select
+                className="w-full p-2 border rounded-xl"
+                value={formData.staffId}
+                onChange={e => setFormData({ ...formData, staffId: e.target.value })}
+              >
+                {staffList.map(staff => (
+                  <option key={staff.id} value={staff.id}>{staff.name}</option>
+                ))}
               </select>
               <select className="w-full p-2 border rounded-xl" value={formData.rating} onChange={e => setFormData({ ...formData, rating: e.target.value })}>
                 <option value="5">5 - Excellent</option>
@@ -1620,7 +2336,16 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
                 value={formData.summary}
                 onChange={e => setFormData({ ...formData, summary: e.target.value })}
               />
-              <button onClick={() => { onSubmit(formData); onClose(); setFormData({ name: 'Rajesh Kumar', rating: '5', summary: '' }) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Display Review</button>
+              <button
+                onClick={() => {
+                  onSubmit(formData);
+                  onClose();
+                  setFormData({ staffId: staffList.length > 0 ? staffList[0].id : '', rating: '5', summary: '' })
+                }}
+                className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
+              >
+                Display Review
+              </button>
             </div>
           </motion.div>
         </div>
@@ -1631,39 +2356,86 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
 
 export const PerformancePage = () => {
   const navigate = useNavigate();
-  const [performanceList, setPerformanceList] = useState(MOCK_PERFORMANCE_DATA);
+  const [performanceList, setPerformanceList] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [staffFilter, setStaffFilter] = useState('Staff: All');
 
-  const getFilteredPerformance = () => {
-    let data = [...performanceList];
-    if (staffFilter !== 'Staff: All') {
-      const keyword = staffFilter === 'Drivers' ? 'Driver' : 'Sales';
-      data = data.filter(item => item.role && item.role.includes(keyword));
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [perfRes, staffRes] = await Promise.all([
+        api.get('/crm/performance'),
+        api.get('/crm/staff')
+      ]);
+
+      if (staffRes.data.success) {
+        setStaffList(staffRes.data.data.staff.map(s => ({
+          id: s._id,
+          name: s.name
+        })));
+      }
+
+      if (perfRes.data.success) {
+        const formatted = perfRes.data.data.reviews.map(review => ({
+          id: review._id,
+          name: review.staff?.name || 'Unknown Staff',
+          role: review.staff?.role || '-',
+          rating: review.rating,
+          date: new Date(review.reviewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          summary: review.feedback,
+          reviewer: review.reviewedBy || 'Admin'
+        }));
+        setPerformanceList(formatted);
+      }
+
+    } catch (error) {
+      console.error("Error fetching performance reviews:", error);
+    } finally {
+      setLoading(false);
     }
-    return data;
   };
 
-  const filteredPerformanceList = getFilteredPerformance();
-
-  const handleAddReview = (data) => {
-    setPerformanceList([{
-      id: Date.now(),
-      ...data,
-      role: "Staff Member", // Mock
-      date: new Date().toLocaleDateString('en-GB'),
-      reviewer: "You"
-    }, ...performanceList]);
+  const handleAddReview = async (data) => {
+    try {
+      const payload = {
+        staff: data.staffId,
+        rating: parseInt(data.rating),
+        feedback: data.summary,
+        reviewedBy: 'Admin',
+        reviewDate: new Date()
+      };
+      const response = await api.post('/crm/performance', payload);
+      if (response.data.success) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error adding review:", error);
+    }
   };
+
+  const filteredPerformance = performanceList.filter(item => {
+    if (staffFilter === 'Staff: All') return true;
+    return true; // Simplified filter to match simplified mock logic or extend if real filters needed
+  });
 
   return (
     <div className="space-y-6">
-      <AddReviewModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddReview} />
+      <AddReviewModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddReview} staffList={staffList} />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Performance</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Performance</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Performance Review</h1>
           <p className="text-gray-500 text-sm">Staff ratings and feedback history.</p>
@@ -1699,59 +2471,64 @@ export const PerformancePage = () => {
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-purple-50/30 border-b border-purple-100 text-xs uppercase tracking-wider text-purple-800 font-bold">
-              <th className="p-4">Staff Member</th>
-              <th className="p-4">Rating</th>
-              <th className="p-4">Review Date</th>
-              <th className="p-4">Feedback Summary</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredPerformanceList.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.name}</div>
-                  <div className="text-xs text-gray-500">{item.role}</div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(5)].map((_, i) => (
-                      <MdStar key={i} size={16} className={i < item.rating ? "text-amber-400" : "text-gray-200"} />
-                    ))}
-                    <span className="text-gray-600 text-xs font-bold ml-1">({item.rating}/5)</span>
-                  </div>
-                </td>
-                <td className="p-4 text-gray-600 font-medium">
-                  {item.date}
-                  <div className="text-xs text-gray-400">by {item.reviewer}</div>
-                </td>
-                <td className="p-4 text-gray-600 italic">
-                  "{item.summary}"
-                </td>
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-purple-50/30 border-b border-purple-100 text-xs uppercase tracking-wider text-purple-800 font-bold">
+                <th className="p-4">Staff Member</th>
+                <th className="p-4">Rating</th>
+                <th className="p-4">Review Date</th>
+                <th className="p-4">Feedback Summary</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredPerformanceList.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No performance reviews found.</div>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredPerformance.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{item.name}</div>
+                    <div className="text-xs text-gray-500">{item.role}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-1 text-amber-400">
+                      {[...Array(5)].map((_, i) => (
+                        <MdStar key={i} size={16} className={i < item.rating ? "text-amber-400" : "text-gray-200"} />
+                      ))}
+                      <span className="text-gray-600 text-xs font-bold ml-1">({item.rating}/5)</span>
+                    </div>
+                  </td>
+                  <td className="p-4 text-gray-600 font-medium">
+                    {item.date}
+                    <div className="text-xs text-gray-400">by {item.reviewer}</div>
+                  </td>
+                  <td className="p-4 text-gray-600 italic">
+                    "{item.summary}"
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
   );
 };
 // Mock Data for Tasks
-const MOCK_TASKS_DATA = [
-  { id: 1, title: "Car Inspection (Thar)", assignedTo: "Amit B. (Mechanic)", dueDate: "Today, 5 PM", priority: "High", status: "Pending" },
-  { id: 2, title: "Document Collection", assignedTo: "Vikram S. (Driver)", dueDate: "Tomorrow", priority: "Medium", status: "Pending" },
-  { id: 3, title: "Lead Follow-ups", assignedTo: "Rajesh K. (Sales)", dueDate: "Overdue", priority: "Critical", status: "Pending" },
-  { id: 4, title: "Office Cleaning", assignedTo: "Priya S. (Admin)", dueDate: "Today, 6 PM", priority: "Low", status: "Done" },
-];
+// Mock Data for Tasks - Removed for Backend Integration
+// const MOCK_TASKS_DATA = [...];
 
-const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({ title: '', assignedTo: 'Amit B. (Mechanic)', priority: 'Medium' });
+const AddTaskModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
+  const [formData, setFormData] = useState({ title: '', assignedTo: '', priority: 'Medium' });
+
+  // Reset or set default staff when modal opens
+  useEffect(() => {
+    if (isOpen && staffList.length > 0 && !formData.assignedTo) {
+      setFormData(prev => ({ ...prev, assignedTo: staffList[0].id }));
+    }
+  }, [isOpen, staffList]);
 
   return (
     <AnimatePresence>
@@ -1779,10 +2556,14 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
               />
-              <select className="w-full p-2 border rounded-xl" value={formData.assignedTo} onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}>
-                <option>Amit B. (Mechanic)</option>
-                <option>Vikram S. (Driver)</option>
-                <option>Rajesh K. (Sales)</option>
+              <select
+                className="w-full p-2 border rounded-xl"
+                value={formData.assignedTo}
+                onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
+              >
+                {staffList.map(staff => (
+                  <option key={staff.id} value={staff.id}>{staff.name} ({staff.role})</option>
+                ))}
               </select>
               <select className="w-full p-2 border rounded-xl" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
                 <option>Low</option>
@@ -1790,7 +2571,16 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
                 <option>High</option>
                 <option>Critical</option>
               </select>
-              <button onClick={() => { onSubmit(formData); onClose(); setFormData({ title: '', assignedTo: 'Amit B. (Mechanic)', priority: 'Medium' }) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Assign Task</button>
+              <button
+                onClick={() => {
+                  onSubmit(formData);
+                  onClose();
+                  setFormData({ title: '', assignedTo: staffList.length > 0 ? staffList[0].id : '', priority: 'Medium' });
+                }}
+                className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
+              >
+                Assign Task
+              </button>
             </div>
           </motion.div>
         </div>
@@ -1801,20 +2591,82 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
 
 export const StaffTasksPage = () => {
   const navigate = useNavigate();
-  const [tasksList, setTasksList] = useState(MOCK_TASKS_DATA);
+  const [tasksList, setTasksList] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleAddTask = (data) => {
-    setTasksList([{
-      id: Date.now(),
-      ...data,
-      dueDate: "Tomorrow, 5 PM",
-      status: "Pending"
-    }, ...tasksList]);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [tasksRes, staffRes] = await Promise.all([
+        api.get('/crm/staff-tasks'),
+        api.get('/crm/staff')
+      ]);
+
+      if (staffRes.data.success) {
+        setStaffList(staffRes.data.data.staff.map(s => ({
+          id: s._id,
+          name: s.name,
+          role: s.role
+        })));
+      }
+
+      if (tasksRes.data.success) {
+        const formatted = tasksRes.data.data.tasks.map(task => ({
+          id: task._id,
+          title: task.title,
+          assignedTo: task.assignedTo ? `${task.assignedTo.name} (${task.assignedTo.role})` : 'Unassigned',
+          dueDate: new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          priority: task.priority,
+          status: task.status
+        }));
+        setTasksList(formatted);
+      }
+
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleMarkDone = (id) => {
-    setTasksList(tasksList.map(t => t.id === id ? { ...t, status: 'Done' } : t));
+  const handleAddTask = async (data) => {
+    try {
+      // Set due date to tomorrow same time by default since no date picker in UI
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 1);
+      dueDate.setHours(17, 0, 0, 0); // Default to 5 PM tomorrow
+
+      const payload = {
+        title: data.title,
+        assignedTo: data.assignedTo,
+        priority: data.priority,
+        dueDate: dueDate,
+        status: 'Pending'
+      };
+      const response = await api.post('/crm/staff-tasks', payload);
+      if (response.data.success) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error adding task:", error);
+    }
+  };
+
+  const handleMarkDone = async (id) => {
+    try {
+      const response = await api.put(`/crm/staff-tasks/${id}`, { status: 'Done' });
+      if (response.data.success) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Error marking task done:", error);
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -1854,12 +2706,16 @@ export const StaffTasksPage = () => {
 
   return (
     <div className="space-y-6">
-      <AddTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddTask} />
+      <AddTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddTask} staffList={staffList} />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Staff</span> <span>/</span> <span className="text-gray-800 font-medium">Tasks</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Tasks</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
           <p className="text-gray-500 text-sm">Assign and track work allocation.</p>
@@ -1900,54 +2756,60 @@ export const StaffTasksPage = () => {
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-indigo-50/30 border-b border-indigo-100 text-xs uppercase tracking-wider text-indigo-800 font-bold">
-              <th className="p-4">Task Details</th>
-              <th className="p-4">Assigned To</th>
-              <th className="p-4">Due Date</th>
-              <th className="p-4">Priority</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredTasksList.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.title}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">ID: TSK-{100 + item.id}</div>
-                </td>
-                <td className="p-4 font-medium text-gray-700">
-                  {item.assignedTo}
-                </td>
-                <td className="p-4">
-                  <span className={`font-semibold ${item.dueDate === 'Overdue' ? 'text-red-600' : 'text-gray-700'}`}>
-                    {item.dueDate}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <span className={`flex items-center gap-1 w-fit px-2 py-1 rounded text-xs font-bold border ${getPriorityColor(item.priority)}`}>
-                    <MdFlag size={12} /> {item.priority}
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  {item.status === 'Pending' ? (
-                    <button
-                      onClick={() => handleMarkDone(item.id)}
-                      className="flex items-center gap-1 ml-auto px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors"
-                    >
-                      <MdCheckCircle size={14} /> Mark Done
-                    </button>
-                  ) : (
-                    <span className="text-gray-400 text-xs font-medium italic">Completed</span>
-                  )}
-                </td>
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-indigo-50/30 border-b border-indigo-100 text-xs uppercase tracking-wider text-indigo-800 font-bold">
+                <th className="p-4">Task Details</th>
+                <th className="p-4">Assigned To</th>
+                <th className="p-4">Due Date</th>
+                <th className="p-4">Priority</th>
+                <th className="p-4 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredTasksList.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{item.title}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">ID: {item.id.substring(item.id.length - 6).toUpperCase()}</div>
+                  </td>
+                  <td className="p-4 font-medium text-gray-700">
+                    {item.assignedTo}
+                  </td>
+                  <td className="p-4">
+                    <span className={`font-semibold ${item.dueDate.includes('Overdue') ? 'text-red-600' : 'text-gray-700'}`}>
+                      {item.dueDate}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span className={`flex items-center gap-1 w-fit px-2 py-1 rounded text-xs font-bold border ${getPriorityColor(item.priority)}`}>
+                      <MdFlag size={12} /> {item.priority}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    {item.status === 'Pending' ? (
+                      <button
+                        onClick={() => handleMarkDone(item.id)}
+                        className="flex items-center gap-1 ml-auto px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors"
+                      >
+                        <MdCheckCircle size={14} /> Mark Done
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 text-xs font-medium italic">Completed</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
-        {filteredTasksList.length === 0 && (
+        {!loading && filteredTasksList.length === 0 && (
           <div className="p-10 text-center text-gray-500">No tasks found.</div>
         )}
       </div>

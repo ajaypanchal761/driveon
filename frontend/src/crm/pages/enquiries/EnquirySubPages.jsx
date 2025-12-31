@@ -47,6 +47,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
+import api from '../../../services/api';
 
 // --- Shared Components for Analytics ---
 const ReportCard = ({ title, subtitle, children, delay = 0, className = "" }) => (
@@ -145,17 +146,87 @@ export const AllEnquiriesPage = () => {
   const [statusFilter, setStatusFilter] = useState('Status: All');
   const [dateFilter, setDateFilter] = useState('Date: All Time');
 
+  const [enquiriesList, setEnquiriesList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEnquiry, setEditingEnquiry] = useState(null);
+
+  // Fetch all enquiries from backend
+  React.useEffect(() => {
+    fetchEnquiries();
+  }, []);
+
+  const fetchEnquiries = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/enquiries');
+      if (response.data.success) {
+        // Map backend data to frontend format
+        const mappedData = response.data.data.enquiries.map(enq => ({
+          id: enq._id,
+          name: enq.name,
+          phone: enq.phone,
+          interest: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified')),
+          source: enq.source,
+          date: enq.createdAt,
+          status: enq.status,
+          email: enq.email || '',
+          note: enq.note || enq.notes || '',
+          car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified'))
+        }));
+        setEnquiriesList(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching enquiries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEnquiry = async (data) => {
+    try {
+      if (editingEnquiry) {
+        // Update existing
+        await api.put(`/crm/enquiries/${editingEnquiry.id}`, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          note: data.note
+        });
+      }
+      // Refresh list after save
+      await fetchEnquiries();
+      setIsModalOpen(false);
+      setEditingEnquiry(null);
+    } catch (error) {
+      console.error('Error saving enquiry:', error);
+      alert('Failed to save enquiry. Please try again.');
+    }
+  };
+
+  const handleEditClick = (enquiry) => {
+    // Transform data for modal
+    setEditingEnquiry({
+      ...enquiry,
+      interest: enquiry.interest || enquiry.car
+    });
+    setIsModalOpen(true);
+  };
+
   // Filter Logic
-  const filteredEnquiries = MOCK_ENQUIRIES.filter(enquiry => {
+  const filteredEnquiries = enquiriesList.filter(enquiry => {
     // Search
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      enquiry.name.toLowerCase().includes(searchLower) ||
-      enquiry.phone.includes(searchTerm) ||
-      enquiry.car.toLowerCase().includes(searchLower);
+      (enquiry.name || '').toLowerCase().includes(searchLower) ||
+      (enquiry.phone || '').includes(searchTerm) ||
+      (enquiry.car || '').toLowerCase().includes(searchLower);
 
     // Status
-    const matchesStatus = statusFilter === 'Status: All' || enquiry.status === statusFilter;
+    const statusVal = statusFilter.replace('Status: ', '');
+    const matchesStatus = statusFilter === 'Status: All' || enquiry.status === statusVal;
 
     // Date
     let matchesDate = true;
@@ -164,17 +235,17 @@ export const AllEnquiriesPage = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      if (dateFilter === 'Today') {
+      if (dateFilter === 'Date: Today') {
         matchesDate = enquiryDate.toDateString() === today.toDateString();
-      } else if (dateFilter === 'Yesterday') {
+      } else if (dateFilter === 'Date: Yesterday') {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         matchesDate = enquiryDate.toDateString() === yesterday.toDateString();
-      } else if (dateFilter === 'Last 7 Days') {
+      } else if (dateFilter === 'Date: Last 7 Days') {
         const last7 = new Date(today);
         last7.setDate(last7.getDate() - 7);
         matchesDate = enquiryDate >= last7;
-      } else if (dateFilter === 'This Month') {
+      } else if (dateFilter === 'Date: This Month') {
         matchesDate = enquiryDate.getMonth() === today.getMonth() && enquiryDate.getFullYear() === today.getFullYear();
       }
     }
@@ -204,7 +275,11 @@ export const AllEnquiriesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">All Enquiries</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">All Enquiries</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">All Enquiries</h1>
           <p className="text-gray-500 text-sm">Manage and track all customer leads.</p>
@@ -248,10 +323,10 @@ export const AllEnquiriesPage = () => {
               onChange={(e) => setDateFilter(e.target.value)}
             >
               <option>Date: All Time</option>
-              <option>Today</option>
-              <option>Yesterday</option>
-              <option>Last 7 Days</option>
-              <option>This Month</option>
+              <option>Date: Today</option>
+              <option>Date: Yesterday</option>
+              <option>Date: Last 7 Days</option>
+              <option>Date: This Month</option>
             </select>
             <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
@@ -273,12 +348,20 @@ export const AllEnquiriesPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-              {filteredEnquiries.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      Loading enquiries...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredEnquiries.length > 0 ? (
                 filteredEnquiries.map((enquiry) => (
                   <tr
                     key={enquiry.id}
-                    onClick={() => navigate(`/crm/enquiries/${enquiry.id}`)}
-                    className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                    className="hover:bg-gray-50/50 transition-colors group"
                   >
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{enquiry.name}</div>
@@ -288,22 +371,22 @@ export const AllEnquiriesPage = () => {
                     </td>
                     <td className="p-4 font-medium">{enquiry.car}</td>
                     <td className="p-4 text-gray-500">{enquiry.source}</td>
-                    <td className="p-4 text-gray-500">{enquiry.date}</td>
+                    <td className="p-4 text-gray-500">
+                      {new Date(enquiry.date).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </td>
                     <td className="p-4">{getStatusBadge(enquiry.status)}</td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2">
                         <button
-                          className="p-2 text-gray-400 rounded-lg transition-colors"
-                          title="View Details"
-                          style={{ color: 'gray', ':hover': { color: premiumColors.primary.DEFAULT, backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1) } }}
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(enquiry); }}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit Details"
                         >
-                          <MdVisibility size={18} />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Call Customer">
-                          <MdCall size={18} />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                          <MdMoreVert size={18} />
+                          <MdEdit size={18} />
                         </button>
                       </div>
                     </td>
@@ -311,24 +394,26 @@ export const AllEnquiriesPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colspan="6" className="p-8 text-center text-gray-500">
-                    No enquiries found matching your filters.
+                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                    No enquiries found matching your criteria.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-          <span>Showing <strong>{filteredEnquiries.length}</strong> of <strong>{MOCK_ENQUIRIES.length}</strong> enquiries</span>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1" disabled><MdArrowBack size={14} /> Prev</button>
-            <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1">Next <MdArrowForward size={14} /></button>
-          </div>
+        <div className="p-4 border-t border-gray-100 text-sm text-gray-500">
+          Showing {filteredEnquiries.length} of {enquiriesList.length} enquiries
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <CreateEnquiryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEnquiry}
+        initialData={editingEnquiry}
+      />
     </div>
   );
 };
@@ -349,6 +434,7 @@ const MOCK_NEW_ENQUIRIES = [
 ];
 
 
+
 const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -356,12 +442,64 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
     email: '',
     interest: '',
     source: 'Walk-in',
+    status: 'New',
     note: ''
   });
 
+  const [availableCars, setAvailableCars] = useState([]);
+  const [loadingCars, setLoadingCars] = useState(false);
+
+  // Fetch available cars from database
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchAvailableCars();
+    }
+  }, [isOpen]);
+
+  const fetchAvailableCars = async () => {
+    try {
+      setLoadingCars(true);
+      // Use the plural /cars endpoint with the centralized api instance
+      const response = await api.get('/cars?limit=100');
+      if (response.data.success && response.data.data && response.data.data.cars) {
+        // Extract car names and IDs from the response
+        const cars = response.data.data.cars.map(car => ({
+          name: `${car.brand || ''} ${car.model || ''}`.trim(),
+          id: car._id
+        }));
+
+        // Sort by name
+        const sortedCars = cars.sort((a, b) => a.name.localeCompare(b.name));
+        setAvailableCars(sortedCars);
+      }
+    } catch (error) {
+      console.error('Error fetching cars:', error);
+      setAvailableCars([]);
+    } finally {
+      setLoadingCars(false);
+    }
+  };
+
   React.useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      // Find matching car ID if interest is currently a string name
+      let interestValue = initialData.interest?._id || initialData.carId || initialData.interest || '';
+
+      // If interestValue is not a valid ObjectId (regex check for hex 24 chars) and we have available cars, try matching by name
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(interestValue);
+      if (interestValue && !isObjectId && availableCars.length > 0) {
+        const matchingCar = availableCars.find(c => c.name.toLowerCase() === interestValue.toLowerCase());
+        if (matchingCar) {
+          interestValue = matchingCar.id;
+        }
+      }
+
+      setFormData({
+        ...initialData,
+        interest: interestValue,
+        status: initialData.status || 'New',
+        note: initialData.note || initialData.notes || ''
+      });
     } else {
       setFormData({
         name: '',
@@ -369,10 +507,11 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
         email: '',
         interest: '',
         source: 'Walk-in',
+        status: 'New',
         note: ''
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, availableCars]);
 
   if (!isOpen) return null;
 
@@ -422,15 +561,21 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Phone Number</label>
-                <div className="relative">
-                  <MdPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all overflow-hidden">
+                  <div className="pl-3 pr-2 flex items-center justify-center border-r border-gray-200 bg-gray-100 text-gray-500 h-full">
+                    <MdPhone className="mr-1 text-gray-400" />
+                    <span className="text-sm font-medium pt-0.5">+91</span>
+                  </div>
                   <input
                     type="tel"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
-                    placeholder="+91 98765 43210"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full pl-3 pr-4 py-2.5 bg-transparent border-none focus:outline-none text-gray-900 placeholder:text-gray-400"
+                    placeholder="98765 43210"
+                    value={formData.phone.replace('+91 ', '')}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData({ ...formData, phone: val ? `+91 ${val}` : '' });
+                    }}
                   />
                 </div>
               </div>
@@ -444,13 +589,16 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
                     className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none appearance-none transition-all cursor-pointer"
                     value={formData.interest}
                     onChange={(e) => setFormData({ ...formData, interest: e.target.value })}
+                    disabled={loadingCars}
                   >
-                    <option value="">Select Car Model</option>
-                    <option value="Innova Crysta">Innova Crysta</option>
-                    <option value="Fortuner">Fortuner</option>
-                    <option value="Swift Dzire">Swift Dzire</option>
-                    <option value="Mahindra Thar">Mahindra Thar</option>
-                    <option value="Hyundai Creta">Hyundai Creta</option>
+                    <option value="">
+                      {loadingCars ? 'Loading cars...' : 'Select Car Model'}
+                    </option>
+                    {availableCars.map((car, index) => (
+                      <option key={index} value={car.id}>
+                        {car.name}
+                      </option>
+                    ))}
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
                     <MdChevronRight className="rotate-90" />
@@ -469,6 +617,25 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
                     <option>Phone Call</option>
                     <option>Referral</option>
                     <option>Social Media</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                    <MdChevronRight className="rotate-90" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Status</label>
+                <div className="relative">
+                  <select
+                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none appearance-none transition-all cursor-pointer"
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  >
+                    <option>New</option>
+                    <option>In Progress</option>
+                    <option>Follow-up</option>
+                    <option>Converted</option>
+                    <option>Closed</option>
                   </select>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
                     <MdChevronRight className="rotate-90" />
@@ -518,15 +685,62 @@ export const NewEnquiriesPage = () => {
   const [dateFilter, setDateFilter] = useState('Date: All');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingEnquiry, setEditingEnquiry] = useState(null);
+  const [enquiriesList, setEnquiriesList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // State for enquiries list (initially loaded from mock)
-  const [enquiriesList, setEnquiriesList] = useState(MOCK_NEW_ENQUIRIES);
+  // Fetch enquiries from backend
+  React.useEffect(() => {
+    fetchEnquiries();
+  }, []);
+
+  const fetchEnquiries = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/enquiries?status=New');
+      if (response.data.success) {
+        // Map backend data to frontend format
+        const mappedData = response.data.data.enquiries.map(enq => ({
+          id: enq._id,
+          name: enq.name,
+          phone: enq.phone,
+          interest: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified')),
+          source: enq.source,
+          time: getTimeAgo(enq.createdAt),
+          date: enq.createdAt,
+          status: enq.status,
+          email: enq.email || '',
+          note: enq.note || enq.notes || ''
+        }));
+        setEnquiriesList(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching enquiries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to calculate time ago
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now - then;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  // State for enquiries list (initially loaded from API)
 
   // Filtering Logic
   const filteredEnquiries = enquiriesList.filter(enquiry => {
     const matchesSearch =
-      enquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      enquiry.phone.includes(searchTerm);
+      (enquiry.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (enquiry.phone || '').includes(searchTerm);
 
     let matchesDate = true;
     if (dateFilter !== 'Date: All') {
@@ -546,26 +760,39 @@ export const NewEnquiriesPage = () => {
     return matchesSearch && matchesDate;
   });
 
-  const handleSaveEnquiry = (data) => {
-    if (editingEnquiry) {
-      // Update existing
-      const updatedList = enquiriesList.map(item =>
-        item.id === editingEnquiry.id ? { ...item, ...data } : item
-      );
-      setEnquiriesList(updatedList);
-    } else {
-      // Create new
-      const newEnquiry = {
-        id: enquiriesList.length + 1,
-        ...data,
-        time: 'Just now',
-        status: 'New',
-        date: new Date().toISOString()
-      };
-      setEnquiriesList([newEnquiry, ...enquiriesList]);
+  const handleSaveEnquiry = async (data) => {
+    try {
+      if (editingEnquiry) {
+        // Update existing
+        await api.put(`/crm/enquiries/${editingEnquiry.id}`, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          status: data.status,
+          note: data.note
+        });
+      } else {
+        // Create new
+        await api.post('/crm/enquiries', {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          status: data.status || 'New',
+          note: data.note
+        });
+      }
+      // Refresh list after save
+      await fetchEnquiries();
+      setIsCreateModalOpen(false);
+      setEditingEnquiry(null);
+    } catch (error) {
+      console.error('Error saving enquiry:', error);
+      alert('Failed to save enquiry. Please try again.');
     }
-    setIsCreateModalOpen(false);
-    setEditingEnquiry(null);
   };
 
   const handleEditClick = (enquiry) => {
@@ -591,7 +818,11 @@ export const NewEnquiriesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">New Leads</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">New Leads</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">New Enquiries</h1>
           <p className="text-gray-500 text-sm">Fresh leads received today. <span className="text-red-500 font-semibold">Action needed immediately.</span></p>
@@ -650,7 +881,16 @@ export const NewEnquiriesPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredEnquiries.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="p-8 text-center text-gray-500">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                    Loading enquiries...
+                  </div>
+                </td>
+              </tr>
+            ) : filteredEnquiries.length > 0 ? (
               filteredEnquiries.map((enquiry) => (
                 <tr key={enquiry.id} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4">
@@ -705,13 +945,88 @@ export const InProgressEnquiriesPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('Stage: All');
-  const [inProgressList, setInProgressList] = useState(MOCK_IN_PROGRESS);
+  const [inProgressList, setInProgressList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEnquiry, setEditingEnquiry] = useState(null);
+
+  // Fetch in-progress enquiries from backend
+  React.useEffect(() => {
+    fetchInProgress();
+  }, []);
+
+  const fetchInProgress = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/enquiries?status=In Progress');
+      if (response.data.success) {
+        // Map backend data to frontend format
+        const mappedData = response.data.data.enquiries.map(enq => ({
+          id: enq._id,
+          name: enq.name,
+          phone: enq.phone,
+          interest: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified')),
+          source: enq.source,
+          date: enq.createdAt,
+          status: enq.status,
+          email: enq.email || '',
+          note: enq.note || enq.notes || '',
+          assignedTo: 'Assigned',
+          stage: enq.stage || 'Negotiation',
+          lastUpdate: getTimeAgo(enq.updatedAt)
+        }));
+        setInProgressList(mappedData);
+      }
+    } catch (error) {
+      console.error('Error fetching in-progress enquiries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTimeAgo = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInMins = Math.floor((now - date) / (1000 * 60));
+    if (diffInMins < 60) return `${diffInMins} mins ago`;
+    const diffInHours = Math.floor(diffInMins / 60);
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    return `${Math.floor(diffInHours / 24)} days ago`;
+  };
+
+  const handleSaveEnquiry = async (data) => {
+    try {
+      if (editingEnquiry) {
+        await api.put(`/crm/enquiries/${editingEnquiry.id}`, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          note: data.note
+        });
+      }
+      await fetchInProgress();
+      setIsModalOpen(false);
+      setEditingEnquiry(null);
+    } catch (error) {
+      console.error('Error saving enquiry:', error);
+      alert('Failed to save. Please try again.');
+    }
+  };
+
+  const handleEditClick = (enquiry) => {
+    setEditingEnquiry({
+      ...enquiry,
+      interest: enquiry.interest
+    });
+    setIsModalOpen(true);
+  };
 
   // Filter Logic
   const filteredInProgress = inProgressList.filter(enquiry => {
     const matchesSearch =
       enquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      enquiry.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       enquiry.interest.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStage = stageFilter === 'Stage: All' || enquiry.stage === stageFilter;
@@ -719,27 +1034,21 @@ export const InProgressEnquiriesPage = () => {
     return matchesSearch && matchesStage;
   });
 
-  const handleViewDetails = (id) => {
-    navigate(`/crm/enquiries/${id}`);
-  };
-
-  const handleMoveStage = (id) => {
-    alert(`Move stage for enquiry ID: ${id}`);
-    // Logic to update stage would go here
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">In Progress</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">In Progress</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">In Progress</h1>
+          <h1 className="text-2xl font-bold text-gray-900">In Progress leads</h1>
           <p className="text-gray-500 text-sm">Track active leads moving through the funnel.</p>
         </div>
-
       </div>
 
       {/* Filters */}
@@ -748,9 +1057,8 @@ export const InProgressEnquiriesPage = () => {
           <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
-            placeholder="Search Name or assigned staff..."
+            placeholder="Search Name or interest..."
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
-            style={{ focusRingColor: rgba(premiumColors.primary.DEFAULT, 0.2), borderColor: 'transparent' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -769,79 +1077,80 @@ export const InProgressEnquiriesPage = () => {
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-purple-50/30 border-b border-purple-100 text-xs uppercase tracking-wider text-purple-700 font-bold">
-              <th className="p-4">Lead Details</th>
-              <th className="p-4">Interest</th>
-              <th className="p-4">Current Stage</th>
-              <th className="p-4">Assigned To</th>
-              <th className="p-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredInProgress.length > 0 ? (
-              filteredInProgress.map((enquiry) => (
-                <tr key={enquiry.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-900">{enquiry.name}</div>
-                    <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
-                      <MdPhone size={10} /> {enquiry.phone}
-                    </div>
-                  </td>
-                  <td className="p-4 font-medium text-gray-800">{enquiry.interest}</td>
-                  <td className="p-4">
-                    <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-bold border border-purple-100">
-                      {enquiry.stage}
-                    </span>
-                    <div className="text-xs text-gray-400 mt-1">Updated {enquiry.lastUpdate}</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                        {enquiry.assignedTo.charAt(0)}
-                      </div>
-                      <span className="text-gray-700 font-medium">{enquiry.assignedTo}</span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleViewDetails(enquiry.id)}
-                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <MdVisibility size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleMoveStage(enquiry.id)}
-                        className="px-3 py-1 rounded-lg text-xs font-bold border hover:bg-opacity-10"
-                        style={{
-                          backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1),
-                          color: premiumColors.primary.DEFAULT,
-                          borderColor: rgba(premiumColors.primary.DEFAULT, 0.2)
-                        }}
-                      >
-                        Move Stage
-                      </button>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                <th className="p-4">Lead Details</th>
+                <th className="p-4">Interest</th>
+                <th className="p-4">Current Stage</th>
+                <th className="p-4">Assigned To</th>
+                <th className="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      Loading leads...
                     </div>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500">
-                  No enquiries found matching your criteria.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        {MOCK_IN_PROGRESS.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No active enquiries found.</div>
-        )}
+              ) : filteredInProgress.length > 0 ? (
+                filteredInProgress.map((enquiry) => (
+                  <tr key={enquiry.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{enquiry.name}</div>
+                      <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
+                        <MdPhone size={10} /> {enquiry.phone}
+                      </div>
+                    </td>
+                    <td className="p-4 font-medium text-gray-800">{enquiry.interest}</td>
+                    <td className="p-4">
+                      <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-bold border border-purple-100">
+                        {enquiry.stage}
+                      </span>
+                      <div className="text-xs text-gray-400 mt-1">Updated {enquiry.lastUpdate}</div>
+                    </td>
+                    <td className="p-4 text-gray-700 font-medium">
+                      {enquiry.assignedTo}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(enquiry); }}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit Details"
+                        >
+                          <MdEdit size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                    No enquiries found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 text-sm text-gray-500 border-t border-gray-100">
+          Showing {filteredInProgress.length} of {inProgressList.length} active leads
+        </div>
       </div>
+
+      <CreateEnquiryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEnquiry}
+        initialData={editingEnquiry}
+      />
     </div>
   );
 };
@@ -857,7 +1166,85 @@ export const FollowUpsEnquiriesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Show: All');
   const [assigneeFilter, setAssigneeFilter] = useState('Assigned to Me');
-  const [followUpsList, setFollowUpsList] = useState(MOCK_FOLLOW_UPS);
+  const [followUpsList, setFollowUpsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEnquiry, setEditingEnquiry] = useState(null);
+
+  // Fetch follow-up enquiries from backend
+  React.useEffect(() => {
+    fetchFollowUps();
+  }, []);
+
+  const fetchFollowUps = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/enquiries?status=Follow-up');
+      if (response.data.success) {
+        setFollowUpsList(response.data.data.enquiries.map(enq => ({
+          id: enq._id,
+          name: enq.name,
+          phone: enq.phone,
+          interest: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified')),
+          car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified')),
+          date: enq.createdAt,
+          dueDate: getDueDate(enq.updatedAt),
+          time: '-',
+          note: enq.note || enq.notes || 'N/A',
+          status: getFollowUpStatus(enq.updatedAt),
+          email: enq.email || ''
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching follow-ups:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDueDate = (dateStr) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + 1); // Mock: next day follows
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  };
+
+  const getFollowUpStatus = (dateStr) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (d < today) return 'Overdue';
+    if (d.toDateString() === today.toDateString()) return 'Due Today';
+    return 'Upcoming';
+  };
+
+  const handleSaveEnquiry = async (data) => {
+    try {
+      if (editingEnquiry) {
+        await api.put(`/crm/enquiries/${editingEnquiry.id}`, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          status: data.status,
+          note: data.note
+        });
+      }
+      await fetchFollowUps();
+      setIsModalOpen(false);
+      setEditingEnquiry(null);
+    } catch (error) {
+      console.error('Error saving:', error);
+    }
+  };
+
+  const handleEditClick = (enquiry) => {
+    setEditingEnquiry({
+      ...enquiry,
+      interest: enquiry.car
+    });
+    setIsModalOpen(true);
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -871,14 +1258,11 @@ export const FollowUpsEnquiriesPage = () => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.note.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'Show: All' || item.status === statusFilter;
-    // Mocking assignee logic
     return matchesSearch && matchesStatus;
   });
 
   const handleMarkDone = (id) => {
-    const updated = followUpsList.filter(item => item.id !== id);
-    setFollowUpsList(updated);
-    // alert("Task marked as done!");
+    setFollowUpsList(prev => prev.filter(item => item.id !== id));
   };
 
   return (
@@ -887,7 +1271,11 @@ export const FollowUpsEnquiriesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Follow-ups</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Follow-ups</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Follow-up Leads</h1>
           <p className="text-gray-500 text-sm">Never miss a potential customer. Track your calls.</p>
@@ -924,70 +1312,87 @@ export const FollowUpsEnquiriesPage = () => {
             <option>Due Today</option>
             <option>Upcoming</option>
           </select>
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer text-gray-500"
-            value={assigneeFilter}
-            onChange={(e) => setAssigneeFilter(e.target.value)}
-          >
-            <option>Assigned to Me</option>
-            <option>All Staff</option>
-          </select>
         </div>
       </div>
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-orange-50/30 border-b border-orange-100 text-xs uppercase tracking-wider text-orange-800 font-bold">
-              <th className="p-4">Customer</th>
-              <th className="p-4">Due Date</th>
-              <th className="p-4">Note / Task</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Done?</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredFollowUps.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.name}</div>
-                  <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
-                    {item.car} • {item.phone}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="font-medium text-gray-900">{item.dueDate}</div>
-                  {item.time !== '-' && <div className="text-xs text-gray-500">{item.time}</div>}
-                </td>
-                <td className="p-4 text-gray-600 italic">
-                  "{item.note}"
-                </td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded-md text-xs font-bold border ${getStatusColor(item.status)}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-
-                    <button
-                      onClick={() => handleMarkDone(item.id)}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 border border-gray-200 flex items-center gap-1"
-                    >
-                      <MdCheck size={16} /> Mark Done
-                    </button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-orange-50/30 border-b border-orange-100 text-xs uppercase tracking-wider text-orange-800 font-bold">
+                <th className="p-4">Customer</th>
+                <th className="p-4">Due Date</th>
+                <th className="p-4">Note / Task</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {MOCK_FOLLOW_UPS.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No scheduled follow-ups.</div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      Loading follow-ups...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredFollowUps.length > 0 ? (
+                filteredFollowUps.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{item.name}</div>
+                      <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
+                        {item.car} • {item.phone}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-medium text-gray-900">{item.dueDate}</div>
+                      {item.time !== '-' && <div className="text-xs text-gray-500">{item.time}</div>}
+                    </td>
+                    <td className="p-4 text-gray-600 italic line-clamp-1">
+                      "{item.note}"
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-md text-xs font-bold border ${getStatusColor(item.status)}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit Details"
+                        >
+                          <MdEdit size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                    No scheduled follow-ups found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 text-sm text-gray-500 border-t border-gray-100">
+          Showing {filteredFollowUps.length} of {followUpsList.length} follow-ups
+        </div>
       </div>
+
+      <CreateEnquiryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEnquiry}
+        initialData={editingEnquiry}
+      />
     </div>
   );
 };
@@ -1002,12 +1407,88 @@ export const ConvertedEnquiriesPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('Date: All Time');
+  const [convertedList, setConvertedList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEnquiry, setEditingEnquiry] = useState(null);
 
-  const filteredConverted = MOCK_CONVERTED_ENQUIRIES.filter(item => {
+  // Fetch converted enquiries from backend
+  React.useEffect(() => {
+    fetchConverted();
+  }, []);
+
+  const fetchConverted = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/enquiries?status=Converted');
+      if (response.data.success) {
+        setConvertedList(response.data.data.enquiries.map(enq => ({
+          id: enq._id,
+          name: enq.name,
+          phone: enq.phone,
+          car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (enq.carInterested || 'Not Specified'),
+          bookingId: enq.bookingId || 'N/A',
+          amount: enq.revenue ? `₹ ${enq.revenue.toLocaleString()}` : (enq.amount || '₹ 0'),
+          convertedBy: 'System',
+          date: new Date(enq.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          rawDate: new Date(enq.updatedAt),
+          email: enq.email || '',
+          note: enq.note || enq.notes || ''
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching converted:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEnquiry = async (data) => {
+    try {
+      if (editingEnquiry) {
+        await api.put(`/crm/enquiries/${editingEnquiry.id}`, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          notes: data.note
+        });
+      }
+      await fetchConverted();
+      setIsModalOpen(false);
+      setEditingEnquiry(null);
+    } catch (error) {
+      console.error('Error saving:', error);
+    }
+  };
+
+  const handleEditClick = (enquiry) => {
+    setEditingEnquiry({
+      ...enquiry,
+      interest: enquiry.car
+    });
+    setIsModalOpen(true);
+  };
+
+  const filteredConverted = convertedList.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.bookingId.toLowerCase().includes(searchTerm.toLowerCase());
-    // Date Logic Mock
-    return matchesSearch;
+
+    let matchesDate = true;
+    const itemDate = item.rawDate;
+    const now = new Date();
+
+    if (dateFilter === 'Date: This Month') {
+      matchesDate = itemDate.getMonth() === now.getMonth() &&
+        itemDate.getFullYear() === now.getFullYear();
+    } else if (dateFilter === 'Last Month') {
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      matchesDate = itemDate.getMonth() === lastMonth.getMonth() &&
+        itemDate.getFullYear() === lastMonth.getFullYear();
+    }
+
+    return matchesSearch && matchesDate;
   });
 
   return (
@@ -1016,18 +1497,16 @@ export const ConvertedEnquiriesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Converted</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Converted</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Converted Enquiries</h1>
           <p className="text-gray-500 text-sm">Successfully closed leads and generated revenue.</p>
         </div>
-        <button
-          onClick={() => navigate('/crm/bookings/active')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-medium shadow-sm hover:bg-green-700 transition-colors"
-        >
-          <MdAdd size={20} />
-          New Conversion
-        </button>
+
       </div>
 
       {/* Filters */}
@@ -1048,64 +1527,87 @@ export const ConvertedEnquiriesPage = () => {
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           >
+            <option>Date: All Time</option>
             <option>Date: This Month</option>
             <option>Last Month</option>
-            <option>Date: All Time</option>
           </select>
         </div>
       </div>
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-green-50/30 border-b border-green-100 text-xs uppercase tracking-wider text-green-800 font-bold">
-              <th className="p-4">Customer Details</th>
-              <th className="p-4">Booking Info</th>
-              <th className="p-4">Revenue</th>
-              <th className="p-4">Converted By</th>
-              <th className="p-4 text-right">View</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredConverted.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.name}</div>
-                  <div className="text-gray-500 text-xs mt-0.5">{item.date}</div>
-                </td>
-                <td className="p-4">
-                  <div className="font-medium text-gray-800">{item.bookingId}</div>
-                  <div className="text-xs text-gray-500">{item.car}</div>
-                </td>
-                <td className="p-4 font-bold text-green-600">
-                  {item.amount}
-                </td>
-                <td className="p-4">
-                  <span className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
-                      {item.convertedBy.charAt(0)}
-                    </span>
-                    {item.convertedBy}
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => navigate('/crm/bookings/active')}
-                    className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium text-sm transition-colors"
-                  >
-                    View Booking <MdArrowForward />
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-green-50/30 border-b border-green-100 text-xs uppercase tracking-wider text-green-800 font-bold">
+                <th className="p-4">Customer Details</th>
+                <th className="p-4">Booking Info</th>
+                <th className="p-4">Converted By</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {MOCK_CONVERTED_ENQUIRIES.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No converted enquiries found.</div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="p-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                      Loading conversions...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredConverted.length > 0 ? (
+                filteredConverted.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{item.name}</div>
+                      <div className="text-gray-500 text-xs mt-0.5">{item.date}</div>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-medium text-gray-800">{item.car}</div>
+                    </td>
+                    <td className="p-4">
+                      <span className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
+                          {item.convertedBy.charAt(0)}
+                        </span>
+                        {item.convertedBy}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit Details"
+                        >
+                          <MdEdit size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="p-8 text-center text-gray-500">
+                    No converted enquiries found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 text-sm text-gray-500 border-t border-gray-100">
+          Showing {filteredConverted.length} of {convertedList.length} conversions
+        </div>
       </div>
+
+      <CreateEnquiryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEnquiry}
+        initialData={editingEnquiry}
+      />
     </div>
   );
 };
@@ -1120,9 +1622,67 @@ export const ClosedEnquiriesPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [reasonFilter, setReasonFilter] = useState('Reason: All');
+  const [closedList, setClosedList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEnquiry, setEditingEnquiry] = useState(null);
 
-  // Explicitly using state to allow "Restoring" removal
-  const [closedList, setClosedList] = useState(MOCK_CLOSED_ENQUIRIES);
+  // Fetch closed enquiries from backend
+  React.useEffect(() => {
+    fetchClosed();
+  }, []);
+
+  const fetchClosed = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/enquiries?status=Closed');
+      if (response.data.success) {
+        setClosedList(response.data.data.enquiries.map(enq => ({
+          id: enq._id,
+          name: enq.name,
+          phone: enq.phone,
+          reason: enq.lostReason || 'Closed',
+          date: new Date(enq.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          note: enq.notes || '',
+          email: enq.email || '',
+          car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (enq.carInterested || 'Not Specified'),
+          source: enq.source
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching closed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEnquiry = async (data) => {
+    try {
+      if (editingEnquiry) {
+        await api.put(`/crm/enquiries/${editingEnquiry.id}`, {
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          carInterested: data.interest,
+          source: data.source,
+          notes: data.note
+        });
+      }
+      await fetchClosed();
+      setIsModalOpen(false);
+      setEditingEnquiry(null);
+    } catch (error) {
+      console.error('Error saving:', error);
+    }
+  };
+
+  const handleEditClick = (enquiry) => {
+    setEditingEnquiry({
+      ...enquiry,
+      interest: enquiry.car
+    });
+    setIsModalOpen(true);
+  };
 
   const filteredClosed = closedList.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1142,7 +1702,11 @@ export const ClosedEnquiriesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Closed</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Closed</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Closed Enquiries</h1>
           <p className="text-gray-500 text-sm">Leads marked as lost or cancelled.</p>
@@ -1178,50 +1742,78 @@ export const ClosedEnquiriesPage = () => {
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
-              <th className="p-4">Lead Details</th>
-              <th className="p-4">Lost Reason</th>
-              <th className="p-4">Date Closed</th>
-              <th className="p-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredClosed.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.name}</div>
-                  <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
-                    <MdPhone size={10} /> {item.phone}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs font-bold border border-red-100">
-                    {item.reason}
-                  </span>
-                  <p className="text-gray-400 text-xs mt-1 italic">"{item.note}"</p>
-                </td>
-                <td className="p-4 text-gray-600 font-medium">
-                  {item.date}
-                </td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => handleRestore(item.id)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-50 hover:text-indigo-600 transition-colors"
-                  >
-                    <MdRestore size={14} /> Restore
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                <th className="p-4">Lead Details</th>
+                <th className="p-4">Lost Reason</th>
+                <th className="p-4">Date Closed</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {MOCK_CLOSED_ENQUIRIES.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No closed enquiries found.</div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="p-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                      Loading closed leads...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredClosed.length > 0 ? (
+                filteredClosed.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{item.name}</div>
+                      <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
+                        <MdPhone size={10} /> {item.phone}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2 py-1 bg-red-50 text-red-600 rounded text-xs font-bold border border-red-100">
+                        {item.reason}
+                      </span>
+                      {item.note && <p className="text-gray-400 text-xs mt-1 italic line-clamp-1">"{item.note}"</p>}
+                    </td>
+                    <td className="p-4 text-gray-600 font-medium">
+                      {item.date}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Edit Details"
+                        >
+                          <MdEdit size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="p-8 text-center text-gray-500">
+                    No closed enquiries found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 text-sm text-gray-500 border-t border-gray-100">
+          Showing {filteredClosed.length} of {closedList.length} closed leads
+        </div>
       </div>
+
+      <CreateEnquiryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveEnquiry}
+        initialData={editingEnquiry}
+      />
     </div>
   );
 };
@@ -1247,14 +1839,50 @@ const VEHICLE_INTEREST_DATA = [
   { name: 'Creta', count: 18 },
 ];
 
+// Analytics Page Component
 export const EnquiryAnalyticsPage = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/analytics');
+      if (response.data.success) {
+        setData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  const { totalEnquiries, convertedCount, lostCount, conversionRate, sourceData, vehicleInterest, growthTrend } = data || {};
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Analytics</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Analytics</span>
           </div>
           <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>Enquiry Analytics</h1>
           <p className="text-gray-500 text-sm">Real-time insights into lead generation and conversion.</p>
@@ -1270,12 +1898,6 @@ export const EnquiryAnalyticsPage = () => {
             <option>Last Quarter</option>
             <option>This Year</option>
           </select>
-          <button
-            className="p-2 text-white rounded-xl shadow-md transition-transform active:scale-95"
-            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-          >
-            <MdDownload />
-          </button>
         </div>
       </div>
 
@@ -1283,8 +1905,8 @@ export const EnquiryAnalyticsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatWidget
           title="Total Enquiries"
-          value="120"
-          change="+12%"
+          value={totalEnquiries || 0}
+          change="Live"
           isPositive={true}
           color={`text-[${premiumColors.primary.DEFAULT}]`}
           icon={MdPersonAdd}
@@ -1292,8 +1914,8 @@ export const EnquiryAnalyticsPage = () => {
         />
         <StatWidget
           title="Conversion Rate"
-          value="15.5%"
-          change="+2.4%"
+          value={`${conversionRate || 0}%`}
+          change="Avg"
           isPositive={true}
           color="text-emerald-600"
           icon={MdTrendingUp}
@@ -1301,8 +1923,8 @@ export const EnquiryAnalyticsPage = () => {
         />
         <StatWidget
           title="Lost Leads"
-          value="24"
-          change="-5%"
+          value={lostCount || 0}
+          change="--%"
           isPositive={false}
           color="text-red-500"
           icon={MdWarning}
@@ -1315,7 +1937,7 @@ export const EnquiryAnalyticsPage = () => {
         {/* Trend Chart (Large) */}
         <ReportCard title="Enquiry Growth Trend" subtitle="Leads vs Conversions (Weekly)" className="lg:col-span-2 h-[400px]" delay={0.4}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={ENQUIRY_TREND_DATA}>
+            <AreaChart data={growthTrend || []}>
               <defs>
                 <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={premiumColors.primary.DEFAULT} stopOpacity={0.3} />
@@ -1331,8 +1953,8 @@ export const EnquiryAnalyticsPage = () => {
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
               <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
               <Legend wrapperStyle={{ paddingTop: '20px' }} />
-              <Area type="monotone" dataKey="leads" stroke={premiumColors.primary.DEFAULT} strokeWidth={3} fillOpacity={1} fill="url(#colorLeads)" name="Total Leads" />
-              <Area type="monotone" dataKey="converted" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorConv)" name="Converted" />
+              <Area type="monotone" dataKey="enquiries" stroke={premiumColors.primary.DEFAULT} strokeWidth={3} fillOpacity={1} fill="url(#colorLeads)" name="Total Leads" />
+              <Area type="monotone" dataKey="conversions" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorConv)" name="Converted" />
             </AreaChart>
           </ResponsiveContainer>
         </ReportCard>
@@ -1343,14 +1965,14 @@ export const EnquiryAnalyticsPage = () => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={SOURCE_DATA}
+                  data={sourceData || []}
                   innerRadius={60}
                   outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {SOURCE_DATA.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                  {(sourceData || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={[premiumColors.primary.DEFAULT, '#10B981', '#F59E0B', '#EF4444'][index % 4]} strokeWidth={0} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -1359,7 +1981,7 @@ export const EnquiryAnalyticsPage = () => {
             </ResponsiveContainer>
             {/* Centered Total Label */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
-              <span className="text-3xl font-bold text-gray-800">120</span>
+              <span className="text-3xl font-bold text-gray-800">{totalEnquiries}</span>
               <p className="text-xs text-gray-400 font-medium">Total</p>
             </div>
           </div>
@@ -1370,13 +1992,13 @@ export const EnquiryAnalyticsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ReportCard title="Vehicle Demand" subtitle="Top Requested Cars" className="h-[350px]" delay={0.6}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={VEHICLE_INTEREST_DATA} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={vehicleInterest || []} layout="vertical" margin={{ left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={rgba('#000', 0.05)} />
               <XAxis type="number" hide />
               <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#4B5563', fontSize: 12, fontWeight: 600 }} width={100} />
               <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
               <Bar dataKey="count" fill={premiumColors.primary.DEFAULT} radius={[0, 4, 4, 0]} barSize={24} name="Enquiries">
-                {VEHICLE_INTEREST_DATA.map((entry, index) => (
+                {(vehicleInterest || []).map((entry, index) => (
                   <Cell key={`cell-${index}`} fillOpacity={1 - (index * 0.15)} />
                 ))}
               </Bar>
@@ -1437,9 +2059,45 @@ const MOCK_CALENDAR_EVENTS = {
 
 export const FollowUpCalendarPage = () => {
   const navigate = useNavigate();
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 11, 1)); // Dec 2025
-  const [selectedDate, setSelectedDate] = useState('2025-12-27');
-  const [events, setEvents] = useState(MOCK_CALENDAR_EVENTS);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [events, setEvents] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Task Modal State
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskTime, setNewTaskTime] = useState('10:00');
+
+  React.useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/crm/tasks');
+      if (response.data.success) {
+        // Group tasks by date
+        const grouped = response.data.data.tasks.reduce((acc, task) => {
+          const dateKey = new Date(task.dueDate).toISOString().split('T')[0];
+          if (!acc[dateKey]) acc[dateKey] = [];
+          acc[dateKey].push({
+            id: task._id,
+            title: task.title || task.description,
+            time: new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: task.status
+          });
+          return acc;
+        }, {});
+        setEvents(grouped);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -1459,25 +2117,48 @@ export const FollowUpCalendarPage = () => {
   };
 
   const handleAddTask = () => {
-    const title = prompt("Enter task title:");
-    if (title) {
-      const time = prompt("Enter time (e.g., 10:00 AM):", "10:00 AM");
-      const newEvent = { id: Date.now(), title, time, status: 'Pending' };
-      setEvents(prev => ({
-        ...prev,
-        [selectedDate]: [...(prev[selectedDate] || []), newEvent]
-      }));
+    setNewTaskTitle('');
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    setNewTaskTime(`${hours}:${minutes}`);
+    setIsTaskModalOpen(true);
+  };
+
+  const saveNewTask = async () => {
+    if (!newTaskTitle.trim()) return;
+
+    try {
+      const [hours, minutes] = newTaskTime.split(':');
+      const dueDate = new Date(selectedDate);
+      dueDate.setHours(parseInt(hours) || 10, parseInt(minutes) || 0);
+
+      const response = await api.post('/crm/tasks', {
+        title: newTaskTitle,
+        description: newTaskTitle,
+        status: 'Pending',
+        dueDate,
+        priority: 'Medium'
+      });
+
+      if (response.data.success) {
+        fetchTasks();
+        setIsTaskModalOpen(false);
+      }
+    } catch (error) {
+      console.error("Failed to create task", error);
     }
   };
 
-  const handleMarkTaskDone = (taskId) => {
-    setEvents(prev => {
-      const dayEvents = prev[selectedDate] || [];
-      const updatedEvents = dayEvents.map(ev =>
-        ev.id === taskId ? { ...ev, status: 'Done' } : ev
-      );
-      return { ...prev, [selectedDate]: updatedEvents };
-    });
+  const handleMarkTaskDone = async (taskId) => {
+    try {
+      // Find current status first to toggle or just set to Done?
+      // Optimistic update for UI feel, but actual logic:
+      await api.put(`/crm/tasks/${taskId}`, { status: 'Done' });
+      fetchTasks();
+    } catch (error) {
+      console.error("Error updating task", error);
+    }
   };
 
   const daysCount = getDaysInMonth(currentMonth);
@@ -1493,7 +2174,11 @@ export const FollowUpCalendarPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Enquiries</span> <span>/</span> <span className="text-gray-800 font-medium">Calendar</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span>/</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Enquiries</span>
+            <span>/</span>
+            <span className="text-gray-800 font-medium">Calendar</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Follow-up Calendar</h1>
         </div>
@@ -1585,39 +2270,93 @@ export const FollowUpCalendarPage = () => {
           </button>
         </div>
       </div>
-    </div>
+
+      {/* Add Task Modal */}
+      {
+        isTaskModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 className="font-bold text-gray-800">Add New Task</h3>
+                <button
+                  onClick={() => setIsTaskModalOpen(false)}
+                  className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                >
+                  <MdClose size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Task Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Call client for documents"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+
+
+              </div>
+
+              <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                <button
+                  onClick={() => setIsTaskModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveNewTask}
+                  disabled={!newTaskTitle.trim()}
+                  className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Create Task
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 
 export const EnquiryDetailsPage = () => {
   const navigate = useNavigate();
-  // Assuming useParams is imported or accessible, if not we need to use window location or add import
-  // Since we are in the same file, we need a way to get the ID. 
-  // Best way is to use 'useParams' from 'react-router-dom'.
-  // I will assume it's imported at the top, if not I need to add it.
-  // Checking imports... 'useParams' was NOT imported in original file.
-  // I will add it to the import statement in a separate replacement chunk if possible, 
-  // or just use window.location.pathname split for now to be safe without breaking top imports
-  // actually, let's just assume we can add the import.
-  // Wait, I can't add import easily without regex matching the top.
-  // For now I will use a simple location hack or assume the user will let me fix the import.
-  // Actually, let's just do it cleanly. I'll add the import in a separate chunk.
+  const { id } = useParams();
+  const [enquiry, setEnquiry] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // BUT, wait, I am already writing this chunk. 
-  // I will use a helper for now.
-  const getIdFromUrl = () => {
-    const parts = window.location.pathname.split('/');
-    return parts[parts.length - 1]; // /crm/enquiries/1 -> 1
+  React.useEffect(() => {
+    fetchEnquiryDetails();
+  }, [id]);
+
+  const fetchEnquiryDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/crm/enquiries/${id}`);
+      if (response.data.success) {
+        setEnquiry(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching details:', error);
+    } finally {
+      setLoading(false);
+    }
   };
-  const id = getIdFromUrl();
 
-  // In a real app, use useParams(). For this specific file edit, I'll stick to this to avoid top-of-file conflicts unless I do it there.
-  // Actually, I can rely on the fact that I will edit the top imports in the next tool call / or same tool call.
-  // Let's use a hook-like structure assuming useParams will be there.
-  // The safest is to rely on props if it was passed, but it's a route component.
-
-  // Let's just find the enquiry.
-  const enquiry = MOCK_ENQUIRIES.find(e => e.id == id);
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p className="mt-4 text-gray-500">Loading lead details...</p>
+      </div>
+    );
+  }
 
   if (!enquiry) {
     return (
@@ -1643,13 +2382,9 @@ export const EnquiryDetailsPage = () => {
         {/* Banner/Header */}
         <div className="h-32 bg-gradient-to-r from-indigo-900 to-blue-900 relative">
           <div className="absolute -bottom-16 left-8">
-            <motion.img
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              src={enquiry.image}
-              alt={enquiry.name}
-              className="w-32 h-32 rounded-full border-4 border-white shadow-md object-cover bg-white"
-            />
+            <div className="w-32 h-32 rounded-full border-4 border-white shadow-md flex items-center justify-center bg-gray-100 text-3xl font-bold text-gray-400">
+              {enquiry.name?.charAt(0)}
+            </div>
           </div>
         </div>
 
@@ -1659,7 +2394,7 @@ export const EnquiryDetailsPage = () => {
               <h1 className="text-3xl font-bold text-gray-900">{enquiry.name}</h1>
               <div className="flex items-center gap-4 text-gray-500 mt-2 text-sm">
                 <span className="flex items-center gap-1"><MdPhone /> {enquiry.phone}</span>
-                <span className="flex items-center gap-1"><MdEmail /> {enquiry.email}</span>
+                <span className="flex items-center gap-1"><MdEmail /> {enquiry.email || 'No Email'}</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1682,7 +2417,9 @@ export const EnquiryDetailsPage = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between border-b border-gray-200 pb-2">
                     <span className="text-gray-500">Interested Car</span>
-                    <span className="font-semibold text-gray-900">{enquiry.car}</span>
+                    <span className="font-semibold text-gray-900">
+                      {enquiry.carInterested?.brand ? `${enquiry.carInterested.brand} ${enquiry.carInterested.model}` : (enquiry.carInterested || 'Not Specified')}
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-gray-200 pb-2">
                     <span className="text-gray-500">Source</span>
@@ -1690,11 +2427,11 @@ export const EnquiryDetailsPage = () => {
                   </div>
                   <div className="flex justify-between border-b border-gray-200 pb-2">
                     <span className="text-gray-500">Enquiry Date</span>
-                    <span className="font-semibold text-gray-900">{enquiry.date}</span>
+                    <span className="font-semibold text-gray-900">{new Date(enquiry.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between pt-1">
-                    <span className="text-gray-500">Last Interaction</span>
-                    <span className="font-semibold text-gray-900">Yesterday</span>
+                    <span className="text-gray-500">Last Update</span>
+                    <span className="font-semibold text-gray-900">{new Date(enquiry.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
@@ -1720,7 +2457,7 @@ export const EnquiryDetailsPage = () => {
               <div className="bg-yellow-50 p-6 rounded-2xl border border-yellow-100">
                 <h3 className="text-lg font-bold text-yellow-800 mb-2">Notes</h3>
                 <p className="text-yellow-700 text-sm italic">
-                  "Customer is interested in the top model. Asked for a test drive this weekend. Also inquiring about loan options."
+                  "{enquiry.notes || 'No notes added yet.'}"
                 </p>
               </div>
             </div>

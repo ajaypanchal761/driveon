@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdTrendingUp, 
   MdTrendingDown, 
@@ -102,10 +103,18 @@ const PROFIT_LOSS_DATA = [
 // --- Pages ---
 
 export const IncomePage = () => {
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
        <div className="flex justify-between items-end">
            <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Income</span>
+                </div>
                <h1 className="text-2xl font-bold text-gray-900">Income Overview</h1>
                <p className="text-gray-500 text-sm">Revenue streams and earnings analysis.</p>
            </div>
@@ -197,10 +206,18 @@ export const IncomePage = () => {
 };
 
 export const ExpensesPage = () => {
+    const navigate = useNavigate();
   return (
     <div className="space-y-6">
         <div className="flex justify-between items-end">
            <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Expenses</span>
+                </div>
                <h1 className="text-2xl font-bold text-gray-900">Expense Tracking</h1>
                <p className="text-gray-500 text-sm">Monitor costs, fuel, and maintenance.</p>
            </div>
@@ -236,9 +253,18 @@ export const ExpensesPage = () => {
   );
 };
 
-export const PendingPaymentsPage = () => (
+export const PendingPaymentsPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Pending Payments</span>
+            </div>
              <h1 className="text-2xl font-bold text-gray-900">Pending Payments</h1>
              <p className="text-gray-500 text-sm">Track outstanding invoices and unsettled dues.</p>
         </div>
@@ -274,10 +300,20 @@ export const PendingPaymentsPage = () => (
         </div>
     </div>
 );
+}
 
-export const ProfitLossPage = () => (
+export const ProfitLossPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">P & L</span>
+            </div>
              <h1 className="text-2xl font-bold text-gray-900">Profit & Loss Overview</h1>
              <p className="text-gray-500 text-sm">Monthly Net Profit Analysis.</p>
         </div>
@@ -303,6 +339,7 @@ export const ProfitLossPage = () => (
         </motion.div>
     </div>
 );
+}
 
 const CASH_FLOW_DATA = [
   { day: '01', cashIn: 15000, cashOut: -5000, net: 10000 },
@@ -323,10 +360,19 @@ const RECENT_TRANSACTIONS = [
   { id: 6, desc: "Office Utilities", type: "Debit", amount: 3500, date: "24 Dec, 10:00 AM", method: "Card" },
 ];
 
-export const CashFlowPage = () => (
+export const CashFlowPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div className="flex justify-between items-end">
              <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Cash Flow</span>
+                </div>
                  <h1 className="text-2xl font-bold text-gray-900">Cash Flow Management</h1>
                  <p className="text-gray-500 text-sm">Real-time liquidity tracking & financial health.</p>
              </div>
@@ -495,6 +541,7 @@ export const CashFlowPage = () => (
         </div>
     </div>
 );
+}
 
 // Hack for Icons missing in explicit import to avoid ReferenceErrors in some environments
 import { MdLocalGasStation, MdBuild, MdDirectionsCar } from 'react-icons/md';

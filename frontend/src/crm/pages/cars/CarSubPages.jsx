@@ -122,116 +122,127 @@ export const AllCarsPage = () => {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">All Cars</span>
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">All Cars</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Vehicle Inventory</h1>
+            <p className="text-gray-500 text-sm">Manage your entire fleet and viewing details.</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Vehicle Inventory</h1>
-          <p className="text-gray-500 text-sm">Manage your entire fleet and viewing details.</p>
-        </div>
-
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search Make, Model, Plate..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
-            style={{ focusRingColor: rgba(premiumColors.primary.DEFAULT, 0.2), borderColor: 'transparent' }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm transition-colors hover:opacity-90 active:scale-95"
+            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
           >
-            <option value="All">Status: All</option>
-            <option value="Active">Active</option>
-            <option value="Maintenance">Maintenance</option>
-            <option value="Idle">Idle</option>
-          </select>
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="All">Type: All</option>
-            <option value="SUV">SUV</option>
-            <option value="Sedan">Sedan</option>
-            <option value="Hatchback">Hatchback</option>
-          </select>
+            <MdAdd size={20} />
+            Add New Car
+          </button>
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
-              <th className="p-4 w-24">Image</th>
-              <th className="p-4">Car Details</th>
-              <th className="p-4">Reg No</th>
-              <th className="p-4">Price/Day</th>
-              <th className="p-4">Status & Trips</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredCars.map((car) => (
-              <tr key={car.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                    <img src={car.image} alt={car.name} className="w-full h-full object-cover" />
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{car.name}</div>
-                  <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
-                    <span>{car.fuel}</span> • <span>{car.type}</span> • <span>{car.seats}</span>
-                  </div>
-                </td>
-                <td className="p-4 font-mono text-gray-600 font-medium">
-                  {car.plate}
-                </td>
-                <td className="p-4 font-bold text-gray-800">
-                  {car.price}
-                </td>
-                <td className="p-4">
-                  <div className="flex flex-col items-start gap-1">
-                    {getStatusBadge(car.status)}
-                    <span className="text-[10px] text-gray-400 font-semibold">{car.trips} Trips Completed</span>
-                  </div>
-                </td>
-                <td className="p-4 text-right">
-                  <button
-                    className="p-2 text-gray-400 rounded-lg transition-colors"
-                    style={{ ':hover': { color: premiumColors.primary.DEFAULT, backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1) } }}
-                  >
-                    <MdVisibility size={18} />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                    <MdMoreVert size={18} />
-                  </button>
-                </td>
+  
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text" 
+                    placeholder="Search Make, Model, Plate..." 
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
+                    style={{ focusRingColor: rgba(premiumColors.primary.DEFAULT, 0.2), borderColor: 'transparent' }}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
+               <select 
+                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+               >
+                 <option value="All">Status: All</option>
+                 <option value="Active">Active</option>
+                 <option value="Maintenance">Maintenance</option>
+                 <option value="Idle">Idle</option>
+               </select>
+               <select 
+                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+               >
+                 <option value="All">Type: All</option>
+                 <option value="SUV">SUV</option>
+                 <option value="Sedan">Sedan</option>
+                 <option value="Hatchback">Hatchback</option>
+               </select>
+            </div>
+        </div>
+  
+        {/* Table */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                <th className="p-4 w-24">Image</th>
+                <th className="p-4">Car Details</th>
+                <th className="p-4">Reg No</th>
+                <th className="p-4">Price/Day</th>
+                <th className="p-4">Status & Trips</th>
+                <th className="p-4 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredCars.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No cars found matching your filters.</div>
-        )}
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredCars.map((car) => (
+                <tr key={car.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                        <img src={car.image} alt={car.name} className="w-full h-full object-cover" />
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{car.name}</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                       <span>{car.fuel}</span> • <span>{car.type}</span> • <span>{car.seats}</span>
+                    </div>
+                  </td>
+                  <td className="p-4 font-mono text-gray-600 font-medium">
+                    {car.plate}
+                  </td>
+                  <td className="p-4 font-bold text-gray-800">
+                    {car.price}
+                  </td>
+                  <td className="p-4">
+                     <div className="flex flex-col items-start gap-1">
+                        {getStatusBadge(car.status)}
+                        <span className="text-[10px] text-gray-400 font-semibold">{car.trips} Trips Completed</span>
+                     </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button 
+                        className="p-2 text-gray-400 rounded-lg transition-colors"
+                        style={{ ':hover': { color: premiumColors.primary.DEFAULT, backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1) } }}
+                    >
+                        <MdVisibility size={18} />
+                    </button>
+                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <MdMoreVert size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {filteredCars.length === 0 && (
+             <div className="p-10 text-center text-gray-500">No cars found matching your filters.</div>
+          )}
+        </div>
 
 
     </div>
@@ -267,94 +278,98 @@ export const IdleCarsPage = () => {
     return matchesSearch && matchesLocation;
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">Idle Cars</span>
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Idle Cars</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Idle Inventory</h1>
+            <p className="text-gray-500 text-sm">Vehicles available for immediate booking.</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Idle Inventory</h1>
-          <p className="text-gray-500 text-sm">Vehicles available for immediate booking.</p>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search Vehicle..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+  
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text" 
+                    placeholder="Search Vehicle..." 
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="flex gap-3">
+               <select 
+                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+                 value={locationFilter}
+                 onChange={(e) => setLocationFilter(e.target.value)}
+               >
+                 <option value="All">Location: All</option>
+                 <option value="Office HQ">Office HQ</option>
+                 <option value="Airport Yard">Airport Yard</option>
+                 <option value="Sector 17">Sector 17</option>
+               </select>
+            </div>
         </div>
-        <div className="flex gap-3">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-          >
-            <option value="All">Location: All</option>
-            <option value="Office HQ">Office HQ</option>
-            <option value="Airport Yard">Airport Yard</option>
-            <option value="Sector 17">Sector 17</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
-              <th className="p-4">Vehicle Details</th>
-              <th className="p-4">Parked At</th>
-              <th className="p-4">Idle Duration</th>
-              <th className="p-4">Condition</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredIdleCars.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.car}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{item.reg}</div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1.5 text-gray-700">
-                    <MdLocalParking className="text-gray-400" size={16} /> {item.location}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1.5 text-gray-700 font-medium">
-                    <MdTimer className="text-orange-400" size={16} /> {item.idleFor}
-                  </div>
-                </td>
-                <td className="p-4">
-                  {getConditionBadge(item.condition)}
-                </td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => setIsBookingModalOpen(true)}
-                    className="flex items-center gap-1 ml-auto px-3 py-1.5 bg-indigo-600 text-white border border-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-                  >
-                    <MdPlayArrow size={16} /> Assign
-                  </button>
-                </td>
+  
+        {/* Table */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
+                <th className="p-4">Vehicle Details</th>
+                <th className="p-4">Parked At</th>
+                <th className="p-4">Idle Duration</th>
+                <th className="p-4">Condition</th>
+                <th className="p-4 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredIdleCars.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No idle cars found matching your filters.</div>
-        )}
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredIdleCars.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{item.car}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{item.reg}</div>
+                  </td>
+                  <td className="p-4">
+                     <div className="flex items-center gap-1.5 text-gray-700">
+                        <MdLocalParking className="text-gray-400" size={16} /> {item.location}
+                     </div>
+                  </td>
+                  <td className="p-4">
+                     <div className="flex items-center gap-1.5 text-gray-700 font-medium">
+                        <MdTimer className="text-orange-400" size={16} /> {item.idleFor}
+                     </div>
+                  </td>
+                  <td className="p-4">
+                     {getConditionBadge(item.condition)}
+                  </td>
+                  <td className="p-4 text-right">
+                    <button 
+                        onClick={() => setIsBookingModalOpen(true)}
+                        className="flex items-center gap-1 ml-auto px-3 py-1.5 bg-indigo-600 text-white border border-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                        <MdPlayArrow size={16} /> Assign
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {filteredIdleCars.length === 0 && (
+             <div className="p-10 text-center text-gray-500">No idle cars found matching your filters.</div>
+          )}
+        </div>
 
       {/* Booking Modal */}
       <SimpleModal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} title="Create Fast Booking">
@@ -431,111 +446,115 @@ export const CarProfitLossPage = () => {
   const [timeRange, setTimeRange] = useState('Last 90 Days');
   const currentData = MOCK_PROFIT_DATA[timeRange] || MOCK_PROFIT_DATA['Last 90 Days'];
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">Profit & Loss</span>
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Profit & Loss</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Fleet Financial Analysis</h1>
+            <p className="text-gray-500 text-sm">Revenue vs Expenses per vehicle breakdown.</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Fleet Financial Analysis</h1>
-          <p className="text-gray-500 text-sm">Revenue vs Expenses per vehicle breakdown.</p>
+          <select 
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium cursor-pointer shadow-sm"
+          >
+             <option>Last 90 Days</option>
+             <option>This Month</option>
+             <option>Last Quarter</option>
+             <option>This Year</option>
+          </select>
         </div>
-        <select
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
-          className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium cursor-pointer shadow-sm"
-        >
-          <option>Last 90 Days</option>
-          <option>This Month</option>
-          <option>Last Quarter</option>
-          <option>This Year</option>
-        </select>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <MdAttachMoney size={80} className="text-green-600" />
-          </div>
-          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Earnings</p>
-          <h3 className="text-3xl font-extrabold text-green-600 mt-2">{currentData.stats.earnings}</h3>
-          <div className="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1">
-            <MdTrendingUp /> {currentData.stats.earningsTrend}
-          </div>
+  
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <MdAttachMoney size={80} className="text-green-600" />
+                </div>
+                <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Earnings</p>
+                <h3 className="text-3xl font-extrabold text-green-600 mt-2">{currentData.stats.earnings}</h3>
+                <div className="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1">
+                   <MdTrendingUp /> {currentData.stats.earningsTrend}
+                </div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <MdTrendingDown size={80} className="text-red-600" />
+                </div>
+                <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Expenses</p>
+                <h3 className="text-3xl font-extrabold text-red-500 mt-2">{currentData.stats.expenses}</h3>
+                <div className="mt-2 text-xs font-semibold text-red-600 flex items-center gap-1">
+                   <MdWarning /> {currentData.stats.expenseTrend}
+                </div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <MdDirectionsCar size={80} className="text-indigo-600" />
+                </div>
+                <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Net Profit</p>
+                <h3 className="text-3xl font-extrabold text-indigo-900 mt-2">{currentData.stats.profit}</h3>
+                <div className="mt-2 text-xs font-semibold text-indigo-600 flex items-center gap-1">
+                   {currentData.stats.profitComment}
+                </div>
+            </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <MdTrendingDown size={80} className="text-red-600" />
-          </div>
-          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Expenses</p>
-          <h3 className="text-3xl font-extrabold text-red-500 mt-2">{currentData.stats.expenses}</h3>
-          <div className="mt-2 text-xs font-semibold text-red-600 flex items-center gap-1">
-            <MdWarning /> {currentData.stats.expenseTrend}
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <MdDirectionsCar size={80} className="text-indigo-600" />
-          </div>
-          <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Net Profit</p>
-          <h3 className="text-3xl font-extrabold text-indigo-900 mt-2">{currentData.stats.profit}</h3>
-          <div className="mt-2 text-xs font-semibold text-indigo-600 flex items-center gap-1">
-            {currentData.stats.profitComment}
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-indigo-50/30 border-b border-indigo-100 text-xs uppercase tracking-wider text-indigo-800 font-bold">
-              <th className="p-4">Vehicle</th>
-              <th className="p-4">Revenue</th>
-              <th className="p-4">Expense</th>
-              <th className="p-4">Net Profit</th>
-              <th className="p-4">ROI</th>
-              <th className="p-4 text-right">Trend</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {currentData.table.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                <td className="p-4">
-                  <div className="font-bold text-gray-900">{item.car}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{item.reg}</div>
-                </td>
-                <td className="p-4 text-green-600 font-bold">
-                  {item.revenue}
-                </td>
-                <td className="p-4 text-red-500 font-medium">
-                  - {item.expense}
-                </td>
-                <td className="p-4 font-extrabold text-indigo-900">
-                  {item.profit}
-                </td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs font-bold border ${item.status === 'Low Margin' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
-                    {item.roi}
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  {item.status === 'Low Margin' ? (
-                    <div className="flex items-center justify-end gap-1 text-red-500 font-bold text-xs"><MdTrendingDown /> Declining</div>
-                  ) : (
-                    <div className="flex items-center justify-end gap-1 text-green-500 font-bold text-xs"><MdTrendingUp /> Growing</div>
-                  )}
-                </td>
+  
+        {/* Table */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-indigo-50/30 border-b border-indigo-100 text-xs uppercase tracking-wider text-indigo-800 font-bold">
+                <th className="p-4">Vehicle</th>
+                <th className="p-4">Revenue</th>
+                <th className="p-4">Expense</th>
+                <th className="p-4">Net Profit</th>
+                <th className="p-4">ROI</th>
+                <th className="p-4 text-right">Trend</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {currentData.table.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{item.car}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{item.reg}</div>
+                  </td>
+                  <td className="p-4 text-green-600 font-bold">
+                    {item.revenue}
+                  </td>
+                  <td className="p-4 text-red-500 font-medium">
+                    - {item.expense}
+                  </td>
+                  <td className="p-4 font-extrabold text-indigo-900">
+                    {item.profit}
+                  </td>
+                  <td className="p-4">
+                     <span className={`px-2 py-1 rounded text-xs font-bold border ${item.status === 'Low Margin' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
+                        {item.roi}
+                     </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    {item.status === 'Low Margin' ? (
+                         <div className="flex items-center justify-end gap-1 text-red-500 font-bold text-xs"><MdTrendingDown /> Declining</div>
+                    ) : (
+                         <div className="flex items-center justify-end gap-1 text-green-500 font-bold text-xs"><MdTrendingUp /> Growing</div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
+    );
 };
 
 // Mock Data for Car Documents
@@ -632,129 +651,133 @@ export const CarDocumentsPage = () => {
 
 
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span className="text-gray-800 font-medium">Documents</span>
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Documents</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Vehicle Documents</h1>
+            <p className="text-gray-500 text-sm">Manage insurance, RC, PUC and other compliance docs.</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Vehicle Documents</h1>
-          <p className="text-gray-500 text-sm">Manage insurance, RC, PUC and other compliance docs.</p>
-        </div>
-        <button
-          onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-          style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-        >
-          <MdFileUpload size={20} />
-          Upload Document
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search Vehicle, Reg No or Document..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-3">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
+          <button 
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
           >
-            <option value="All">Type: All</option>
-            <option value="Insurance">Insurance</option>
-            <option value="PUC">PUC</option>
-            <option value="RC">RC</option>
-            <option value="Fitness">Fitness</option>
-            <option value="Permit">Permit</option>
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
-          >
-            <option value="All">Status: All</option>
-            <option value="Valid">Valid</option>
-            <option value="Expiring Soon">Expiring Soon</option>
-            <option value="Expired">Expired</option>
-          </select>
+            <MdFileUpload size={20} />
+            Upload Document
+          </button>
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
-              <th className="p-4">Vehicle</th>
-              <th className="p-4">Document Details</th>
-              <th className="p-4">Expiry Date</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
-            {filteredDocs.length > 0 ? (
-              filteredDocs.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-900">{item.car}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{item.reg}</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-indigo-50 text-indigo-500 rounded-lg">
-                        <MdDescription size={18} />
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-800">{item.docName}</div>
-                        <div className="text-xs text-gray-400">{item.type}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1.5 font-medium text-gray-700">
-                      <MdDateRange size={16} className="text-gray-400" /> {item.expiry}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    {item.status === 'Valid' && <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">Valid</span>}
-                    {item.status === 'Expiring Soon' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Expiring Soon</span>}
-                    {item.status === 'Expired' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Expired</span>}
-                  </td>
-                  <td className="p-4 text-right">
-                    <button
-                      onClick={() => handleView(item)}
-                      className="text-blue-600 hover:underline text-xs font-bold flex items-center gap-1 ml-auto"
-                    >
-                      <MdVisibility size={14} /> View
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500">
-                  <div className="flex flex-col items-center justify-center">
-                    <MdFolderOff size={40} className="text-gray-300 mb-2" />
-                    <p className="font-medium">No documents found matching the criteria.</p>
-                  </div>
-                </td>
+  
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text" 
+                    placeholder="Search Vehicle, Reg No or Document..." 
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="flex gap-3">
+               <select 
+                 value={filterType}
+                 onChange={(e) => setFilterType(e.target.value)}
+                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
+               >
+                 <option value="All">Type: All</option>
+                 <option value="Insurance">Insurance</option>
+                 <option value="PUC">PUC</option>
+                 <option value="RC">RC</option>
+                 <option value="Fitness">Fitness</option>
+                 <option value="Permit">Permit</option>
+               </select>
+               <select 
+                 value={filterStatus}
+                 onChange={(e) => setFilterStatus(e.target.value)}
+                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
+               >
+                 <option value="All">Status: All</option>
+                 <option value="Valid">Valid</option>
+                 <option value="Expiring Soon">Expiring Soon</option>
+                 <option value="Expired">Expired</option>
+               </select>
+            </div>
+        </div>
+  
+        {/* Table */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
+                <th className="p-4">Vehicle</th>
+                <th className="p-4">Document Details</th>
+                <th className="p-4">Expiry Date</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Action</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {filteredDocs.length > 0 ? (
+                filteredDocs.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900">{item.car}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{item.reg}</div>
+                    </td>
+                    <td className="p-4">
+                       <div className="flex items-center gap-2">
+                          <div className="p-2 bg-indigo-50 text-indigo-500 rounded-lg">
+                              <MdDescription size={18} />
+                          </div>
+                          <div>
+                              <div className="font-bold text-gray-800">{item.docName}</div>
+                              <div className="text-xs text-gray-400">{item.type}</div>
+                          </div>
+                       </div>
+                    </td>
+                    <td className="p-4">
+                       <div className="flex items-center gap-1.5 font-medium text-gray-700">
+                          <MdDateRange size={16} className="text-gray-400" /> {item.expiry}
+                       </div>
+                    </td>
+                    <td className="p-4">
+                       {item.status === 'Valid' && <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">Valid</span>}
+                       {item.status === 'Expiring Soon' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Expiring Soon</span>}
+                       {item.status === 'Expired' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Expired</span>}
+                    </td>
+                    <td className="p-4 text-right">
+                          <button 
+                            onClick={() => handleView(item)}
+                            className="text-blue-600 hover:underline text-xs font-bold flex items-center gap-1 ml-auto"
+                          >
+                              <MdVisibility size={14} /> View
+                          </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                    <td colSpan="5" className="p-8 text-center text-gray-500">
+                        <div className="flex flex-col items-center justify-center">
+                            <MdFolderOff size={40} className="text-gray-300 mb-2" />
+                            <p className="font-medium">No documents found matching the criteria.</p>
+                        </div>
+                    </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
       {/* Upload Modal */}
       <SimpleModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title="Upload New Document">
@@ -924,47 +947,53 @@ export const AccidentActivePage = () => {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span>Accidents</span> <span>/</span> <span className="text-gray-800 font-medium">Active</span>
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Active</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Active Accident Cases</h1>
+            <p className="text-gray-500 text-sm">Track and manage ongoing accident claims and repairs.</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Active Accident Cases</h1>
-          <p className="text-gray-500 text-sm">Track and manage ongoing accident claims and repairs.</p>
+          <button 
+            onClick={() => navigate('/crm/cars/accidents/add')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-medium shadow-sm hover:bg-red-700 transition-colors"
+          >
+            <MdAdd size={20} />
+            Report New Case
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/crm/cars/accidents/add')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-medium shadow-sm hover:bg-red-700 transition-colors"
-        >
-          <MdAdd size={20} />
-          Report New Case
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search car, number..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+  
+        {/* Filters */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-96">
+                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                    type="text" 
+                    placeholder="Search car, number..." 
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="flex gap-3">
+               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
+                 <option>Severity: All</option>
+                 <option>Major</option>
+                 <option>Medium</option>
+                 <option>Minor</option>
+               </select>
+            </div>
         </div>
-        <div className="flex gap-3">
-          <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-            <option>Severity: All</option>
-            <option>Major</option>
-            <option>Medium</option>
-            <option>Minor</option>
-          </select>
-        </div>
-      </div>
 
       {/* Alerts */}
       <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3">

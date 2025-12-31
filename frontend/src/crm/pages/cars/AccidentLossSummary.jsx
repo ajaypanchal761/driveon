@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdDownload, 
   MdTrendingUp, 
@@ -130,6 +131,8 @@ const VehicleLossItem = ({ vehicle, maxVal, index }) => {
 
 // --- Main Component ---
 const AccidentLossSummary = () => {
+  const navigate = useNavigate();
+
 
   const maxLoss = Math.max(...TOP_LOSS_VEHICLES.map(v => v.amount));
 
@@ -140,7 +143,13 @@ const AccidentLossSummary = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span>Home</span> <span>/</span> <span>Cars</span> <span>/</span> <span>Accidents</span> <span>/</span> <span className="text-gray-800 font-medium">Reports</span>
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span>/</span> 
+              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
+              <span>/</span> 
+              <span className="text-gray-800 font-medium">Reports</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Loss & Recovery Summary</h1>
             <p className="text-gray-500 text-sm">Financial performance of accident claims (YTD).</p>

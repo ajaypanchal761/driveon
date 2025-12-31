@@ -5,7 +5,7 @@ const crmTaskSchema = new mongoose.Schema(
         enquiryId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Enquiry',
-            required: true,
+            required: false,
         },
         title: {
             type: String,

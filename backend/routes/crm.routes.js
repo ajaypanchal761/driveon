@@ -8,6 +8,7 @@ import {
     createTask,
     updateTask,
     getActiveBookings,
+    getUpcomingBookings,
     getCRMAnalytics,
     getStaff,
     createStaff,
@@ -20,6 +21,7 @@ import {
     getAttendance,
     markAttendance,
     getPayroll,
+    createPayroll,
     updatePayrollStatus,
     getAdvances,
     createAdvance,
@@ -64,7 +66,12 @@ import {
     getAnnualReport,
     getExpenseCategories,
     createExpenseCategory,
-    deleteExpenseCategory
+    deleteExpenseCategory,
+    getCities,
+    createCity,
+    updateCity,
+    deleteCity,
+    getDashboardAlerts
 } from '../controllers/crm.controller.js';
 // import { protect, admin } from '../middleware/auth.middleware.js'; // Assuming you have auth middleware
 
@@ -130,7 +137,8 @@ router.route('/attendance')
 
 // Payroll Routes
 router.route('/payroll')
-    .get(getPayroll);
+    .get(getPayroll)
+    .post(createPayroll);
 
 router.route('/payroll/:id')
     .put(updatePayrollStatus);
@@ -228,8 +236,20 @@ router.route('/finance/categories')
     .post(createExpenseCategory);
 router.delete('/finance/categories/:id', deleteExpenseCategory);
 
+// Settings - Cities & Locations
+router.route('/settings/cities')
+    .get(getCities)
+    .post(createCity);
+router.route('/settings/cities/:id')
+    .put(updateCity)
+    .delete(deleteCity);
+
+// Dashboard - Smart Command Center
+router.get('/dashboard/alerts', getDashboardAlerts);
+
 // Bookings Routes
 router.get('/bookings/active', getActiveBookings);
+router.get('/bookings/upcoming', getUpcomingBookings);
 
 // Analytics Route
 router.get('/analytics', getCRMAnalytics);

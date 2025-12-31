@@ -20,7 +20,9 @@ const crmRoleSchema = new mongoose.Schema(
                 'Custom',
                 'Cars, Bookings, Garage',
                 'Finance, Reports',
-                'Bookings (Read Only)'
+                'Bookings (Read Only)',
+                'Basic',
+                'Intermediate'
             ],
             default: 'Read Only',
         },

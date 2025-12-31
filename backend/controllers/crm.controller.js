@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import Enquiry from '../models/Enquiry.js';
+import Car from '../models/Car.js';
+import Admin from '../models/Admin.js';
 import CRMTask from '../models/CRMTask.js';
 import Booking from '../models/Booking.js';
 import Staff from '../models/Staff.js';
@@ -21,6 +23,7 @@ import VendorHistory from '../models/VendorHistory.js';
 import Transaction from '../models/Transaction.js';
 import Invoice from '../models/Invoice.js';
 import ExpenseCategory from '../models/ExpenseCategory.js';
+import City from '../models/City.js';
 import { uploadImage } from '../services/cloudinary.service.js';
 
 /**
@@ -38,11 +41,29 @@ export const getEnquiries = async (req, res) => {
         }
 
         if (search) {
+            // Find car IDs that match the search brand or model
+            const Car = mongoose.model('Car');
+            const matchingCars = await Car.find({
+                $or: [
+                    { brand: { $regex: search, $options: 'i' } },
+                    { model: { $regex: search, $options: 'i' } }
+                ]
+            }).select('_id');
+            const carIds = matchingCars.map(car => car._id);
+
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { phone: { $regex: search, $options: 'i' } },
-                { carInterested: { $regex: search, $options: 'i' } }
+                { carInterested: { $in: carIds } }
             ];
+
+            // Only add regex on carInterested if search is a valid string for regex
+            // This handles legacy string entries like "Alto 800 C2"
+            try {
+                query.$or.push({ carInterested: { $regex: search, $options: 'i' } });
+            } catch (e) {
+                // Ignore if regex fails
+            }
         }
 
         if (startDate && endDate) {
@@ -52,9 +73,33 @@ export const getEnquiries = async (req, res) => {
             };
         }
 
-        const enquiries = await Enquiry.find(query)
+        let enquiries = await Enquiry.find(query)
             .populate('assignedTo', 'name email')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Safe manual population for carInterested (handles mixture of ObjectIds and Strings)
+        const carIdsToFetch = enquiries
+            .filter(enq => enq.carInterested && mongoose.Types.ObjectId.isValid(enq.carInterested))
+            .map(enq => enq.carInterested);
+
+        if (carIdsToFetch.length > 0) {
+            const cars = await mongoose.model('Car').find({ _id: { $in: carIdsToFetch } }).select('brand model').lean();
+            const carMap = cars.reduce((acc, car) => {
+                acc[car._id.toString()] = car;
+                return acc;
+            }, {});
+
+            enquiries = enquiries.map(enq => {
+                if (enq.carInterested && mongoose.Types.ObjectId.isValid(enq.carInterested)) {
+                    const carData = carMap[enq.carInterested.toString()];
+                    if (carData) {
+                        enq.carInterested = carData;
+                    }
+                }
+                return enq;
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -136,7 +181,16 @@ export const updateEnquiry = async (req, res) => {
  */
 export const getEnquiryDetails = async (req, res) => {
     try {
-        const enquiry = await Enquiry.findById(req.params.id).populate('assignedTo', 'name email');
+        let enquiry = await Enquiry.findById(req.params.id)
+            .populate('assignedTo', 'name email')
+            .lean();
+
+        if (enquiry && enquiry.carInterested && mongoose.Types.ObjectId.isValid(enquiry.carInterested)) {
+            const carData = await mongoose.model('Car').findById(enquiry.carInterested).select('brand model year registrationNumber color carType').lean();
+            if (carData) {
+                enquiry.carInterested = carData;
+            }
+        }
 
         if (!enquiry) {
             return res.status(404).json({
@@ -298,6 +352,61 @@ export const getActiveBookings = async (req, res) => {
 };
 
 /**
+ * @desc    Get Upcoming Bookings for CRM
+ * @route   GET /api/crm/bookings/upcoming
+ * @access  Admin
+ */
+export const getUpcomingBookings = async (req, res) => {
+    try {
+        const bookings = await Booking.find({
+            status: { $in: ['confirmed', 'pending'] },
+            'tripStart.date': { $gte: new Date() }
+        })
+            .populate('user', 'name phone')
+            .populate('car', 'brand model registrationNumber images')
+            .sort({ 'tripStart.date': 1 });
+
+        const formatted = bookings.map(b => {
+            const now = new Date();
+            const start = new Date(b.tripStart.date);
+            const diffMs = start - now;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+            let startsIn = '';
+            if (diffDays > 0) startsIn = `${diffDays} Days`;
+            else if (diffHours > 0) startsIn = `${diffHours} Hours`;
+            else startsIn = 'Soon';
+
+            return {
+                id: b._id,
+                vehicle: `${b.car.brand} ${b.car.model}`,
+                vehicleImage: b.car.images.find(img => img.isPrimary)?.url || b.car.images[0]?.url,
+                regNumber: b.car.registrationNumber,
+                customer: b.user.name,
+                phone: b.user.phone,
+                dateRange: `${new Date(b.tripStart.date).toLocaleDateString()} - ${new Date(b.tripEnd.date).toLocaleDateString()}`,
+                status: b.status.charAt(0).toUpperCase() + b.status.slice(1),
+                startsIn: startsIn,
+                amount: b.pricing.finalPrice
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            data: { bookings: formatted }
+        });
+    } catch (error) {
+        console.error('Get upcoming bookings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error fetching upcoming bookings',
+            error: error.message
+        });
+    }
+};
+
+/**
  * @desc    Get CRM Dashboard Analytics
  * @route   GET /api/crm/analytics
  * @access  Admin
@@ -321,7 +430,45 @@ export const getCRMAnalytics = async (req, res) => {
             { $group: { _id: "$carInterested", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 },
-            { $project: { name: "$_id", count: 1, _id: 0 } }
+            {
+                $addFields: {
+                    carObjId: {
+                        $convert: {
+                            input: "$_id",
+                            to: "objectId",
+                            onError: null,
+                            onNull: null
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'cars',
+                    localField: 'carObjId',
+                    foreignField: '_id',
+                    as: 'carDetails'
+                }
+            },
+            {
+                $project: {
+                    name: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$carDetails" }, 0] },
+                            then: {
+                                $concat: [
+                                    { $arrayElemAt: ["$carDetails.brand", 0] },
+                                    " ",
+                                    { $arrayElemAt: ["$carDetails.model", 0] }
+                                ]
+                            },
+                            else: "$_id"
+                        }
+                    },
+                    count: 1,
+                    _id: 0
+                }
+            }
         ]);
 
         // Growth Trend (Weekly for last 4 weeks)
@@ -425,6 +572,11 @@ export const createStaff = async (req, res) => {
         if (req.file) {
             const uploadResult = await uploadImage(req.file, { folder: 'crm/staff' });
             staffData.avatar = uploadResult.secure_url;
+        }
+
+        // Generate employeeId if not present (Simple generation: STF- + last 4 digits of timestamp + random)
+        if (!staffData.employeeId) {
+            staffData.employeeId = `STF-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 100)}`;
         }
 
         const staff = await Staff.create(staffData);
@@ -722,6 +874,40 @@ export const getPayroll = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server error fetching payroll',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * @desc    Create Payroll Record
+ * @route   POST /api/crm/payroll
+ * @access  Admin
+ */
+export const createPayroll = async (req, res) => {
+    try {
+        const { staff, month, baseSalary, deductions, netPay, status, advanceAmount } = req.body;
+
+        const salary = await Salary.create({
+            staff,
+            month,
+            baseSalary,
+            deductions: deductions || 0,
+            netPay,
+            status: status || 'Pending',
+            advanceAmount: advanceAmount || 0,
+            paidDate: status === 'Paid' ? new Date() : undefined
+        });
+
+        res.status(201).json({
+            success: true,
+            data: { salary }
+        });
+    } catch (error) {
+        console.error('Create payroll error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error creating payroll',
             error: error.message
         });
     }
@@ -1908,6 +2094,139 @@ export const deleteExpenseCategory = async (req, res) => {
     try {
         await ExpenseCategory.findByIdAndDelete(req.params.id);
         res.json({ success: true, message: 'Category deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @desc    City & Location Management
+ */
+export const getCities = async (req, res) => {
+    try {
+        const cities = await City.find().sort({ createdAt: -1 });
+        res.json({ success: true, count: cities.length, data: { cities } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const createCity = async (req, res) => {
+    try {
+        const city = await City.create(req.body);
+        res.status(201).json({ success: true, data: { city } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const updateCity = async (req, res) => {
+    try {
+        const city = await City.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ success: true, data: { city } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const deleteCity = async (req, res) => {
+    try {
+        await City.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'City deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @desc    Smart Command Center - Dashboard Alerts
+ * @route   GET /api/crm/dashboard/alerts
+ */
+export const getDashboardAlerts = async (req, res) => {
+    try {
+        // Salary Pending
+        const salaryPending = await Salary.countDocuments({ status: 'Pending' });
+
+        // Insurance Expiring (within 30 days)
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        const insuranceExpiring = await CarDocument.countDocuments({
+            type: 'Insurance',
+            expiryDate: { $lte: thirtyDaysFromNow, $gte: new Date() }
+        });
+
+        // Active Accidents
+        const activeAccidents = await AccidentCase.countDocuments({ status: 'Active' });
+
+        // Cars Idle > 5 Days
+        const fiveDaysAgo = new Date();
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+        const idleCars = await Car.countDocuments({
+            status: 'Available',
+            lastBookingDate: { $lte: fiveDaysAgo }
+        });
+
+        // Garage Bills Pending
+        const garageBillsPending = await CarExpense.countDocuments({
+            category: 'Repair',
+            paymentStatus: 'Pending'
+        });
+
+        // Vendor Payments Due
+        const vendorPaymentsDue = await VendorTransaction.countDocuments({
+            type: 'Payout',
+            status: 'Processing'
+        });
+
+        res.json({
+            success: true,
+            data: {
+                alerts: [
+                    {
+                        title: 'Salary Pending',
+                        description: 'Staff members awaiting payment',
+                        count: salaryPending,
+                        type: 'warning',
+                        action: 'payroll'
+                    },
+                    {
+                        title: 'Insurance Expiring',
+                        description: 'Renew before 5th Jan',
+                        count: insuranceExpiring,
+                        type: 'warning',
+                        action: 'documents'
+                    },
+                    {
+                        title: 'Active Accidents',
+                        description: '2 cases in recovery tracking',
+                        count: activeAccidents,
+                        type: 'error',
+                        action: 'accidents'
+                    },
+                    {
+                        title: 'Car Idle > 5 Days',
+                        description: 'Assign them to new bookings',
+                        count: idleCars,
+                        type: 'info',
+                        action: 'cars'
+                    },
+                    {
+                        title: 'Garage Bill Pending',
+                        description: 'Check Active Repairs',
+                        count: garageBillsPending,
+                        type: 'warning',
+                        action: 'garage'
+                    },
+                    {
+                        title: 'Vendor Payment Due',
+                        description: `Rs. 15,000 pending for Garage A`,
+                        count: vendorPaymentsDue,
+                        type: 'error',
+                        action: 'vendors'
+                    }
+                ]
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MdStore, 
   MdBuild, 
@@ -179,6 +180,7 @@ const MOCK_PARTS = [
 // --- Pages ---
 
 export const AllGaragesPage = () => {
+    const navigate = useNavigate();
     const [garages, setGarages] = useState(MOCK_GARAGES);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -208,6 +210,13 @@ export const AllGaragesPage = () => {
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">All Garages</span>
+                    </div>
                      <h1 className="text-2xl font-bold text-gray-900">Partner Garages</h1>
                      <p className="text-gray-500 text-sm">Network of authorized service centers.</p>
                  </div>
@@ -341,6 +350,7 @@ export const AllGaragesPage = () => {
 };
 
 export const ActiveRepairsPage = () => {
+    const navigate = useNavigate();
     const [repairs, setRepairs] = useState(MOCK_REPAIRS);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newRepair, setNewRepair] = useState({
@@ -363,6 +373,13 @@ export const ActiveRepairsPage = () => {
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Active Repairs</span>
+                    </div>
                      <h1 className="text-2xl font-bold text-gray-900">Active Repairs</h1>
                      <p className="text-gray-500 text-sm">Real-time status of vehicles in garage.</p>
                  </div>
@@ -433,6 +450,7 @@ export const ActiveRepairsPage = () => {
 };
 
 export const ServiceHistoryPage = () => {
+    const navigate = useNavigate();
     const [history, setHistory] = useState(MOCK_HISTORY);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -446,6 +464,13 @@ export const ServiceHistoryPage = () => {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Service Logs</span>
+                    </div>
                     <h1 className="text-2xl font-bold text-gray-900">Service Logs</h1>
                     <p className="text-gray-500 text-sm">Archive of all maintenance activities.</p>
                 </div>
@@ -497,10 +522,19 @@ export const ServiceHistoryPage = () => {
     );
 };
 
-export const PartsCostPage = () => (
+export const PartsCostPage = () => {
+    const navigate = useNavigate();
+    return (
     <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
              <div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span>/</span> 
+                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                    <span>/</span> 
+                    <span className="text-gray-800 font-medium">Inventory</span>
+                </div>
                  <h1 className="text-2xl font-bold text-gray-900">Inventory & Parts Cost</h1>
                  <p className="text-gray-500 text-sm">Track spare parts inventory and pricing.</p>
              </div>
@@ -533,5 +567,6 @@ export const PartsCostPage = () => (
         </div>
     </div>
 );
+}
 
 
