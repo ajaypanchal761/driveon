@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MdFolderOpen, 
   MdSearch, 
@@ -27,177 +28,545 @@ import {
 } from 'react-icons/md';
 import { jsPDF } from 'jspdf';
 import { premiumColors } from '../../../theme/colors';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useStaff } from '../../context/StaffContext';
 
-// Mock Data for Staff Directory
-const MOCK_STAFF_DATA = [
-  { id: 1, name: "Rajesh Kumar", role: "Sales Manager", department: "Sales", phone: "+91 98765 43210", email: "rajesh@example.com", status: "Active", joinDate: "12 Jan 2023" },
-  { id: 2, name: "Vikram Singh", role: "Senior Driver", department: "Fleet", phone: "+91 99887 76655", email: "vikram@example.com", status: "On Duty", joinDate: "05 Mar 2023" },
-  { id: 3, name: "Amit Bhardwaj", role: "Head Mechanic", department: "Garage", phone: "+91 91234 56789", email: "amit@example.com", status: "Leave", joinDate: "20 Jun 2024" },
-  { id: 4, name: "Priya Sharma", role: "Admin Executive", department: "Administration", phone: "+91 98989 89898", email: "priya@example.com", status: "Active", joinDate: "01 Feb 2024" },
-  { id: 5, name: "Suresh Raina", role: "Driver", department: "Fleet", phone: "+91 77788 99900", email: "suresh@example.com", status: "On Duty", joinDate: "15 Aug 2023" },
-];
+// ... (other imports remain)
 
-/**
- * Generic Placeholder for Staff Sub-Pages
- */
-const StaffPlaceholder = ({ title, subtitle }) => {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          <p className="text-gray-500 text-sm">{subtitle}</p>
+// Removed MOCK_STAFF_DATA - now in Context
+
+const StaffPlaceholder = ({ name, size = "md", className = "" }) => {
+    const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??';
+    const sizeClasses = size === "sm" ? "w-8 h-8 text-xs" : size === "lg" ? "w-16 h-16 text-xl" : "w-10 h-10 text-sm";
+    
+    return (
+        <div className={`${sizeClasses} rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold ${className}`}>
+            {initials}
         </div>
-      </div>
+    );
+};
 
-      <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-10 flex flex-col items-center justify-center text-center min-h-[400px]">
-         <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-400 mb-4">
-            <MdFolderOpen size={40} />
+const AddStaffModal = ({ isOpen, onClose, onSubmit, initialData }) => {
+    const { rolesList } = useStaff();
+    const [step, setStep] = useState(1);
+    const [formData, setFormData] = useState({
+        name: '',
+        role: '',
+        department: 'Sales',
+        phone: '',
+        email: '',
+        salaryType: 'Monthly',
+        baseMonthlySalary: '',
+        dailyRate: '',
+        ratePerTrip: '',
+        joinDate: new Date().toLocaleDateString('en-GB'),
+        status: 'Active',
+        workingDays: 26,
+        absentDeduction: '',
+        halfDayDeduction: '',
+        overtimeRate: '',
+        employmentType: 'Full Time'
+    });
+
+    useEffect(() => {
+        if (isOpen) {
+            setStep(1); 
+            if (initialData) {
+                // Sanitize phone number to remove +91 or other chars if present in edit mode
+                const sanitizedPhone = initialData.phone ? initialData.phone.replace(/\D/g, '').slice(-10) : '';
+                setFormData({...initialData, phone: sanitizedPhone});
+            } else {
+                setFormData({
+                    name: '',
+                    role: rolesList.length > 0 ? rolesList[0].role : '',
+                    department: 'Sales',
+                    phone: '',
+                    email: '',
+                    salaryType: 'Monthly',
+                    baseMonthlySalary: '',
+                    dailyRate: '',
+                    ratePerTrip: '',
+                    joinDate: new Date().toLocaleDateString('en-GB'),
+                    status: 'Active',
+                    workingDays: 26,
+                    absentDeduction: '',
+                    halfDayDeduction: '',
+                    overtimeRate: '',
+                    employmentType: 'Full Time'
+                });
+            }
+        }
+    }, [isOpen, initialData, rolesList]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSubmit(formData);
+        onClose();
+    };
+
+    const [errors, setErrors] = useState({});
+
+    // ... (useEffect remains same) ...
+
+    const validateStep1 = () => {
+        let newErrors = {};
+        if (!formData.name.trim()) newErrors.name = "Name is required";
+        if (!formData.role) newErrors.role = "Role is required";
+        
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!formData.email) {
+            newErrors.email = "Email is required";
+        } else if (!emailRegex.test(formData.email)) {
+             newErrors.email = "Invalid email format";
+        }
+
+        // Phone validation
+        if (!formData.phone) {
+             newErrors.phone = "Phone is required";
+        } else if (formData.phone.length !== 10) {
+             newErrors.phone = "Phone must be exactly 10 digits";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const validateStep2 = () => {
+        let newErrors = {};
+        
+        // Salary validation based on type
+        const salaryValue = formData.salaryType === 'Monthly' ? formData.baseMonthlySalary : 
+                           formData.salaryType === 'Daily' ? formData.dailyRate : formData.ratePerTrip;
+        
+        if (!salaryValue) {
+            newErrors.salary = "Amount is required";
+        } else if (Number(salaryValue) <= 0) {
+            newErrors.salary = "Amount must be greater than 0";
+        }
+
+        // Working Days validation
+        if (!formData.workingDays) {
+            newErrors.workingDays = "Working days required";
+        } else if (Number(formData.workingDays) < 1 || Number(formData.workingDays) > 31) {
+             newErrors.workingDays = "Invalid days (1-31)";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const nextStep = () => {
+        if (step === 1) {
+            if (validateStep1()) setStep(step + 1);
+        } else if (step === 2) {
+             if (validateStep2()) setStep(step + 1);
+        } else {
+            setStep(step + 1);
+        }
+    };
+    const prevStep = () => setStep(step - 1);
+
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* ... overlay ... */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+             <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-0 overflow-hidden"
+             >
+                {/* Header */}
+                <div className="bg-white px-6 py-4 flex justify-between items-start border-b border-gray-100 relative">
+                     {/* Progress Bar */}
+                     <div className="absolute top-0 left-0 h-1 bg-indigo-600 transition-all duration-300" style={{ width: `${(step / 3) * 100}%` }}></div>
+                     
+                     <div>
+                        <h3 className="text-xl font-bold text-gray-900">{initialData ? 'Edit Staff' : 'Add New Staff'}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Step {step} of 3: {step === 1 ? 'Basic Details' : step === 2 ? 'Salary Config' : 'Final Review'}</p>
+                     </div>
+                     <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                         <MdClose size={22} />
+                     </button>
+                </div>
+
+                <div className="p-6">
+                    <form onSubmit={(e) => e.preventDefault()} className="min-h-[350px]">
+                        <AnimatePresence mode="wait">
+                            {/* STEP 1: BASIC DETAILS */}
+                            {step === 1 && (
+                                <motion.div 
+                                    key="step1"
+                                    initial={{ x: 20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    exit={{ x: -20, opacity: 0 }}
+                                    className="space-y-4"
+                                >
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Full Name *</label>
+                                            <input autoFocus type="text" placeholder="Rajesh Kumar" className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${errors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-100'}`} value={formData.name} onChange={e => {
+                                                setFormData({...formData, name: e.target.value});
+                                                if(errors.name) setErrors({...errors, name: null});
+                                            }} />
+                                            {errors.name && <p className="text-[10px] text-red-500 font-medium">{errors.name}</p>}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Role *</label>
+                                            <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+                                                {rolesList.map(r => <option key={r.id} value={r.role}>{r.role}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Department</label>
+                                            <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})}>
+                                                <option>Sales</option>
+                                                <option>Fleet</option>
+                                                <option>Garage</option>
+                                                <option>Administration</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                           <label className="text-[10px] font-bold text-gray-600 uppercase">Status</label>
+                                           <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+                                               <option>Active</option>
+                                               <option>On Duty</option>
+                                               <option>Leave</option>
+                                               <option>Inactive</option>
+                                           </select>
+                                       </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Phone *</label>
+                                            <div className="relative flex items-center">
+                                                <MdPhone className="absolute left-3 text-gray-400 z-10" size={14} />
+                                                <span className="absolute left-9 text-gray-500 font-medium text-sm border-r border-gray-300 pr-2 py-0.5 select-none">+91</span>
+                                                <input 
+                                                    type="text" 
+                                                    maxLength="10"
+                                                    placeholder="98765 43210" 
+                                                    className={`w-full pl-[4.5rem] pr-3 py-2 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${errors.phone ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-100'}`}
+                                                    value={formData.phone} 
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        setFormData({...formData, phone: val});
+                                                        if(errors.phone) setErrors({...errors, phone: null});
+                                                    }} 
+                                                />
+                                            </div>
+                                            {errors.phone && <p className="text-[10px] text-red-500 font-medium">{errors.phone}</p>}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Email *</label>
+                                            <div className="relative">
+                                                <MdEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                                <input 
+                                                    type="email" 
+                                                    placeholder="staff@driveon.com" 
+                                                    className={`w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${errors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-100'}`}
+                                                    value={formData.email} 
+                                                    onChange={e => {
+                                                        setFormData({...formData, email: e.target.value});
+                                                        if(errors.email) setErrors({...errors, email: null});
+                                                    }} 
+                                                />
+                                            </div>
+                                            {errors.email && <p className="text-[10px] text-red-500 font-medium">{errors.email}</p>}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Joining Date</label>
+                                            <div className="relative">
+                                                <input type="text" placeholder="dd-mm-yyyy" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all" value={formData.joinDate} />
+                                                <MdAccessTime className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                           <label className="text-[10px] font-bold text-gray-600 uppercase">Employment</label>
+                                           <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.employmentType} onChange={e => setFormData({...formData, employmentType: e.target.value})}>
+                                               <option>Full Time</option>
+                                               <option>Part Time</option>
+                                               <option>Contract</option>
+                                               <option>Internship</option>
+                                           </select>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* STEP 2: SALARY CONFIG */}
+                            {step === 2 && (
+                                <motion.div 
+                                    key="step2"
+                                    initial={{ x: 20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    exit={{ x: -20, opacity: 0 }}
+                                    className="space-y-5"
+                                >
+                                    {/* Salary Method Toggle */}
+                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                        <label className="text-[10px] font-bold text-indigo-800 uppercase mb-2 block">Salary Method</label>
+                                        <div className="flex gap-2">
+                                            {['Monthly', 'Daily', 'Per Trip'].map((type) => (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => setFormData({...formData, salaryType: type})}
+                                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all
+                                                        ${formData.salaryType === type 
+                                                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                                                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Dynamic Fields based on Salary Type */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">
+                                                {formData.salaryType === 'Monthly' ? 'Base Monthly Salary (₹) *' : formData.salaryType === 'Daily' ? 'Daily Rate (₹) *' : 'Rate Per Trip (₹) *'}
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                className={`w-full px-3 py-2 bg-white border rounded-lg text-lg font-bold text-gray-800 focus:outline-none focus:ring-2 transition-all ${errors.salary ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-100'}`}
+                                                value={formData.salaryType === 'Monthly' ? formData.baseMonthlySalary : formData.salaryType === 'Daily' ? formData.dailyRate : formData.ratePerTrip}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (formData.salaryType === 'Monthly') setFormData({...formData, baseMonthlySalary: val});
+                                                    else if (formData.salaryType === 'Daily') setFormData({...formData, dailyRate: val});
+                                                    else setFormData({...formData, ratePerTrip: val});
+                                                    if(errors.salary) setErrors({...errors, salary: null});
+                                                }}
+                                            />
+                                            {errors.salary && <p className="text-[10px] text-red-500 font-medium">{errors.salary}</p>}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Working Days *</label>
+                                            <input 
+                                                type="number" 
+                                                className={`w-full px-3 py-2 bg-white border rounded-lg text-lg font-bold text-gray-800 focus:outline-none focus:ring-2 transition-all ${errors.workingDays ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-100'}`}
+                                                value={formData.workingDays}
+                                                onChange={e => {
+                                                    setFormData({...formData, workingDays: e.target.value})
+                                                    if(errors.workingDays) setErrors({...errors, workingDays: null});
+                                                }}
+                                            />
+                                            {errors.workingDays && <p className="text-[10px] text-red-500 font-medium">{errors.workingDays}</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Additional Deductions (Colored Inputs) */}
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-500">Absent Deduction/Day</label>
+                                            <div className="relative">
+                                                <input type="number" className="w-full px-3 py-2 pl-6 bg-rose-50 border border-rose-100 rounded-lg text-sm text-rose-800 font-bold focus:outline-none" value={formData.absentDeduction} onChange={e => setFormData({...formData, absentDeduction: e.target.value})} />
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-rose-400 text-xs">₹</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-500">Half Day Deduction</label>
+                                            <div className="relative">
+                                                <input type="number" className="w-full px-3 py-2 pl-6 bg-orange-50 border border-orange-100 rounded-lg text-sm text-orange-800 font-bold focus:outline-none" value={formData.halfDayDeduction} onChange={e => setFormData({...formData, halfDayDeduction: e.target.value})} />
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-400 text-xs">₹</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-gray-500">Overtime Rate/Hr</label>
+                                            <div className="relative">
+                                                <input type="number" className="w-full px-3 py-2 pl-6 bg-green-50 border border-green-100 rounded-lg text-sm text-green-800 font-bold focus:outline-none" value={formData.overtimeRate} onChange={e => setFormData({...formData, overtimeRate: e.target.value})} />
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-green-400 text-xs">₹</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-blue-50 p-3 rounded-lg flex gap-3 items-start border border-blue-100">
+                                        <div className="mt-0.5 text-blue-600 font-bold text-xs">NB:</div>
+                                        <p className="text-xs text-blue-800">
+                                            These rules will be locked and used to auto-calculate salary every month. Manual editing of salary is disabled to ensure accuracy.
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* STEP 3: REVIEW (Placeholder) */}
+                            {step === 3 && (
+                                <motion.div 
+                                    key="step3"
+                                    initial={{ x: 20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    exit={{ x: -20, opacity: 0 }}
+                                    className="space-y-4 text-center py-6"
+                                >
+                                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <MdCheckCircle size={32} />
+                                    </div>
+                                    <h4 className="text-lg font-bold text-gray-900">All Set!</h4>
+                                    <p className="text-gray-500 text-sm px-8">
+                                        You are about to add <span className="font-bold text-gray-800">{formData.name}</span> as a <span className="font-bold text-gray-800">{formData.role}</span>.
+                                    </p>
+                                    <div className="bg-gray-50 rounded-xl p-4 mt-4 text-left text-sm space-y-2 border border-gray-100">
+                                        <div className="flex justify-between"><span>Salary Type:</span> <span className="font-bold">{formData.salaryType}</span></div>
+                                        <div className="flex justify-between"><span>Base Pay:</span> <span className="font-bold">₹{formData.baseMonthlySalary || formData.dailyRate || formData.ratePerTrip}</span></div>
+                                        <div className="flex justify-between"><span>Phone:</span> <span className="font-bold">{formData.phone}</span></div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </form>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-5 border-t border-gray-100 flex justify-between bg-gray-50 items-center">
+                    {step > 1 ? (
+                        <button onClick={prevStep} className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors text-sm border border-gray-200 bg-white">
+                            Back
+                        </button>
+                    ) : (
+                        <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:text-red-500 transition-colors text-sm">
+                            Cancel
+                        </button>
+                    )}
+
+                    {step < 3 ? (
+                        <button onClick={nextStep} className="px-8 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all text-sm flex items-center gap-2">
+                            Next Step
+                        </button>
+                    ) : (
+                        <button onClick={handleSubmit} className="px-8 py-2.5 rounded-xl font-bold bg-green-600 text-white hover:bg-green-700 shadow-md transition-all text-sm flex items-center gap-2">
+                             Confirm & Add
+                        </button>
+                    )}
+                </div>
+             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    );
+ };
+
+const ViewStaffModal = ({ isOpen, onClose, staff }) => {
+    if (!staff) return null;
+    return (
+     <AnimatePresence>
+       {isOpen && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+           <motion.div
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+             onClick={onClose}
+             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+           />
+            <motion.div
+             initial={{ scale: 0.95, opacity: 0, y: 20 }}
+             animate={{ scale: 1, opacity: 1, y: 0 }}
+             exit={{ scale: 0.95, opacity: 0, y: 20 }}
+             className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+                <div className="h-24 bg-gradient-to-r from-indigo-600 to-purple-600 relative">
+                     <button onClick={onClose} className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-colors">
+                        <MdClose size={20} />
+                     </button>
+                </div>
+                <div className="px-6 pb-6 -mt-12 relative">
+                     <div className="w-24 h-24 rounded-2xl bg-white p-1.5 shadow-lg mb-4">
+                        <div className="w-full h-full bg-indigo-50 rounded-xl flex items-center justify-center text-3xl font-bold text-indigo-600">
+                             {staff.name.charAt(0)}
+                        </div>
+                     </div>
+                     
+                     <div className="mb-6">
+                        <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider rounded border border-indigo-100 mb-2 inline-block">
+                             {staff.role}
+                        </span>
+                        <h2 className="text-2xl font-bold text-gray-900 leading-tight">{staff.name}</h2>
+                        <p className="text-gray-500 font-medium">{staff.department} Department</p>
+                     </div>
+
+                     <div className="space-y-4">
+                         <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 shadow-sm">
+                                 <MdPhone size={18} />
+                             </div>
+                             <div>
+                                 <p className="text-xs text-gray-400 font-bold uppercase">Phone</p>
+                                 <p className="text-sm font-bold text-gray-800">{staff.phone}</p>
+                             </div>
+                         </div>
+                         <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 shadow-sm">
+                                 <MdEmail size={18} />
+                             </div>
+                             <div>
+                                 <p className="text-xs text-gray-400 font-bold uppercase">Email</p>
+                                 <p className="text-sm font-bold text-gray-800">{staff.email}</p>
+                             </div>
+                         </div>
+                         <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                             <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 shadow-sm">
+                                 <MdAttachMoney size={18} />
+                             </div>
+                             <div>
+                                 <p className="text-xs text-gray-400 font-bold uppercase">Salary Structure</p>
+                                 <p className="text-sm font-bold text-gray-800">
+                                     {staff.salaryType === 'Monthly' ? `₹ ${staff.baseMonthlySalary} / Month` : 
+                                      staff.salaryType === 'Daily' ? `₹ ${staff.dailyRate} / Day` : 
+                                      `₹ ${staff.ratePerTrip} / Trip`}
+                                 </p>
+                             </div>
+                         </div>
+                     </div>
+                     
+                     <div className="mt-6 pt-6 border-t border-gray-100 flex justify-between items-center text-sm text-gray-500">
+                         <span>Member since {staff.joinDate}</span>
+                         <span className={`px-2 py-0.5 rounded text-xs font-bold border ${staff.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                             {staff.status}
+                         </span>
+                     </div>
+                </div>
+            </motion.div>
          </div>
-         <h3 className="text-xl font-semibold text-gray-700">Module: {title}</h3>
-         <p className="text-gray-500 max-w-sm mt-2">
-            This "Staff Operations" module page is ready. It will contain specific features for "{title}".
-         </p>
-      </div>
-    </div>
-  );
-};
-
-// --- Modals ---
-
-const AddStaffModal = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    role: '',
-    department: 'Sales',
-    phone: '',
-    email: '',
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-    onClose();
-    setFormData({ name: '', role: '', department: 'Sales', phone: '', email: '' });
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden"
-          >
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-800">Add New Staff</h2>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <MdClose size={20} className="text-gray-500" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input 
-                  required
-                  type="text" 
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  placeholder="e.g. Rahul Verma"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <input 
-                    required
-                    type="text" 
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="e.g. Sales Executive"
-                    value={formData.role}
-                    onChange={e => setFormData({...formData, role: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <select 
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                    value={formData.department}
-                    onChange={e => setFormData({...formData, department: e.target.value})}
-                  >
-                    <option>Sales</option>
-                    <option>Fleet</option>
-                    <option>Garage</option>
-                    <option>Administration</option>
-                    <option>Finance</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <input 
-                      required
-                      type="tel" 
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                      placeholder="+91..."
-                      value={formData.phone}
-                      onChange={e => setFormData({...formData, phone: e.target.value})}
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input 
-                      required
-                      type="email" 
-                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                      placeholder="email@example.com"
-                      value={formData.email}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
-                    />
-                 </div>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors">
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
-                >
-                  Add Staff
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
+       )}
+     </AnimatePresence>
+    );
+ };
 
 export const StaffDirectoryPage = () => {
     const navigate = useNavigate();
+    const { staffList, addStaff, updateStaff, deleteStaff } = useStaff();
     const [searchTerm, setSearchTerm] = useState('');
     const [deptFilter, setDeptFilter] = useState('All');
-    const [staffList, setStaffList] = useState(MOCK_STAFF_DATA);
+    // staffList is now from context
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingStaff, setEditingStaff] = useState(null);
+    const [viewStaff, setViewStaff] = useState(null); // Full View Modal State
+    const [activeMenu, setActiveMenu] = useState(null); // Track open menu
   
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenu(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
     const filteredStaff = staffList.filter(staff => {
       const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             staff.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -205,13 +574,19 @@ export const StaffDirectoryPage = () => {
       return matchesSearch && matchesDept;
     });
 
-    const handleAddStaff = (newStaff) => {
-        setStaffList([{
-            id: Date.now(),
-            ...newStaff,
-            status: "Active",
-            joinDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-        }, ...staffList]);
+    const handleAddStaff = (newStaffData) => {
+        if (editingStaff) {
+            updateStaff(editingStaff.id, newStaffData);
+            setEditingStaff(null);
+        } else {
+            addStaff(newStaffData);
+        }
+    };
+
+    const handleDeletStaff = (id) => {
+        if(window.confirm("Are you sure you want to delete this staff member?")) {
+            deleteStaff(id);
+        }
     };
   
     const getStatusBadge = (status) => {
@@ -225,7 +600,18 @@ export const StaffDirectoryPage = () => {
   
     return (
       <div className="space-y-6">
-        <AddStaffModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSubmit={handleAddStaff} />
+        <AddStaffModal 
+            isOpen={isAddModalOpen} 
+            onClose={() => { setIsAddModalOpen(false); setEditingStaff(null); }} 
+            onSubmit={handleAddStaff} 
+            initialData={editingStaff}
+        />
+
+        <ViewStaffModal 
+            isOpen={!!viewStaff} 
+            onClose={() => setViewStaff(null)} 
+            staff={viewStaff} 
+        />
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -241,7 +627,7 @@ export const StaffDirectoryPage = () => {
             <p className="text-gray-500 text-sm">Manage all staff members and their details</p>
           </div>
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => { setEditingStaff(null); setIsAddModalOpen(true); }}
             className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
             style={{ backgroundColor: premiumColors.primary.DEFAULT }}
           >
@@ -286,6 +672,7 @@ export const StaffDirectoryPage = () => {
                 <th className="p-4">Staff Name</th>
                 <th className="p-4">Role & Dept</th>
                 <th className="p-4">Contact</th>
+                <th className="p-4">Salary Config</th>
                 <th className="p-4">Joined</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right">Actions</th>
@@ -312,6 +699,26 @@ export const StaffDirectoryPage = () => {
                       <MdEmail size={14} className="text-gray-400" /> {staff.email}
                     </div>
                   </td>
+                  <td className="p-4">
+                     {staff.salaryType === 'Monthly' && (
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-900">₹ {staff.baseMonthlySalary}</span>
+                            <span className="text-[10px] text-gray-400 font-medium uppercase">Monthly</span>
+                        </div>
+                     )}
+                     {staff.salaryType === 'Daily' && (
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-900">₹ {staff.dailyRate}</span>
+                            <span className="text-[10px] text-gray-400 font-medium uppercase">/ Day</span>
+                        </div>
+                     )}
+                     {staff.salaryType === 'Per Trip' && (
+                        <div className="flex flex-col">
+                            <span className="font-bold text-gray-900">₹ {staff.ratePerTrip}</span>
+                            <span className="text-[10px] text-gray-400 font-medium uppercase">/ Trip</span>
+                        </div>
+                     )}
+                  </td>
                   <td className="p-4 text-gray-500">
                     {staff.joinDate}
                   </td>
@@ -319,12 +726,46 @@ export const StaffDirectoryPage = () => {
                     {getStatusBadge(staff.status)}
                   </td>
                   <td className="p-4 text-right">
-                    <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                    <button 
+                        onClick={() => setViewStaff(staff)}
+                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors mr-2"
+                        title="View Details"
+                    >
                       <MdVisibility size={18} />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      <MdMoreVert size={18} />
-                    </button>
+                    
+                    <div className="relative inline-block text-left">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenu(activeMenu === staff.id ? null : staff.id);
+                            }}
+                            className={`p-2 rounded-lg transition-colors ${activeMenu === staff.id ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                        >
+                          <MdMoreVert size={18} />
+                        </button>
+                        
+                        {activeMenu === staff.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 origin-top-right animate-scaleIn">
+                                <button 
+                                    onClick={() => {
+                                        setEditingStaff(staff);
+                                        setIsAddModalOpen(true);
+                                        setActiveMenu(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-indigo-600 flex items-center gap-2"
+                                >
+                                    <MdEdit size={16} /> Edit Details
+                                </button>
+                                <button 
+                                    onClick={() => handleDeletStaff(staff.id)}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                >
+                                    <MdDelete size={16} /> Delete Staff
+                                </button>
+                            </div>
+                        )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -334,14 +775,7 @@ export const StaffDirectoryPage = () => {
       </div>
     );
   };
-// Mock Data for Roles
-const MOCK_ROLES_DATA = [
-  { id: 1, role: "Admin", access: "Full Access", count: 2, description: "Complete control over all modules and settings." },
-  { id: 2, role: "Sales Manager", access: "Leads, Bookings, Reports", count: 3, description: "Can manage enquiries, bookings and view sales reports." },
-  { id: 3, role: "Fleet Manager", access: "Cars, Garage, Drivers", count: 1, description: "Manages vehicle inventory, maintenance and drivers." },
-  { id: 4, role: "Driver", access: "Trip App Only", count: 15, description: "Limited access to assigned trips and basic profile." },
-  { id: 5, role: "Accountant", access: "Finance, Salary, Invoices", count: 1, description: "Manages expenses, income, and staff payroll." },
-];
+
 
 const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
    const [formData, setFormData] = useState({ role: '', description: '', access: 'Basic' });
@@ -407,11 +841,9 @@ const RoleDetails = ({ role, onBack }) => {
         ? ['View Staff Directory', 'Manage Bookings', 'View Basic Reports']
         : ['View Assigned Tasks', 'Mark Attendance'];
 
-    // Find assigned staff
-    const assignedStaff = MOCK_STAFF_DATA.filter(s => 
-        s.role.toLowerCase().includes(role.role.toLowerCase()) || 
-        role.role.toLowerCase().includes(s.role.toLowerCase())
-    );
+    // Find assigned staff using context
+    const { staffList } = useStaff();
+    const assignedStaff = staffList.filter(s => role.staffIds?.includes(s.id));
 
     const [activeTab, setActiveTab] = useState('permissions');
 
@@ -446,7 +878,7 @@ const RoleDetails = ({ role, onBack }) => {
                             <MdGroup size={24} />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-gray-900">{assignedStaff.length}</p>
+                            <p className="text-2xl font-bold text-gray-900">{role.staffIds?.length || 0}</p>
                             <p className="text-sm text-gray-500 font-medium">Active Staff</p>
                         </div>
                     </div>
@@ -466,7 +898,7 @@ const RoleDetails = ({ role, onBack }) => {
                   onClick={() => setActiveTab('staff')}
                   className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'staff' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
                 >
-                    Assigned Staff ({assignedStaff.length})
+                    Assigned Staff ({role.staffIds?.length || 0})
                     {activeTab === 'staff' && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" />}
                 </button>
             </div>
@@ -538,26 +970,16 @@ const RoleDetails = ({ role, onBack }) => {
 
 export const RolesPage = () => {
   const navigate = useNavigate();
-  // Calculate dynamic counts
-  const rolesWithCounts = MOCK_ROLES_DATA.map(role => {
-      const count = MOCK_STAFF_DATA.filter(s => 
-          s.role.toLowerCase().includes(role.role.toLowerCase()) || 
-          role.role.toLowerCase().includes(s.role.toLowerCase())
-      ).length;
-      return { ...role, count }; // Override static count
-  });
-
-  const [rolesList, setRolesList] = useState(rolesWithCounts);
+  const { rolesList, addRole, updateRole, deleteRole } = useStaff();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null); // For Details Page
 
-
   const handleSaveRole = (data) => {
       if (editingRole) {
-          setRolesList(rolesList.map(r => r.id === editingRole.id ? { ...r, ...data } : r));
+          updateRole(editingRole.id, data);
       } else {
-          setRolesList([...rolesList, { id: Date.now(), ...data, count: 0 }]);
+          addRole(data);
       }
       setIsModalOpen(false);
       setEditingRole(null);
@@ -572,7 +994,7 @@ export const RolesPage = () => {
   const handleDelete = (e, id) => {
       e.stopPropagation(); // Prevent opening details
       if(window.confirm('Delete this role?')) {
-          setRolesList(rolesList.filter(r => r.id !== id));
+          deleteRole(id);
       }
   };
 
@@ -649,7 +1071,7 @@ export const RolesPage = () => {
                      {role.access}
                   </span>
                   <div className="flex items-center gap-1.5 text-gray-500 text-sm font-medium">
-                     <MdGroup size={16} /> {role.count} Staff
+                     <MdGroup size={16} /> {role.staffIds?.length || 0} Staff
                   </div>
                </div>
             </div>
@@ -1046,16 +1468,48 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 // Mock Data for Salary
 const MOCK_SALARY_DATA = [
   { id: 1, name: "Rajesh Kumar", role: "Sales Manager", baseSalary: "₹ 25,000", deductions: "₹ 1,000", netPay: "₹ 24,000", status: "Paid", paymentDate: "01 Dec 2025" },
-  { id: 2, name: "Vikram Singh", role: "Driver", baseSalary: "₹ 18,000", deductions: "₹ 500", netPay: "₹ 17,500", status: "Pending", paymentDate: "-" },
-  { id: 3, name: "Amit Bhardwaj", role: "Mechanic", baseSalary: "₹ 20,000", deductions: "₹ 0", netPay: "₹ 20,000", status: "Processing", paymentDate: "-" },
 ];
 
 export const SalaryPage = () => {
     const navigate = useNavigate();
+    const { staffList } = useStaff();
     const [salaryList, setSalaryList] = useState(MOCK_SALARY_DATA);
     const [monthFilter, setMonthFilter] = useState('Month: December');
     const [staffFilter, setStaffFilter] = useState('Staff: All');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Check for staff with completed cycles (Due for Payment)
+    useEffect(() => {
+        const existingIds = new Set(salaryList.map(item => item.id));
+
+        const dueStaff = staffList.filter(staff => !existingIds.has(staff.id))
+            .map(staff => {
+                let baseAmount = "0";
+                if (staff.salaryType === 'Monthly') baseAmount = staff.baseMonthlySalary;
+                else if (staff.salaryType === 'Daily') baseAmount = staff.dailyRate;
+                else if (staff.salaryType === 'Per Trip') baseAmount = staff.ratePerTrip;
+                
+                // Simple formatting
+                const formattedBase = `₹ ${parseInt(baseAmount || 0).toLocaleString('en-IN')}`;
+
+                return {
+                    id: staff.id,
+                    name: staff.name,
+                    role: staff.role,
+                    baseSalary: formattedBase,
+                    deductions: "₹ 0",
+                    netPay: formattedBase,
+                    status: "Pending",
+                    paymentDate: "-",
+                    // Add flag to indicate this was auto-added due to cycle completion
+                    isCycleComplete: true 
+                };
+            });
+
+        if (dueStaff.length > 0) {
+            setSalaryList(prev => [...prev, ...dueStaff]);
+        }
+    }, [staffList]);
 
     const handlePayNow = (id) => {
         setSalaryList(salaryList.map(item => {
@@ -1282,7 +1736,14 @@ const MOCK_ADVANCES_DATA = [
 ];
 
 const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
-    const [formData, setFormData] = useState({ name: 'Vikram Singh', amount: '' });
+    const { staffList } = useStaff();
+    const [formData, setFormData] = useState({ name: staffList[0]?.name || '', amount: '' });
+
+    useEffect(() => {
+        if (isOpen && staffList.length > 0) {
+            setFormData({ name: staffList[0].name, amount: '' });
+        }
+    }, [isOpen, staffList]);
  
     return (
      <AnimatePresence>
@@ -1304,9 +1765,7 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
                <h3 className="text-xl font-bold mb-4">New Advance</h3>
                <div className="space-y-4">
                    <select className="w-full p-2 border rounded-xl" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}>
-                       <option>Vikram Singh</option>
-                       <option>Suresh Raina</option>
-                       <option>Amit Bhardwaj</option>
+                       {staffList.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                    </select>
                    <input 
                     type="number"
@@ -1315,7 +1774,7 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
                     value={formData.amount}
                     onChange={e => setFormData({...formData, amount: e.target.value})}
                    />
-                   <button onClick={() => { onSubmit(formData); onClose(); setFormData({name: 'Vikram Singh', amount: ''}) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Submit Request</button>
+                   <button onClick={() => { if(formData.amount) { onSubmit(formData); onClose(); } }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Submit Request</button>
                </div>
             </motion.div>
          </div>
@@ -1323,13 +1782,114 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
      </AnimatePresence>
     );
  };
+
+const AddRepaymentModal = ({ isOpen, onClose, onSubmit, selectedEntry }) => {
+    const [amount, setAmount] = useState('');
+    const [note, setNote] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setAmount('');
+            setNote('');
+        }
+    }, [isOpen]);
+
+    const handleSubmit = () => {
+        if (amount && !isNaN(amount)) {
+            onSubmit(parseFloat(amount), note);
+            onClose();
+        }
+    };
+
+    if (!selectedEntry) return null;
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                    />
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.95, opacity: 0 }}
+                        className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+                    >
+                        <h3 className="text-xl font-bold mb-2 text-gray-900">Add Repayment</h3>
+                        <p className="text-sm text-gray-500 mb-6">Recording repayment for <span className="font-bold text-gray-800">{selectedEntry.name}</span></p>
+                        
+                        <div className="space-y-4">
+                            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4">
+                                <div className="flex justify-between text-xs text-indigo-600 font-bold uppercase mb-1">
+                                    <span>Remaining Balance</span>
+                                    <span>{selectedEntry.balance}</span>
+                                </div>
+                                <div className="w-full bg-indigo-200 h-1 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-indigo-600 h-full transition-all duration-500" 
+                                        style={{ width: `${(parseFloat(selectedEntry.paid.replace(/[^\d.]/g, '')) / parseFloat(selectedEntry.amount.replace(/[^\d.]/g, ''))) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase">Repayment Amount (₹)</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="Enter amount" 
+                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors font-bold text-gray-800" 
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase">Confirmation / Note</label>
+                                <textarea 
+                                    placeholder="e.g. Paid via UPI" 
+                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors text-sm" 
+                                    rows="2"
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button 
+                                    onClick={onClose} 
+                                    className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleSubmit} 
+                                    className="flex-2 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all active:scale-95"
+                                >
+                                    Confirm Payment
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+};
  
- export const AdvancesPage = () => {
+  export const AdvancesPage = () => {
      const navigate = useNavigate();
      const [searchTerm, setSearchTerm] = useState('');
      const [statusFilter, setStatusFilter] = useState('Status: Active');
      const [advancesList, setAdvancesList] = useState(MOCK_ADVANCES_DATA);
      const [isModalOpen, setIsModalOpen] = useState(false);
+     const [isRepaymentModalOpen, setIsRepaymentModalOpen] = useState(false);
+     const [selectedEntry, setSelectedEntry] = useState(null);
  
      const handleAddAdvance = (data) => {
          setAdvancesList([...advancesList, {
@@ -1343,15 +1903,14 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
          }]);
      };
  
-     const handleRepayment = (id) => {
-         const amount = prompt("Enter Repayment Amount:");
-         if(amount) {
+     const handleRepayment = (amount, note) => {
+         if(amount && selectedEntry) {
              setAdvancesList(advancesList.map(item => {
-                 if(item.id === id) {
-                     const currentPaid = parseInt(item.paid.replace(/[^\d]/g, ''));
-                     const total = parseInt(item.amount.replace(/[^\d]/g, ''));
-                     const newPaid = currentPaid + parseInt(amount);
-                     const newBalance = total - newPaid;
+                 if(item.id === selectedEntry.id) {
+                     const currentPaid = parseFloat(item.paid.replace(/[^\d.]/g, ''));
+                     const total = parseFloat(item.amount.replace(/[^\d.]/g, ''));
+                     const newPaid = currentPaid + parseFloat(amount);
+                     const newBalance = Math.max(0, total - newPaid);
                      return {
                          ...item,
                          paid: `₹ ${newPaid.toLocaleString('en-IN')}`,
@@ -1361,7 +1920,13 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
                  }
                  return item;
              }));
+             console.log(`Note recorded for STF-${selectedEntry.id}: ${note}`);
          }
+     };
+
+     const openRepaymentModal = (entry) => {
+         setSelectedEntry(entry);
+         setIsRepaymentModalOpen(true);
      };
    
      const filteredAdvances = advancesList.filter(item => {
@@ -1374,7 +1939,13 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
  
      return (
        <div className="space-y-6">
-         <AddAdvanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddAdvance} />
+          <AddAdvanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddAdvance} />
+          <AddRepaymentModal
+            isOpen={isRepaymentModalOpen} 
+            onClose={() => setIsRepaymentModalOpen(false)} 
+            onSubmit={handleRepayment} 
+            selectedEntry={selectedEntry} 
+          />
          {/* Header */}
          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
@@ -1459,7 +2030,7 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
                    <td className="p-4 text-right">
                      {item.status === 'Active' && (
                          <button 
-                            onClick={() => handleRepayment(item.id)}
+                            onClick={() => openRepaymentModal(item)}
                             className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
                          >
                              Add Repayment

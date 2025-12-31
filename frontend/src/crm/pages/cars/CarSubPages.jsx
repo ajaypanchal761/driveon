@@ -137,14 +137,7 @@ export const AllCarsPage = () => {
             <h1 className="text-2xl font-bold text-gray-900">Vehicle Inventory</h1>
             <p className="text-gray-500 text-sm">Manage your entire fleet and viewing details.</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm transition-colors hover:opacity-90 active:scale-95"
-            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-          >
-            <MdAdd size={20} />
-            Add New Car
-          </button>
+
         </div>
   
         {/* Filters */}

@@ -62,6 +62,15 @@ const ModuleFavoritesPage = lazy(() => import("../module/pages/ModuleFavoritesPa
 const EmployeeHomePage = lazy(() => import("../employee/pages/EmployeeHomePage"));
 const EnquiriesListPage = lazy(() => import("../employee/pages/EnquiriesListPage"));
 const EnquiryDetailsPage = lazy(() => import("../employee/pages/EnquiryDetailsPage"));
+const AttendancePage = lazy(() => import("../employee/pages/AttendancePage"));
+const TasksPage = lazy(() => import("../employee/pages/TasksPage"));
+const ProfilePage = lazy(() => import("../employee/pages/ProfilePage"));
+const SalaryPage = lazy(() => import("../employee/pages/SalaryPage"));
+const StaffDirectoryPage = lazy(() => import("../employee/pages/StaffDirectoryPage"));
+const ExpenseClaimsPage = lazy(() => import("../employee/pages/ExpenseClaimsPage"));
+const NotificationsPage = lazy(() => import("../employee/pages/NotificationsPage"));
+const PrivacySecurityPage = lazy(() => import("../employee/pages/PrivacySecurityPage"));
+const EmployeeLoginPage = lazy(() => import("../employee/pages/EmployeeLoginPage"));
 
 
 
@@ -223,7 +232,7 @@ const CRM_CarProfit = lazy(() => import("../crm/pages/cars/CarSubPages").then(mo
 const CRM_CarDocs = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarDocumentsPage })));
 // Accident Subpages
 const CRM_AccidentActive = lazy(() => import("../crm/pages/cars/AccidentActiveCases"));
-const CRM_AccidentDetail = lazy(() => import("../crm/pages/cars/AccidentDetailPage").then(module => ({ default: module.AccidentDetailPage })));
+const CRM_AccidentDetail = lazy(() => import("../crm/pages/cars/AccidentDetailPage"));
 const CRM_AccidentAdd = lazy(() => import("../crm/pages/cars/AccidentAddCase"));
 
 const CRM_AccidentClosed = lazy(() => import("../crm/pages/cars/AccidentClosedCases"));
@@ -829,6 +838,10 @@ const router = createBrowserRouter([
     element: <EmployeeHomePage />,
   },
   {
+    path: "/employee/login",
+    element: <EmployeeLoginPage />,
+  },
+  {
     path: "/employee/enquiries",
     element: <EnquiriesListPage />,
   },
@@ -836,7 +849,39 @@ const router = createBrowserRouter([
     path: "/employee/enquiries/:id",
     element: <EnquiryDetailsPage />,
   },
-
+  {
+    path: "/employee/attendance",
+    element: <AttendancePage />,
+  },
+  {
+    path: "/employee/tasks",
+    element: <TasksPage />,
+  },
+  {
+    path: "/employee/profile",
+    element: <ProfilePage />,
+  },
+  {
+    path: "/employee/salary",
+    element: <SalaryPage />,
+  },
+  {
+    path: "/employee/directory",
+    element: <StaffDirectoryPage />,
+  },
+  {
+    path: "/employee/expenses",
+    element: <ExpenseClaimsPage />,
+  },
+  {
+    path: "/employee/notifications",
+    element: <NotificationsPage />,
+  },
+  {
+    path: "/employee/privacy",
+    element: <PrivacySecurityPage />,
+  },
+  
   // 404 Page
   {
     path: "*",

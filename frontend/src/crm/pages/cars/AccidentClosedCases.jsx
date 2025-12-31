@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   MdSearch, 
   MdFilterList, 
@@ -48,12 +48,38 @@ const MOCK_CLOSED_CASES = [
 
 const AccidentClosedCases = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
+    const [yearFilter, setYearFilter] = useState('All');
+    const [insurerFilter, setInsurerFilter] = useState('All');
+    
+    const [cases, setCases] = useState(MOCK_CLOSED_CASES);
 
-    const filteredCases = MOCK_CLOSED_CASES.filter(item => 
-        item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.reg.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useEffect(() => {
+        if (location.state?.newClosedCase) {
+             const newCase = location.state.newClosedCase;
+             setCases(prev => {
+                 // Prevent duplicate additions in case of multiple re-renders
+                 if (prev.some(c => c.originalId === newCase.originalId)) {
+                     return prev;
+                 }
+                 return [newCase, ...prev];
+             });
+             
+             // Clear state so refresh doesn't re-add
+             window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
+
+    const filteredCases = cases.filter(item => {
+        const matchesSearch = item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              item.reg.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesYear = yearFilter === 'All' || item.date.includes(yearFilter);
+        const matchesInsurer = insurerFilter === 'All' || item.insurer === insurerFilter;
+
+        return matchesSearch && matchesYear && matchesInsurer;
+    });
 
     return (
       <div className="space-y-6">
@@ -72,12 +98,7 @@ const AccidentClosedCases = () => {
             <h1 className="text-2xl font-bold text-gray-900">Closed & Settled Cases</h1>
             <p className="text-gray-500 text-sm">History of resolved accidents and financial settlements.</p>
           </div>
-          <button 
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <MdDownload size={20} />
-            Export History
-          </button>
+
         </div>
   
         {/* Filters */}
@@ -95,18 +116,27 @@ const AccidentClosedCases = () => {
             <div className="flex gap-3">
                <div className="relative">
                    <MdCalendarToday className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                   <select className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                     <option>Year: 2025</option>
-                     <option>Year: 2024</option>
+                   <select 
+                        value={yearFilter}
+                        onChange={(e) => setYearFilter(e.target.value)}
+                        className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+                   >
+                     <option value="All">Year: All</option>
+                     <option value="2025">Year: 2025</option>
+                     <option value="2024">Year: 2024</option>
                    </select>
                </div>
                <div className="relative">
                    <MdFilterList className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                   <select className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                     <option>Insurer: All</option>
-                     <option>Tata AIG</option>
-                     <option>HDFC Ergo</option>
-                     <option>ICICI Lombard</option>
+                   <select 
+                        value={insurerFilter}
+                        onChange={(e) => setInsurerFilter(e.target.value)}
+                        className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+                   >
+                     <option value="All">Insurer: All</option>
+                     <option value="Tata AIG">Tata AIG</option>
+                     <option value="HDFC Ergo">HDFC Ergo</option>
+                     <option value="ICICI Lombard">ICICI Lombard</option>
                    </select>
                </div>
             </div>

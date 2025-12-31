@@ -5,8 +5,11 @@ import {
   MdEdit, 
   MdCameraAlt, 
   MdNoteAdd, 
-  MdLocationOn
+  MdLocationOn,
+  MdClose,
+  MdCheckCircle
 } from 'react-icons/md';
+import { AnimatePresence, motion } from 'framer-motion';
 import { premiumColors } from '../../../theme/colors';
 
 // Internal Components
@@ -67,10 +70,14 @@ const MOCK_ACCIDENT_DETAIL = {
   ]
 };
 
-export const AccidentDetailPage = () => {
+const AccidentDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const data = MOCK_ACCIDENT_DETAIL;
+
+    // Local State
+    const [status, setStatus] = useState(data.status);
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
     // Viewer State
     const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -99,6 +106,28 @@ export const AccidentDetailPage = () => {
         setIsViewerOpen(true);
     };
 
+    const handleStatusUpdate = (newStatus, closingData = null) => {
+        setStatus(newStatus);
+        
+        if (newStatus === 'Closed' && closingData) {
+            // Navigate to Closed Cases page with the new case data
+            const closedCaseData = {
+                id: Date.now(), // Generate a new specific ID or use existing
+                originalId: data.id,
+                car: data.carName,
+                reg: data.regNumber,
+                date: data.reportDate, // Or today's date
+                insurer: "Unknown", // You might want to add insurer to mock data or input
+                finalCost: `₹ ${Number(closingData.finalCost).toLocaleString()}`,
+                recovered: `₹ ${Number(closingData.recovered).toLocaleString()}`,
+                netLoss: `₹ ${Number(closingData.finalCost - closingData.recovered).toLocaleString()}`,
+                status: "Settled" // Or use the status provided
+            };
+
+            navigate('/crm/cars/accidents/closed', { state: { newClosedCase: closedCaseData } });
+        }
+    };
+
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-10">
             {/* Header / Nav */}
@@ -107,10 +136,11 @@ export const AccidentDetailPage = () => {
                     <MdArrowBack /> Back to List
                 </button>
                 <div className="flex gap-2">
-                    <button onClick={openAllPhotos} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 shadow-sm transition-colors">
-                        <MdCameraAlt /> View All Photos
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-sm transition-colors">
+
+                    <button 
+                        onClick={() => setIsStatusModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-sm transition-colors"
+                    >
                         <MdEdit /> Update Status
                     </button>
                 </div>
@@ -125,6 +155,7 @@ export const AccidentDetailPage = () => {
                      <div className="flex flex-wrap items-center gap-3 mb-1">
                          <h1 className="text-2xl font-bold text-gray-900">{data.carName}</h1>
                          <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase tracking-wider">{data.severity} Damage</span>
+                         <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider">{status}</span>
                      </div>
                      <p className="font-mono text-gray-500 font-bold text-lg mb-2">{data.regNumber}</p>
                      <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -163,7 +194,130 @@ export const AccidentDetailPage = () => {
                 images={viewerImages} 
                 activeIndex={viewerIndex}
             />
+
+            {/* Status Update Modal */}
+            <UpdateStatusModal 
+                isOpen={isStatusModalOpen} 
+                onClose={() => setIsStatusModalOpen(false)} 
+                currentStatus={status} 
+                onUpdate={handleStatusUpdate} 
+            />
         </div>
+    );
+};
+
+const UpdateStatusModal = ({ isOpen, onClose, currentStatus, onUpdate }) => {
+    const STATUS_OPTIONS = ["Open", "In Repair", "Closed"];
+    const [selected, setSelected] = useState(currentStatus);
+    
+    // Suggest keeping these empty initially
+    const [closingDetails, setClosingDetails] = useState({
+        finalCost: '',
+        recovered: ''
+    });
+
+    const handleUpdateClick = () => {
+        if (selected === 'Closed') {
+            // Optional: Add simple validation
+            if (!closingDetails.finalCost || !closingDetails.recovered) {
+                alert("Please fill in Final Cost and Recovered Amount to close the case.");
+                return;
+            }
+        }
+        onUpdate(selected, selected === 'Closed' ? closingDetails : null);
+        onClose();
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                     <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                     />
+                     <motion.div
+                        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                        className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+                     >
+                        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="font-bold text-gray-800">Update Case Status</h3>
+                            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-400"><MdClose size={20} /></button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div className="space-y-2">
+                                {STATUS_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => setSelected(opt)}
+                                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                            selected === opt 
+                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' 
+                                            : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {opt}
+                                        {selected === opt && <MdCheckCircle className="text-indigo-600" size={20} />}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <AnimatePresence>
+                                {selected === 'Closed' && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="pt-2 space-y-3 border-t border-gray-100 mt-2">
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Settlement Details</p>
+                                            
+                                            <div>
+                                                <label className="text-xs text-gray-500 font-medium mb-1 block">Final Repair Cost (₹)</label>
+                                                <input 
+                                                    type="number"
+                                                    value={closingDetails.finalCost}
+                                                    onChange={(e) => setClosingDetails({...closingDetails, finalCost: e.target.value})}
+                                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 text-gray-800 font-bold"
+                                                    placeholder="e.g. 40000"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-xs text-gray-500 font-medium mb-1 block">Insurance Recovered (₹)</label>
+                                                <input 
+                                                    type="number"
+                                                    value={closingDetails.recovered}
+                                                    onChange={(e) => setClosingDetails({...closingDetails, recovered: e.target.value})}
+                                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-100 text-green-700 font-bold"
+                                                    placeholder="e.g. 35000"
+                                                />
+                                            </div>
+
+                                            {closingDetails.finalCost && closingDetails.recovered && (
+                                                <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
+                                                    <span className="text-xs font-bold text-red-600 uppercase">Net Loss</span>
+                                                    <span className="font-bold text-red-700">₹ {(Number(closingDetails.finalCost) - Number(closingDetails.recovered)).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                        <div className="p-4 bg-gray-50 border-t border-gray-100">
+                            <button 
+                                onClick={handleUpdateClick} 
+                                className="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                            >
+                                {selected === 'Closed' ? 'Close & Settle Case' : 'Update Status'}
+                            </button>
+                        </div>
+                     </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
     );
 };
 

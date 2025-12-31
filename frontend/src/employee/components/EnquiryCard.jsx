@@ -6,7 +6,7 @@ const EnquiryCard = ({ enquiry, onClick }) => {
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
       case 'pending': return 'bg-blue-100 text-blue-600';
-      case 'missed': return 'bg-orange-100 text-orange-600';
+      case 'closed': return 'bg-orange-100 text-orange-600';
       case 'converted': return 'bg-green-100 text-green-600';
       default: return 'bg-gray-100 text-gray-600';
     }

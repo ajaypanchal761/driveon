@@ -1,29 +1,55 @@
-import React, { useState } from 'react';
+      import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiSearch, FiFilter, FiArrowLeft } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
-import HeaderTopBar from '../components/HeaderTopBar'; // Will need to create generic header actually, but I'll inline for now or create it.
+import { FiPlus, FiSearch, FiFilter, FiArrowLeft, FiCalendar, FiX } from 'react-icons/fi';
+import { useNavigate, useLocation } from 'react-router-dom';
+import HeaderTopBar from '../components/HeaderTopBar'; 
 import EnquiryCard from '../components/EnquiryCard';
 import BottomNav from '../components/BottomNav';
+import DateRangeModal from '../components/DateRangeModal';
+import { isWithinInterval, parse, startOfDay, endOfDay } from 'date-fns';
 
 // Dummy Data
 const dummyEnquiries = [
-  { id: 1, name: "Rahul Sharma", phone: "+91 98765 43210", status: "Pending", date: "Today, 10:30 AM" },
-  { id: 2, name: "Priya Singh", phone: "+91 98989 89898", status: "Missed", date: "Yesterday, 4:15 PM" },
-  { id: 3, name: "Amit Verma", phone: "+91 99887 76655", status: "Converted", date: "Oct 24, 2023" },
-  { id: 4, name: "Sneha Gupta", phone: "+91 88776 65544", status: "Pending", date: "Oct 23, 2023" },
-  { id: 5, name: "Vikram Malhotra", phone: "+91 77665 54433", status: "Missed", date: "Oct 22, 2023" },
+  { id: 1, name: "Rahul Sharma", phone: "+91 98765 43210", status: "Pending", date: "2023-10-24" }, // ISO format for easier parsing
+  { id: 2, name: "Priya Singh", phone: "+91 98989 89898", status: "Closed", date: "2023-10-23" },
+  { id: 3, name: "Amit Verma", phone: "+91 99887 76655", status: "Converted", date: "2023-10-24" },
+  { id: 4, name: "Sneha Gupta", phone: "+91 88776 65544", status: "Pending", date: "2023-10-23" },
+  { id: 5, name: "Vikram Malhotra", phone: "+91 77665 54433", status: "Closed", date: "2023-10-22" },
 ];
 
 const EnquiriesListPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('All');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'All');
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState({ start: null, end: null });
 
-  const filteredEnquiries = activeTab === 'All' 
-    ? dummyEnquiries 
-    : dummyEnquiries.filter(e => e.status === activeTab);
+  // Filter Logic
+  const filteredEnquiries = dummyEnquiries.filter(enquiry => {
+    // 1. Tab Filter
+    if (activeTab !== 'All' && enquiry.status !== activeTab) return false;
 
-  const tabs = ['All', 'Pending', 'Missed', 'Converted'];
+    // 2. Date Filter
+    if (dateFilter.start && dateFilter.end) {
+      const enquiryDate = startOfDay(new Date(enquiry.date)); // Simple parsing for now
+      const start = startOfDay(dateFilter.start);
+      const end = endOfDay(dateFilter.end);
+      
+      return isWithinInterval(enquiryDate, { start, end });
+    }
+    
+    return true;
+  });
+
+  const handleDateApply = ({ start, end }) => {
+    setDateFilter({ start, end });
+  };
+
+  const clearDateFilter = () => {
+    setDateFilter({ start: null, end: null });
+  };
+
+  const tabs = ['All', 'Pending', 'Closed', 'Converted'];
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] pb-24 font-sans selection:bg-blue-100">
@@ -33,9 +59,17 @@ const EnquiriesListPage = () => {
         <HeaderTopBar 
           title="Enquiries" 
           rightAction={
-            <button className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-all">
-               <FiSearch size={20} />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsDateModalOpen(true)}
+                className={`p-2.5 rounded-full transition-all ${dateFilter.start ? 'bg-amber-500 text-white shadow-lg' : 'bg-white/10 text-white hover:bg-white/20'}`}
+              >
+                 <FiCalendar size={20} />
+              </button>
+              {dateFilter.start && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1C205C]"></span>
+              )}
+            </div>
           } 
         />
 
@@ -61,40 +95,48 @@ const EnquiriesListPage = () => {
         <div className="flex justify-between items-center mb-4">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
             Showing {filteredEnquiries.length} {activeTab} 
+            {dateFilter.start && <span className="text-blue-600 block sm:inline sm:ml-1 mt-1 sm:mt-0 font-normal normal-case">(Filtered by Date)</span>}
           </p>
-          <button className="text-[#1C205C] text-xs font-bold flex items-center gap-1">
-             <FiFilter /> Filter
-          </button>
+          
+          {dateFilter.start && (
+             <button onClick={clearDateFilter} className="text-red-500 text-xs font-bold flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-full">
+                <FiX /> Clear Dates
+             </button>
+          )}
         </div>
 
         <motion.div layout className="space-y-4">
-           <AnimatePresence>
+           <AnimatePresence mode='wait'>
              {filteredEnquiries.length > 0 ? (
                filteredEnquiries.map(enquiry => (
                  <EnquiryCard key={enquiry.id} enquiry={enquiry} onClick={() => navigate(`/employee/enquiries/${enquiry.id}`)} />
                ))
              ) : (
                <motion.div 
-                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
-                 className="text-center py-10 text-gray-400"
+                 initial={{ opacity: 0, scale: 0.9 }} 
+                 animate={{ opacity: 1, scale: 1 }} 
+                 exit={{ opacity: 0, scale: 0.9 }}
+                 className="text-center py-16 text-gray-400 flex flex-col items-center"
                >
-                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <FiSearch className="text-2xl" />
+                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <FiSearch className="text-3xl opacity-50" />
                  </div>
-                 No enquiries found.
+                 <p className="font-bold text-gray-500">No enquiries found</p>
+                 <p className="text-xs mt-1">Try changing fields or filters</p>
                </motion.div>
              )}
            </AnimatePresence>
         </motion.div>
       </div>
 
-      {/* FLOATING ACTION BUTTON */}
-      <motion.button 
-        whileTap={{ scale: 0.9 }}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-[#1C205C] rounded-full text-white shadow-xl shadow-blue-900/30 flex items-center justify-center z-40"
-      >
-        <FiPlus size={28} />
-      </motion.button>
+      {/* DATE RANGE MODAL */}
+      <DateRangeModal 
+        isOpen={isDateModalOpen} 
+        onClose={() => setIsDateModalOpen(false)} 
+        onApply={handleDateApply} 
+      />
+
+
 
       {/* BOTTOM NAV */}
       <BottomNav />

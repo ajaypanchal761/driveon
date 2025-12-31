@@ -356,7 +356,7 @@ const MOCK_NEW_ENQUIRIES = [
 const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => {
     const [formData, setFormData] = useState({
         name: '',
-        phone: '',
+        phone: '+91 ',
         email: '',
         interest: '',
         source: 'Walk-in',
@@ -369,7 +369,7 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
         } else {
             setFormData({
                 name: '',
-                phone: '',
+                phone: '+91 ',
                 email: '',
                 interest: '',
                 source: 'Walk-in',
@@ -431,6 +431,7 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
                                     <input 
                                         type="tel" 
                                         required
+                                        maxLength={14}
                                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
                                         placeholder="+91 98765 43210"
                                         value={formData.phone}

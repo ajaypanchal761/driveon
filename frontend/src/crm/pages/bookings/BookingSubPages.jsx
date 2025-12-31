@@ -15,7 +15,11 @@ import {
   MdTrendingUp,
   MdTrendingDown,
   MdLocalGasStation,
-  MdReceipt
+  MdReceipt,
+  MdEmail,
+  MdDownload,
+  MdVisibility,
+  MdClose
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
@@ -390,16 +394,112 @@ export const CancelledBookingsPage = () => {
     );
 };
 
+
+
+const PaymentDetailsModal = ({ payment, onClose }) => {
+    if (!payment) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+            >
+                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 className="font-bold text-gray-800">Payment Details</h3>
+                    <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                        <MdClose size={20} />
+                    </button>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm">Booking ID</span>
+                        <span className="font-bold text-indigo-600">{payment.bookingId}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm">Customer Name</span>
+                        <span className="font-bold text-gray-800">{payment.customer}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm">Payment Method</span>
+                        <span className="font-medium text-gray-800">{payment.method}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm">Total Amount</span>
+                        <span className="font-bold text-gray-800">₹ {payment.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm">Amount Paid</span>
+                        <span className="font-bold text-green-600">₹ {payment.paid.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-500 text-sm">Pending Amount</span>
+                        <span className="font-bold text-red-500">₹ {payment.pending.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-500 text-sm">Status</span>
+                        <PaymentStatusBadge status={payment.status} />
+                    </div>
+                </div>
+                <div className="p-5 bg-gray-50 border-t border-gray-100 flex justify-end">
+                    <button 
+                        onClick={onClose}
+                        className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                    >
+                        Close
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 export const BookingPaymentStatusPage = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeActionId, setActiveActionId] = useState(null);
+    const [payments, setPayments] = useState(MOCK_PAYMENTS);
+    const [selectedPayment, setSelectedPayment] = useState(null);
 
-    const filteredPayments = MOCK_PAYMENTS.filter(payment => 
+    // Close dropdown when clicking outside
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (activeActionId !== null && !event.target.closest('.action-menu-container')) {
+                setActiveActionId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [activeActionId]);
+
+    const filteredPayments = payments.filter(payment => 
         payment.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) || 
         payment.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
         payment.method.toLowerCase().includes(searchTerm.toLowerCase()) ||
         payment.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleMarkAsPaid = (paymentId) => {
+        setPayments(prev => prev.map(p => {
+            if (p.id === paymentId) {
+                return { 
+                    ...p, 
+                    status: 'Paid', 
+                    paid: p.amount, 
+                    pending: 0,
+                    method: p.method === 'N/A' ? 'Cash' : p.method // Default to Cash if unknown when marking paid
+                };
+            }
+            return p;
+        }));
+        setActiveActionId(null);
+    };
+
+    const handleViewDetails = (payment) => {
+        setSelectedPayment(payment);
+        setActiveActionId(null);
+    };
 
     return (
         <div className="space-y-6">
@@ -427,7 +527,7 @@ export const BookingPaymentStatusPage = () => {
                 </div>
              </div>
 
-             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
                  <table className="w-full text-left">
                      <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
                          <tr>
@@ -442,7 +542,7 @@ export const BookingPaymentStatusPage = () => {
                      </thead>
                      <tbody className="divide-y divide-gray-100 text-sm">
                          {filteredPayments.map((payment) => (
-                             <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                             <tr key={payment.id} className="hover:bg-gray-50 transition-colors relative">
                                  <td className="px-6 py-4 font-bold text-indigo-600">{payment.bookingId}</td>
                                  <td className="px-6 py-4 font-medium text-gray-900">{payment.customer}</td>
                                  <td className="px-6 py-4 text-gray-600">₹ {payment.amount.toLocaleString()}</td>
@@ -451,8 +551,32 @@ export const BookingPaymentStatusPage = () => {
                                  <td className="px-6 py-4">
                                      <PaymentStatusBadge status={payment.status} />
                                  </td>
-                                 <td className="px-6 py-4 text-right">
-                                     <button className="text-gray-400 hover:text-gray-600"><MdMoreVert size={20} /></button>
+                                 <td className="px-6 py-4 text-right action-menu-container relative">
+                                     <button 
+                                         onClick={(e) => {
+                                             e.stopPropagation();
+                                             setActiveActionId(activeActionId === payment.id ? null : payment.id);
+                                         }}
+                                         className={`p-2 rounded-full transition-colors ${activeActionId === payment.id ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                                     >
+                                         <MdMoreVert size={20} />
+                                     </button>
+                                     
+                                     {activeActionId === payment.id && (
+                                         <div className="absolute right-8 top-8 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden text-left animate-in fade-in zoom-in duration-200 origin-top-right">
+                                             <div className="p-1">
+                                                 <button onClick={() => handleViewDetails(payment)} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                                                     <MdVisibility size={16} className="text-gray-400" /> View Details
+                                                 </button>
+
+                                                 {payment.status !== 'Paid' && (
+                                                     <button onClick={() => handleMarkAsPaid(payment.id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors font-bold">
+                                                         <MdCheckCircle size={16} /> Mark as Paid
+                                                     </button>
+                                                 )}
+                                             </div>
+                                         </div>
+                                     )}
                                  </td>
                              </tr>
                          ))}
@@ -464,6 +588,14 @@ export const BookingPaymentStatusPage = () => {
                     </div>
                  )}
              </div>
+
+             {/* Details Modal */}
+             {selectedPayment && (
+                 <PaymentDetailsModal 
+                    payment={selectedPayment} 
+                    onClose={() => setSelectedPayment(null)} 
+                 />
+             )}
         </div>
     );
 };
@@ -473,7 +605,8 @@ export const BookingProfitViewPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredProfit = MOCK_PROFIT.filter(item => 
-        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase())
+        item.vehicle.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+        item.id.toString().includes(searchTerm.trim())
     );
 
     return (
@@ -540,7 +673,7 @@ export const BookingProfitViewPage = () => {
                          </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100 text-sm">
-                         {MOCK_PROFIT.map((row) => (
+                         {filteredProfit.map((row) => (
                              <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                                  <td className="px-6 py-4 font-bold text-gray-800">{row.vehicle}</td>
                                  <td className="px-6 py-4 text-gray-600">₹ {row.revenue.toLocaleString()}</td>
