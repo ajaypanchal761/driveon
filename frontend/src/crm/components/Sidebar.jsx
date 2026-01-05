@@ -69,7 +69,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'Cars',
       subItems: [
         { path: '/crm/cars/all', name: 'All Cars' },
-        { path: '/crm/cars/idle', name: 'Idle Cars' },
+        // { path: '/crm/cars/idle', name: 'Idle Cars' },
         { path: '/crm/cars/profit', name: 'Profit / Loss' },
 
         { path: '/crm/cars/documents', name: 'Documents' },
@@ -104,7 +104,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/garage/all', name: 'All Garages' },
         { path: '/crm/garage/active', name: 'Active Repairs' },
         { path: '/crm/garage/history', name: 'Service History' },
-        { path: '/crm/garage/parts', name: 'Parts Cost' },
+        // { path: '/crm/garage/parts', name: 'Parts Cost' },
 
       ]
     },

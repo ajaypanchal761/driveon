@@ -44,6 +44,7 @@ import {
 } from 'react-icons/md';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
+import ThemedDropdown from '../../../components/common/ThemedDropdown';
 
 // Mock Data for Cars
 const MOCK_CARS_DATA = [
@@ -83,7 +84,7 @@ const SimpleModal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-in fade-in zoom-in duration-200">
         <div className="flex justify-between items-center p-4 border-b border-gray-100">
            <h3 className="font-bold text-gray-800">{title}</h3>
            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
@@ -100,10 +101,48 @@ const SimpleModal = ({ isOpen, onClose, title, children }) => {
 
 export const AllCarsPage = () => {
     const navigate = useNavigate();
+    const [carsList, setCarsList] = useState(MOCK_CARS_DATA);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [typeFilter, setTypeFilter] = useState('All');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    
+    // Action States
+    const [viewCar, setViewCar] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [activeMenuId, setActiveMenuId] = useState(null);
+
+    const handleViewCar = (car) => {
+        setViewCar(car);
+        setIsViewModalOpen(true);
+    };
+
+    const [editingCar, setEditingCar] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    const handleEditCar = (car) => {
+        setEditingCar(car);
+        setIsEditModalOpen(true);
+        setActiveMenuId(null);
+    };
+
+    const handleDeleteCar = (id) => {
+        if(window.confirm('Are you sure you want to delete this vehicle?')) {
+            setCarsList(carsList.filter(c => c.id !== id));
+            // In a real app, this would make an API call
+            // alert('Vehicle deleted successfully'); // Removed alert as removal is visual feedback
+        }
+        setActiveMenuId(null);
+    };
+
+    // Close menu when clicking outside
+    React.useEffect(() => {
+        const handleClickOutside = () => setActiveMenuId(null);
+        if (activeMenuId) {
+            document.addEventListener('click', handleClickOutside);
+        }
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [activeMenuId]);
 
     const getStatusBadge = (status) => {
         switch(status) {
@@ -114,7 +153,7 @@ export const AllCarsPage = () => {
         }
     };
 
-    const filteredCars = MOCK_CARS_DATA.filter(car => {
+    const filteredCars = carsList.filter(car => {
         const matchesSearch = car.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                               car.plate.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'All' || car.status === statusFilter;
@@ -153,27 +192,21 @@ export const AllCarsPage = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
-               <select 
-                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-               >
-                 <option value="All">Status: All</option>
-                 <option value="Active">Active</option>
-                 <option value="Maintenance">Maintenance</option>
-                 <option value="Idle">Idle</option>
-               </select>
-               <select 
-                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-               >
-                 <option value="All">Type: All</option>
-                 <option value="SUV">SUV</option>
-                 <option value="Sedan">Sedan</option>
-                 <option value="Hatchback">Hatchback</option>
-               </select>
+            <div className="flex gap-3">
+                <div className="min-w-[140px]">
+                   <ThemedDropdown 
+                      options={['Status: All', 'Active', 'Maintenance', 'Idle']}
+                      value={statusFilter === 'All' ? 'Status: All' : statusFilter}
+                      onChange={(val) => setStatusFilter(val === 'Status: All' ? 'All' : val)}
+                   />
+                </div>
+                <div className="min-w-[140px]">
+                   <ThemedDropdown 
+                      options={['Type: All', 'SUV', 'Sedan', 'Hatchback']}
+                      value={typeFilter === 'All' ? 'Type: All' : typeFilter}
+                      onChange={(val) => setTypeFilter(val === 'Type: All' ? 'All' : val)}
+                   />
+                </div>
             </div>
         </div>
   
@@ -181,7 +214,7 @@ export const AllCarsPage = () => {
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
+              <tr className="border-b border-gray-100 text-xs uppercase tracking-wider font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), color: premiumColors.primary.DEFAULT }}>
                 <th className="p-4 w-24">Image</th>
                 <th className="p-4">Car Details</th>
                 <th className="p-4">Reg No</th>
@@ -216,16 +249,45 @@ export const AllCarsPage = () => {
                         <span className="text-[10px] text-gray-400 font-semibold">{car.trips} Trips Completed</span>
                      </div>
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-4 text-right relative">
                     <button 
-                        className="p-2 text-gray-400 rounded-lg transition-colors"
-                        style={{ ':hover': { color: premiumColors.primary.DEFAULT, backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1) } }}
+                        onClick={() => handleViewCar(car)}
+                        className="p-2 text-gray-400 rounded-lg transition-colors hover:text-indigo-600 hover:bg-indigo-50"
+                        style={{ color: premiumColors.primary.DEFAULT }}
                     >
                         <MdVisibility size={18} />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MdMoreVert size={18} />
-                    </button>
+                    <div className="inline-block relative">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === car.id ? null : car.id);
+                            }}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <MdMoreVert size={18} />
+                        </button>
+                        
+                        {/* Context Menu */}
+                        {activeMenuId === car.id && (
+                            <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-lg border border-gray-100 z-10 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-100">
+                                <button 
+                                    onClick={() => handleEditCar(car)}
+                                    className="w-full px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 text-left"
+                                >
+                                    Edit Details
+                                </button>
+
+                                <div className="h-px bg-gray-50 my-1"></div>
+                                <button 
+                                    onClick={() => handleDeleteCar(car.id)}
+                                    className="w-full px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -250,17 +312,104 @@ export const AllCarsPage = () => {
                 </div>
                  <div>
                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                   <select className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100">
-                      <option>SUV</option>
-                      <option>Sedan</option>
-                      <option>Hatchback</option>
-                   </select>
+                   <ThemedDropdown 
+                      options={['SUV', 'Sedan', 'Hatchback']}
+                      value="SUV" // Controlled value should ideally be state, but for mock modal this is static-like replacement.
+                      onChange={() => {}} 
+                   />
                 </div>
                 <button className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors" style={{ backgroundColor: premiumColors.primary.DEFAULT }}>
                     Add Vehicle
                 </button>
             </div>
         </SimpleModal>
+
+        {/* View Car Modal */}
+        {viewCar && (
+            <SimpleModal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Vehicle Details">
+                <div className="space-y-6">
+                    <div className="w-full h-40 bg-gray-100 rounded-xl overflow-hidden">
+                        <img src={viewCar.image} alt={viewCar.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-900">{viewCar.name}</h3>
+                        <p className="text-gray-500 font-mono text-sm">{viewCar.plate}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Fuel & Type</div>
+                            <div className="font-semibold text-gray-800">{viewCar.fuel} / {viewCar.type}</div>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Capacity</div>
+                            <div className="font-semibold text-gray-800">{viewCar.seats}</div>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Pricing</div>
+                            <div className="font-semibold text-gray-800">{viewCar.price}/day</div>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold mb-1">Total Trips</div>
+                            <div className="font-semibold text-gray-800">{viewCar.trips}</div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </SimpleModal>
+        )}
+
+        {/* Edit Car Modal (Reusing SimpleModal structure) */}
+        {editingCar && (
+            <SimpleModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Vehicle Details">
+                 <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Name</label>
+                        <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            defaultValue={editingCar.name} 
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Registration Number</label>
+                        <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            defaultValue={editingCar.plate} 
+                        />
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Price Per Day</label>
+                        <input 
+                            type="text" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            defaultValue={editingCar.price} 
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <ThemedDropdown 
+                             options={['Active', 'Maintenance', 'Idle']}
+                             value={editingCar.status}
+                             onChange={() => {}}
+                        />
+                    </div>
+                    <button 
+                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors" 
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                        onClick={() => {
+                            // Mock save logic
+                            setIsEditModalOpen(false);
+                            alert('Changes saved successfully!');
+                        }}
+                    >
+                        Save Changes
+                    </button>
+                </div>
+            </SimpleModal>
+        )}
       </div>
     );
 };
@@ -372,7 +521,13 @@ export const IdleCarsPage = () => {
                   <td className="p-4 text-right">
                     <button 
                         onClick={() => setIsBookingModalOpen(true)}
-                        className="flex items-center gap-1 ml-auto px-3 py-1.5 bg-indigo-600 text-white border border-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm"
+                        className="flex items-center gap-1 ml-auto px-3 py-1.5 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                        style={{ 
+                            backgroundColor: premiumColors.primary.DEFAULT,
+                            borderColor: premiumColors.primary.DEFAULT
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = rgba(premiumColors.primary.DEFAULT, 0.9)}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = premiumColors.primary.DEFAULT}
                     >
                         <MdPlayArrow size={16} /> Assign
                     </button>
@@ -477,16 +632,13 @@ export const CarProfitLossPage = () => {
             <h1 className="text-2xl font-bold text-gray-900">Fleet Financial Analysis</h1>
             <p className="text-gray-500 text-sm">Revenue vs Expenses per vehicle breakdown.</p>
           </div>
-          <select 
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium cursor-pointer shadow-sm"
-          >
-             <option>Last 90 Days</option>
-             <option>This Month</option>
-             <option>Last Quarter</option>
-             <option>This Year</option>
-          </select>
+          <div className="min-w-[160px]">
+             <ThemedDropdown 
+               options={['Last 90 Days', 'This Month', 'Last Quarter', 'This Year']}
+               value={timeRange}
+               onChange={(val) => setTimeRange(val)}
+             />
+          </div>
         </div>
   
         {/* KPI Cards */}
@@ -704,37 +856,29 @@ export const CarDocumentsPage = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <div className="flex gap-3">
-               <select 
-                 value={filterType}
-                 onChange={(e) => setFilterType(e.target.value)}
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
-               >
-                 <option value="All">Type: All</option>
-                 <option value="Insurance">Insurance</option>
-                 <option value="PUC">PUC</option>
-                 <option value="RC">RC</option>
-                 <option value="Fitness">Fitness</option>
-                 <option value="Permit">Permit</option>
-               </select>
-               <select 
-                 value={filterStatus}
-                 onChange={(e) => setFilterStatus(e.target.value)}
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
-               >
-                 <option value="All">Status: All</option>
-                 <option value="Valid">Valid</option>
-                 <option value="Expiring Soon">Expiring Soon</option>
-                 <option value="Expired">Expired</option>
-               </select>
-            </div>
+             <div className="flex gap-3">
+                <div className="min-w-[160px]">
+                   <ThemedDropdown 
+                     options={['Type: All', 'Insurance', 'PUC', 'RC', 'Fitness', 'Permit']}
+                     value={filterType === 'All' ? 'Type: All' : filterType}
+                     onChange={(val) => setFilterType(val === 'Type: All' ? 'All' : val)}
+                   />
+                </div>
+                <div className="min-w-[160px]">
+                   <ThemedDropdown 
+                     options={['Status: All', 'Valid', 'Expiring Soon', 'Expired']}
+                     value={filterStatus === 'All' ? 'Status: All' : filterStatus}
+                     onChange={(val) => setFilterStatus(val === 'Status: All' ? 'All' : val)}
+                   />
+                </div>
+             </div>
         </div>
   
         {/* Table */}
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
+              <tr className="border-b border-gray-100 text-xs uppercase tracking-wider font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), color: premiumColors.primary.DEFAULT }}>
                 <th className="p-4">Vehicle</th>
                 <th className="p-4">Document Details</th>
                 <th className="p-4">Expiry Date</th>
@@ -752,9 +896,9 @@ export const CarDocumentsPage = () => {
                     </td>
                     <td className="p-4">
                        <div className="flex items-center gap-2">
-                          <div className="p-2 bg-indigo-50 text-indigo-500 rounded-lg">
-                              <MdDescription size={18} />
-                          </div>
+                           <div className="p-2 rounded-lg" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}>
+                               <MdDescription size={18} />
+                           </div>
                           <div>
                               <div className="font-bold text-gray-800">{item.docName}</div>
                               <div className="text-xs text-gray-400">{item.type}</div>
@@ -774,7 +918,8 @@ export const CarDocumentsPage = () => {
                     <td className="p-4 text-right">
                           <button 
                             onClick={() => handleView(item)}
-                            className="text-blue-600 hover:underline text-xs font-bold flex items-center gap-1 ml-auto"
+                            className="hover:underline text-xs font-bold flex items-center gap-1 ml-auto"
+                            style={{ color: premiumColors.primary.DEFAULT }}
                           >
                               <MdVisibility size={14} /> View
                           </button>
@@ -800,30 +945,19 @@ export const CarDocumentsPage = () => {
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Select Vehicle</label>
-                    <select 
+                    <ThemedDropdown 
+                        options={['Toyota Innova Crysta (PB 01 1234)', 'Mahindra Thar (PB 65 9876)', 'Swift Dzire (PB 10 5678)']}
                         value={newDocData.vehicle}
-                        onChange={(e) => setNewDocData({...newDocData, vehicle: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 bg-white"
-                    >
-                        <option>Toyota Innova Crysta (PB 01 1234)</option>
-                        <option>Mahindra Thar (PB 65 9876)</option>
-                        <option>Swift Dzire (PB 10 5678)</option>
-                    </select>
+                        onChange={(val) => setNewDocData({...newDocData, vehicle: val})}
+                    />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
-                    <select 
+                    <ThemedDropdown 
+                        options={['Insurance Policy', 'Pollution Certificate (PUC)', 'Registration Certificate (RC)', 'Fitness Certificate', 'Permit', 'Other']}
                         value={newDocData.type}
-                        onChange={(e) => setNewDocData({...newDocData, type: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 bg-white"
-                    >
-                        <option>Insurance Policy</option>
-                        <option>Pollution Certificate (PUC)</option>
-                        <option>Registration Certificate (RC)</option>
-                        <option>Fitness Certificate</option>
-                        <option>Permit</option>
-                        <option>Other</option>
-                    </select>
+                        onChange={(val) => setNewDocData({...newDocData, type: val})}
+                    />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>

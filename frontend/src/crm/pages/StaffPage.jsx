@@ -8,7 +8,8 @@ import {
   MdAttachMoney,
   MdEvent,
   MdSearch,
-  MdFilterList
+  MdFilterList,
+  MdLocationOn
 } from 'react-icons/md';
 import { premiumColors } from '../../theme/colors';
 
@@ -126,22 +127,41 @@ const StaffPage = () => {
                 </div>
              </div>
              
-             {/* Attendance Actions */}
-             <div className="flex gap-2">
-                <button className="flex flex-col items-center gap-1 group">
-                   <div className="w-8 h-8 rounded-full border border-green-200 bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-all shadow-sm">P</div>
-                   <span className="text-[10px] text-gray-400 font-medium">Present</span>
-                </button>
-                <button className="flex flex-col items-center gap-1 group">
-                   <div className="w-8 h-8 rounded-full border border-red-200 bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all shadow-sm">A</div>
-                   <span className="text-[10px] text-gray-400 font-medium">Absent</span>
-                </button>
-                <button className="flex flex-col items-center gap-1 group">
-                   <div className="w-8 h-8 rounded-full border border-amber-200 bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-all shadow-sm">H</div>
-                   <span className="text-[10px] text-gray-400 font-medium">Half Day</span>
-                </button>
-             </div>
-          </div>
+              {/* Attendance Actions */}
+              <div className="flex gap-2 items-center">
+                 {/* ID 1 is the demo user for location */}
+                 {staff.id === 1 && (
+                     <button 
+                        onClick={() => {
+                            const locData = localStorage.getItem('emp_latest_location');
+                            if (locData) {
+                                const parsed = JSON.parse(locData);
+                                alert(`Latest Location for ${staff.name}:\n${parsed.address}\n\nTime: ${new Date(parsed.timestamp).toLocaleTimeString()}`);
+                            } else {
+                                alert('No location data available for this staff member.');
+                            }
+                        }}
+                        className="mr-2 flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        title="View Live Location"
+                     >
+                        <MdLocationOn />
+                     </button>
+                 )}
+
+                 <button className="flex flex-col items-center gap-1 group">
+                    <div className="w-8 h-8 rounded-full border border-green-200 bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-all shadow-sm">P</div>
+                    <span className="text-[10px] text-gray-400 font-medium">Present</span>
+                 </button>
+                 <button className="flex flex-col items-center gap-1 group">
+                    <div className="w-8 h-8 rounded-full border border-red-200 bg-red-50 text-red-600 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all shadow-sm">A</div>
+                    <span className="text-[10px] text-gray-400 font-medium">Absent</span>
+                 </button>
+                 <button className="flex flex-col items-center gap-1 group">
+                    <div className="w-8 h-8 rounded-full border border-amber-200 bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-all shadow-sm">H</div>
+                    <span className="text-[10px] text-gray-400 font-medium">Half Day</span>
+                 </button>
+              </div>
+           </div>
         ))}
       </div>
     </div>

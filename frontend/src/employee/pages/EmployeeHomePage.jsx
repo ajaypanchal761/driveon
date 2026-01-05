@@ -90,86 +90,88 @@ const EmployeeHomePage = () => {
       className="min-h-screen bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100"
     >
       
-      {/* HEADER SECTION - Curved & Clean */}
-      <motion.div 
-        variants={itemVariants}
-        className="text-white pt-10 pb-24 rounded-b-[40px] relative overflow-hidden shadow-xl"
-        style={{ background: GRADIENT_HEADER }}
-      >
-        <div className="px-6 relative z-10 flex justify-between items-start">
-          <div className="flex flex-col">
-            <span className="text-blue-100 text-sm font-medium mb-1 tracking-wide">Good Morning,</span>
-            <h1 className="text-3xl font-bold tracking-tight">{employeeData.name}</h1>
-            <div className="flex items-center gap-2 mt-2 opacity-80 text-xs font-light">
-              <span className="bg-white/10 px-2 py-0.5 rounded-md">{employeeData.role}</span>
-              <span>•</span>
-              <span>{employeeData.shift}</span>
-            </div>
-          </div>
-          <div className="flex gap-3">
-             <motion.button 
-               whileTap={{ scale: 0.9 }}
-               onClick={() => navigate('/employee/notifications')}
-               className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all shadow-lg shadow-blue-900/20 relative"
-             >
-              <FiBell className="text-xl" />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1C205C]"></span>
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Abstract Shapes */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl translate-y-1/4 -translate-x-1/4"></div>
-      </motion.div>
-
-      {/* OVERLOGGING CARD - "Working Time" Style */}
-      <div className="px-6 -mt-16 relative z-20">
-        <motion.div 
-          variants={itemVariants}
-          className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white"
-        >
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Working Time</p>
-              <div className="flex items-baseline gap-1">
-                 <h2 className="text-4xl font-extrabold text-gray-800 tracking-tight">
-                  {formatTime(time).split(' ')[0]}
-                  <span className="text-lg text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
-                </h2>
+      <div className="sticky top-0 z-30">
+          {/* HEADER SECTION - Curved & Clean */}
+          <motion.div 
+            variants={itemVariants}
+            className="text-white pt-10 pb-24 rounded-b-[40px] relative overflow-hidden shadow-xl"
+            style={{ background: GRADIENT_HEADER }}
+          >
+            <div className="px-6 relative z-10 flex justify-between items-start">
+              <div className="flex flex-col">
+                <span className="text-blue-100 text-sm font-medium mb-1 tracking-wide">Good Morning,</span>
+                <h1 className="text-3xl font-bold tracking-tight">{employeeData.name}</h1>
+                <div className="flex items-center gap-2 mt-2 opacity-80 text-xs font-light">
+                  <span className="bg-white/10 px-2 py-0.5 rounded-md">{employeeData.role}</span>
+                  <span>•</span>
+                  <span>{employeeData.shift}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                 <span className="text-xs text-gray-400 font-medium"> <FiBriefcase className="inline mr-1"/> Kuwaiti Mosque Rd </span>
+              <div className="flex gap-3">
+                 <motion.button 
+                   whileTap={{ scale: 0.9 }}
+                   onClick={() => navigate('/employee/notifications')}
+                   className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all shadow-lg shadow-blue-900/20 relative"
+                 >
+                  <FiBell className="text-xl" />
+                  <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1C205C]"></span>
+                </motion.button>
               </div>
             </div>
-            {/* Clock Out Button - Prominent */}
-            <motion.button 
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setClockedIn(!clockedIn)}
-              className={`${clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
-                text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2`}
+
+            {/* Abstract Shapes */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl translate-y-1/4 -translate-x-1/4"></div>
+          </motion.div>
+
+          {/* OVERLOGGING CARD - "Working Time" Style */}
+          <div className="px-6 -mt-16 relative z-40">
+            <motion.div 
+              variants={itemVariants}
+              className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white"
             >
-              <FiClock />
-              {clockedIn ? 'Check Out' : 'Check In'}
-            </motion.button>
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Working Time</p>
+                  <div className="flex items-baseline gap-1">
+                     <h2 className="text-4xl font-extrabold text-gray-800 tracking-tight">
+                      {formatTime(time).split(' ')[0]}
+                      <span className="text-lg text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                     <span className="text-xs text-gray-400 font-medium"> <FiBriefcase className="inline mr-1"/> Kuwaiti Mosque Rd </span>
+                  </div>
+                </div>
+                {/* Clock Out Button - Prominent */}
+                <motion.button 
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setClockedIn(!clockedIn)}
+                  className={`${clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
+                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2`}
+                >
+                  <FiClock />
+                  {clockedIn ? 'Check Out' : 'Check In'}
+                </motion.button>
+              </div>
+              
+              {/* Stats Row within Card */}
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                 <div className="text-center">
+                   <span className="block text-xl font-bold text-gray-800">{employeeData.todayHours}</span>
+                   <span className="text-[10px] text-gray-400 font-bold uppercase">Total Hours</span>
+                 </div>
+                 <div className="text-center border-l border-gray-100">
+                   <span className="block text-xl font-bold text-green-500">{employeeData.status}</span>
+                   <span className="text-[10px] text-gray-400 font-bold uppercase">Status</span>
+                 </div>
+                 <div className="text-center border-l border-gray-100">
+                   <span className="block text-xl font-bold text-blue-500">28</span>
+                   <span className="text-[10px] text-gray-400 font-bold uppercase">Days</span>
+                 </div>
+              </div>
+            </motion.div>
           </div>
-          
-          {/* Stats Row within Card */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-             <div className="text-center">
-               <span className="block text-xl font-bold text-gray-800">{employeeData.todayHours}</span>
-               <span className="text-[10px] text-gray-400 font-bold uppercase">Total Hours</span>
-             </div>
-             <div className="text-center border-l border-gray-100">
-               <span className="block text-xl font-bold text-green-500">{employeeData.status}</span>
-               <span className="text-[10px] text-gray-400 font-bold uppercase">Status</span>
-             </div>
-             <div className="text-center border-l border-gray-100">
-               <span className="block text-xl font-bold text-blue-500">28</span>
-               <span className="text-[10px] text-gray-400 font-bold uppercase">Days</span>
-             </div>
-          </div>
-        </motion.div>
       </div>
 
       <div className="px-6 mt-8 space-y-8">

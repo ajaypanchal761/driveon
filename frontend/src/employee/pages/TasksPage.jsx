@@ -43,52 +43,54 @@ const TasksPage = () => {
   return (
     <div className="min-h-screen bg-[#F5F7FA] pb-24 font-sans selection:bg-blue-100 flex flex-col">
       
-      {/* HEADER SECTION - COMPACT DASHBOARD STYLE */}
-      <div className="bg-[#1C205C] pt-6 pb-12 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+      <div className="sticky top-0 z-30">
+        {/* HEADER SECTION - COMPACT DASHBOARD STYLE */}
+        <div className="bg-[#1C205C] pt-6 pb-12 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
 
-        <HeaderTopBar title="My Tasks" />
-        
-        {/* Date Display */}
-        <div className="mt-4 flex items-center justify-between text-white">
-           <div>
-              <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{currentDate.toLocaleDateString('en-US', { weekday: 'long' })}</p>
-              <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</h2>
-           </div>
-           <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 text-center">
-              <span className="block text-2xl font-bold">{completedCount}/{totalToday}</span>
-              <span className="text-[10px] uppercase text-blue-200 font-bold">Done</span>
-           </div>
-        </div>
-      </div>
-
-      {/* FILTER TABS - FLOATING */}
-      <div className="-mt-6 px-6 z-10">
-          <div className="bg-white p-1.5 rounded-2xl shadow-lg border border-gray-100 flex justify-between">
-              {['Today', 'Tomorrow', 'Completed'].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`
-                       flex-1 py-3 rounded-xl text-xs font-bold transition-all relative
-                       ${filter === f 
-                         ? 'text-[#1C205C]' 
-                         : 'text-gray-400 hover:text-gray-600'}
-                    `}
-                  >
-                      {filter === f && (
-                        <motion.div 
-                          layoutId="activeTab"
-                          className="absolute inset-0 bg-blue-50 rounded-xl -z-10"
-                        />
-                      )}
-                      {f} 
-                      {/* Badge for counts if needed */}
-                      {f === 'Today' && <span className="ml-1 text-[10px] bg-[#1C205C] text-white px-1.5 py-0.5 rounded-full">{totalToday}</span>}
-                  </button>
-              ))}
+          <HeaderTopBar title="My Tasks" />
+          
+          {/* Date Display */}
+          <div className="mt-4 flex items-center justify-between text-white">
+             <div>
+                <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{currentDate.toLocaleDateString('en-US', { weekday: 'long' })}</p>
+                <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</h2>
+             </div>
+             <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 text-center">
+                <span className="block text-2xl font-bold">{completedCount}/{totalToday}</span>
+                <span className="text-[10px] uppercase text-blue-200 font-bold">Done</span>
+             </div>
           </div>
+        </div>
+
+        {/* FILTER TABS - FLOATING */}
+        <div className="-mt-6 px-6 z-10 relative">
+            <div className="bg-white p-1.5 rounded-2xl shadow-lg border border-gray-100 flex justify-between">
+                {['Today', 'Tomorrow', 'Completed'].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={`
+                         flex-1 py-3 rounded-xl text-xs font-bold transition-all relative
+                         ${filter === f 
+                           ? 'text-[#1C205C]' 
+                           : 'text-gray-400 hover:text-gray-600'}
+                      `}
+                    >
+                        {filter === f && (
+                          <motion.div 
+                            layoutId="activeTab"
+                            className="absolute inset-0 bg-blue-50 rounded-xl -z-10"
+                          />
+                        )}
+                        {f} 
+                        {/* Badge for counts if needed */}
+                        {f === 'Today' && <span className="ml-1 text-[10px] bg-[#1C205C] text-white px-1.5 py-0.5 rounded-full">{totalToday}</span>}
+                    </button>
+                ))}
+            </div>
+        </div>
       </div>
 
       {/* TASKS LIST */}

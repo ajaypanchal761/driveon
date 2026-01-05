@@ -22,7 +22,11 @@ import {
   MdClose,
   MdAdd
 } from 'react-icons/md';
+
 import { motion } from 'framer-motion';
+import { premiumColors } from '../../../theme/colors';
+import { rgba } from 'polished';
+import ThemedDropdown from '../../../components/common/ThemedDropdown';
 
 // --- Shared Components ---
 
@@ -49,14 +53,25 @@ const StatusBadge = ({ status }) => {
     'Active': 'bg-green-50 text-green-700 border-green-200',
     'Inactive': 'bg-red-50 text-red-700 border-red-200',
     'Pending': 'bg-orange-50 text-orange-700 border-orange-200',
-    'Verified': 'bg-blue-50 text-blue-700 border-blue-200',
+    'Verified': 'text-white border-transparent', // Custom styled below
     'Payout': 'bg-red-50 text-red-600 border-red-200',
     'Commission': 'bg-green-50 text-green-600 border-green-200',
     'Processing': 'bg-yellow-50 text-yellow-700 border-yellow-200',
     'Completed': 'bg-green-50 text-green-700 border-green-200',
   };
+
+  const getStyle = (s) => {
+      if (s === 'Verified') {
+          return { backgroundColor: premiumColors.primary.DEFAULT, color: 'white', borderColor: 'transparent' };
+      }
+      return {};
+  };
+
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}>
+    <span 
+        className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}
+        style={getStyle(status)}
+    >
       {status}
     </span>
   );
@@ -70,7 +85,7 @@ const VendorCard = ({ vendor }) => (
        className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm transition-all group relative overflow-hidden"
     >
         {vendor.verified && (
-            <div className="absolute top-0 right-0 bg-blue-500 text-white p-1 rounded-bl-xl shadow-sm z-10">
+            <div className="absolute top-0 right-0 text-white p-1 rounded-bl-xl shadow-sm z-10" style={{ backgroundColor: premiumColors.primary.DEFAULT }}>
                 <MdVerified size={16} />
             </div>
         )}
@@ -80,20 +95,20 @@ const VendorCard = ({ vendor }) => (
                 <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
             </div>
             <div>
-                <h3 className="font-bold text-gray-900 text-lg group-hover:text-indigo-600 transition-colors">{vendor.name}</h3>
+                <h3 className="font-bold text-gray-900 text-lg transition-colors group-hover:opacity-80" style={{ '--hover-color': premiumColors.primary.DEFAULT }}>{vendor.name}</h3>
                 <p className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-0.5 rounded-md inline-block mt-1">{vendor.type}</p>
             </div>
         </div>
 
         <div className="space-y-2.5 text-sm text-gray-600 mb-5">
             <div className="flex items-center gap-2">
-                <MdPhone className="text-indigo-300" /> {vendor.phone}
+                <MdPhone style={{ color: rgba(premiumColors.primary.DEFAULT, 0.6) }} /> {vendor.phone}
             </div>
             <div className="flex items-center gap-2">
-                <MdEmail className="text-indigo-300" /> {vendor.email}
+                <MdEmail style={{ color: rgba(premiumColors.primary.DEFAULT, 0.6) }} /> {vendor.email}
             </div>
             <div className="flex items-center gap-2">
-                <MdDirectionsCar className="text-indigo-300" /> <span className="font-bold text-gray-800">{vendor.cars} Active Cars</span>
+                <MdDirectionsCar style={{ color: rgba(premiumColors.primary.DEFAULT, 0.6) }} /> <span className="font-bold text-gray-800">{vendor.cars} Active Cars</span>
             </div>
         </div>
 
@@ -121,7 +136,7 @@ const PaymentRow = ({ payment }) => (
         <td className="px-6 py-4">
             <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">{payment.vendor}</span>
-                {payment.verified && <MdVerified className="text-blue-500" size={14} />}
+                {payment.verified && <MdVerified size={14} style={{ color: premiumColors.primary.DEFAULT }} />}
             </div>
         </td>
         <td className="px-6 py-4 text-gray-500">{payment.refId}</td>
@@ -192,9 +207,9 @@ export const AllVendorsPage = () => {
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">All Vendors</span>
                     </div>
@@ -206,18 +221,17 @@ export const AllVendorsPage = () => {
                          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                          <input 
                             type="text"
-                            placeholder="Search vendors..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                         placeholder="Search vendors..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all shadow-sm"
+                            style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                          />
                      </div>
-                     <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-medium flex items-center justify-center gap-2">
-                         <MdFilterList /> Filter
-                     </button>
                      <button 
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                        className="px-4 py-2.5 text-white rounded-xl shadow-lg font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 10px 15px -3px ${rgba(premiumColors.primary.DEFAULT, 0.3)}` }}
                      >
                          <MdStore /> Add Vendor
                      </button>
@@ -250,22 +264,19 @@ export const AllVendorsPage = () => {
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                         <select 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                         <ThemedDropdown 
+                            options={['Car Provider', 'Fleet Partner', 'Driver Partner', 'Premium Partner']}
                             value={newVendor.type}
-                            onChange={(e) => setNewVendor({...newVendor, type: e.target.value})}
-                         >
-                             <option>Car Provider</option>
-                             <option>Fleet Partner</option>
-                             <option>Driver Partner</option>
-                             <option>Premium Partner</option>
-                         </select>
+                            onChange={(val) => setNewVendor({...newVendor, type: val})}
+                            placeholder="Select Type"
+                         />
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 transition-all" 
+                            style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
                             value={newVendor.phone}
                             onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
                          />
@@ -274,14 +285,19 @@ export const AllVendorsPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                          <input 
                             type="email" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 transition-all" 
+                            style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
                             value={newVendor.email}
                             onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
                          />
                      </div>
                      <button 
                         onClick={handleAddVendor}
-                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        className="w-full py-2.5 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95 hover:opacity-90"
+                        style={{ 
+                            backgroundColor: premiumColors.primary.DEFAULT,
+                            boxShadow: `0 10px 15px -3px ${rgba(premiumColors.primary.DEFAULT, 0.3)}`
+                        }}
                      >
                          Onboard Vendor
                      </button>
@@ -298,18 +314,25 @@ export const VendorPaymentsPage = () => {
          <div className="flex flex-col md:flex-row justify-between items-end gap-4">
              <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                     <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
                     <span>/</span> 
                     <span className="text-gray-800 font-medium">Payments</span>
                 </div>
                  <h1 className="text-2xl font-bold text-gray-900">Payments & Settlements</h1>
                  <p className="text-gray-500 text-sm">Track vendor payouts and commissions.</p>
              </div>
-             <button className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl font-bold hover:bg-indigo-100 flex items-center gap-2">
-                 <MdDownload /> Report
-             </button>
+              <button 
+                  className="px-4 py-2 rounded-xl font-bold flex items-center gap-2 border transition-colors hover:opacity-80"
+                  style={{ 
+                      backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), 
+                      color: premiumColors.primary.DEFAULT,
+                      borderColor: rgba(premiumColors.primary.DEFAULT, 0.1)
+                  }}
+              >
+                  <MdDownload /> Report
+              </button>
          </div>
 
          {/* Stats */}
@@ -358,9 +381,9 @@ export const VendorHistoryPage = () => {
          <div className="flex justify-between items-end">
              <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                     <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
                     <span>/</span> 
                     <span className="text-gray-800 font-medium">History</span>
                 </div>
@@ -385,7 +408,7 @@ export const VendorHistoryPage = () => {
                         <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 font-bold text-gray-700">{log.date}</td>
                             <td className="px-6 py-4 font-medium text-gray-900">{log.vendor}</td>
-                            <td className="px-6 py-4 text-indigo-600 font-bold">{log.action}</td>
+                            <td className="px-6 py-4 font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{log.action}</td>
                             <td className="px-6 py-4 text-gray-600">{log.detail}</td>
                             <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
                         </tr>
@@ -403,9 +426,9 @@ export const VendorCarUsagePage = () => {
     <div className="space-y-6">
          <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                 <span>/</span> 
-                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
                 <span>/</span> 
                 <span className="text-gray-800 font-medium">Car Usage</span>
             </div>
@@ -427,7 +450,7 @@ export const VendorCarUsagePage = () => {
                  <tbody className="divide-y divide-gray-100 text-sm">
                      {MOCK_CAR_USAGE.map((item) => (
                          <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                             <td className="px-6 py-4 font-bold text-indigo-600">{item.vendor}</td>
+                              <td className="px-6 py-4 font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{item.vendor}</td>
                              <td className="px-6 py-4">
                                  <div className="font-medium text-gray-900">{item.car}</div>
                                  <div className="text-xs text-gray-500">{item.reg}</div>

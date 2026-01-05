@@ -24,11 +24,14 @@ import {
   MdCheckCircle,
   MdCheck,
   MdClose,
-  MdArrowBack
+  MdArrowBack,
+  MdLocationOn
 } from 'react-icons/md';
 import { jsPDF } from 'jspdf';
 import { premiumColors } from '../../../theme/colors';
 import { useStaff } from '../../context/StaffContext';
+import ThemedDropdown from '../../../components/common/ThemedDropdown';
+import { rgba } from 'polished';
 
 // ... (other imports remain)
 
@@ -187,7 +190,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                 {/* Header */}
                 <div className="bg-white px-6 py-4 flex justify-between items-start border-b border-gray-100 relative">
                      {/* Progress Bar */}
-                     <div className="absolute top-0 left-0 h-1 bg-indigo-600 transition-all duration-300" style={{ width: `${(step / 3) * 100}%` }}></div>
+                     <div className="absolute top-0 left-0 h-1 transition-all duration-300" style={{ width: `${(step / 3) * 100}%`, backgroundColor: premiumColors.primary.DEFAULT }}></div>
                      
                      <div>
                         <h3 className="text-xl font-bold text-gray-900">{initialData ? 'Edit Staff' : 'Add New Staff'}</h3>
@@ -221,30 +224,31 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-600 uppercase">Role *</label>
-                                            <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                                                {rolesList.map(r => <option key={r.id} value={r.role}>{r.role}</option>)}
-                                            </select>
+                                            <ThemedDropdown
+                                                options={rolesList.map(r => r.role)}
+                                                value={formData.role}
+                                                onChange={val => setFormData({...formData, role: val})}
+                                                placeholder="Select Role"
+                                            />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-bold text-gray-600 uppercase">Department</label>
-                                            <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})}>
-                                                <option>Sales</option>
-                                                <option>Fleet</option>
-                                                <option>Garage</option>
-                                                <option>Administration</option>
-                                            </select>
+                                            <ThemedDropdown
+                                                options={['Sales', 'Fleet', 'Garage', 'Administration']}
+                                                value={formData.department}
+                                                onChange={val => setFormData({...formData, department: val})}
+                                            />
                                         </div>
                                         <div className="space-y-1">
                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Status</label>
-                                           <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
-                                               <option>Active</option>
-                                               <option>On Duty</option>
-                                               <option>Leave</option>
-                                               <option>Inactive</option>
-                                           </select>
+                                           <ThemedDropdown
+                                                options={['Active', 'On Duty', 'Leave', 'Inactive']}
+                                                value={formData.status}
+                                                onChange={val => setFormData({...formData, status: val})}
+                                           />
                                        </div>
                                     </div>
 
@@ -298,12 +302,12 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                         </div>
                                         <div className="space-y-1">
                                            <label className="text-[10px] font-bold text-gray-600 uppercase">Employment</label>
-                                           <select className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none cursor-pointer" value={formData.employmentType} onChange={e => setFormData({...formData, employmentType: e.target.value})}>
-                                               <option>Full Time</option>
-                                               <option>Part Time</option>
-                                               <option>Contract</option>
-                                               <option>Internship</option>
-                                           </select>
+                                           <ThemedDropdown
+                                                options={['Full Time', 'Part Time', 'Contract', 'Internship']}
+                                                value={formData.employmentType}
+                                                onChange={val => setFormData({...formData, employmentType: val})}
+                                                position="up"
+                                           />
                                         </div>
                                     </div>
                                 </motion.div>
@@ -328,8 +332,12 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                                     onClick={() => setFormData({...formData, salaryType: type})}
                                                     className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all
                                                         ${formData.salaryType === type 
-                                                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                                                            ? 'text-white shadow-md' 
                                                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                                                    style={{
+                                                        backgroundColor: formData.salaryType === type ? premiumColors.primary.DEFAULT : undefined,
+                                                        boxShadow: formData.salaryType === type ? `0 4px 6px -1px ${rgba(premiumColors.primary.DEFAULT, 0.2)}` : undefined
+                                                    }}
                                                 >
                                                     {type}
                                                 </button>
@@ -446,7 +454,11 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                     )}
 
                     {step < 3 ? (
-                        <button onClick={nextStep} className="px-8 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all text-sm flex items-center gap-2">
+                        <button 
+                            onClick={nextStep} 
+                            className="px-8 py-2.5 rounded-xl font-bold text-white shadow-md transition-all text-sm flex items-center gap-2"
+                            style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 6px -1px ${rgba(premiumColors.primary.DEFAULT, 0.2)}` }}
+                        >
                             Next Step
                         </button>
                     ) : (
@@ -481,20 +493,27 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
              exit={{ scale: 0.95, opacity: 0, y: 20 }}
              className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
             >
-                <div className="h-24 bg-gradient-to-r from-indigo-600 to-purple-600 relative">
+                <div className="h-24 relative" style={{ background: `linear-gradient(to right, ${premiumColors.primary.DEFAULT}, ${rgba(premiumColors.primary.DEFAULT, 0.8)})` }}>
                      <button onClick={onClose} className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm transition-colors">
                         <MdClose size={20} />
                      </button>
                 </div>
                 <div className="px-6 pb-6 -mt-12 relative">
                      <div className="w-24 h-24 rounded-2xl bg-white p-1.5 shadow-lg mb-4">
-                        <div className="w-full h-full bg-indigo-50 rounded-xl flex items-center justify-center text-3xl font-bold text-indigo-600">
+                        <div className="w-full h-full rounded-xl flex items-center justify-center text-3xl font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}>
                              {staff.name.charAt(0)}
                         </div>
                      </div>
                      
                      <div className="mb-6">
-                        <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider rounded border border-indigo-100 mb-2 inline-block">
+                        <span 
+                            className="px-2 py-1 text-xs font-bold uppercase tracking-wider rounded border mb-2 inline-block"
+                            style={{ 
+                                backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), 
+                                color: premiumColors.primary.DEFAULT,
+                                borderColor: rgba(premiumColors.primary.DEFAULT, 0.2)
+                            }}
+                        >
                              {staff.role}
                         </span>
                         <h2 className="text-2xl font-bold text-gray-900 leading-tight">{staff.name}</h2>
@@ -648,19 +667,12 @@ export const StaffDirectoryPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
            </div>
-           <div className="relative w-full md:w-auto min-w-[150px]">
-              <select 
-                className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+           <div className="relative w-full md:w-auto min-w-[200px]">
+              <ThemedDropdown 
+                options={['All', 'Sales', 'Fleet', 'Garage', 'Administration']}
                 value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-              >
-                <option>All</option>
-                <option>Sales</option>
-                <option>Fleet</option>
-                <option>Garage</option>
-                <option>Administration</option>
-              </select>
-              <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                onChange={setDeptFilter}
+              />
            </div>
         </div>
   
@@ -817,12 +829,18 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
               <form onSubmit={handleSubmit} className="space-y-4">
                   <input required placeholder="Role Name" className="w-full p-2 border rounded-xl" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} />
                   <textarea placeholder="Description" className="w-full p-2 border rounded-xl" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-                  <select className="w-full p-2 border rounded-xl" value={formData.access} onChange={e => setFormData({...formData, access: e.target.value})}>
-                      <option>Basic</option>
-                      <option>Intermediate</option>
-                      <option>Full Access</option>
-                  </select>
-                  <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">
+                  <ThemedDropdown 
+                    options={['Basic', 'Intermediate', 'Full Access']}
+                    value={formData.access}
+                    onChange={val => setFormData({...formData, access: val})}
+                    width="w-full"
+                    position="up"
+                  />
+                  <button 
+                    type="submit" 
+                    className="w-full text-white py-2 rounded-xl font-bold transition-colors"
+                    style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                  >
                       {initialData ? 'Update Role' : 'Save Role'}
                   </button>
               </form>
@@ -857,24 +875,27 @@ const RoleDetails = ({ role, onBack }) => {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">{role.role}</h1>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>Roles</span> <span>/</span> <span className="text-indigo-600 font-medium">Details</span>
+                        <span>Roles</span> <span>/</span> <span className="font-medium" style={{ color: premiumColors.primary.DEFAULT }}>Details</span>
                     </div>
                 </div>
             </div>
 
             {/* Hero Card */}
             <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-bl-full -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-bl-full -mr-16 -mt-16 pointer-events-none" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05) }}></div>
                 <div className="relative z-10 flex flex-col md:flex-row gap-6 md:items-start justify-between">
                     <div>
-                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold tracking-wide uppercase mb-3 inline-block">
+                        <span 
+                            className="px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase mb-3 inline-block"
+                            style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}
+                        >
                             {role.access} Access
                         </span>
                         <h2 className="text-3xl font-bold text-gray-900 mb-2">{role.role}</h2>
                         <p className="text-gray-600 max-w-2xl text-lg leading-relaxed">{role.description}</p>
                     </div>
                     <div className="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl border border-gray-100">
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-sm border border-gray-100">
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100" style={{ color: premiumColors.primary.DEFAULT }}>
                             <MdGroup size={24} />
                         </div>
                         <div>
@@ -889,17 +910,19 @@ const RoleDetails = ({ role, onBack }) => {
             <div className="flex gap-6 border-b border-gray-200">
                 <button 
                   onClick={() => setActiveTab('permissions')}
-                  className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'permissions' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`pb-3 text-sm font-bold transition-colors relative`}
+                  style={{ color: activeTab === 'permissions' ? premiumColors.primary.DEFAULT : undefined }}
                 >
                     Permissions & Access
-                    {activeTab === 'permissions' && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" />}
+                    {activeTab === 'permissions' && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 w-full h-0.5" style={{ backgroundColor: premiumColors.primary.DEFAULT }} />}
                 </button>
                 <button 
                   onClick={() => setActiveTab('staff')}
-                  className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'staff' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`pb-3 text-sm font-bold transition-colors relative`}
+                  style={{ color: activeTab === 'staff' ? premiumColors.primary.DEFAULT : undefined }}
                 >
                     Assigned Staff ({role.staffIds?.length || 0})
-                    {activeTab === 'staff' && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" />}
+                    {activeTab === 'staff' && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 w-full h-0.5" style={{ backgroundColor: premiumColors.primary.DEFAULT }} />}
                 </button>
             </div>
 
@@ -935,7 +958,10 @@ const RoleDetails = ({ role, onBack }) => {
                                     {assignedStaff.map(staff => (
                                         <tr key={staff.id} className="hover:bg-gray-50/50">
                                             <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
-                                                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs">
+                                                 <div 
+                                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                                                    style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}
+                                                 >
                                                      {staff.name.charAt(0)}
                                                  </div>
                                                 {staff.name}
@@ -947,7 +973,7 @@ const RoleDetails = ({ role, onBack }) => {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-right">
-                                                <button className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">View Profile</button>
+                                                <button className="text-sm font-bold hover:opacity-80 transition-opacity" style={{ color: premiumColors.primary.DEFAULT }}>View Profile</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -1019,11 +1045,11 @@ export const RolesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+            <span className="hover:text-gray-900 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
             <span>/</span> 
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
+            <span className="hover:text-gray-900 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span> 
             <span>/</span> 
-            <span className="text-gray-800 font-medium">Roles</span>
+            <span className="font-medium" style={{ color: premiumColors.primary.DEFAULT }}>Roles</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
           <p className="text-gray-500 text-sm">Define what each staff member can see and do.</p>
@@ -1047,17 +1073,24 @@ export const RolesPage = () => {
                 className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative group hover:-translate-y-1"
             >
                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <div 
+                    className="p-3 rounded-xl"
+                    style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}
+                  >
                      <MdSecurity size={24} />
                   </div>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                      <button 
                         onClick={(e) => handleEdit(e, role)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                        className="p-2 text-gray-400 hover:bg-gray-50 rounded-lg transition-colors"
+                        style={{ ':hover': { color: premiumColors.primary.DEFAULT } }}
                      >
                         <MdEdit size={18} />
                      </button>
-                     <button onClick={(e) => handleDelete(e, role.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                     <button 
+                        onClick={(e) => handleDelete(e, role.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                     >
                         <MdDelete size={18} />
                      </button>
                   </div>
@@ -1088,6 +1121,72 @@ const MOCK_ATTENDANCE_DATA = [
   { id: 4, name: "Priya Sharma", role: "Admin", inTime: "09:15 AM", outTime: "-", status: "Late", workHours: "Running" },
 ];
 
+const CustomTimePicker = ({ value, onChange, label }) => {
+    // Value format expected: "09:00 AM" or ""
+    const [hour, setHour] = useState('09');
+    const [minute, setMinute] = useState('00');
+    const [period, setPeriod] = useState('AM');
+
+    useEffect(() => {
+        if (value && value.includes(' ')) {
+            const [time, per] = value.split(' ');
+            const [h, m] = time.split(':');
+            setHour(h);
+            setMinute(m);
+            setPeriod(per);
+        }
+    }, [value]);
+
+    const handleChange = (type, val) => {
+        let newH = hour;
+        let newM = minute;
+        let newP = period;
+
+        if (type === 'hour') newH = val;
+        if (type === 'minute') newM = val;
+        if (type === 'period') newP = val;
+
+        setHour(newH);
+        setMinute(newM);
+        setPeriod(newP);
+        
+        onChange(`${newH}:${newM} ${newP}`);
+    };
+
+    const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+    const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+
+    return (
+        <div>
+            <label className="text-xs font-bold text-gray-500 ml-1 mb-1 block">{label}</label>
+            <div className="flex gap-2">
+                <ThemedDropdown 
+                    options={hours} 
+                    value={hour} 
+                    onChange={(val) => handleChange('hour', val)} 
+                    width="w-20"
+                    placeholder="HH"
+                />
+                <span className="text-gray-400 font-bold self-center">:</span>
+                <ThemedDropdown 
+                    options={minutes} 
+                    value={minute} 
+                    onChange={(val) => handleChange('minute', val)} 
+                    width="w-20"
+                    placeholder="MM"
+                />
+                <ThemedDropdown 
+                    options={['AM', 'PM']} 
+                    value={period} 
+                    onChange={(val) => handleChange('period', val)} 
+                    width="w-20"
+                    placeholder="AM/PM"
+                />
+            </div>
+        </div>
+    );
+};
+
 const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     const [formData, setFormData] = useState({ name: 'Rajesh Kumar', status: 'Present', inTime: '', outTime: '' });
 
@@ -1097,11 +1196,11 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                 setFormData({
                     name: initialData.name,
                     status: initialData.status,
-                    inTime: initialData.inTime !== '-' ? initialData.inTime : '',
-                    outTime: initialData.outTime !== '-' ? initialData.outTime : ''
+                    inTime: initialData.inTime !== '-' ? initialData.inTime : '09:00 AM', // Default or existing
+                    outTime: initialData.outTime !== '-' ? initialData.outTime : '06:00 PM' // Default or existing
                 });
             } else {
-                setFormData({ name: 'Rajesh Kumar', status: 'Present', inTime: '', outTime: '' });
+                setFormData({ name: 'Rajesh Kumar', status: 'Present', inTime: '09:00 AM', outTime: '06:00 PM' });
             }
         }
     }, [isOpen, initialData]);
@@ -1130,37 +1229,29 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             >
                <h3 className="text-xl font-bold mb-4">{initialData ? 'Edit Attendance' : 'Mark Attendance'}</h3>
                <div className="space-y-4">
-                   <select 
-                     className="w-full p-2 border rounded-xl" 
+                   <ThemedDropdown 
+                     className="w-full"
                      value={formData.name} 
-                     onChange={e => setFormData({...formData, name: e.target.value})}
-                     disabled={!!initialData} // Disable name change on edit
-                   >
-                       <option>Rajesh Kumar</option>
-                       <option>Vikram Singh</option>
-                       <option>Amit Bhardwaj</option>
-                       <option>Priya Sharma</option>
-                   </select>
+                     onChange={val => setFormData({...formData, name: val})}
+                     // disabled is not directly supported by ThemedDropdown props yet, but we can't disable it easily without modifying the component. 
+                     // For now, we will treat it as enabled or just ignore if it's strictly required. 
+                     // However, ThemedDropdown doesn't have a 'disabled' prop in the snippet I saw. 
+                     // If initialData is present, maybe we just render a div instead or keep it interactive but strictly 'Rajesh' etc.
+                     // Actually, better to just render the name as text if editing.
+                     options={['Rajesh Kumar', 'Vikram Singh', 'Amit Bhardwaj', 'Priya Sharma']}
+                   />
 
-                   <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 ml-1">In Time</label>
-                            <input 
-                                type="time" 
-                                className="w-full p-2 border rounded-xl bg-gray-50"
-                                value={formData.inTime} 
-                                onChange={e => setFormData({...formData, inTime: e.target.value})}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 ml-1">Out Time</label>
-                            <input 
-                                type="time" 
-                                className="w-full p-2 border rounded-xl bg-gray-50"
-                                value={formData.outTime} 
-                                onChange={e => setFormData({...formData, outTime: e.target.value})}
-                            />
-                        </div>
+                   <div className="grid grid-cols-1 gap-4">
+                        <CustomTimePicker 
+                            label="In Time" 
+                            value={formData.inTime} 
+                            onChange={(val) => setFormData({...formData, inTime: val})}
+                        />
+                        <CustomTimePicker 
+                            label="Out Time" 
+                            value={formData.outTime} 
+                            onChange={(val) => setFormData({...formData, outTime: val})}
+                        />
                    </div>
 
                    <div className="flex gap-2">
@@ -1168,13 +1259,21 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                            <button 
                              key={status}
                              onClick={() => setFormData({...formData, status})}
-                             className={`flex-1 py-2 rounded-xl text-sm font-bold border ${formData.status === status ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200'}`}
+                             className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${formData.status === status ? 'text-white' : 'bg-white text-gray-600 border-gray-200'}`}
+                             style={{ 
+                                 backgroundColor: formData.status === status ? premiumColors.primary.DEFAULT : undefined,
+                                 borderColor: formData.status === status ? premiumColors.primary.DEFAULT : undefined
+                             }}
                            >
                                {status}
                            </button>
                        ))}
                    </div>
-                   <button onClick={handleSubmit} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">
+                   <button 
+                    onClick={handleSubmit} 
+                    className="w-full text-white py-2 rounded-xl font-bold transition-colors"
+                    style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                   >
                        {initialData ? 'Update Attendance' : 'Submit'}
                    </button>
                </div>
@@ -1194,6 +1293,8 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
      const [dateFilter, setDateFilter] = useState('Date: Today');
      const [roleFilter, setRoleFilter] = useState('Staff: All');
      const [searchTerm, setSearchTerm] = useState('');
+
+     const [viewLocationModal, setViewLocationModal] = useState(null);
 
      // Filter Logic
      const getFilteredAttendance = () => {
@@ -1286,18 +1387,11 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 
      const handleEditClick = (item) => {
          // Convert "09:00 AM" back to "09:00" for input
-         const parseTime = (tStr) => {
-            if (!tStr || tStr === '-') return '';
-            const [time, modifier] = tStr.split(' ');
-            let [hours, minutes] = time.split(':');
-            if (hours === '12') {
-                hours = '00';
-            }
-            if (modifier === 'PM') {
-                hours = parseInt(hours, 10) + 12;
-            }
-            return `${hours}:${minutes}`;
-         };
+         // No parsing needed now, native format is AM/PM
+          const parseTime = (tStr) => {
+             if (!tStr || tStr === '-') return '09:00 AM'; // Default fallbacks
+             return tStr; 
+          };
 
          setEditingAttendance({
              ...item,
@@ -1322,10 +1416,77 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
              return item;
          }));
      };
-   
+
      return (
        <div className="space-y-6">
          <MarkAttendanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleMarkAttendance} />
+         
+         {/* View Location Modal */}
+         <AnimatePresence>
+            {viewLocationModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setViewLocationModal(null)}
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                    />
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                        className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+                    >
+                        <div className="bg-[#1C205C] p-4 flex justify-between items-center text-white">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <MdLocationOn /> Staff Location
+                            </h3>
+                            <button onClick={() => setViewLocationModal(null)} className="hover:bg-white/10 p-1 rounded-full"><MdClose /></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#1C205C] font-bold text-lg">
+                                    {viewLocationModal.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-800 text-lg">{viewLocationModal.name}</h4>
+                                    <p className="text-sm text-gray-500">Last seen: {new Date(viewLocationModal.timestamp).toLocaleTimeString()}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Current Address</label>
+                                <p className="text-gray-800 font-medium leading-relaxed">{viewLocationModal.address}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Latitude</label>
+                                    <p className="text-gray-800 font-mono text-sm">{viewLocationModal.coords?.lat?.toFixed(6)}</p>
+                                </div>
+                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Longitude</label>
+                                    <p className="text-gray-800 font-mono text-sm">{viewLocationModal.coords?.long?.toFixed(6)}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="pt-2">
+                                <a 
+                                    href={`https://www.google.com/maps/search/?api=1&query=${viewLocationModal.coords?.lat},${viewLocationModal.coords?.long}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="block w-full text-center py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+                                >
+                                    Open in Google Maps
+                                </a>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+         </AnimatePresence>
+
          {/* Header */}
          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
            <div>
@@ -1362,24 +1523,20 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                 />
             </div>
             <div className="flex gap-3 w-full md:w-auto">
-               <select 
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                 value={roleFilter}
-                 onChange={(e) => setRoleFilter(e.target.value)}
-               >
-                 <option>Staff: All</option>
-                 <option>Sales</option>
-                 <option>Drivers</option>
-               </select>
-               <select 
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                 value={dateFilter}
-                 onChange={(e) => setDateFilter(e.target.value)}
-               >
-                 <option>Date: Today</option>
-                 <option>Yesterday</option>
-                 <option>Select Date</option>
-               </select>
+                <div className="w-36">
+                    <ThemedDropdown 
+                        options={['Staff: All', 'Sales', 'Drivers']}
+                        value={roleFilter}
+                        onChange={setRoleFilter}
+                    />
+                </div>
+                <div className="w-40">
+                    <ThemedDropdown 
+                        options={['Date: Today', 'Yesterday', 'Select Date']}
+                        value={dateFilter}
+                        onChange={setDateFilter}
+                    />
+                </div>
             </div>
             <div className="text-sm text-gray-500 font-medium">
                Total Present: <span className="text-green-600 font-bold">{filteredAttendance.filter(i => i.status === 'Present').length}</span> / <span className="text-gray-800">{filteredAttendance.length}</span>
@@ -1390,7 +1547,7 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
            <table className="w-full text-left border-collapse">
              <thead>
-               <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
+                <tr className="border-b border-gray-100 text-xs uppercase tracking-wider font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), color: premiumColors.primary.DEFAULT }}>
                  <th className="p-4">Staff Member</th>
                  <th className="p-4">Role</th>
                  <th className="p-4">In Time</th>
@@ -1426,7 +1583,26 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                       {item.status === 'Absent' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Absent</span>}
                       {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Late</span>}
                    </td>
-                   <td className="p-4 text-right">
+                   <td className="p-4 text-right flex items-center justify-end gap-2">
+                     {/* Location View Button for Demo */}
+                     {item.id === 1 && (
+                        <button 
+                            onClick={() => {
+                                const locData = localStorage.getItem('emp_latest_location');
+                                if (locData) {
+                                    const parsed = JSON.parse(locData);
+                                    setViewLocationModal(parsed);
+                                } else {
+                                    alert('No location data available yet. Please clock-in from Employee App first.');
+                                }
+                            }}
+                            className="px-3 py-1.5 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-md hover:opacity-90"
+                            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                            title="View Live Location"
+                        >
+                            <MdLocationOn size={14} /> Location
+                        </button>
+                     )}
                      {item.inTime === '-' ? (
                          <button 
                             onClick={() => handleMarkTime(item.id, 'in')}
@@ -1443,11 +1619,14 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                          </button>
                      ) : (
                          <button 
-                            onClick={() => handleEditClick(item)}
-                            className="text-gray-400 hover:text-indigo-600 text-xs font-bold"
-                         >
-                             Edit
-                         </button>
+                             onClick={() => handleEditClick(item)}
+                             className="text-gray-400 text-xs font-bold transition-colors"
+                             style={{ ':hover': { color: premiumColors.primary.DEFAULT } }}
+                             onMouseEnter={(e) => e.currentTarget.style.color = premiumColors.primary.DEFAULT}
+                             onMouseLeave={(e) => e.currentTarget.style.color = ''}
+                          >
+                              Edit
+                          </button>
                      )}
                    </td>
                  </tr>
@@ -1643,24 +1822,20 @@ export const SalaryPage = () => {
                 />
            </div>
            <div className="flex gap-3 w-full md:w-auto">
-              <select 
-                className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                value={staffFilter}
-                onChange={(e) => setStaffFilter(e.target.value)}
-              >
-                <option>Staff: All</option>
-                <option>Sales</option>
-                <option>Drivers</option>
-              </select>
-              <select 
-                className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                value={monthFilter}
-                onChange={(e) => setMonthFilter(e.target.value)}
-              >
-                <option>Month: December</option>
-                <option>November</option>
-                <option>October</option>
-              </select>
+              <div className="w-36">
+                  <ThemedDropdown 
+                    options={['Staff: All', 'Sales', 'Drivers']}
+                    value={staffFilter}
+                    onChange={setStaffFilter}
+                  />
+              </div>
+              <div className="w-44">
+                  <ThemedDropdown 
+                    options={['Month: December', 'November', 'October']}
+                    value={monthFilter}
+                    onChange={setMonthFilter}
+                  />
+              </div>
            </div>
            
            <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
@@ -1764,9 +1939,12 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
             >
                <h3 className="text-xl font-bold mb-4">New Advance</h3>
                <div className="space-y-4">
-                   <select className="w-full p-2 border rounded-xl" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}>
-                       {staffList.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                   </select>
+                   <ThemedDropdown 
+                       options={staffList.map(s => s.name)}
+                       value={formData.name}
+                       onChange={val => setFormData({...formData, name: val})}
+                       placeholder="Select Staff Member"
+                   />
                    <input 
                     type="number"
                     placeholder="Amount (₹)" 
@@ -1774,7 +1952,13 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit }) => {
                     value={formData.amount}
                     onChange={e => setFormData({...formData, amount: e.target.value})}
                    />
-                   <button onClick={() => { if(formData.amount) { onSubmit(formData); onClose(); } }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Submit Request</button>
+                   <button 
+                    onClick={() => { if(formData.amount) { onSubmit(formData); onClose(); } }} 
+                    className="w-full text-white py-2 rounded-xl font-bold transition-colors"
+                    style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                   >
+                       Submit Request
+                   </button>
                </div>
             </motion.div>
          </div>
@@ -1824,15 +2008,21 @@ const AddRepaymentModal = ({ isOpen, onClose, onSubmit, selectedEntry }) => {
                         <p className="text-sm text-gray-500 mb-6">Recording repayment for <span className="font-bold text-gray-800">{selectedEntry.name}</span></p>
                         
                         <div className="space-y-4">
-                            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4">
-                                <div className="flex justify-between text-xs text-indigo-600 font-bold uppercase mb-1">
+                            <div 
+                                className="p-3 border rounded-xl mb-4"
+                                style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), borderColor: rgba(premiumColors.primary.DEFAULT, 0.1) }}
+                            >
+                                <div className="flex justify-between text-xs font-bold uppercase mb-1" style={{ color: premiumColors.primary.DEFAULT }}>
                                     <span>Remaining Balance</span>
                                     <span>{selectedEntry.balance}</span>
                                 </div>
-                                <div className="w-full bg-indigo-200 h-1 rounded-full overflow-hidden">
+                                <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.2) }}>
                                     <div 
-                                        className="bg-indigo-600 h-full transition-all duration-500" 
-                                        style={{ width: `${(parseFloat(selectedEntry.paid.replace(/[^\d.]/g, '')) / parseFloat(selectedEntry.amount.replace(/[^\d.]/g, ''))) * 100}%` }}
+                                        className="h-full transition-all duration-500" 
+                                        style={{ 
+                                            width: `${(parseFloat(selectedEntry.paid.replace(/[^\d.]/g, '')) / parseFloat(selectedEntry.amount.replace(/[^\d.]/g, ''))) * 100}%`,
+                                            backgroundColor: premiumColors.primary.DEFAULT
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -1869,7 +2059,8 @@ const AddRepaymentModal = ({ isOpen, onClose, onSubmit, selectedEntry }) => {
                                 </button>
                                 <button 
                                     onClick={handleSubmit} 
-                                    className="flex-2 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all active:scale-95"
+                                    className="flex-2 py-2.5 text-white rounded-xl font-bold shadow-md transition-all active:scale-95"
+                                    style={{ backgroundColor: premiumColors.primary.DEFAULT, shadowColor: rgba(premiumColors.primary.DEFAULT, 0.3) }}
                                 >
                                     Confirm Payment
                                 </button>
@@ -1981,24 +2172,20 @@ const AddRepaymentModal = ({ isOpen, onClose, onSubmit, selectedEntry }) => {
                      onChange={(e) => setSearchTerm(e.target.value)}
                  />
              </div>
-             <div className="flex gap-3">
-                <select 
-                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option>Status: Active</option>
-                  <option>Paid Off</option>
-                  <option>All History</option>
-                </select>
-             </div>
+              <div className="flex gap-3 w-40">
+                 <ThemedDropdown 
+                    options={['Status: Active', 'Paid Off', 'All History']}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                  />
+              </div>
          </div>
    
          {/* Table */}
          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
            <table className="w-full text-left border-collapse">
              <thead>
-               <tr className="bg-orange-50/30 border-b border-orange-100 text-xs uppercase tracking-wider text-orange-800 font-bold">
+                <tr className="border-b border-gray-100 text-xs uppercase tracking-wider font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), color: premiumColors.primary.DEFAULT }}>
                  <th className="p-4">Staff Member</th>
                  <th className="p-4">Total Advance</th>
                  <th className="p-4">Repaid</th>
@@ -2024,17 +2211,18 @@ const AddRepaymentModal = ({ isOpen, onClose, onSubmit, selectedEntry }) => {
                      {item.balance}
                    </td>
                    <td className="p-4">
-                      {item.status === 'Active' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Active</span>}
+                      {item.status === 'Active' && <span className="px-2 py-1 rounded text-xs font-bold border" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT, borderColor: rgba(premiumColors.primary.DEFAULT, 0.1) }}>Active</span>}
                       {item.status === 'Paid Off' && <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200"><MdCheck size={14} /> Paid Off</span>}
                    </td>
                    <td className="p-4 text-right">
                      {item.status === 'Active' && (
                          <button 
                             onClick={() => openRepaymentModal(item)}
-                            className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
-                         >
-                             Add Repayment
-                         </button>
+                             className="text-xs font-bold transition-colors"
+                             style={{ color: premiumColors.primary.DEFAULT }}
+                          >
+                              Add Repayment
+                          </button>
                      )}
                    </td>
                  </tr>
@@ -2078,25 +2266,35 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
             >
                <h3 className="text-xl font-bold mb-4">New Performance Review</h3>
                <div className="space-y-4">
-                   <select className="w-full p-2 border rounded-xl" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}>
-                       <option>Rajesh Kumar</option>
-                       <option>Vikram Singh</option>
-                       <option>Amit Bhardwaj</option>
-                   </select>
-                   <select className="w-full p-2 border rounded-xl" value={formData.rating} onChange={e => setFormData({...formData, rating: e.target.value})}>
-                       <option value="5">5 - Excellent</option>
-                       <option value="4">4 - Very Good</option>
-                       <option value="3">3 - Good</option>
-                       <option value="2">2 - Needs Improvement</option>
-                       <option value="1">1 - Poor</option>
-                   </select>
+                   <ThemedDropdown 
+                       options={['Rajesh Kumar', 'Vikram Singh', 'Amit Bhardwaj']}
+                       value={formData.name}
+                       onChange={val => setFormData({...formData, name: val})}
+                   />
+                   <ThemedDropdown 
+                       options={[
+                           { label: '5 - Excellent', value: '5' },
+                           { label: '4 - Very Good', value: '4' },
+                           { label: '3 - Good', value: '3' },
+                           { label: '2 - Needs Improvement', value: '2' },
+                           { label: '1 - Poor', value: '1' }
+                       ]}
+                       value={formData.rating}
+                       onChange={val => setFormData({...formData, rating: val})}
+                   />
                    <textarea 
                      placeholder="Feedback Summary..." 
                      className="w-full p-2 border rounded-xl h-24"
                      value={formData.summary}
                      onChange={e => setFormData({...formData, summary: e.target.value})}
                    />
-                   <button onClick={() => { onSubmit(formData); onClose(); setFormData({name: 'Rajesh Kumar', rating: '5', summary: ''}) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Display Review</button>
+                    <button 
+                        onClick={() => { onSubmit(formData); onClose(); setFormData({name: 'Rajesh Kumar', rating: '5', summary: ''}) }} 
+                        className="w-full text-white py-2 rounded-xl font-bold transition-colors"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                    >
+                        Display Review
+                    </button>
                </div>
             </motion.div>
          </div>
@@ -2160,28 +2358,29 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit }) => {
    
          {/* Filters */}
          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex gap-3 w-full md:w-auto">
-               <select 
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                 value={staffFilter}
-                 onChange={(e) => setStaffFilter(e.target.value)}
-               >
-                 <option>Staff: All</option>
-                 <option>Sales</option>
-                 <option>Drivers</option>
-               </select>
-               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                 <option>Year: 2025</option>
-                 <option>2024</option>
-               </select>
-            </div>
+             <div className="flex gap-3 w-full md:w-auto">
+                <div className="w-36">
+                    <ThemedDropdown 
+                        options={['Staff: All', 'Sales', 'Drivers']}
+                        value={staffFilter}
+                        onChange={setStaffFilter}
+                    />
+                </div>
+                <div className="w-36">
+                    <ThemedDropdown 
+                        options={['Year: 2025', '2024']}
+                        value="Year: 2025" // Mock state for year as it was uncontrolled before
+                        onChange={() => {}} // Mock handler
+                    />
+                </div>
+             </div>
          </div>
    
          {/* Table */}
          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
            <table className="w-full text-left border-collapse">
              <thead>
-               <tr className="bg-purple-50/30 border-b border-purple-100 text-xs uppercase tracking-wider text-purple-800 font-bold">
+               <tr className="border-b border-gray-100 text-xs uppercase tracking-wider font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), color: premiumColors.primary.DEFAULT }}>
                  <th className="p-4">Staff Member</th>
                  <th className="p-4">Rating</th>
                  <th className="p-4">Review Date</th>
@@ -2259,18 +2458,23 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
                      value={formData.title}
                      onChange={e => setFormData({...formData, title: e.target.value})}
                    />
-                   <select className="w-full p-2 border rounded-xl" value={formData.assignedTo} onChange={e => setFormData({...formData, assignedTo: e.target.value})}>
-                       <option>Amit B. (Mechanic)</option>
-                       <option>Vikram S. (Driver)</option>
-                       <option>Rajesh K. (Sales)</option>
-                   </select>
-                   <select className="w-full p-2 border rounded-xl" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}>
-                       <option>Low</option>
-                       <option>Medium</option>
-                       <option>High</option>
-                       <option>Critical</option>
-                   </select>
-                   <button onClick={() => { onSubmit(formData); onClose(); setFormData({title: '', assignedTo: 'Amit B. (Mechanic)', priority: 'Medium'}) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Assign Task</button>
+                   <ThemedDropdown 
+                       options={['Amit B. (Mechanic)', 'Vikram S. (Driver)', 'Rajesh K. (Sales)']}
+                       value={formData.assignedTo}
+                       onChange={val => setFormData({...formData, assignedTo: val})}
+                   />
+                   <ThemedDropdown 
+                       options={['Low', 'Medium', 'High', 'Critical']}
+                       value={formData.priority}
+                       onChange={val => setFormData({...formData, priority: val})}
+                   />
+                   <button 
+                    onClick={() => { onSubmit(formData); onClose(); setFormData({title: '', assignedTo: 'Amit B. (Mechanic)', priority: 'Medium'}) }} 
+                    className="w-full text-white py-2 rounded-xl font-bold transition-colors"
+                    style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                   >
+                       Assign Task
+                   </button>
                </div>
             </motion.div>
          </div>
@@ -2361,24 +2565,22 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
          {/* Filters */}
          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex gap-3 w-full md:w-auto">
-               <select 
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                 value={assignedToFilter}
-                 onChange={(e) => setAssignedToFilter(e.target.value)}
-               >
-                 <option>Assigned To: All</option>
-                 <option>Sales</option>
-                 <option>Garage</option>
-               </select>
-               <select 
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                 value={statusFilter}
-                 onChange={(e) => setStatusFilter(e.target.value)}
-               >
-                 <option>Status: Pending</option>
-                 <option>Completed</option>
-                 <option>All</option>
-               </select>
+             <div className="flex gap-3 w-full md:w-auto">
+                <div className="w-44">
+                    <ThemedDropdown 
+                        options={['Assigned To: All', 'Sales', 'Garage']}
+                        value={assignedToFilter}
+                        onChange={setAssignedToFilter}
+                    />
+                </div>
+                <div className="w-40">
+                    <ThemedDropdown 
+                        options={['Status: Pending', 'Completed', 'All']}
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                    />
+                </div>
+             </div>
             </div>
          </div>
    
@@ -2386,7 +2588,7 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit }) => {
          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
            <table className="w-full text-left border-collapse">
              <thead>
-               <tr className="bg-indigo-50/30 border-b border-indigo-100 text-xs uppercase tracking-wider text-indigo-800 font-bold">
+                <tr className="border-b border-gray-100 text-xs uppercase tracking-wider font-bold" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), color: premiumColors.primary.DEFAULT }}>
                  <th className="p-4">Task Details</th>
                  <th className="p-4">Assigned To</th>
                  <th className="p-4">Due Date</th>

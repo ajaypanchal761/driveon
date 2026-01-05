@@ -47,6 +47,9 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
+import ThemedDropdown from '../../../components/common/ThemedDropdown';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 // --- Shared Components for Analytics ---
 const ReportCard = ({ title, subtitle, children, delay = 0, className = "" }) => (
@@ -228,36 +231,21 @@ export const AllEnquiriesPage = () => {
             />
          </div>
          
-         <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-            <div className="relative min-w-[140px]">
-               <select 
-                 className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-indigo-400 text-gray-600 text-sm font-medium cursor-pointer hover:border-gray-300"
+         <div className="flex gap-3 w-full md:w-auto flex-wrap pb-2 md:pb-0 z-20">
+            <div className="min-w-[150px]">
+               <ThemedDropdown 
+                 options={['Status: All', 'New', 'In Progress', 'Follow-up', 'Converted', 'Closed']}
                  value={statusFilter}
-                 onChange={(e) => setStatusFilter(e.target.value)}
-               >
-                 <option>Status: All</option>
-                 <option>New</option>
-                 <option>In Progress</option>
-                 <option>Follow-up</option>
-                 <option>Converted</option>
-                 <option>Closed</option>
-               </select>
-               <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                 onChange={(val) => setStatusFilter(val)}
+               />
             </div>
             
-             <div className="relative min-w-[140px]">
-               <select 
-                 className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-indigo-400 text-gray-600 text-sm font-medium cursor-pointer hover:border-gray-300"
+             <div className="min-w-[150px]">
+               <ThemedDropdown 
+                 options={['Date: All Time', 'Today', 'Yesterday', 'Last 7 Days', 'This Month']}
                  value={dateFilter}
-                 onChange={(e) => setDateFilter(e.target.value)}
-               >
-                 <option>Date: All Time</option>
-                 <option>Today</option>
-                 <option>Yesterday</option>
-                 <option>Last 7 Days</option>
-                 <option>This Month</option>
-               </select>
-               <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                 onChange={(val) => setDateFilter(val)}
+               />
             </div>
          </div>
       </div>
@@ -628,20 +616,13 @@ export const NewEnquiriesPage = () => {
                 />
             </div>
             <div className="flex items-center gap-2">
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors">
-                    <MdVisibility /> Auto-Assign
-                </button>
-                <div className="relative">
-                    <select 
-                        className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+
+                <div className="min-w-[150px]">
+                    <ThemedDropdown 
+                        options={['Date: All', 'Date: Today', 'Date: Yesterday']}
                         value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value)}
-                    >
-                        <option>Date: All</option>
-                        <option>Date: Today</option>
-                        <option>Date: Yesterday</option>
-                    </select>
-                    <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        onChange={(val) => setDateFilter(val)}
+                    />
                 </div>
             </div>
         </div>
@@ -768,16 +749,13 @@ export const InProgressEnquiriesPage = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <select 
-                className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value)}
-            >
-                <option>Stage: All</option>
-                <option>Negotiation</option>
-                <option>Doc Verification</option>
-                <option>Test Drive Done</option>
-            </select>
+            <div className="min-w-[180px]">
+                <ThemedDropdown 
+                    options={['Stage: All', 'Negotiation', 'Doc Verification', 'Test Drive Done']}
+                    value={stageFilter}
+                    onChange={(val) => setStageFilter(val)}
+                />
+            </div>
         </div>
   
         {/* Data Table */}
@@ -931,24 +909,20 @@ export const FollowUpsEnquiriesPage = () => {
                 />
             </div>
             <div className="flex gap-3">
-                 <select 
-                    className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                 >
-                    <option>Show: All</option>
-                    <option>Overdue</option>
-                    <option>Due Today</option>
-                    <option>Upcoming</option>
-                </select>
-                <select 
-                    className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer text-gray-500"
-                    value={assigneeFilter}
-                    onChange={(e) => setAssigneeFilter(e.target.value)}
-                >
-                    <option>Assigned to Me</option>
-                    <option>All Staff</option>
-                </select>
+                 <div className="min-w-[150px]">
+                    <ThemedDropdown 
+                        options={['Show: All', 'Overdue', 'Due Today', 'Upcoming']}
+                        value={statusFilter}
+                        onChange={(val) => setStatusFilter(val)}
+                    />
+                </div>
+                <div className="min-w-[150px]">
+                    <ThemedDropdown 
+                        options={['Assigned to Me', 'All Staff']}
+                        value={assigneeFilter}
+                        onChange={(val) => setAssigneeFilter(val)}
+                    />
+                </div>
             </div>
         </div>
   
@@ -1044,7 +1018,10 @@ export const ConvertedEnquiriesPage = () => {
           </div>
           <button 
             onClick={() => navigate('/crm/bookings/active')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-medium shadow-sm hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm transition-colors"
+            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = rgba(premiumColors.primary.DEFAULT, 0.9)}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = premiumColors.primary.DEFAULT}
           >
             <MdAdd size={20} />
             New Conversion
@@ -1064,15 +1041,13 @@ export const ConvertedEnquiriesPage = () => {
                 />
             </div>
             <div className="flex gap-3">
-               <select 
-                className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-               >
-                 <option>Date: This Month</option>
-                 <option>Last Month</option>
-                 <option>Date: All Time</option>
-               </select>
+               <div className="min-w-[180px]">
+                   <ThemedDropdown 
+                    options={['Date: This Month', 'Last Month', 'Date: All Time']}
+                    value={dateFilter}
+                    onChange={(val) => setDateFilter(val)}
+                   />
+               </div>
             </div>
         </div>
   
@@ -1187,17 +1162,13 @@ export const ClosedEnquiriesPage = () => {
                 />
             </div>
             <div className="flex gap-3">
-               <select 
-                className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                value={reasonFilter}
-                onChange={(e) => setReasonFilter(e.target.value)}
-               >
-                 <option>Reason: All</option>
-                 <option>Price Too High</option>
-                 <option>Booked w/ Competitor</option>
-                 <option>Plan Cancelled</option>
-                 <option>Change of Mind</option>
-               </select>
+               <div className="min-w-[200px]">
+                   <ThemedDropdown 
+                    options={['Reason: All', 'Price Too High', 'Booked w/ Competitor', 'Plan Cancelled', 'Change of Mind']}
+                    value={reasonFilter}
+                    onChange={(val) => setReasonFilter(val)}
+                   />
+               </div>
             </div>
         </div>
   
@@ -1273,8 +1244,50 @@ const VEHICLE_INTEREST_DATA = [
 ];
 
 export const EnquiryAnalyticsPage = () => {
+    const navigate = useNavigate();
+    const [timeRange, setTimeRange] = useState('This Month');
+    const contentRef = React.useRef(null);
+
+    const handleDownloadPDF = async () => {
+        if (!contentRef.current) return;
+        
+        try {
+            const element = contentRef.current;
+            // Scroll to top to ensure complete capture and prevent cut-off
+            window.scrollTo(0, 0);
+            await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for rendering
+
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                ignoreElements: (element) => element.hasAttribute('data-html2canvas-ignore')
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, (imgHeight * pdfWidth) / imgWidth);
+            pdf.save('enquiry_analytics_report.pdf');
+        } catch (error) {
+            console.error("PDF Export Error:", error);
+            alert(`Failed to export PDF. Error: ${error.message || error}`);
+        }
+    };
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" ref={contentRef}>
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
@@ -1289,22 +1302,15 @@ export const EnquiryAnalyticsPage = () => {
             <p className="text-gray-500 text-sm">Real-time insights into lead generation and conversion.</p>
           </div>
           
-          <div className="flex gap-2">
-              <select 
-                className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                style={{ color: premiumColors.primary.DEFAULT }}
-              >
-                 <option>This Month</option>
-                 <option>Last Month</option>
-                 <option>Last Quarter</option>
-                 <option>This Year</option>
-              </select>
-              <button 
-                className="p-2 text-white rounded-xl shadow-md transition-transform active:scale-95"
-                style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-              >
-                  <MdDownload />
-              </button>
+          <div className="flex gap-2 items-center" data-html2canvas-ignore="true">
+              <div className="min-w-[150px]">
+                 <ThemedDropdown 
+                    options={['This Month', 'Last Month', 'Last Quarter', 'This Year']}
+                    value={timeRange}
+                    onChange={setTimeRange}
+                 />
+              </div>
+
           </div>
         </div>
   
@@ -1564,13 +1570,28 @@ export const FollowUpCalendarPage = () => {
                                 onClick={() => setSelectedDate(dateStr)}
                                 className={`
                                     min-h-[80px] rounded-xl border p-2 cursor-pointer transition-all relative
-                                    ${isSelected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100' : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'}
+                                    ${isSelected ? 'shadow-md transform scale-[1.02]' : 'border-gray-100 hover:bg-gray-50'}
                                 `}
+                                style={{
+                                    borderColor: isSelected ? premiumColors.primary.DEFAULT : (isSelected ? 'transparent' : ''),
+                                    backgroundColor: isSelected ? rgba(premiumColors.primary.DEFAULT, 0.05) : '',
+                                }}
                             >
-                                <span className={`text-sm font-bold ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>{day}</span>
+                                <span 
+                                    className="text-sm font-bold block mb-1"
+                                    style={{ color: isSelected ? premiumColors.primary.DEFAULT : '#374151' }}
+                                >
+                                    {day}
+                                </span>
                                 {hasEvents && hasEvents.length > 0 && (
                                     <div className="mt-2 space-y-1">
-                                        <div className="text-[10px] font-medium px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded w-fit">
+                                        <div 
+                                            className="text-[10px] font-bold px-1.5 py-0.5 rounded w-fit"
+                                            style={{
+                                                backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1),
+                                                color: premiumColors.primary.DEFAULT
+                                            }}
+                                        >
                                             {hasEvents.length} Tasks
                                         </div>
                                     </div>
@@ -1584,16 +1605,16 @@ export const FollowUpCalendarPage = () => {
              {/* Daily Agenda Side Panel */}
              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col h-full">
                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <MdCalendarToday className="text-indigo-500" /> 
+                    <MdCalendarToday style={{ color: premiumColors.primary.DEFAULT }} /> 
                     {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
                  </h3>
                  
                  <div className="flex-1 space-y-4 overflow-y-auto pr-1">
                      {events[selectedDate] && events[selectedDate].length > 0 ? (
                          events[selectedDate].map((event) => (
-                             <div key={event.id} className="p-4 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors bg-gray-50">
+                             <div key={event.id} className="p-4 rounded-xl border border-gray-100 transition-colors bg-gray-50 hover:border-gray-300">
                                  <div className="flex justify-between items-start mb-2">
-                                     <span className="font-bold text-gray-800 text-sm">{event.time}</span>
+                                     <span className="font-bold text-sm" style={{ color: premiumColors.primary.DEFAULT }}>{event.time}</span>
                                      <button 
                                         onClick={() => handleMarkTaskDone(event.id)}
                                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer ${event.status === 'Done' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
@@ -1616,7 +1637,18 @@ export const FollowUpCalendarPage = () => {
                  
                  <button 
                     onClick={handleAddTask}
-                    className="mt-4 w-full py-2.5 border border-dashed border-gray-300 rounded-xl text-gray-500 font-bold text-sm hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
+                    className="mt-4 w-full py-2.5 border border-dashed border-gray-300 rounded-xl text-gray-500 font-bold text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                    style={{
+                         ':hover': { color: premiumColors.primary.DEFAULT, borderColor: premiumColors.primary.DEFAULT }
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = premiumColors.primary.DEFAULT;
+                        e.currentTarget.style.borderColor = premiumColors.primary.DEFAULT;
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#6b7280';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                    }}
                  >
                      <MdAdd /> Add Task
                  </button>

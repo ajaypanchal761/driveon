@@ -22,20 +22,37 @@ import {
   MdClose
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
+import { premiumColors } from '../../../theme/colors';
+import { rgba } from 'polished';
 
 // --- Shared Components ---
 
 const BookingStatusBadge = ({ status }) => {
   const styles = {
-    'Ongoing': 'bg-blue-50 text-blue-700 border-blue-200',
+    'Ongoing': 'text-white border-transparent', // Custom styled below
     'Starting': 'bg-yellow-50 text-yellow-700 border-yellow-200',
     'Completed': 'bg-green-50 text-green-700 border-green-200',
     'Cancelled': 'bg-red-50 text-red-700 border-red-200',
     'Pending': 'bg-orange-50 text-orange-700 border-orange-200',
-    'Confirmed': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'Confirmed': 'text-white border-transparent', // Custom styled below
   };
+
+  const getStyle = (s) => {
+      if (s === 'Ongoing' || s === 'Confirmed') {
+          return { 
+              backgroundColor: premiumColors.primary.DEFAULT, 
+              color: 'white', 
+              borderColor: 'transparent' 
+          };
+      }
+      return {};
+  }
+
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}>
+    <span 
+        className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}
+        style={getStyle(status)}
+    >
       {status}
     </span>
   );
@@ -85,7 +102,13 @@ const BookingCard = ({ booking, type, actions }) => (
            <span>{booking.dateRange}</span>
        </div>
        {type === 'active' && (
-           <div className="flex items-center gap-2 text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1.5 rounded-lg">
+           <div 
+                className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg"
+                style={{ 
+                    backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), 
+                    color: premiumColors.primary.DEFAULT 
+                }}
+           >
                <MdAccessTime />
                <span>{booking.timeLeft}</span>
            </div>
@@ -415,7 +438,7 @@ const PaymentDetailsModal = ({ payment, onClose }) => {
                 <div className="p-6 space-y-4">
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-gray-500 text-sm">Booking ID</span>
-                        <span className="font-bold text-indigo-600">{payment.bookingId}</span>
+                        <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{payment.bookingId}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
                         <span className="text-gray-500 text-sm">Customer Name</span>
@@ -445,7 +468,11 @@ const PaymentDetailsModal = ({ payment, onClose }) => {
                 <div className="p-5 bg-gray-50 border-t border-gray-100 flex justify-end">
                     <button 
                         onClick={onClose}
-                        className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        className="px-4 py-2 text-white font-bold rounded-xl hover:opacity-90 transition-all shadow-lg"
+                        style={{ 
+                            backgroundColor: premiumColors.primary.DEFAULT,
+                            boxShadow: `0 10px 15px -3px ${rgba(premiumColors.primary.DEFAULT, 0.3)}`
+                        }}
                     >
                         Close
                     </button>
@@ -506,9 +533,9 @@ export const BookingPaymentStatusPage = () => {
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/bookings/active')}>Bookings</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">Payment Status</span>
                     </div>
@@ -520,7 +547,8 @@ export const BookingPaymentStatusPage = () => {
                     <input 
                         type="text"
                         placeholder="Search payments..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all shadow-sm"
+                        style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -543,7 +571,7 @@ export const BookingPaymentStatusPage = () => {
                      <tbody className="divide-y divide-gray-100 text-sm">
                          {filteredPayments.map((payment) => (
                              <tr key={payment.id} className="hover:bg-gray-50 transition-colors relative">
-                                 <td className="px-6 py-4 font-bold text-indigo-600">{payment.bookingId}</td>
+                                 <td className="px-6 py-4 font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{payment.bookingId}</td>
                                  <td className="px-6 py-4 font-medium text-gray-900">{payment.customer}</td>
                                  <td className="px-6 py-4 text-gray-600">₹ {payment.amount.toLocaleString()}</td>
                                  <td className="px-6 py-4 text-green-600 font-medium">₹ {payment.paid.toLocaleString()}</td>
@@ -557,7 +585,8 @@ export const BookingPaymentStatusPage = () => {
                                              e.stopPropagation();
                                              setActiveActionId(activeActionId === payment.id ? null : payment.id);
                                          }}
-                                         className={`p-2 rounded-full transition-colors ${activeActionId === payment.id ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                                         className={`p-2 rounded-full transition-colors ${activeActionId === payment.id ? '' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                                         style={activeActionId === payment.id ? { backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT } : {}}
                                      >
                                          <MdMoreVert size={20} />
                                      </button>

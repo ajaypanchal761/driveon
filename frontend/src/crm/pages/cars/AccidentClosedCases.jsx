@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   MdSearch, 
-  MdFilterList, 
   MdDownload, 
   MdCheckCircle,
-  MdAttachMoney,
-  MdCalendarToday
+  MdAttachMoney
 } from 'react-icons/md';
+import ThemedDropdown from '../../../components/common/ThemedDropdown';
+import { premiumColors } from '../../../theme/colors';
+import { rgba } from 'polished';
 
 // Mock Data for Closed Cases
 const MOCK_CLOSED_CASES = [
@@ -87,11 +88,11 @@ const AccidentClosedCases = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
               <span>/</span> 
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/cars/all')}>Cars</span> 
               <span>/</span> 
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
+              <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/cars/accidents/active')}>Accidents</span> 
               <span>/</span> 
               <span className="text-gray-800 font-medium">Closed Cases</span>
             </div>
@@ -108,36 +109,35 @@ const AccidentClosedCases = () => {
                 <input 
                     type="text" 
                     placeholder="Search Vehicle or Reg No..." 
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
+                    style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <div className="flex gap-3">
-               <div className="relative">
-                   <MdCalendarToday className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                   <select 
+            <div className="flex gap-3 w-full md:w-auto">
+               <div className="w-full md:w-40">
+                   <ThemedDropdown 
+                        options={[
+                            { value: 'All', label: 'Year: All' },
+                            { value: '2025', label: 'Year: 2025' },
+                            { value: '2024', label: 'Year: 2024' }
+                        ]}
                         value={yearFilter}
-                        onChange={(e) => setYearFilter(e.target.value)}
-                        className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                   >
-                     <option value="All">Year: All</option>
-                     <option value="2025">Year: 2025</option>
-                     <option value="2024">Year: 2024</option>
-                   </select>
+                        onChange={setYearFilter}
+                   />
                </div>
-               <div className="relative">
-                   <MdFilterList className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                   <select 
+               <div className="w-full md:w-48">
+                   <ThemedDropdown 
+                        options={[
+                            { value: 'All', label: 'Insurer: All' },
+                            { value: 'Tata AIG', label: 'Tata AIG' },
+                            { value: 'HDFC Ergo', label: 'HDFC Ergo' },
+                            { value: 'ICICI Lombard', label: 'ICICI Lombard' }
+                        ]}
                         value={insurerFilter}
-                        onChange={(e) => setInsurerFilter(e.target.value)}
-                        className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
-                   >
-                     <option value="All">Insurer: All</option>
-                     <option value="Tata AIG">Tata AIG</option>
-                     <option value="HDFC Ergo">HDFC Ergo</option>
-                     <option value="ICICI Lombard">ICICI Lombard</option>
-                   </select>
+                        onChange={setInsurerFilter}
+                   />
                </div>
             </div>
         </div>

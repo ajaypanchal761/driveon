@@ -16,6 +16,8 @@ import carService from '../../services/car.service';
 import commonService from '../../services/common.service';
 import { userService } from '../../services/user.service';
 import { setUser, updateUser } from '../../store/slices/userSlice';
+import { authService } from '../../services';
+import { loginSuccess } from '../../store/slices/authSlice';
 import razorpayService from '../../services/razorpay.service';
 import bookingService from '../../services/booking.service';
 
@@ -108,6 +110,135 @@ const CarDetailsPage = () => {
   const [faqs, setFaqs] = useState([]);
   const [cancellationPolicy, setCancellationPolicy] = useState(null);
   const [inclusionsExclusions, setInclusionsExclusions] = useState([]);
+
+  // Login State
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginPhoneNumber, setLoginPhoneNumber] = useState('');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginShowOTP, setLoginShowOTP] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  // Validate phone number
+  const validatePhoneNumber = (value) => {
+    if (!value) {
+      return 'Phone number is required';
+    }
+    const phoneRegex = /^[6-9]\d{9}$/;
+    const cleanedPhone = value.replace(/\D/g, '');
+    if (phoneRegex.test(cleanedPhone)) {
+      return '';
+    }
+    return 'Please enter a valid 10-digit phone number';
+  };
+
+  const handleSendLoginOTP = async (e) => {
+    if (e) e.preventDefault();
+    setLoginError('');
+
+    const validationError = validatePhoneNumber(loginPhoneNumber);
+    if (validationError) {
+      setLoginError(validationError);
+      return;
+    }
+
+    setLoginLoading(true);
+
+    try {
+      const response = await authService.sendLoginOTP({
+        emailOrPhone: loginPhoneNumber,
+      });
+
+      if (response.success) {
+        // toastUtils.success('OTP sent successfully!');
+        setLoginShowOTP(true);
+        setLoginError('');
+      } else {
+        setLoginError(response.message || 'Failed to send OTP. Please try again.');
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to send OTP. Please try again.';
+      setLoginError(errorMessage);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleVerifyLoginOTP = async (e) => {
+    if (e) e.preventDefault();
+    setLoginError('');
+
+    if (!loginOtp || loginOtp.length !== 6) {
+      setLoginError('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setLoginLoading(true);
+
+    try {
+      const response = await authService.verifyOTP({
+        phone: loginPhoneNumber.replace(/\D/g, ''),
+        otp: loginOtp,
+      });
+
+      const token = response?.token;
+      const refreshToken = response?.refreshToken;
+      const userData = response?.user;
+
+      if (token) {
+        dispatch(
+          loginSuccess({
+            token: token,
+            refreshToken: refreshToken,
+            userRole: userData?.role || 'user',
+          })
+        );
+      }
+
+      if (userData) {
+        dispatch(setUser(userData));
+      }
+
+      // toastUtils.success('Login successful!');
+      // No navigation needed, state update will re-render and show booking form
+    } catch (error) {
+      console.error('Verify OTP Error:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Invalid OTP. Please try again.';
+      setLoginError(errorMessage);
+      setLoginOtp('');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleResendLoginOTP = async () => {
+    setLoginLoading(true);
+    try {
+      const response = await authService.resendOTP({
+        phone: loginPhoneNumber.replace(/\D/g, ''),
+        purpose: 'login',
+      });
+
+      if (response.success) {
+        // toastUtils.success('OTP resent successfully!');
+        setLoginOtp('');
+        setLoginError('');
+      } else {
+        setLoginError(response.message || 'Failed to resend OTP. Please try again.');
+      }
+    } catch (error) {
+      console.error('Resend OTP Error:', error);
+      setLoginError('Failed to resend OTP. Please try again.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
   // Get authentication state
   const dispatch = useAppDispatch();
@@ -1723,6 +1854,11 @@ const CarDetailsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+
     if (!pickupDate || !dropDate || !pickupTime || !dropTime) {
       alert('Please select pickup and drop date & time');
       return;
@@ -1919,6 +2055,11 @@ const CarDetailsPage = () => {
 
   // Lightweight navigation helper for CTA buttons that don't submit the form
   const handleQuickBook = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+
     try {
       sessionStorage.setItem('driveon:selectedCar', JSON.stringify(car));
     } catch (err) {
@@ -2420,9 +2561,110 @@ const CarDetailsPage = () => {
 
           {/* Right Column: Booking Form Card (Sticky) */}
           <div className="lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] lg:overflow-y-auto order-2 lg:order-none">
-            <form onSubmit={handleSubmit} className="rounded-2xl p-4 xl:p-6 shadow-lg space-y-4"
-              style={{ backgroundColor: colors.backgroundSecondary }}
-            >
+            {!isAuthenticated ? (
+              <div
+                className="rounded-2xl p-4 xl:p-6 shadow-lg space-y-4"
+                style={{ backgroundColor: colors.backgroundSecondary }}
+              >
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold mb-2 cursor-default" style={{ color: colors.textPrimary }}>Login to Book</h2>
+                  <p className="text-sm text-gray-500">Please login to view pricing and book this car.</p>
+                </div>
+
+                <form onSubmit={loginShowOTP ? handleVerifyLoginOTP : handleSendLoginOTP} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>Phone Number</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 font-medium">+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        value={loginPhoneNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setLoginPhoneNumber(value);
+                          setLoginError('');
+                        }}
+                        placeholder="Enter phone number"
+                        className="w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none transition-all"
+                        style={{
+                          borderColor: loginError && !loginShowOTP ? '#ef4444' : colors.borderMedium,
+                          backgroundColor: colors.backgroundPrimary
+                        }}
+                        disabled={loginShowOTP}
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
+
+                  {loginShowOTP && (
+                    <div className="animate-fade-in">
+                      <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>One Time Password (OTP)</label>
+                      <input
+                        type="text"
+                        value={loginOtp}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          setLoginOtp(value);
+                          setLoginError('');
+                        }}
+                        placeholder="Enter 6-digit OTP"
+                        className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all tracking-widest text-center text-lg pointer-events-auto"
+                        style={{
+                          borderColor: loginError ? '#ef4444' : colors.borderMedium,
+                          backgroundColor: colors.backgroundPrimary
+                        }}
+                        maxLength={6}
+                      />
+                      <div className="flex justify-end mt-2">
+                        <button
+                          type="button"
+                          onClick={handleResendLoginOTP}
+                          disabled={loginLoading}
+                          className="text-xs font-semibold hover:underline disabled:opacity-50"
+                          style={{ color: colors.backgroundTertiary }}
+                        >
+                          Resend OTP
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {loginError && (
+                    <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+                      <p className="text-xs text-red-600 text-center font-medium">{loginError}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loginLoading || (!loginShowOTP && loginPhoneNumber.length !== 10) || (loginShowOTP && loginOtp.length !== 6)}
+                    className="w-full py-3.5 rounded-xl text-white font-bold text-base shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98 mt-2"
+                    style={{ backgroundColor: colors.backgroundTertiary }}
+                  >
+                    {loginLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Processing...
+                      </span>
+                    ) : (loginShowOTP ? 'Verify & Login' : 'Send OTP')}
+                  </button>
+
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-gray-500">
+                      Don't have an account?{' '}
+                      <Link to="/register" className="font-bold hover:underline" style={{ color: colors.backgroundTertiary }}>
+                        Sign up
+                      </Link>
+                    </p>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="rounded-2xl p-4 xl:p-6 shadow-lg space-y-4"
+                style={{ backgroundColor: colors.backgroundSecondary }}
+              >
               {/* Price Summary at Top */}
               <div className="mb-4">
                 <div className="flex items-baseline gap-1 mb-2">
@@ -3320,6 +3562,7 @@ const CarDetailsPage = () => {
                 )}
               </button>
             </form>
+            )}
           </div>
         </div>
 

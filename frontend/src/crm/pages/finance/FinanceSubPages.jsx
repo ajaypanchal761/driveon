@@ -12,7 +12,9 @@ import {
   MdDownload,
   MdFilterList,
   MdPieChart,
-  MdShowChart
+  MdShowChart,
+  MdCalendarToday,
+  MdSearch
 } from 'react-icons/md';
 import { 
   AreaChart, 
@@ -33,6 +35,7 @@ import {
 } from 'recharts';
 import { rgba } from 'polished';
 import { motion } from 'framer-motion';
+import { premiumColors } from '../../../theme/colors';
 
 // --- Shared Components ---
 
@@ -118,9 +121,6 @@ export const IncomePage = () => {
                <h1 className="text-2xl font-bold text-gray-900">Income Overview</h1>
                <p className="text-gray-500 text-sm">Revenue streams and earnings analysis.</p>
            </div>
-           <button className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">
-               <MdDownload /> Report
-           </button>
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -255,13 +255,26 @@ export const ExpensesPage = () => {
 
 export const PendingPaymentsPage = () => {
     const navigate = useNavigate();
+    const [payments, setPayments] = React.useState(PENDING_PAYMENTS);
+
+    const handleSettle = (id) => {
+        if (window.confirm('Are you sure you want to mark this payment as settled?')) {
+            setPayments(prev => prev.filter(p => p.id !== id));
+            // In a real app, you'd make an API call here
+        }
+    };
+
+    const handleRemind = (entity) => {
+        alert(`Reminder sent to ${entity}`);
+    };
+
     return (
     <div className="space-y-6">
         <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                 <span>/</span> 
-                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
                 <span>/</span> 
                 <span className="text-gray-800 font-medium">Pending Payments</span>
             </div>
@@ -270,33 +283,54 @@ export const PendingPaymentsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-             {PENDING_PAYMENTS.map((item, index) => (
-                 <motion.div 
-                    key={item.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:border-indigo-100 transition-colors"
-                 >
-                     <div className="flex items-center gap-4 w-full md:w-auto">
-                         <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${item.type === 'Receivable' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                             {item.type === 'Receivable' ? <MdArrowDownward size={24} /> : <MdArrowUpward size={24} />}
+             {payments.length > 0 ? (
+                 payments.map((item, index) => (
+                     <motion.div 
+                        key={item.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ delay: 0.1 * index }}
+                        className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:border-indigo-100 transition-colors"
+                     >
+                         <div className="flex items-center gap-4 w-full md:w-auto">
+                             <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${item.type === 'Receivable' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                 {item.type === 'Receivable' ? <MdArrowDownward size={24} /> : <MdArrowUpward size={24} />}
+                             </div>
+                             <div>
+                                 <h4 className="font-bold text-gray-900">{item.entity}</h4>
+                                 <p className="text-sm text-gray-500">{item.type} • <span className={`${item.status === 'Critical' ? 'text-red-600 font-bold' : 'text-orange-500'}`}>{item.due}</span></p>
+                             </div>
                          </div>
-                         <div>
-                             <h4 className="font-bold text-gray-900">{item.entity}</h4>
-                             <p className="text-sm text-gray-500">{item.type} • <span className={`${item.status === 'Critical' ? 'text-red-600 font-bold' : 'text-orange-500'}`}>{item.due}</span></p>
+    
+                         <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                             <span className="text-xl font-bold text-gray-800">₹ {item.amount.toLocaleString()}</span>
+                              <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => handleRemind(item.entity)}
+                                    className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                                  >
+                                    Remind
+                                  </button>
+                                  <button 
+                                    onClick={() => handleSettle(item.id)}
+                                    className="px-4 py-2 text-sm font-bold text-white rounded-lg shadow-md transition-colors hover:opacity-90 active:scale-95"
+                                    style={{ 
+                                        backgroundColor: premiumColors.primary.DEFAULT,
+                                        boxShadow: `0 4px 6px -1px ${rgba(premiumColors.primary.DEFAULT, 0.3)}`
+                                    }}
+                                  >
+                                    Settle
+                                  </button>
+                              </div>
                          </div>
-                     </div>
-
-                     <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                         <span className="text-xl font-bold text-gray-800">₹ {item.amount.toLocaleString()}</span>
-                         <div className="flex gap-2">
-                             <button className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg">Remind</button>
-                             <button className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md shadow-indigo-200">Settle</button>
-                         </div>
-                     </div>
-                 </motion.div>
-             ))}
+                     </motion.div>
+                 ))
+             ) : (
+                 <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200">
+                     <p className="text-gray-500">No pending payments found.</p>
+                 </div>
+             )}
         </div>
     </div>
 );
@@ -367,9 +401,9 @@ export const CashFlowPage = () => {
         <div className="flex justify-between items-end">
              <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                     <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
                     <span>/</span> 
                     <span className="text-gray-800 font-medium">Cash Flow</span>
                 </div>
@@ -378,9 +412,14 @@ export const CashFlowPage = () => {
              </div>
              <motion.div 
                 whileHover={{ scale: 1.02 }}
-                className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white border border-indigo-700 rounded-2xl px-6 py-3 flex items-center gap-4 shadow-xl shadow-indigo-200"
+                className="text-white border rounded-2xl px-6 py-3 flex items-center gap-4 shadow-xl"
+                style={{ 
+                    background: `linear-gradient(135deg, ${premiumColors.primary[600]}, ${premiumColors.primary[800]})`,
+                    borderColor: premiumColors.primary[700],
+                    boxShadow: `0 20px 25px -5px ${rgba(premiumColors.primary.DEFAULT, 0.4)}, 0 10px 10px -5px ${rgba(premiumColors.primary.DEFAULT, 0.2)}`
+                }}
              >
-                 <span className="text-xs font-bold text-indigo-100 uppercase tracking-wider">Current Balance</span>
+                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: premiumColors.primary[100] }}>Current Balance</span>
                  <span className="text-3xl font-bold">₹ 8,42,000</span>
              </motion.div>
         </div>
@@ -447,7 +486,16 @@ export const CashFlowPage = () => {
              >
                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
                      <h3 className="font-bold text-gray-800 text-lg">Transactions</h3>
-                     <button className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors">See All</button>
+                     <button 
+                        onClick={() => navigate('/crm/finance/transactions')}
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                        style={{ 
+                            color: premiumColors.primary.DEFAULT,
+                            backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1)
+                        }}
+                     >
+                        See All
+                     </button>
                  </div>
                  <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                      {RECENT_TRANSACTIONS.map((txn, i) => (
@@ -542,6 +590,114 @@ export const CashFlowPage = () => {
     </div>
 );
 }
+
+// --- Transactions Page ---
+const ALL_TRANSACTIONS = [
+    ...RECENT_TRANSACTIONS,
+    { id: 7, desc: "Vendor Payout - City Cabs", type: "Debit", amount: 8000, date: "23 Dec, 05:00 PM", method: "Bank Transfer" },
+    { id: 8, desc: "Booking Payment #BK-045", type: "Credit", amount: 22000, date: "23 Dec, 01:15 PM", method: "Card" },
+    { id: 9, desc: "Car Maintenance - Swift", type: "Debit", amount: 1500, date: "22 Dec, 11:30 AM", method: "Cash" },
+    { id: 10, desc: "Insurance Renewal", type: "Debit", amount: 18000, date: "21 Dec, 03:00 PM", method: "Bank Transfer" },
+    { id: 11, desc: "Booking Payment #BK-032", type: "Credit", amount: 9500, date: "20 Dec, 10:00 AM", method: "UPI" },
+    { id: 12, desc: "Office Rent", type: "Debit", amount: 25000, date: "01 Dec, 09:00 AM", method: "Bank Transfer" },
+];
+
+export const TransactionsPage = () => {
+    const navigate = useNavigate();
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [filterType, setFilterType] = React.useState('All'); // All, Credit, Debit
+
+    const filteredTransactions = ALL_TRANSACTIONS.filter(txn => {
+        const matchesSearch = txn.desc.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = filterType === 'All' || txn.type === filterType;
+        return matchesSearch && matchesType;
+    });
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+                 <div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span>/</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                        <span>/</span> 
+                        <span className="text-gray-800 font-medium">Transactions</span>
+                    </div>
+                     <h1 className="text-2xl font-bold text-gray-900">All Transactions</h1>
+                     <p className="text-gray-500 text-sm">Comprehensive history of all financial movements.</p>
+                 </div>
+                 <div className="flex gap-3">
+                      <div className="relative">
+                           <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                           <input 
+                             type="text" 
+                             placeholder="Search transactions..." 
+                             className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
+                             style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
+                             value={searchTerm}
+                             onChange={(e) => setSearchTerm(e.target.value)}
+                           />
+                      </div>
+                      <select 
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
+                        style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                      >
+                          <option value="All">All Types</option>
+                          <option value="Credit">Credits (In)</option>
+                          <option value="Debit">Debits (Out)</option>
+                      </select>
+                      <button className="flex items-center gap-2 px-4 py-2 text-white rounded-xl font-bold shadow-lg transition-all hover:opacity-90"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 4px 6px -1px ${rgba(premiumColors.primary.DEFAULT, 0.3)}` }}
+                      >
+                        <MdDownload /> Export
+                      </button>
+                 </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <tr>
+                            <th className="px-6 py-4">Transaction Details</th>
+                            <th className="px-6 py-4">Date & Time</th>
+                            <th className="px-6 py-4">Method</th>
+                            <th className="px-6 py-4 text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm">
+                        {filteredTransactions.map((txn) => (
+                            <tr key={txn.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${txn.type === 'Credit' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                            {txn.type === 'Credit' ? <MdArrowDownward size={18} /> : <MdArrowUpward size={18} />}
+                                        </div>
+                                        <span className="font-bold text-gray-800">{txn.desc}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-500 font-medium">{txn.date}</td>
+                                <td className="px-6 py-4">
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase tracking-wider">{txn.method}</span>
+                                </td>
+                                <td className={`px-6 py-4 text-right font-bold ${txn.type === 'Credit' ? 'text-green-600' : 'text-gray-900'}`}>
+                                    {txn.type === 'Credit' ? '+' : '-'} ₹{txn.amount.toLocaleString()}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {filteredTransactions.length === 0 && (
+                    <div className="p-8 text-center text-gray-500">
+                        No transactions found matching your search.
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 // Hack for Icons missing in explicit import to avoid ReferenceErrors in some environments
 import { MdLocalGasStation, MdBuild, MdDirectionsCar } from 'react-icons/md';

@@ -28,52 +28,54 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100 flex flex-col">
+    <div className="h-screen overflow-y-auto bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100">
       
-      {/* HEADER & PROFILE CARD */}
-      <div className="bg-[#1C205C] pt-6 pb-24 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+      <div className="sticky top-0 z-30 bg-[#F5F7FA]">
+        {/* HEADER & PROFILE CARD */}
+        <div className="bg-[#1C205C] pt-6 pb-24 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
 
-          <HeaderTopBar title="My Profile" />
+            <HeaderTopBar title="My Profile" />
 
-          <div className="flex flex-col items-center mt-4 text-white">
-              <div className="relative">
-                  <div className="w-24 h-24 rounded-full border-4 border-white/20 shadow-xl overflow-hidden p-1 bg-white/10 backdrop-blur-sm">
-                      <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  <div className="absolute bottom-1 right-1 bg-emerald-500 w-6 h-6 rounded-full border-2 border-[#1C205C] flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  </div>
-              </div>
-              
-              <h2 className="text-2xl font-bold mt-3 tracking-wide">{user.name}</h2>
-              <p className="text-blue-200 text-sm font-medium">{user.role} • {user.id}</p>
-          </div>
-      </div>
+            <div className="flex flex-col items-center mt-4 text-white">
+                <div className="relative">
+                    <div className="w-24 h-24 rounded-full border-4 border-white/20 shadow-xl overflow-hidden p-1 bg-white/10 backdrop-blur-sm">
+                        <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                    </div>
+                    <div className="absolute bottom-1 right-1 bg-emerald-500 w-6 h-6 rounded-full border-2 border-[#1C205C] flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                </div>
+                
+                <h2 className="text-2xl font-bold mt-3 tracking-wide">{user.name}</h2>
+                <p className="text-blue-200 text-sm font-medium">{user.role} • {user.id}</p>
+            </div>
+        </div>
 
-      {/* OVERLAPPING STATS CARD */}
-      <div className="px-6 -mt-16 z-10">
-          <div className="bg-white rounded-2xl p-4 shadow-xl shadow-blue-900/10 border border-white grid grid-cols-3 divide-x divide-gray-100">
-              <div className="text-center px-2">
-                  <p className="text-2xl font-black text-[#1C205C]">{performance.score}%</p>
-                  <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Target Score</p>
-              </div>
-              <div className="text-center px-2">
-                  <p className="text-2xl font-black text-emerald-600">{performance.rating}</p>
-                  <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Avg Rating</p>
-              </div>
-              <div className="text-center px-2">
-                   <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600 mb-1">
-                      <FiAward />
-                   </div>
-                   <p className="text-[10px] uppercase font-bold text-gray-400">Hustler</p>
-              </div>
-          </div>
+        {/* OVERLAPPING STATS CARD */}
+        <div className="px-6 -mt-16 relative z-10">
+            <div className="bg-white rounded-2xl p-4 shadow-xl shadow-blue-900/10 border border-white grid grid-cols-3 divide-x divide-gray-100">
+                <div className="text-center px-2">
+                    <p className="text-2xl font-black text-[#1C205C]">{performance.score}%</p>
+                    <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Target Score</p>
+                </div>
+                <div className="text-center px-2">
+                    <p className="text-2xl font-black text-emerald-600">{performance.rating}</p>
+                    <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Avg Rating</p>
+                </div>
+                <div className="text-center px-2">
+                     <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600 mb-1">
+                        <FiAward />
+                     </div>
+                     <p className="text-[10px] uppercase font-bold text-gray-400">Hustler</p>
+                </div>
+            </div>
+        </div>
       </div>
 
       {/* MENU LIST */}
-      <div className="px-5 mt-6 space-y-3 flex-1">
+      <div className="px-5 mt-6 space-y-3">
           {/* PERSONAL INFO SECTION */}
           <SectionTitle title="Personal Information" />
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-4">

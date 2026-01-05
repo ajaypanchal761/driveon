@@ -59,6 +59,7 @@ const ModuleNewProfilePage = lazy(() => import("../module/pages/ModuleNewProfile
 const ModuleProfile1Page = lazy(() => import("../module/pages/ModuleProfile1Page"));
 const ModuleFavoritesPage = lazy(() => import("../module/pages/ModuleFavoritesPage"));
 
+import EmployeeLayout from "../employee/components/layout/EmployeeLayout";
 const EmployeeHomePage = lazy(() => import("../employee/pages/EmployeeHomePage"));
 const EnquiriesListPage = lazy(() => import("../employee/pages/EnquiriesListPage"));
 const EnquiryDetailsPage = lazy(() => import("../employee/pages/EnquiryDetailsPage"));
@@ -267,6 +268,7 @@ const CRM_Expenses = lazy(() => import("../crm/pages/finance/FinanceSubPages").t
 const CRM_PendingPayments = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.PendingPaymentsPage })));
 const CRM_ProfitLoss = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.ProfitLossPage })));
 const CRM_CashFlow = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.CashFlowPage })));
+const CRM_Transactions = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.TransactionsPage })));
 
 const CRM_SettingsPage = lazy(() => import("../crm/pages/SettingsPage"));
 // Import Report Subpages
@@ -379,10 +381,12 @@ const router = createBrowserRouter([
         path: "cars/all",
         element: <CRM_AllCars />,
       },
+      /*
       {
         path: "cars/idle",
         element: <CRM_IdleCars />,
       },
+      */
 
       {
         path: "cars/profit",
@@ -455,10 +459,12 @@ const router = createBrowserRouter([
         path: "garage/history",
         element: <CRM_ServiceHistory />,
       },
+      /*
       {
         path: "garage/parts",
         element: <CRM_PartsCost />,
       },
+      */
 
       // VENDOR ROUTES
       {
@@ -506,6 +512,10 @@ const router = createBrowserRouter([
       {
         path: "finance/cash-flow",
         element: <CRM_CashFlow />,
+      },
+      {
+        path: "finance/transactions",
+        element: <CRM_Transactions />,
       },
       // REPORT ROUTES
       {
@@ -834,52 +844,57 @@ const router = createBrowserRouter([
 
   // Employee Routes
   {
-    path: "/employee",
-    element: <EmployeeHomePage />,
-  },
-  {
-    path: "/employee/login",
-    element: <EmployeeLoginPage />,
-  },
-  {
-    path: "/employee/enquiries",
-    element: <EnquiriesListPage />,
-  },
-  {
-    path: "/employee/enquiries/:id",
-    element: <EnquiryDetailsPage />,
-  },
-  {
-    path: "/employee/attendance",
-    element: <AttendancePage />,
-  },
-  {
-    path: "/employee/tasks",
-    element: <TasksPage />,
-  },
-  {
-    path: "/employee/profile",
-    element: <ProfilePage />,
-  },
-  {
-    path: "/employee/salary",
-    element: <SalaryPage />,
-  },
-  {
-    path: "/employee/directory",
-    element: <StaffDirectoryPage />,
-  },
-  {
-    path: "/employee/expenses",
-    element: <ExpenseClaimsPage />,
-  },
-  {
-    path: "/employee/notifications",
-    element: <NotificationsPage />,
-  },
-  {
-    path: "/employee/privacy",
-    element: <PrivacySecurityPage />,
+    element: <EmployeeLayout />,
+    children: [
+      {
+        path: "/employee",
+        element: <EmployeeHomePage />,
+      },
+      {
+        path: "/employee/login",
+        element: <EmployeeLoginPage />,
+      },
+      {
+        path: "/employee/enquiries",
+        element: <EnquiriesListPage />,
+      },
+      {
+        path: "/employee/enquiries/:id",
+        element: <EnquiryDetailsPage />,
+      },
+      {
+        path: "/employee/attendance",
+        element: <AttendancePage />,
+      },
+      {
+        path: "/employee/tasks",
+        element: <TasksPage />,
+      },
+      {
+        path: "/employee/profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "/employee/salary",
+        element: <SalaryPage />,
+      },
+      {
+        path: "/employee/directory",
+        element: <StaffDirectoryPage />,
+      },
+      {
+        path: "/employee/expenses",
+        element: <ExpenseClaimsPage />,
+      },
+      {
+        path: "/employee/notifications",
+        element: <NotificationsPage />,
+      },
+      {
+        path: "/employee/privacy",
+        element: <PrivacySecurityPage />,
+      },
+    ],
   },
   
   // 404 Page

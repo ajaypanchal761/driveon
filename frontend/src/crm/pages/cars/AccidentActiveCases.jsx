@@ -5,6 +5,7 @@ import {
   MdAdd, 
   MdError,
 } from 'react-icons/md';
+import ThemedDropdown from '../../../components/common/ThemedDropdown';
 
 // Mock Data
 const MOCK_ACCIDENTS = [
@@ -43,6 +44,7 @@ const MOCK_ACCIDENTS = [
 const AccidentActiveCases = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [severityFilter, setSeverityFilter] = useState('All');
 
     const getSeverityColor = (severity) => {
         switch(severity) {
@@ -53,11 +55,13 @@ const AccidentActiveCases = () => {
         }
     };
 
-    const filteredAccidents = MOCK_ACCIDENTS.filter(item => 
-        item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.reg.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.location.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredAccidents = MOCK_ACCIDENTS.filter(item => {
+        const matchesSearch = item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              item.reg.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              item.location.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSeverity = severityFilter === 'All' || item.severity === severityFilter;
+        return matchesSearch && matchesSeverity;
+    });
 
     return (
       <div className="space-y-6">
@@ -98,12 +102,13 @@ const AccidentActiveCases = () => {
                 />
             </div>
             <div className="flex gap-3">
-               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                 <option>Severity: All</option>
-                 <option>Major</option>
-                 <option>Medium</option>
-                 <option>Minor</option>
-               </select>
+               <div className="min-w-[150px]">
+                  <ThemedDropdown 
+                    options={['Severity: All', 'Major', 'Medium', 'Minor']}
+                    value={severityFilter === 'All' ? 'Severity: All' : severityFilter}
+                    onChange={(val) => setSeverityFilter(val === 'Severity: All' ? 'All' : val)}
+                  />
+               </div>
             </div>
         </div>
 

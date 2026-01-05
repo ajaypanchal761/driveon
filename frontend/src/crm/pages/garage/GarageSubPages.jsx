@@ -23,6 +23,8 @@ import {
   MdAdd
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
+import { premiumColors } from '../../../theme/colors';
+import { rgba } from 'polished';
 
 // --- Shared Components ---
 
@@ -47,14 +49,24 @@ const StatusBadge = ({ status }) => {
   const styles = {
     'Active': 'bg-green-50 text-green-700 border-green-200',
     'Inactive': 'bg-red-50 text-red-700 border-red-200',
-    'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
+    'In Progress': 'text-white border-transparent', // Custom styled below
     'Pending': 'bg-orange-50 text-orange-700 border-orange-200',
     'Completed': 'bg-gray-50 text-gray-700 border-gray-200',
     'Expiring Soon': 'bg-yellow-50 text-yellow-700 border-yellow-200',
     'Valid': 'bg-green-50 text-green-700 border-green-200',
   };
+  const getStyle = (s) => {
+      if (s === 'In Progress') {
+          return { backgroundColor: premiumColors.primary.DEFAULT, color: 'white', borderColor: 'transparent' };
+      }
+      return {};
+  };
+
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}>
+    <span 
+        className={`px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || 'bg-gray-50 text-gray-600'}`}
+        style={getStyle(status)}
+    >
       {status}
     </span>
   );
@@ -69,11 +81,15 @@ const GarageCard = ({ garage, onDetails }) => (
     >
         <div className="flex justify-between items-start mb-4">
             <div className="flex gap-4">
-                <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                    <MdStore size={32} />
+                <div 
+                    className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 transition-colors group-hover:text-white"
+                    style={{ '--hover-bg': premiumColors.primary.DEFAULT }}
+                >
+                    <MdStore size={32} className="group-hover:text-white" />
+                    <style>{`.group:hover .w-14 { background-color: ${premiumColors.primary.DEFAULT} !important; color: white !important; }`}</style>
                 </div>
                 <div>
-                    <h3 className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{garage.name}</h3>
+                    <h3 className="font-bold text-gray-900 transition-colors group-hover:opacity-80" style={{ '--hover-color': premiumColors.primary.DEFAULT }}>{garage.name}</h3>
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                         <MdLocationOn /> {garage.location}
                     </div>
@@ -124,10 +140,10 @@ const RepairItem = ({ repair }) => (
              <div className="flex-1 md:w-48">
                  <div className="flex justify-between text-xs font-bold mb-1.5">
                      <span className="text-gray-500">Progress</span>
-                     <span className="text-indigo-600">{repair.progress}%</span>
+                     <span className="font-bold" style={{ color: premiumColors.primary.DEFAULT }}>{repair.progress}%</span>
                  </div>
                  <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                     <div className="bg-indigo-600 h-full rounded-full transition-all duration-1000" style={{ width: `${repair.progress}%` }}></div>
+                     <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${repair.progress}%`, backgroundColor: premiumColors.primary.DEFAULT }}></div>
                  </div>
                  <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
                      <span>Diagnostics</span>
@@ -141,9 +157,14 @@ const RepairItem = ({ repair }) => (
                  <p className="text-sm font-bold text-gray-800">{repair.completionDate}</p>
              </div>
              
-             <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors">
+              <button 
+                  className="p-2 text-gray-400 rounded-full transition-colors hover:text-white"
+                  style={{ '--hover-bg': rgba(premiumColors.primary.DEFAULT, 0.1), '--hover-text': premiumColors.primary.DEFAULT }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = rgba(premiumColors.primary.DEFAULT, 0.1); e.currentTarget.style.color = premiumColors.primary.DEFAULT; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#9ca3af'; }}
+              >
                   <MdMoreVert size={24} />
-             </button>
+              </button>
         </div>
     </motion.div>
 );
@@ -211,9 +232,9 @@ export const AllGaragesPage = () => {
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/garage/all')}>Garage</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">All Garages</span>
                     </div>
@@ -225,15 +246,17 @@ export const AllGaragesPage = () => {
                          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                          <input 
                             type="text"
-                            placeholder="Search garages..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                         placeholder="Search garages..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all shadow-sm"
+                            style={{ '--tw-ring-color': rgba(premiumColors.primary.DEFAULT, 0.2) }}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                          />
                      </div>
                      <button 
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                        className="px-4 py-2.5 text-white rounded-xl shadow-lg font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                        style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 10px 15px -3px ${rgba(premiumColors.primary.DEFAULT, 0.3)}` }}
                      >
                          <MdStore /> Add Garage
                      </button>
@@ -335,9 +358,9 @@ export const AllGaragesPage = () => {
                                  </div>
                              </div>
                          </div>
-                         <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                             <p className="text-xs text-indigo-400 uppercase font-bold mb-1">Specialization</p>
-                             <div className="flex items-center gap-2 text-indigo-800 font-medium">
+                         <div className="p-4 rounded-xl border" style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.05), borderColor: rgba(premiumColors.primary.DEFAULT, 0.2) }}>
+                             <p className="text-xs uppercase font-bold mb-1" style={{ color: premiumColors.primary.DEFAULT }}>Specialization</p>
+                             <div className="flex items-center gap-2 font-medium" style={{ color: premiumColors.primary.DEFAULT }}>
                                  <MdBuild /> {selectedGarage.specialist}
                              </div>
                          </div>
@@ -374,9 +397,9 @@ export const ActiveRepairsPage = () => {
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/garage/all')}>Garage</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">Active Repairs</span>
                     </div>
@@ -385,7 +408,8 @@ export const ActiveRepairsPage = () => {
                  </div>
                  <button 
                     onClick={() => setIsAddModalOpen(true)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center gap-2"
+                    className="px-4 py-2 text-white rounded-xl shadow-lg font-bold flex items-center gap-2"
+                    style={{ backgroundColor: premiumColors.primary.DEFAULT, boxShadow: `0 10px 15px -3px ${rgba(premiumColors.primary.DEFAULT, 0.3)}` }}
                  >
                      <MdAdd /> Logs New Repair
                  </button>
@@ -465,9 +489,9 @@ export const ServiceHistoryPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/garage/all')}>Garage</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">Service Logs</span>
                     </div>
@@ -498,7 +522,6 @@ export const ServiceHistoryPage = () => {
                              <th className="px-6 py-4">Service Details</th>
                              <th className="px-6 py-4">Cost</th>
                              <th className="px-6 py-4">Status</th>
-                             <th className="px-6 py-4"></th>
                          </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100 text-sm">
@@ -510,9 +533,6 @@ export const ServiceHistoryPage = () => {
                                  <td className="px-6 py-4 text-gray-600">{log.service}</td>
                                  <td className="px-6 py-4 font-bold text-gray-900">₹ {log.cost.toLocaleString()}</td>
                                  <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
-                                 <td className="px-6 py-4 text-right">
-                                     <button className="text-indigo-600 hover:text-indigo-800"><MdReceipt size={20} /></button>
-                                 </td>
                              </tr>
                          ))}
                      </tbody>
@@ -529,9 +549,9 @@ export const PartsCostPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
              <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/dashboard')}>Home</span> 
                     <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                    <span className="cursor-pointer transition-colors hover:opacity-80" style={{ color: premiumColors.primary.DEFAULT }} onClick={() => navigate('/crm/garage/all')}>Garage</span> 
                     <span>/</span> 
                     <span className="text-gray-800 font-medium">Inventory</span>
                 </div>
@@ -555,7 +575,7 @@ export const PartsCostPage = () => {
                       <div className="flex justify-between items-end border-t border-gray-50 pt-3">
                           <div>
                               <p className="text-xs text-gray-400 font-bold uppercase">Unit Cost</p>
-                              <p className="text-lg font-bold text-indigo-600">₹ {part.cost.toLocaleString()}</p>
+                              <p className="text-lg font-bold" style={{ color: premiumColors.primary.DEFAULT }}>₹ {part.cost.toLocaleString()}</p>
                           </div>
                           <div>
                               <p className="text-xs text-gray-400 font-bold uppercase text-right">Stock</p>
