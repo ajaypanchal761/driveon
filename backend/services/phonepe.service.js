@@ -152,8 +152,8 @@ class PhonePeService {
           transactionId: paymentData.merchantTransactionId,
           phonePeTransactionId: paymentData.transactionId,
           amount: paymentData.amount / 100, // Convert from paise to rupees
-          status: paymentData.state === 'COMPLETED' ? 'success' : 
-                  paymentData.state === 'FAILED' ? 'failed' : 'pending',
+          status: paymentData.state === 'COMPLETED' ? 'success' :
+            paymentData.state === 'FAILED' ? 'failed' : 'pending',
           paymentMethod: paymentData.paymentInstrument?.type || 'PAY_PAGE',
           responseCode: paymentData.responseCode,
           responseMessage: paymentData.responseMessage,
@@ -182,7 +182,7 @@ class PhonePeService {
       const endpoint = '/pg/v1/pay';
       const checksum = this.generateChecksum(base64Payload, endpoint);
       const expectedXVerify = `${checksum}###${this.saltIndex}`;
-      
+
       return xVerify === expectedXVerify;
     } catch (error) {
       console.error('Callback verification error:', error);

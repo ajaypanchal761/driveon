@@ -37,7 +37,7 @@ export const uploadImage = async (file, options = {}) => {
 
     // Handle different file types
     let uploadResult;
-    
+
     if (file.buffer) {
       // If file has buffer (from express-fileupload)
       return new Promise((resolve, reject) => {

@@ -365,13 +365,13 @@ bookingSchema.pre('validate', async function (next) {
       let isUnique = false;
       let attempts = 0;
       const maxAttempts = 10;
-      
+
       // Try to generate a unique bookingId
       while (!isUnique && attempts < maxAttempts) {
         const timestamp = Date.now().toString().slice(-6);
         const random = Math.random().toString(36).substring(2, 5).toUpperCase();
         bookingId = `BK${timestamp}${random}`;
-        
+
         // Check if this bookingId already exists
         const existing = await mongoose.model('Booking').findOne({ bookingId });
         if (!existing) {
@@ -382,12 +382,12 @@ bookingSchema.pre('validate', async function (next) {
           await new Promise(resolve => setTimeout(resolve, 10));
         }
       }
-      
+
       // If still not unique after max attempts, use timestamp-based ID
       if (!isUnique) {
         bookingId = `BK${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       }
-      
+
       this.bookingId = bookingId;
       console.log('✅ Generated bookingId in pre-validate hook:', this.bookingId);
     }
@@ -408,21 +408,21 @@ bookingSchema.index({ bookingDate: -1 });
 bookingSchema.index({ createdAt: -1 });
 
 // Virtual for formatted booking display
-bookingSchema.virtual('formattedBookingId').get(function() {
+bookingSchema.virtual('formattedBookingId').get(function () {
   return this.bookingId;
 });
 
 // Method to check if booking is active
-bookingSchema.methods.isActive = function() {
+bookingSchema.methods.isActive = function () {
   return this.status === 'active' && this.tripStatus === 'in_progress';
 };
 
 // Method to check if tracking should be active
-bookingSchema.methods.shouldTrack = function() {
+bookingSchema.methods.shouldTrack = function () {
   const now = new Date();
   const tripStart = new Date(this.tripStart.date);
   const tripEnd = new Date(this.tripEnd.date);
-  
+
   return (
     this.status === 'confirmed' &&
     this.tripStatus !== 'completed' &&

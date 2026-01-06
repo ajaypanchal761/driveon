@@ -11,13 +11,13 @@ export const authenticateAdmin = async (req, res, next) => {
     // Public routes: /signup, /login, /refresh-token
     // IMPORTANT: Router is mounted at '/api/admin', so routes are relative
     const publicRoutes = ['signup', 'login', 'refresh-token'];
-    
+
     // Get all possible path variations
     const currentPath = req.path || '';
     const urlPath = req.url?.split('?')[0] || '';
     const originalPath = req.originalUrl?.split('?')[0] || '';
     const baseUrl = req.baseUrl || '';
-    
+
     // Get relative path (remove /api/admin prefix)
     let relativePath = originalPath;
     if (originalPath.startsWith('/api/admin')) {
@@ -25,17 +25,17 @@ export const authenticateAdmin = async (req, res, next) => {
     } else if (originalPath.startsWith('/api')) {
       relativePath = originalPath.replace('/api', '');
     }
-    
+
     // Normalize paths (remove leading/trailing slashes, lowercase)
     const normalizePath = (path) => path.replace(/^\/+|\/+$/g, '').toLowerCase();
-    
+
     const normalizedPaths = [
       normalizePath(currentPath),
       normalizePath(urlPath),
       normalizePath(originalPath),
       normalizePath(relativePath),
     ];
-    
+
     // Log for debugging
     console.log('\n🔍 MIDDLEWARE CHECK:', {
       method: req.method,
@@ -46,35 +46,35 @@ export const authenticateAdmin = async (req, res, next) => {
       baseUrl,
       normalizedPaths,
     });
-    
+
     // Check if this is a public route
     const isPublicRoute = publicRoutes.some(route => {
       const routeLower = route.toLowerCase();
-      
+
       // Check if any normalized path matches the route
       const matches = normalizedPaths.some(normalized => {
-        return normalized === routeLower || 
-               normalized.endsWith(`/${routeLower}`) ||
-               normalized.includes(`/${routeLower}/`) ||
-               normalized.includes(`/${routeLower}`);
+        return normalized === routeLower ||
+          normalized.endsWith(`/${routeLower}`) ||
+          normalized.includes(`/${routeLower}/`) ||
+          normalized.includes(`/${routeLower}`);
       });
-      
+
       if (matches) {
         console.log(`\n✅✅✅ PUBLIC ROUTE DETECTED: "${route}"`);
         console.log('Matching path:', normalizedPaths.find(p => p.includes(routeLower)));
       }
-      
+
       return matches;
     });
-    
+
     if (isPublicRoute) {
       // This is a public route - skip authentication
       console.log('✅ Skipping authentication for public route\n');
       return next();
     }
-    
+
     console.log('🔒 This is a PROTECTED route - checking authentication...\n');
-    
+
     // Extract token from header (only for protected routes)
     const token = extractTokenFromHeader(req.headers.authorization);
 
