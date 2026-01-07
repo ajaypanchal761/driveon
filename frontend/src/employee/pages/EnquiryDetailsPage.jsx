@@ -1,157 +1,501 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { jsPDF } from 'jspdf';
 import { 
-  FiArrowLeft, FiPhone, FiMessageCircle, FiClock, FiCalendar, 
-  FiMapPin, FiCheckCircle, FiPlus, FiMoreVertical 
+  FiArrowLeft, FiEdit2, FiPhone, FiMessageSquare, FiFileText, 
+  FiUser, FiMapPin, FiCalendar, FiCreditCard, FiCheckCircle, FiAlertCircle 
 } from 'react-icons/fi';
-import { FaWhatsapp } from 'react-icons/fa';
+import BottomNav from '../components/BottomNav';
 
-// Dummy Data Lookup (Simulating API)
-const getEnquiryData = (id) => ({
-  id,
-  name: "Rahul Sharma",
-  phone: "+91 98765 43210",
-  email: "rahul.sharma@example.com",
-  location: "Indore, MP",
-  carInterest: "Toyota Innova Crysta",
-  budget: "15-18 Lakhs",
-  status: "Pending",
-  created: "Oct 24, 2023 • 10:30 AM",
-  timeline: [
-    { id: 1, type: "call", note: "Called customer. Interested in top model. Will visit showroom tomorrow.", date: "Today, 11:00 AM", author: "You" },
-    { id: 2, type: "status", note: "Status changed to Pending", date: "Yesterday, 4:00 PM", author: "System" },
-    { id: 3, type: "create", note: "Enquiry created via Website", date: "Oct 24, 10:30 AM", author: "System" },
-  ]
-});
+
+// Expanded Dummy Data simulating a database
+// Expanded Dummy Data simulating a database
+const enquiryDatabase = [
+  { 
+    id: 1, 
+    name: "Rahul Sharma", 
+    phone: "+91 98765 43210", 
+    status: "Pending", 
+    date: "2023-10-24",
+    model: "Seltos",
+    source: "Facebook Lead",
+    email: "rahul.sharma@example.com",
+    enquiryId: "E2023102401",
+    category: "Corporate",
+    customerType: "Individual",
+    address: "123, Palm Grove Heights, Mumbai",
+    exchange: "Yes",
+    remark: "Looking for diesel variant specifically.",
+    variant: "GTX Plus",
+    exteriorColor: "Imperial Blue",
+    interiorColor: "Black",
+    bookingBalance: "0",
+    
+    // Follow Up Data
+    followUps: [
+      { id: 101, date: "2023-10-25", type: "Call", note: "Customer engaged, asked for brochure.", status: "Completed" },
+      { id: 102, date: "2023-10-27", type: "Visit", note: "Scheduled for test drive.", status: "Pending" }
+    ],
+
+    // Invoice Data
+    invoice: {
+      number: "INV-23-9088",
+      date: "2023-11-01",
+      amount: "18,45,000",
+      status: "Paid",
+      pdfUrl: "#"
+    },
+
+    // Feedback Data
+    feedback: {
+      rating: 4,
+      comment: "Sales executive was very helpful. Delivery process could be faster.",
+      date: "2023-11-05"
+    }
+  },
+  { 
+    id: 2, 
+    name: "Priya Singh", 
+    phone: "+91 98989 89898", 
+    status: "Closed", 
+    date: "2023-10-23",
+    model: "Sonet",
+    source: "Walk-in",
+    email: "priya.singh88@gmail.com",
+    enquiryId: "E2023102305",
+    category: "Individual",
+    customerType: "First Time Buyer",
+    address: "B-402, Sunshine Apartments, Delhi",
+    exchange: "No",
+    remark: "Budget constraint around 12L.",
+    variant: "HTK Plus",
+    exteriorColor: "Clear White",
+    interiorColor: "Beige",
+    bookingBalance: "0",
+    
+    // Populated Data
+    followUps: [
+         { id: 103, date: "2023-10-23", type: "Call", note: "Called customer, no answer. Left voicemail.", status: "Completed" },
+         { id: 104, date: "2023-10-24", type: "Call", note: "Follow up call, phone switched off.", status: "Completed" }
+    ],
+    booking: null,
+    invoice: null,
+    feedback: null
+  },
+  { 
+    id: 3, 
+    name: "Amit Verma", 
+    phone: "+91 99887 76655", 
+    status: "Converted", 
+    date: "2023-10-24",
+    model: "Carens",
+    source: "Referral",
+    email: "amit.verma@techs.com",
+    enquiryId: "E2023102409",
+    category: "Individual",
+    customerType: "Individual",
+    address: "77/A, Green Park, Bangalore",
+    exchange: "Yes",
+    remark: "Ready to book, waiting for loan approval.",
+    booking: {
+        id: "BKQ789012",
+        date: "2023/10/25",
+        status: "Confirmed",
+        amountPaid: "25,000"
+    },
+    variant: "Luxury Plus",
+    exteriorColor: "Moss Brown",
+    interiorColor: "Triton Navy",
+    bookingBalance: "14,50,000",
+    
+    followUps: [
+      { id: 201, date: "2023-10-24", type: "Call", note: "Loan approved from HDFC.", status: "Completed" },
+      { id: 202, date: "2023-10-25", type: "Visit", note: "Customer came for booking formalities.", status: "Completed" }
+    ],
+    invoice: {
+      number: "INV-23-9092",
+      date: "2023-10-28",
+      amount: "14,75,000",
+      status: "Paid",
+      pdfUrl: "#"
+    },
+    feedback: {
+      rating: 5,
+      comment: "Excellent service provided by the team. Very happy with the car.",
+      date: "2023-10-28"
+    }
+  },
+  { 
+    id: 4, 
+    name: "Sneha Gupta", 
+    phone: "+91 88776 65544", 
+    status: "Pending", 
+    date: "2023-10-23",
+    model: "Seltos",
+    source: "Website",
+    email: "sneha.g@outlook.com",
+    enquiryId: "E2023102311",
+    category: "Individual",
+    customerType: "Individual",
+    address: "Flat 505, River View, Pune",
+    exchange: "No",
+    remark: "Comparing with Creta.",
+    variant: "HTX",
+    exteriorColor: "Sparkling Silver",
+    interiorColor: "Black",
+    bookingBalance: "0",
+    
+    followUps: [
+        { id: 301, date: "2023-10-24", type: "Call", note: "Explained features over call.", status: "Completed" },
+        { id: 302, date: "2023-10-26", type: "Test Drive", note: "Test drive scheduled at home.", status: "Pending" }
+    ], 
+    booking: null,
+    invoice: null, 
+    feedback: null
+  },
+  { 
+    id: 5, 
+    name: "Vikram Malhotra", 
+    phone: "+91 77665 54433", 
+    status: "Missed", 
+    date: "2023-10-22",
+    model: "Carnival",
+    source: "Cold Call",
+    email: "vikram.m@business.net",
+    enquiryId: "E2023102203",
+    category: "Corporate",
+    customerType: "Fleet Owner",
+    address: "Plot 88, Industrial Area, Gurgaon",
+    exchange: "Yes",
+    remark: "Interested in 3 units.",
+    variant: "Limousine",
+    exteriorColor: "Aurora Black Pearl",
+    interiorColor: "Viper Burgundy",
+    bookingBalance: "0",
+    
+    followUps: [
+        { id: 401, date: "2023-10-23", type: "Call", note: "Sent corporate fleet proposal via email.", status: "Completed" },
+        { id: 402, date: "2023-10-25", type: "Call", note: "Customer asked to call back next week.", status: "Pending" }
+    ], 
+    booking: null,
+    invoice: null, 
+    feedback: null
+  },
+];
 
 const EnquiryDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const data = getEnquiryData(id);
-  const [activeTab, setActiveTab] = useState('Timeline');
+  const [activeTab, setActiveTab] = useState('Enquiry');
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    // Find data based on ID
+    const foundData = enquiryDatabase.find(item => item.id === parseInt(id));
+    if (foundData) {
+      setData(foundData);
+    }
+  }, [id]);
+
+  if (!data) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+
+  const handleDownloadInvoice = (invoice) => {
+    const doc = new jsPDF();
+
+    // Theme Color
+    const themeColor = "#1C205C";
+
+    // Header Area
+    doc.setFillColor(themeColor);
+    doc.rect(0, 0, 210, 40, 'F'); // A4 Width is 210mm
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", 105, 20, { align: "center" });
+
+    // Customer Details
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Billed To:", 15, 55);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(data.name, 15, 62);
+    doc.text(`Model: ${data.model}`, 15, 68);
+    if(data.phone) doc.text(`Phone: ${data.phone}`, 15, 74);
+
+    // Invoice Details (Right Side)
+    doc.setFont("helvetica", "bold");
+    doc.text("Invoice Details:", 130, 55);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`Invoice No: ${invoice.number}`, 130, 62);
+    doc.text(`Date: ${invoice.date}`, 130, 68);
+    doc.text(`Status: ${invoice.status}`, 130, 74);
+
+    // Line Divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, 85, 195, 85);
+
+    // Table Header
+    doc.setFont("helvetica", "bold");
+    doc.text("Description", 15, 95);
+    doc.text("Amount", 170, 95, { align: "right" });
+
+    doc.line(15, 100, 195, 100);
+
+    // Table Content
+    doc.setFont("helvetica", "normal");
+    doc.text(`Booking/Purchase of ${data.model} (${data.variant || 'Standard'})`, 15, 110);
+    doc.text(invoice.amount, 170, 110, { align: "right" });
+
+    doc.line(15, 115, 195, 115);
+
+    // Total
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("Total:", 120, 125);
+    doc.text(`INR ${invoice.amount}`, 195, 125, { align: "right" });
+
+    // Footer
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Thank you for your business!", 105, 150, { align: "center" });
+    
+    // Save PDF
+    doc.save(`Invoice_${invoice.number}.pdf`);
+  };
+
+  const tabs = [
+    "Enquiry", "Follow Up", "Booking", "Payment", "Invoice", "Feedback"
+  ];
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] font-sans selection:bg-blue-100 flex flex-col">
+    <div className="min-h-screen bg-[#F5F7FA] pb-24 font-sans selection:bg-blue-100 flex flex-col">
       
-      {/* HEADER */}
-      <div className="bg-[#1C205C] pt-10 pb-20 px-6 rounded-b-[40px] shadow-lg relative z-10">
-        <div className="flex justify-between items-center text-white mb-6">
+      {/* HEADER - CLEAN & SIMPLE */}
+      <div className="bg-[#1C205C] pt-6 pb-20 px-5 relative z-10">
+        <div className="flex justify-between items-center text-white mb-4">
            <button onClick={() => navigate(-1)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-all">
              <FiArrowLeft size={20} />
            </button>
            <h1 className="text-lg font-bold tracking-wide">Enquiry Details</h1>
            <button className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-all">
-             <FiMoreVertical size={20} />
+             <FiEdit2 size={18} />
            </button>
         </div>
-
-        <div className="flex flex-col items-center">
-           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-[#1C205C] shadow-lg mb-3">
-             {data.name.charAt(0)}
-           </div>
-           <h2 className="text-2xl font-bold text-white mb-1">{data.name}</h2>
-           <div className="flex items-center gap-2 opacity-80 text-white text-sm font-light">
-              <FiMapPin size={12} /> {data.location}
-           </div>
-           <div className="mt-4 flex gap-3">
-              <button onClick={() => window.open(`tel:${data.phone}`)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-white text-sm font-semibold transition-all">
-                <FiPhone /> Call
-              </button>
-              <button onClick={() => window.open(`https://wa.me/${data.phone.replace(/[^0-9]/g, '')}`)} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 px-4 py-2 rounded-full text-white text-sm font-semibold transition-all shadow-lg">
-                <FaWhatsapp /> WhatsApp
-              </button>
-           </div>
-        </div>
       </div>
 
-      {/* CONTENT CARD */}
-      <div className="-mt-12 px-6 flex-1 pb-24">
-         <motion.div 
-           initial={{ y: 20, opacity: 0 }}
-           animate={{ y: 0, opacity: 1 }}
-           className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]"
-         >
-            {/* TABS */}
-           <div className="flex border-b border-gray-100">
-              <button 
-                onClick={() => setActiveTab('Overview')}
-                className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-all ${activeTab === 'Overview' ? 'border-[#1C205C] text-[#1C205C]' : 'border-transparent text-gray-400'}`}
-              >Overview</button>
-              <button 
-                onClick={() => setActiveTab('Timeline')}
-                className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-all ${activeTab === 'Timeline' ? 'border-[#1C205C] text-[#1C205C]' : 'border-transparent text-gray-400'}`}
-              >Timeline</button>
-           </div>
+      {/* OVERLAPPING SUMMARY CARD */}
+      <div className="px-5 -mt-16 z-20 relative mb-2">
+         <div className="bg-white rounded-[20px] p-5 shadow-lg border border-gray-100 relative overflow-hidden flex justify-between items-start">
+            {/* Red Accent Line */}
+            <div className="absolute left-0 top-5 bottom-5 w-1.5 bg-red-500 rounded-r-full"></div>
+            
+            <div className="pl-4">
+               <h2 className="text-xl font-bold text-[#1C205C] mb-0.5 leading-tight">{data.name}</h2>
+               <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">{data.model}</p>
+               <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase">{data.source}</span>
+                  <span className="text-[10px] text-gray-400 font-medium">{data.date}</span>
+               </div>
+            </div>
 
-           <div className="p-6">
-              {activeTab === 'Overview' ? (
-                <div className="space-y-6">
-                   <InfoItem icon={<FiCheckCircle />} label="Status" value={data.status} badge />
-                   <InfoItem icon={<FiCar />} label="Interested Car" value={data.carInterest} />
-                   <InfoItem icon={<FiCreditCard />} label="Budget" value={data.budget} />
-                   <InfoItem icon={<FiPhone />} label="Phone" value={data.phone} />
-                   <InfoItem icon={<FiMail />} label="Email" value={data.email} />
-                   <InfoItem icon={<FiCalendar />} label="Created On" value={data.created} />
+            {/* Call Action */}
+            <button onClick={() => window.open(`tel:${data.phone}`)} className="w-11 h-11 bg-green-50 rounded-full flex items-center justify-center text-green-600 shadow-sm border border-green-100 active:scale-95 transition-all mt-1">
+               <FiPhone size={20} />
+            </button>
+         </div>
+      </div>
+
+      {/* TABS - INCREASED SPACING */}
+      <div className="bg-transparent sticky top-0 z-30 pt-2 pb-1 bg-[#F5F7FA]">
+         <div className="flex overflow-x-auto px-5 py-2 scrollbar-hide gap-8 bg-transparent">
+            {tabs.map(tab => (
+               <button 
+                 key={tab}
+                 onClick={() => setActiveTab(tab)}
+                 className={`pb-2 text-sm font-medium whitespace-nowrap transition-all border-b-[3px] rounded-sm
+                   ${activeTab === tab ? 'border-[#1C205C] text-[#1C205C] font-bold' : 'border-transparent text-gray-400'}`}
+               >
+                 {tab}
+               </button>
+            ))}
+         </div>
+      </div>
+
+      {/* DYNAMIC CONTENT AREA */}
+      <div className="px-5 py-4 flex-1">
+        <AnimatePresence mode='wait'>
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.2 }}
+          >
+            {activeTab === 'Enquiry' && (
+               <div className="space-y-4">
+                  {/* Basic Info Group */}
+                  <div className="bg-white p-5 rounded-[20px] shadow-sm border border-gray-100">
+                     <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                        <DetailItem label="Enquiry ID" value={data.enquiryId} fullWidth />
+                        <DetailItem label="Source" value={data.source} />
+                        <DetailItem label="Category" value={data.category} />
+                        <DetailItem label="Customer Type" value={data.customerType} />
+                        <DetailItem label="Exchange" value={data.exchange} />
+                     </div>
+                  </div>
+
+                  {/* Contact Info Group */}
+                  <div className="bg-white p-5 rounded-[20px] shadow-sm border border-gray-100">
+                     <h3 className="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-wider">Contact Details</h3>
+                     <div className="space-y-5">
+                        <DetailItem label="Mobile Number" value={data.phone} highlight />
+                        <DetailItem label="Email" value={data.email} />
+                        <DetailItem label="Address" value={data.address} />
+                     </div>
+                  </div>
+
+                  {/* Remark */}
+                  <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                     <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">Remark</p>
+                     <p className="text-sm text-[#1C205C] font-medium leading-relaxed">{data.remark}</p>
+                  </div>
+               </div>
+            )}
+            
+            {activeTab === 'Follow Up' && (
+                <div className="space-y-4">
+                    {data.followUps && data.followUps.length > 0 ? (
+                        data.followUps.map((item) => (
+                           <div key={item.id} className="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex gap-4">
+                               <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                   <FiCalendar size={18} />
+                               </div>
+                               <div>
+                                   <p className="text-[#1C205C] font-bold text-sm">{item.type} <span className="text-gray-400 font-normal ml-1">| {item.date}</span></p>
+                                   <p className="text-gray-600 text-xs mt-1 leading-normal">{item.note}</p>
+                                   <span className={`inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded ${item.status === 'Completed' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-500'}`}>
+                                       {item.status}
+                                   </span>
+                               </div>
+                           </div>
+                        ))
+                    ) : (
+                        <div className="bg-white p-10 rounded-[20px] shadow-sm border border-gray-100 text-center">
+                           <p className="text-gray-400 text-sm font-medium">No follow-ups recorded.</p>
+                        </div>
+                    )}
                 </div>
-              ) : (
-                <div className="space-y-6 relative">
-                   <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-gray-100"></div>
-                   {data.timeline.map((item) => (
-                      <div key={item.id} className="flex gap-4 relative">
-                         <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center z-10 border-4 border-white shadow-sm
-                           ${item.type === 'call' ? 'bg-blue-100 text-blue-600' : 
-                             item.type === 'status' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}
-                         >
-                           {item.type === 'call' ? <FiPhone size={16} /> : 
-                            item.type === 'status' ? <FiCheckCircle size={16} /> : <FiClock size={16} />}
-                         </div>
-                         <div className="pb-4">
-                            <p className="text-gray-800 text-sm font-medium leading-relaxed">{item.note}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                               <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold">{item.author}</span>
-                               <span className="text-[10px] text-gray-400">{item.date}</span>
-                            </div>
-                         </div>
+            )}
+
+            {activeTab === 'Booking' && (
+               <div className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100 text-center min-h-[250px] flex flex-col justify-center items-center">
+                  {data.booking ? (
+                      <div className="w-full text-left space-y-6">
+                          <DetailItem label="Booking ID" value={data.booking.id} />
+                          <DetailItem label="Booking Date" value={data.booking.date} />
+                          <DetailItem label="Status" value={data.booking.status} highlight />
+                          <DetailItem label="Amount Paid" value={`₹ ${data.booking.amountPaid}`} />
                       </div>
-                   ))}
-                </div>
-              )}
-           </div>
-         </motion.div>
+                  ) : (
+                      <>
+                        <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4">
+                            <FiAlertCircle size={28} />
+                        </div>
+                        <p className="text-red-500 font-bold text-base">Data Not Found</p>
+                        <p className="text-xs text-gray-400 mt-1">No booking record exists.</p>
+                      </>
+                  )}
+               </div>
+            )}
+
+            {activeTab === 'Payment' && (
+               <div className="space-y-4">
+                  <div className="bg-white p-5 rounded-[20px] shadow-sm border border-gray-100">
+                     <h3 className="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-wider">Vehicle Details</h3>
+                     <div className="grid grid-cols-2 gap-y-5">
+                       <DetailItem label="Model" value={data.model} />
+                       <DetailItem label="Variant" value={data.variant} />
+                       <DetailItem label="Exterior Color" value={data.exteriorColor} />
+                       <DetailItem label="Interior Color" value={data.interiorColor} />
+                     </div>
+                  </div>
+                  
+                  <div className="bg-white p-5 rounded-[20px] shadow-sm border border-gray-100">
+                     <h3 className="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-wider">Payment Summary</h3>
+                     <DetailItem label="Booking Balance" value={`₹ ${data.bookingBalance}`} highlight />
+                  </div>
+               </div>
+            )}
+            
+            {activeTab === 'Invoice' && (
+               <div className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100 text-center min-h-[200px] flex flex-col justify-center items-center">
+                   {data.invoice ? (
+                       <div className="w-full text-left space-y-6">
+                           <DetailItem label="Invoice Number" value={data.invoice.number} />
+                           <DetailItem label="Invoice Date" value={data.invoice.date} />
+                           <DetailItem label="Total Amount" value={`₹ ${data.invoice.amount}`} highlight />
+                           <button 
+                             onClick={() => handleDownloadInvoice(data.invoice)}
+                             className="w-full mt-4 flex items-center justify-center gap-2 bg-[#1C205C] text-white py-3 rounded-xl shadow-lg border border-transparent active:scale-95 transition-all text-sm font-bold"
+                           >
+                               <FiFileText /> Download Invoice
+                           </button>
+                       </div>
+                   ) : (
+                       <>
+                           <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-4">
+                               <FiFileText size={28} />
+                           </div>
+                           <p className="text-gray-500 font-bold text-base">No Invoice Generated</p>
+                       </>
+                   )}
+               </div>
+            )}
+            
+            {activeTab === 'Feedback' && (
+               <div className="bg-white p-6 rounded-[20px] shadow-sm border border-gray-100">
+                   {data.feedback ? (
+                       <div className="text-center">
+                           <div className="flex justify-center gap-1 mb-4 text-amber-400 text-2xl">
+                               {[...Array(5)].map((_, i) => (
+                                   <span key={i} className={i < data.feedback.rating ? 'text-amber-400' : 'text-gray-200'}>★</span>
+                               ))}
+                           </div>
+                           <p className="text-[#1C205C] font-bold text-lg mb-2">"{data.feedback.comment}"</p>
+                           <p className="text-xs text-gray-400">{data.feedback.date}</p>
+                       </div>
+                   ) : (
+                       <div className="text-center py-8">
+                           <p className="text-gray-400 text-sm">No feedback received yet.</p>
+                       </div>
+                   )}
+               </div>
+            )}
+
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* FLOAT ACTION BAR */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-50 rounded-t-[30px] flex gap-3">
-         <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-[#1C205C] font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-           <FiMessageCircle /> Message
-         </button>
-         <button className="flex-1 bg-[#1C205C] hover:bg-blue-900 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
-           <FiPlus /> Add Follow-up
-         </button>
-      </div>
-
+      <BottomNav />
     </div>
   );
 };
 
-const InfoItem = ({ icon, label, value, badge }) => (
-  <div className="flex items-start gap-4">
-    <div className="mt-0.5 text-gray-400 text-lg">{icon}</div>
-    <div className="flex-1 pb-4 border-b border-gray-50">
-       <span className="block text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">{label}</span>
-       {badge ? (
-         <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">{value}</span>
-       ) : (
-         <span className="text-gray-800 font-semibold text-base">{value}</span>
-       )}
-    </div>
+// Reusable Detail Item Component
+const DetailItem = ({ label, value, fullWidth = false, highlight = false }) => (
+  <div className={`${fullWidth ? 'col-span-2' : ''}`}>
+    <p className="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide mb-1 opacity-80">{label}</p>
+    <p className={`text-sm sm:text-base font-bold text-[#1C205C] break-words ${highlight ? 'text-blue-600' : ''}`}>
+      {value || '-'}
+    </p>
   </div>
 );
-
-// Mocks for unused icons
-const FiCar = () => <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M18.5 10l-6-7-6 7H2v7h20v-7h-3.5z"></path></svg>;
-const FiCreditCard = () => <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>;
-const FiMail = () => <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>;
 
 export default EnquiryDetailsPage;

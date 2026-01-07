@@ -62,6 +62,14 @@ const ModuleFavoritesPage = lazy(() => import("../module/pages/ModuleFavoritesPa
 const EmployeeHomePage = lazy(() => import("../employee/pages/EmployeeHomePage"));
 const EnquiriesListPage = lazy(() => import("../employee/pages/EnquiriesListPage"));
 const EnquiryDetailsPage = lazy(() => import("../employee/pages/EnquiryDetailsPage"));
+const AttendancePage = lazy(() => import("../employee/pages/AttendancePage"));
+const TasksPage = lazy(() => import("../employee/pages/TasksPage"));
+const ProfilePage = lazy(() => import("../employee/pages/ProfilePage"));
+const StaffDirectoryPage = lazy(() => import("../employee/pages/StaffDirectoryPage"));
+const SalaryPage = lazy(() => import("../employee/pages/SalaryPage"));
+const ExpenseClaimsPage = lazy(() => import("../employee/pages/ExpenseClaimsPage"));
+const PrivacySecurityPage = lazy(() => import("../employee/pages/PrivacySecurityPage"));
+const NotificationsPage = lazy(() => import("../employee/pages/NotificationsPage"));
 
 
 
@@ -835,6 +843,38 @@ const router = createBrowserRouter([
   {
     path: "/employee/enquiries/:id",
     element: <EnquiryDetailsPage />,
+  },
+  {
+    path: "/employee/attendance",
+    element: <AttendancePage />,
+  },
+  {
+    path: "/employee/tasks",
+    element: <TasksPage />,
+  },
+  {
+    path: "/employee/profile",
+    element: <ProfilePage />,
+  },
+  {
+    path: "/employee/directory",
+    element: <StaffDirectoryPage />,
+  },
+  {
+    path: "/employee/salary",
+    element: <SalaryPage />,
+  },
+  {
+    path: "/employee/expenses",
+    element: <ExpenseClaimsPage />,
+  },
+  {
+    path: "/employee/privacy",
+    element: <PrivacySecurityPage />,
+  },
+  {
+    path: "/employee/notifications",
+    element: <NotificationsPage />,
   },
 
   // 404 Page
