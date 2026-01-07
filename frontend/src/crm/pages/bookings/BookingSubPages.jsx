@@ -14,7 +14,7 @@ import {
     MdCancel,
     MdWarning,
     MdTrendingUp,
-    MdTrendingDown,
+    MdTrendingDown, 
     MdLocalGasStation,
     MdReceipt
 } from 'react-icons/md';
