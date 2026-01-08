@@ -106,21 +106,16 @@ export const IncomePage = () => {
   const navigate = useNavigate();
   return (
     <div className="space-y-6">
-       <div className="flex justify-between items-end">
-           <div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
-                    <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
-                    <span>/</span> 
-                    <span className="text-gray-800 font-medium">Income</span>
-                </div>
-               <h1 className="text-2xl font-bold text-gray-900">Income Overview</h1>
-               <p className="text-gray-500 text-sm">Revenue streams and earnings analysis.</p>
-           </div>
-           <button className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">
-               <MdDownload /> Report
-           </button>
+       <div>
+           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Income</span>
+            </div>
+           <h1 className="text-2xl font-bold text-gray-900">Income Overview</h1>
+           <p className="text-gray-500 text-sm">Revenue streams and earnings analysis.</p>
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -367,9 +362,9 @@ export const CashFlowPage = () => {
         <div className="flex justify-between items-end">
              <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
                     <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
+                    <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/finance/p-and-l')}>Finance</span> 
                     <span>/</span> 
                     <span className="text-gray-800 font-medium">Cash Flow</span>
                 </div>
@@ -378,9 +373,9 @@ export const CashFlowPage = () => {
              </div>
              <motion.div 
                 whileHover={{ scale: 1.02 }}
-                className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white border border-indigo-700 rounded-2xl px-6 py-3 flex items-center gap-4 shadow-xl shadow-indigo-200"
+                className="bg-gradient-to-r from-[#1c205c] to-[#252d6d] text-white border border-[#1c205c] rounded-2xl px-6 py-3 flex items-center gap-4 shadow-xl shadow-gray-300"
              >
-                 <span className="text-xs font-bold text-indigo-100 uppercase tracking-wider">Current Balance</span>
+                 <span className="text-xs font-bold text-white/80 uppercase tracking-wider">Current Balance</span>
                  <span className="text-3xl font-bold">₹ 8,42,000</span>
              </motion.div>
         </div>
@@ -402,7 +397,7 @@ export const CashFlowPage = () => {
                      <div className="flex gap-4 text-xs font-bold bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                          <span className="flex items-center gap-1.5 text-gray-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Cash In</span>
                          <span className="flex items-center gap-1.5 text-gray-600"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Cash Out</span>
-                         <span className="flex items-center gap-1.5 text-gray-600"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Net Flow</span>
+                         <span className="flex items-center gap-1.5 text-gray-600"><span className="w-2.5 h-2.5 rounded-full bg-[#1c205c]"></span> Net Flow</span>
                      </div>
                  </div>
                  <ResponsiveContainer width="100%" height="80%">
@@ -433,7 +428,7 @@ export const CashFlowPage = () => {
                          />
                          <Bar dataKey="cashIn" fill="url(#gIn)" radius={[6,6,0,0]} barSize={10} name="Cash In" animationDuration={1500} />
                          <Bar dataKey="cashOut" fill="url(#gOut)" radius={[6,6,0,0]} barSize={10} name="Cash Out" animationDuration={1500} />
-                         <Line type="monotone" dataKey="net" stroke="#6366F1" strokeWidth={3} dot={{r: 4, fill: '#6366F1', strokeWidth: 2, stroke:'#fff'}} name="Net Flow" animationDuration={2000} />
+                         <Line type="monotone" dataKey="net" stroke="#1c205c" strokeWidth={3} dot={{r: 4, fill: '#1c205c', strokeWidth: 2, stroke:'#fff'}} name="Net Flow" animationDuration={2000} />
                      </ComposedChart>
                  </ResponsiveContainer>
              </motion.div>
@@ -447,7 +442,7 @@ export const CashFlowPage = () => {
              >
                  <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
                      <h3 className="font-bold text-gray-800 text-lg">Transactions</h3>
-                     <button className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors">See All</button>
+                     <button className="text-xs font-bold text-[#1c205c] hover:text-[#252d6d] bg-[#1c205c]/10 px-3 py-1.5 rounded-lg transition-colors">See All</button>
                  </div>
                  <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                      {RECENT_TRANSACTIONS.map((txn, i) => (

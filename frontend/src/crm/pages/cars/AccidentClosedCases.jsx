@@ -8,6 +8,7 @@ import {
   MdAttachMoney,
   MdCalendarToday
 } from 'react-icons/md';
+import ThemedDropdown from '../../components/ThemedDropdown';
 
 // Mock Data for Closed Cases
 const MOCK_CLOSED_CASES = [
@@ -49,8 +50,22 @@ const MOCK_CLOSED_CASES = [
 const AccidentClosedCases = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [yearFilter, setYearFilter] = useState('Year: 2025');
+    const [insurerFilter, setInsurerFilter] = useState('Insurer: All');
+    const [allCases, setAllCases] = useState([]);
 
-    const filteredCases = MOCK_CLOSED_CASES.filter(item => 
+    // Load cases on mount
+    React.useEffect(() => {
+        // Get closed cases from localStorage
+        const localStorageCases = JSON.parse(localStorage.getItem('closedAccidentCases') || '[]');
+        
+        // Combine with mock data, prioritizing localStorage (newer cases)
+        const combined = [...localStorageCases, ...MOCK_CLOSED_CASES];
+        
+        setAllCases(combined);
+    }, []);
+
+    const filteredCases = allCases.filter(item => 
         item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.reg.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -72,12 +87,7 @@ const AccidentClosedCases = () => {
             <h1 className="text-2xl font-bold text-gray-900">Closed & Settled Cases</h1>
             <p className="text-gray-500 text-sm">History of resolved accidents and financial settlements.</p>
           </div>
-          <button 
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <MdDownload size={20} />
-            Export History
-          </button>
+
         </div>
   
         {/* Filters */}
@@ -95,19 +105,23 @@ const AccidentClosedCases = () => {
             <div className="flex gap-3">
                <div className="relative">
                    <MdCalendarToday className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                   <select className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                     <option>Year: 2025</option>
-                     <option>Year: 2024</option>
-                   </select>
+                   <ThemedDropdown
+                     options={['Year: 2025', 'Year: 2024']}
+                     value={yearFilter}
+                     onChange={(val) => setYearFilter(val)}
+                     className="bg-white text-sm"
+                     width="w-40"
+                   />
                </div>
                <div className="relative">
                    <MdFilterList className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                   <select className="pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                     <option>Insurer: All</option>
-                     <option>Tata AIG</option>
-                     <option>HDFC Ergo</option>
-                     <option>ICICI Lombard</option>
-                   </select>
+                   <ThemedDropdown
+                     options={['Insurer: All', 'Tata AIG', 'HDFC Ergo', 'ICICI Lombard']}
+                     value={insurerFilter}
+                     onChange={(val) => setInsurerFilter(val)}
+                     className="bg-white text-sm"
+                     width="w-48"
+                   />
                </div>
             </div>
         </div>

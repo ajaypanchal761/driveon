@@ -13,10 +13,15 @@ import {
     MdCheckCircle,
     MdCancel,
     MdWarning,
+    MdClose,
+    MdEdit,
     MdTrendingUp,
     MdTrendingDown, 
     MdLocalGasStation,
-    MdReceipt
+    MdReceipt,
+    MdVisibility,
+    MdDownload,
+    MdNotifications
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
@@ -450,6 +455,15 @@ export const CancelledBookingsPage = () => {
 export const BookingPaymentStatusPage = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [openActionMenu, setOpenActionMenu] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState(null);
+
+    const handleEditPayment = (payment) => {
+        setSelectedPayment(payment);
+        setIsEditModalOpen(true);
+        setOpenActionMenu(null);
+    };
 
     const filteredPayments = MOCK_PAYMENTS.filter(payment =>
         payment.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -463,9 +477,9 @@ export const BookingPaymentStatusPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
                         <span>/</span>
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span>
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/bookings/active')}>Bookings</span>
                         <span>/</span>
                         <span className="text-gray-800 font-medium">Payment Status</span>
                     </div>
@@ -477,7 +491,7 @@ export const BookingPaymentStatusPage = () => {
                     <input
                         type="text"
                         placeholder="Search payments..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] transition-all shadow-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -486,7 +500,7 @@ export const BookingPaymentStatusPage = () => {
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <thead className="bg-[#1c205c]/5 text-xs font-bold text-[#1c205c] uppercase tracking-wider border-b border-[#1c205c]/10">
                         <tr>
                             <th className="px-6 py-4">Booking ID</th>
                             <th className="px-6 py-4">Customer</th>
@@ -500,7 +514,7 @@ export const BookingPaymentStatusPage = () => {
                     <tbody className="divide-y divide-gray-100 text-sm">
                         {filteredPayments.map((payment) => (
                             <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-4 font-bold text-indigo-600">{payment.bookingId}</td>
+                                <td className="px-6 py-4 font-bold text-[#1c205c]">{payment.bookingId}</td>
                                 <td className="px-6 py-4 font-medium text-gray-900">{payment.customer}</td>
                                 <td className="px-6 py-4 text-gray-600">₹ {payment.amount.toLocaleString()}</td>
                                 <td className="px-6 py-4 text-green-600 font-medium">₹ {payment.paid.toLocaleString()}</td>
@@ -508,8 +522,14 @@ export const BookingPaymentStatusPage = () => {
                                 <td className="px-6 py-4">
                                     <PaymentStatusBadge status={payment.status} />
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                    <button className="text-gray-400 hover:text-gray-600"><MdMoreVert size={20} /></button>
+                                <td className="px-6 py-4 text-right relative">
+                                    <button 
+                                        onClick={() => handleEditPayment(payment)}
+                                        className="text-gray-400 hover:text-[#1c205c] p-2 hover:bg-[#1c205c]/5 rounded-lg transition-colors"
+                                        title="Edit Payment"
+                                    >
+                                        <MdEdit size={20} />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -521,6 +541,74 @@ export const BookingPaymentStatusPage = () => {
                     </div>
                 )}
             </div>
+
+
+            {/* Edit Modal */}
+            {isEditModalOpen && selectedPayment && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl animate-scale-in">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Edit Payment</h3>
+                                <p className="text-sm text-gray-500">Update details for {selectedPayment.bookingId}</p>
+                            </div>
+                            <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <MdClose size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount (₹)</label>
+                                <input 
+                                    type="number" 
+                                    defaultValue={selectedPayment.amount} 
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Amount Received (₹)</label>
+                                <input 
+                                    type="number" 
+                                    defaultValue={selectedPayment.paid} 
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
+                                />
+                            </div>
+                             <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+                                <select 
+                                    defaultValue={selectedPayment.status}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
+                                >
+                                    <option value="Paid">Paid</option>
+                                    <option value="Partial">Partial</option>
+                                    <option value="Due">Due</option>
+                                    <option value="Refunded">Refunded</option>
+                                </select>
+                            </div>
+                            
+                            <div className="pt-4 flex gap-3">
+                                <button 
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        alert('Payment details updated successfully!');
+                                        setIsEditModalOpen(false);
+                                    }}
+                                    className="flex-1 py-2.5 bg-[#1c205c] text-white rounded-xl font-bold hover:bg-[#252d6d] transition-colors"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

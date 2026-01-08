@@ -104,6 +104,7 @@ const DashboardPage = () => {
       borderColor: "border-rose-100",
       path: "/crm/cars/accidents/active" 
     },
+    /*
     { 
       id: 5, 
       title: "Car Idle > 5 Days", 
@@ -114,6 +115,7 @@ const DashboardPage = () => {
       borderColor: "border-blue-100",
       path: "/crm/cars/idle" 
     },
+    */
     { 
       id: 6, 
       title: "Garage Bill Pending", 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ThemedDropdown from '../../components/ThemedDropdown';
 import { 
   MdPerson, 
   MdStore, 
@@ -70,7 +71,7 @@ const VendorCard = ({ vendor }) => (
        className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm transition-all group relative overflow-hidden"
     >
         {vendor.verified && (
-            <div className="absolute top-0 right-0 bg-blue-500 text-white p-1 rounded-bl-xl shadow-sm z-10">
+            <div className="absolute top-0 right-0 bg-[#1c205c] text-white p-1 rounded-bl-xl shadow-sm z-10">
                 <MdVerified size={16} />
             </div>
         )}
@@ -80,20 +81,20 @@ const VendorCard = ({ vendor }) => (
                 <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
             </div>
             <div>
-                <h3 className="font-bold text-gray-900 text-lg group-hover:text-indigo-600 transition-colors">{vendor.name}</h3>
+                <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#212c40] transition-colors">{vendor.name}</h3>
                 <p className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-0.5 rounded-md inline-block mt-1">{vendor.type}</p>
             </div>
         </div>
 
         <div className="space-y-2.5 text-sm text-gray-600 mb-5">
             <div className="flex items-center gap-2">
-                <MdPhone className="text-indigo-300" /> {vendor.phone}
+                <MdPhone className="text-[#212c40]/40" /> {vendor.phone}
             </div>
             <div className="flex items-center gap-2">
-                <MdEmail className="text-indigo-300" /> {vendor.email}
+                <MdEmail className="text-[#212c40]/40" /> {vendor.email}
             </div>
             <div className="flex items-center gap-2">
-                <MdDirectionsCar className="text-indigo-300" /> <span className="font-bold text-gray-800">{vendor.cars} Active Cars</span>
+                <MdDirectionsCar className="text-[#212c40]/40" /> <span className="font-bold text-gray-800">{vendor.cars} Active Cars</span>
             </div>
         </div>
 
@@ -121,7 +122,7 @@ const PaymentRow = ({ payment }) => (
         <td className="px-6 py-4">
             <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">{payment.vendor}</span>
-                {payment.verified && <MdVerified className="text-blue-500" size={14} />}
+                {payment.verified && <MdVerified className="text-[#1c205c]" size={14} />}
             </div>
         </td>
         <td className="px-6 py-4 text-gray-500">{payment.refId}</td>
@@ -192,9 +193,9 @@ export const AllVendorsPage = () => {
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                        <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">All Vendors</span>
                     </div>
@@ -207,17 +208,14 @@ export const AllVendorsPage = () => {
                          <input 
                             type="text"
                             placeholder="Search vendors..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-all shadow-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                          />
                      </div>
-                     <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-medium flex items-center justify-center gap-2">
-                         <MdFilterList /> Filter
-                     </button>
                      <button 
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                        className="px-4 py-2.5 bg-[#212c40] text-white rounded-xl shadow-lg shadow-gray-300 hover:bg-[#2a3550] font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
                      >
                          <MdStore /> Add Vendor
                      </button>
@@ -243,29 +241,25 @@ export const AllVendorsPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]" 
                             value={newVendor.name}
                             onChange={(e) => setNewVendor({...newVendor, name: e.target.value})}
                          />
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                         <select 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                         <ThemedDropdown 
+                            options={['Car Provider', 'Fleet Partner', 'Driver Partner', 'Premium Partner']}
                             value={newVendor.type}
-                            onChange={(e) => setNewVendor({...newVendor, type: e.target.value})}
-                         >
-                             <option>Car Provider</option>
-                             <option>Fleet Partner</option>
-                             <option>Driver Partner</option>
-                             <option>Premium Partner</option>
-                         </select>
+                            onChange={(val) => setNewVendor({...newVendor, type: val})}
+                            className="bg-white"
+                         />
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]" 
                             value={newVendor.phone}
                             onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
                          />
@@ -274,14 +268,14 @@ export const AllVendorsPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                          <input 
                             type="email" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]" 
                             value={newVendor.email}
                             onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
                          />
                      </div>
                      <button 
                         onClick={handleAddVendor}
-                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        className="w-full py-2.5 bg-[#212c40] text-white rounded-xl font-bold hover:bg-[#2a3550] transition-colors shadow-lg shadow-gray-300"
                      >
                          Onboard Vendor
                      </button>
@@ -298,18 +292,15 @@ export const VendorPaymentsPage = () => {
          <div className="flex flex-col md:flex-row justify-between items-end gap-4">
              <div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                    <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
                     <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
+                    <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
                     <span>/</span> 
                     <span className="text-gray-800 font-medium">Payments</span>
                 </div>
                  <h1 className="text-2xl font-bold text-gray-900">Payments & Settlements</h1>
                  <p className="text-gray-500 text-sm">Track vendor payouts and commissions.</p>
              </div>
-             <button className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl font-bold hover:bg-indigo-100 flex items-center gap-2">
-                 <MdDownload /> Report
-             </button>
          </div>
 
          {/* Stats */}
@@ -322,9 +313,9 @@ export const VendorPaymentsPage = () => {
                  <p className="text-green-800 text-xs font-bold uppercase">Paid This Month</p>
                  <h3 className="text-2xl font-bold text-green-700 mt-1">₹ 8,20,000</h3>
              </div>
-             <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                 <p className="text-blue-800 text-xs font-bold uppercase">Commission Earned</p>
-                 <h3 className="text-2xl font-bold text-blue-700 mt-1">₹ 1,15,000</h3>
+             <div className="bg-[#1c205c]/10 p-6 rounded-2xl border border-[#1c205c]/20">
+                 <p className="text-[#1c205c] text-xs font-bold uppercase">Commission Earned</p>
+                 <h3 className="text-2xl font-bold text-[#1c205c] mt-1">₹ 1,15,000</h3>
              </div>
          </div>
 

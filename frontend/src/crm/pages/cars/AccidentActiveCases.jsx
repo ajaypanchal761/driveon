@@ -5,6 +5,7 @@ import {
   MdAdd, 
   MdError,
 } from 'react-icons/md';
+import ThemedDropdown from '../../components/ThemedDropdown';
 
 // Mock Data
 const MOCK_ACCIDENTS = [
@@ -43,6 +44,20 @@ const MOCK_ACCIDENTS = [
 const AccidentActiveCases = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [severityFilter, setSeverityFilter] = useState('Severity: All');
+    const [activeCases, setActiveCases] = useState([]);
+
+    // Load active cases on mount
+    React.useEffect(() => {
+        // Get closed case IDs from localStorage
+        const closedCases = JSON.parse(localStorage.getItem('closedAccidentCases') || '[]');
+        const closedIds = closedCases.map(c => c.id);
+        
+        // Filter out closed cases from mock data
+        const active = MOCK_ACCIDENTS.filter(accident => !closedIds.includes(accident.id));
+        
+        setActiveCases(active);
+    }, []);
 
     const getSeverityColor = (severity) => {
         switch(severity) {
@@ -53,7 +68,7 @@ const AccidentActiveCases = () => {
         }
     };
 
-    const filteredAccidents = MOCK_ACCIDENTS.filter(item => 
+    const filteredAccidents = activeCases.filter(item => 
         item.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.reg.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.location.toLowerCase().includes(searchTerm.toLowerCase())
@@ -98,12 +113,13 @@ const AccidentActiveCases = () => {
                 />
             </div>
             <div className="flex gap-3">
-               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                 <option>Severity: All</option>
-                 <option>Major</option>
-                 <option>Medium</option>
-                 <option>Minor</option>
-               </select>
+               <ThemedDropdown
+                 options={['Severity: All', 'Major', 'Medium', 'Minor']}
+                 value={severityFilter}
+                 onChange={(val) => setSeverityFilter(val)}
+                 className="bg-white text-sm"
+                 width="w-40"
+               />
             </div>
         </div>
 

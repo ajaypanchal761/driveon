@@ -165,21 +165,16 @@ export const DailyReportsPage = () => {
     const navigate = useNavigate();
     return (
     <div className="space-y-6">
-        <div className="flex justify-between items-end">
-            <div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
-                    <span>/</span> 
-                    <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/reports/daily')}>Reports</span> 
-                    <span>/</span> 
-                    <span className="text-gray-800 font-medium">Daily</span>
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900">Daily Operations Report</h1>
-                <p className="text-gray-500 text-sm">Real-time tracking for Today, {new Date().toLocaleDateString()}.</p>
+        <div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                <span>/</span> 
+                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/reports/daily')}>Reports</span> 
+                <span>/</span> 
+                <span className="text-gray-800 font-medium">Daily</span>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all hover:scale-105 active:scale-95">
-                <MdDownload /> Export PDF
-            </button>
+            <h1 className="text-2xl font-bold text-gray-900">Daily Operations Report</h1>
+            <p className="text-gray-500 text-sm">Real-time tracking for Today, {new Date().toLocaleDateString()}.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

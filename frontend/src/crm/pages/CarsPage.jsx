@@ -11,6 +11,7 @@ import {
   MdAdd
 } from 'react-icons/md';
 import { premiumColors } from '../../theme/colors';
+import ThemedDropdown from '../components/ThemedDropdown';
 
 // MOCK DATA: CARS
 const MOCK_FLEET = [
@@ -33,6 +34,7 @@ const DOCUMENT_ALERTS = [
 
 const CarsPage = () => {
   const [activeTab, setActiveTab] = useState('Fleet'); // Fleet, Timeline, Accidents, Documents
+  const [timelineRange, setTimelineRange] = useState('Last 30 Days');
 
   // SUB-COMPONENT: Fleet Grid
   const FleetView = () => (
@@ -90,10 +92,13 @@ const CarsPage = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
        <div className="flex justify-between mb-6">
           <h3 className="font-bold text-lg">Toyota Innova Crysta Lifecycle</h3>
-          <select className="text-sm border-gray-300 rounded-lg bg-gray-50 p-2">
-             <option>Last 30 Days</option>
-             <option>All Time</option>
-          </select>
+          <ThemedDropdown
+             options={['Last 30 Days', 'All Time']}
+             value={timelineRange}
+             onChange={(val) => setTimelineRange(val)}
+             className="bg-gray-50 text-sm"
+             width="w-40"
+          />
        </div>
        
        {/* Timeline Chain Visual */}

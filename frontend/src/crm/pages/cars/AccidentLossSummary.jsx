@@ -154,14 +154,7 @@ const AccidentLossSummary = () => {
             <h1 className="text-2xl font-bold text-gray-900">Loss & Recovery Summary</h1>
             <p className="text-gray-500 text-sm">Financial performance of accident claims (YTD).</p>
           </div>
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors"
-          >
-            <MdDownload size={20} />
-            Export Report
-          </motion.button>
+
       </div>
 
       {/* KPI Row */}

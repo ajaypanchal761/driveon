@@ -72,6 +72,13 @@ export const AccidentDetailPage = () => {
     const { id } = useParams();
     const data = MOCK_ACCIDENT_DETAIL;
 
+    // Status Update State
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [currentStatus, setCurrentStatus] = useState(data.status);
+    const [newStatus, setNewStatus] = useState(data.status);
+    const [finalCost, setFinalCost] = useState('');
+    const [recoveredAmount, setRecoveredAmount] = useState('');
+
     // Viewer State
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [viewerImages, setViewerImages] = useState([]);
@@ -86,17 +93,61 @@ export const AccidentDetailPage = () => {
             setViewerIndex(0);
             setIsViewerOpen(true);
         } else if (part) {
-            // No images but damaged
-            alert(`Selected: ${partName} (${part.severity}). No specific photos available.`);
+            // No images but damaged - silently handle
+            console.log(`Selected: ${partName} (${part.severity}). No specific photos available.`);
         } else {
             console.log("Clicked undamaged part:", partName);
         }
     };
 
-    const openAllPhotos = () => {
-        setViewerImages(data.allImages.map(src => ({ src, alt: 'Accident Evidence' })));
-        setViewerIndex(0);
-        setIsViewerOpen(true);
+    const handleUpdateStatus = () => {
+        // Demo logic to update status
+        setCurrentStatus(newStatus);
+        setIsStatusModalOpen(false);
+        // Api call would go here
+    };
+
+    const handleCloseCase = async () => {
+        // Validate inputs
+        if (!finalCost || !recoveredAmount) {
+            return; // Form validation will handle this
+        }
+
+        const netLoss = Number(finalCost) - Number(recoveredAmount);
+        
+        // Create closed case entry
+        const closedCase = {
+            id: data.id,
+            car: data.carName,
+            reg: data.regNumber,
+            date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            finalCost: `₹ ${Number(finalCost).toLocaleString()}`,
+            recovered: `₹ ${Number(recoveredAmount).toLocaleString()}`,
+            netLoss: `₹ ${netLoss.toLocaleString()}`,
+            status: netLoss === 0 ? 'Full Recovery' : 'Settled',
+            closedAt: new Date().toISOString()
+        };
+
+        // Get existing closed cases from localStorage
+        const existingClosed = JSON.parse(localStorage.getItem('closedAccidentCases') || '[]');
+        
+        // Add new closed case
+        existingClosed.push(closedCase);
+        
+        // Save back to localStorage
+        localStorage.setItem('closedAccidentCases', JSON.stringify(existingClosed));
+
+        // In a real app, make API call to update the case
+        // await api.put(`/crm/accidents/${id}`, {
+        //     status: 'Closed',
+        //     finalCost: Number(finalCost),
+        //     recoveredAmount: Number(recoveredAmount),
+        //     netLoss: netLoss
+        // });
+
+        // Navigate to closed cases
+        setIsStatusModalOpen(false);
+        navigate('/crm/cars/accidents/closed');
     };
 
     return (
@@ -107,10 +158,11 @@ export const AccidentDetailPage = () => {
                     <MdArrowBack /> Back to List
                 </button>
                 <div className="flex gap-2">
-                    <button onClick={openAllPhotos} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 shadow-sm transition-colors">
-                        <MdCameraAlt /> View All Photos
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-sm transition-colors">
+
+                    <button 
+                        onClick={() => setIsStatusModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#212c40] text-white font-bold rounded-xl hover:bg-[#2a3550] shadow-sm transition-colors"
+                    >
                         <MdEdit /> Update Status
                     </button>
                 </div>
@@ -125,6 +177,7 @@ export const AccidentDetailPage = () => {
                      <div className="flex flex-wrap items-center gap-3 mb-1">
                          <h1 className="text-2xl font-bold text-gray-900">{data.carName}</h1>
                          <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase tracking-wider">{data.severity} Damage</span>
+                         <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider border border-blue-200">{currentStatus}</span>
                      </div>
                      <p className="font-mono text-gray-500 font-bold text-lg mb-2">{data.regNumber}</p>
                      <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -163,6 +216,87 @@ export const AccidentDetailPage = () => {
                 images={viewerImages} 
                 activeIndex={viewerIndex}
             />
+
+            {/* Update Status Modal */}
+             {isStatusModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsStatusModalOpen(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-bold text-gray-800">Update Case Status</h3>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-gray-500">Select the new status for this accident case:</p>
+                            <div className="space-y-2">
+                                {['In Repair', 'Closed'].map(status => (
+                                    <button 
+                                        key={status}
+                                        onClick={() => setNewStatus(status)}
+                                        className={`w-full text-left px-4 py-3 rounded-xl border font-bold text-sm transition-all
+                                            ${newStatus === status 
+                                                ? 'bg-[#212c40] text-white border-[#212c40]' 
+                                                : 'bg-white text-gray-600 border-gray-200 hover:border-[#212c40]/30 hover:bg-gray-50'
+                                            }
+                                        `}
+                                    >
+                                        {status}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {newStatus === 'Closed' && (
+                                <div className="space-y-3 pt-2 animate-fadeIn">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Final Repair Cost (₹)</label>
+                                        <input 
+                                            type="number" 
+                                            value={finalCost}
+                                            onChange={(e) => setFinalCost(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] outline-none transition-all font-mono"
+                                            placeholder="e.g. 72000"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Amount Recovered (₹)</label>
+                                        <input 
+                                            type="number" 
+                                            value={recoveredAmount}
+                                            onChange={(e) => setRecoveredAmount(e.target.value)}
+                                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] outline-none transition-all font-mono"
+                                            placeholder="e.g. 50000"
+                                            required
+                                        />
+                                    </div>
+                                    {finalCost && recoveredAmount && (
+                                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-500 uppercase">Net Loss:</span>
+                                                <span className={`text-lg font-bold ${(Number(finalCost) - Number(recoveredAmount)) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                    ₹ {(Number(finalCost) - Number(recoveredAmount)).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={() => {
+                                    if (newStatus === 'Closed') {
+                                        handleCloseCase();
+                                    } else {
+                                        handleUpdateStatus();
+                                    }
+                                }}
+                                disabled={newStatus === 'Closed' && (!finalCost || !recoveredAmount)}
+                                className="w-full py-3 mt-4 rounded-xl bg-[#212c40] text-white font-bold shadow-lg shadow-gray-300 hover:bg-[#2a3550] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {newStatus === 'Closed' ? 'Close Case & Save' : 'Update Status'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

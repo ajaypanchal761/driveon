@@ -47,6 +47,8 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
+
+import ThemedDropdown from '../../components/ThemedDropdown';
 import api from '../../../services/api';
 
 // --- Shared Components for Analytics ---
@@ -299,36 +301,25 @@ export const AllEnquiriesPage = () => {
           />
         </div>
 
-        <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+        <div className="flex gap-3 w-full md:w-auto">
           <div className="relative min-w-[140px]">
-            <select
-              className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-indigo-400 text-gray-600 text-sm font-medium cursor-pointer hover:border-gray-300"
+            <ThemedDropdown
+              options={['Status: All', 'New', 'In Progress', 'Follow-up', 'Converted', 'Closed']}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option>Status: All</option>
-              <option>New</option>
-              <option>In Progress</option>
-              <option>Follow-up</option>
-              <option>Converted</option>
-              <option>Closed</option>
-            </select>
-            <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              onChange={(val) => setStatusFilter(val)}
+              className="bg-white text-sm"
+              width="w-full"
+            />
           </div>
 
           <div className="relative min-w-[140px]">
-            <select
-              className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none focus:border-indigo-400 text-gray-600 text-sm font-medium cursor-pointer hover:border-gray-300"
+            <ThemedDropdown
+              options={['Date: All Time', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month']}
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            >
-              <option>Date: All Time</option>
-              <option>Date: Today</option>
-              <option>Date: Yesterday</option>
-              <option>Date: Last 7 Days</option>
-              <option>Date: This Month</option>
-            </select>
-            <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              onChange={(val) => setDateFilter(val)}
+              className="bg-white text-sm"
+              width="w-full"
+            />
           </div>
         </div>
       </div>
@@ -585,61 +576,41 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Interested Car</label>
                 <div className="relative">
-                  <select
-                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none appearance-none transition-all cursor-pointer"
+                  <ThemedDropdown
+                    placeholder={loadingCars ? 'Loading cars...' : 'Select Car Model'}
+                    options={availableCars.map(car => ({ value: car.id, label: car.name }))}
                     value={formData.interest}
-                    onChange={(e) => setFormData({ ...formData, interest: e.target.value })}
-                    disabled={loadingCars}
-                  >
-                    <option value="">
-                      {loadingCars ? 'Loading cars...' : 'Select Car Model'}
-                    </option>
-                    {availableCars.map((car, index) => (
-                      <option key={index} value={car.id}>
-                        {car.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                    <MdChevronRight className="rotate-90" />
-                  </div>
+                    onChange={(val) => setFormData({ ...formData, interest: val })}
+                    className="bg-gray-50"
+                    width="w-full"
+                  />
+
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Lead Source</label>
                 <div className="relative">
-                  <select
-                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none appearance-none transition-all cursor-pointer"
+                  <ThemedDropdown
+                    options={['Walk-in', 'Phone Call', 'Referral', 'Social Media']}
                     value={formData.source}
-                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                  >
-                    <option>Walk-in</option>
-                    <option>Phone Call</option>
-                    <option>Referral</option>
-                    <option>Social Media</option>
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                    <MdChevronRight className="rotate-90" />
-                  </div>
+                    onChange={(val) => setFormData({ ...formData, source: val })}
+                    className="bg-gray-50"
+                    width="w-full"
+                  />
+
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Status</label>
                 <div className="relative">
-                  <select
-                    className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none appearance-none transition-all cursor-pointer"
+                  <ThemedDropdown
+                    options={['New', 'In Progress', 'Follow-up', 'Converted', 'Closed']}
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    <option>New</option>
-                    <option>In Progress</option>
-                    <option>Follow-up</option>
-                    <option>Converted</option>
-                    <option>Closed</option>
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                    <MdChevronRight className="rotate-90" />
-                  </div>
+                    onChange={(val) => setFormData({ ...formData, status: val })}
+                    className="bg-gray-50"
+                    width="w-full"
+                  />
+
                 </div>
               </div>
             </div>
@@ -850,20 +821,15 @@ export const NewEnquiriesPage = () => {
           />
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors">
-            <MdVisibility /> Auto-Assign
-          </button>
+
           <div className="relative">
-            <select
-              className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+            <ThemedDropdown 
+              options={['Date: All', 'Date: Today', 'Date: Yesterday']}
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            >
-              <option>Date: All</option>
-              <option>Date: Today</option>
-              <option>Date: Yesterday</option>
-            </select>
-            <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              onChange={(val) => setDateFilter(val)}
+              className="bg-white text-sm"
+              width="w-40"
+            />
           </div>
         </div>
       </div>
@@ -1063,16 +1029,13 @@ export const InProgressEnquiriesPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <select
-          className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+        <ThemedDropdown 
+          options={['Stage: All', 'Negotiation', 'Doc Verification', 'Test Drive Done']}
           value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value)}
-        >
-          <option>Stage: All</option>
-          <option>Negotiation</option>
-          <option>Doc Verification</option>
-          <option>Test Drive Done</option>
-        </select>
+          onChange={(val) => setStageFilter(val)}
+          className="bg-white text-sm"
+          width="w-44"
+        />
       </div>
 
       {/* Data Table */}
@@ -1302,16 +1265,13 @@ export const FollowUpsEnquiriesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Show: All', 'Overdue', 'Due Today', 'Upcoming']}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option>Show: All</option>
-            <option>Overdue</option>
-            <option>Due Today</option>
-            <option>Upcoming</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
       </div>
 
@@ -1522,15 +1482,13 @@ export const ConvertedEnquiriesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Date: All Time', 'Date: This Month', 'Last Month']}
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option>Date: All Time</option>
-            <option>Date: This Month</option>
-            <option>Last Month</option>
-          </select>
+            onChange={(val) => setDateFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
       </div>
 
@@ -1726,17 +1684,13 @@ export const ClosedEnquiriesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Reason: All', 'Price Too High', 'Booked w/ Competitor', 'Plan Cancelled', 'Change of Mind']}
             value={reasonFilter}
-            onChange={(e) => setReasonFilter(e.target.value)}
-          >
-            <option>Reason: All</option>
-            <option>Price Too High</option>
-            <option>Booked w/ Competitor</option>
-            <option>Plan Cancelled</option>
-            <option>Change of Mind</option>
-          </select>
+            onChange={(val) => setReasonFilter(val)}
+            className="bg-white text-sm"
+            width="w-44"
+          />
         </div>
       </div>
 
@@ -1843,6 +1797,7 @@ const VEHICLE_INTEREST_DATA = [
 export const EnquiryAnalyticsPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsRange, setAnalyticsRange] = useState('This Month');
 
   React.useEffect(() => {
     fetchAnalytics();
@@ -1889,15 +1844,13 @@ export const EnquiryAnalyticsPage = () => {
         </div>
 
         <div className="flex gap-2">
-          <select
-            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            style={{ color: premiumColors.primary.DEFAULT }}
-          >
-            <option>This Month</option>
-            <option>Last Month</option>
-            <option>Last Quarter</option>
-            <option>This Year</option>
-          </select>
+          <ThemedDropdown 
+            options={['This Month', 'Last Month', 'Last Quarter', 'This Year']}
+            value={analyticsRange}
+            onChange={(val) => setAnalyticsRange(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
       </div>
 
@@ -2212,13 +2165,13 @@ export const FollowUpCalendarPage = () => {
                   onClick={() => setSelectedDate(dateStr)}
                   className={`
                                     min-h-[80px] rounded-xl border p-2 cursor-pointer transition-all relative
-                                    ${isSelected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100' : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'}
+                                    ${isSelected ? 'border-[#212c40] bg-[#212c40]/5 ring-2 ring-[#212c40]/20' : 'border-gray-100 hover:border-[#212c40]/30 hover:bg-gray-50'}
                                 `}
                 >
-                  <span className={`text-sm font-bold ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>{day}</span>
+                  <span className={`text-sm font-bold ${isSelected ? 'text-[#212c40]' : 'text-gray-700'}`}>{day}</span>
                   {hasEvents && hasEvents.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      <div className="text-[10px] font-medium px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded w-fit">
+                      <div className="text-[10px] font-medium px-1.5 py-0.5 bg-[#212c40]/10 text-[#212c40] rounded w-fit">
                         {hasEvents.length} Tasks
                       </div>
                     </div>
@@ -2232,14 +2185,14 @@ export const FollowUpCalendarPage = () => {
         {/* Daily Agenda Side Panel */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col h-full">
           <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <MdCalendarToday className="text-indigo-500" />
+            <MdCalendarToday className="text-[#212c40]" />
             {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
           </h3>
 
           <div className="flex-1 space-y-4 overflow-y-auto pr-1">
             {events[selectedDate] && events[selectedDate].length > 0 ? (
               events[selectedDate].map((event) => (
-                <div key={event.id} className="p-4 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors bg-gray-50">
+                <div key={event.id} className="p-4 rounded-xl border border-gray-100 hover:border-[#212c40]/30 transition-colors bg-gray-50">
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-bold text-gray-800 text-sm">{event.time}</span>
                     <button
@@ -2264,7 +2217,7 @@ export const FollowUpCalendarPage = () => {
 
           <button
             onClick={handleAddTask}
-            className="mt-4 w-full py-2.5 border border-dashed border-gray-300 rounded-xl text-gray-500 font-bold text-sm hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
+            className="mt-4 w-full py-2.5 border border-dashed border-gray-300 rounded-xl text-gray-500 font-bold text-sm hover:bg-gray-50 hover:text-[#212c40] transition-colors flex items-center justify-center gap-2"
           >
             <MdAdd /> Add Task
           </button>
@@ -2277,7 +2230,7 @@ export const FollowUpCalendarPage = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
               <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 className="font-bold text-gray-800">Add New Task</h3>
+                <h3 className="font-bold text-[#212c40]">Add New Task</h3>
                 <button
                   onClick={() => setIsTaskModalOpen(false)}
                   className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
@@ -2292,7 +2245,7 @@ export const FollowUpCalendarPage = () => {
                   <input
                     type="text"
                     placeholder="e.g. Call client for documents"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] focus:bg-white outline-none transition-all"
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     autoFocus
@@ -2312,7 +2265,7 @@ export const FollowUpCalendarPage = () => {
                 <button
                   onClick={saveNewTask}
                   disabled={!newTaskTitle.trim()}
-                  className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="px-6 py-2 bg-[#212c40] text-white font-bold rounded-xl shadow-lg shadow-gray-300 hover:bg-[#2a3550] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   Create Task
                 </button>

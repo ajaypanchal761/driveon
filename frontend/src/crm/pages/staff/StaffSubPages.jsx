@@ -24,11 +24,14 @@ import {
   MdCheckCircle,
   MdCheck,
   MdClose,
-  MdArrowBack
+  MdArrowBack,
+  MdLocationOn,
+  MdMap
 } from 'react-icons/md';
 import { jsPDF } from 'jspdf';
 import { premiumColors } from '../../../theme/colors';
 import { motion, AnimatePresence } from 'framer-motion';
+import ThemedDropdown from '../../components/ThemedDropdown';
 
 // Mock Data for Staff Directory
 const MOCK_STAFF_DATA = [
@@ -67,145 +70,6 @@ const StaffPlaceholder = ({ title, subtitle }) => {
 
 // --- Modals ---
 
-const StaffFormModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    role: '',
-    department: 'Sales',
-    phone: '',
-    email: '',
-  });
-
-  useEffect(() => {
-    if (editingStaff) {
-      setFormData({
-        name: editingStaff.name,
-        role: editingStaff.role,
-        department: editingStaff.department,
-        phone: editingStaff.phone,
-        email: editingStaff.email,
-      });
-    } else {
-      setFormData({ name: '', role: '', department: 'Sales', phone: '', email: '' });
-    }
-  }, [editingStaff, isOpen]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-    onClose();
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden"
-          >
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-800">
-                {editingStaff ? 'Edit Staff Member' : 'Add New Staff'}
-              </h2>
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <MdClose size={20} className="text-gray-500" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input
-                  required
-                  type="text"
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  placeholder="e.g. Rajesh Kumar"
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="e.g. Sales Manager"
-                    value={formData.role}
-                    onChange={e => setFormData({ ...formData, role: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <select
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium"
-                    value={formData.department}
-                    onChange={e => setFormData({ ...formData, department: e.target.value })}
-                  >
-                    <option>Sales</option>
-                    <option>Fleet</option>
-                    <option>Garage</option>
-                    <option>Administration</option>
-                    <option>Finance</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <input
-                    required
-                    type="tel"
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-mono"
-                    placeholder="+91..."
-                    value={formData.phone}
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    required
-                    type="email"
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="email@example.com"
-                    value={formData.email}
-                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all border-b-2 border-indigo-800"
-                >
-                  {editingStaff ? 'Update Staff' : 'Add Staff'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
 
 const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -229,7 +93,7 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
       >
         <button
           onClick={() => { onEdit(staff); onClose(); }}
-          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2 transition-colors font-medium"
+          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[#212c40]/5 hover:text-[#212c40] flex items-center gap-2 transition-colors font-medium"
         >
           <MdEdit size={16} /> Edit Details
         </button>
@@ -248,7 +112,7 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
             key={status}
             onClick={() => { onChangeStatus(staff.id, status); onClose(); }}
             className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors font-medium
-                            ${staff.status === status ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600 hover:bg-gray-50'}
+                            ${staff.status === status ? 'text-[#212c40] bg-[#212c40]/10' : 'text-gray-600 hover:bg-gray-50'}
                         `}
           >
             <div className={`w-2 h-2 rounded-full ${status === 'Active' ? 'bg-green-500' :
@@ -267,13 +131,25 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
  * AddStaffModal - Modal for adding new staff members
  */
 const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
+  const [step, setStep] = useState(1);
+  const [salaryMethod, setSalaryMethod] = useState('Monthly');
   const [formData, setFormData] = useState({
     name: '',
     role: '',
     department: '',
+    status: 'Active',
     phone: '',
-    email: ''
+    email: '',
+    joiningDate: new Date().toISOString().split('T')[0],
+    employmentType: '',
+    salary: '',
+    workingDays: '26',
+    absentDeduction: '',
+    halfDayDeduction: '',
+    overtimeRate: ''
   });
+  
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isOpen) {
@@ -282,160 +158,397 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           name: editingStaff.name || '',
           role: editingStaff.role || '',
           department: editingStaff.department || '',
+          status: editingStaff.status || 'Active',
           phone: editingStaff.phone ? editingStaff.phone.replace(/^\+91\s*/, '') : '',
-          email: editingStaff.email || ''
+          email: editingStaff.email || '',
+          joiningDate: editingStaff.joinDate ? new Date(editingStaff.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          employmentType: editingStaff.employmentType || '',
+          salary: editingStaff.salary || '',
+          workingDays: editingStaff.workingDays || '26',
+          absentDeduction: editingStaff.absentDeduction || '',
+          halfDayDeduction: editingStaff.halfDayDeduction || '',
+          overtimeRate: editingStaff.overtimeRate || ''
         });
+        setStep(1);
+        setErrors({});
       } else {
-        // Reset form when modal closes or opens for new
         setFormData({
           name: '',
           role: '',
           department: '',
+          status: 'Active',
           phone: '',
-          email: ''
+          email: '',
+          joiningDate: new Date().toISOString().split('T')[0],
+          employmentType: '',
+          salary: '',
+          workingDays: '26',
+          absentDeduction: '',
+          halfDayDeduction: '',
+          overtimeRate: ''
         });
+        setStep(1);
+        setErrors({});
       }
     }
   }, [isOpen, editingStaff]);
 
+  const validateStep1 = () => {
+    let newErrors = {};
+    if (!formData.name) newErrors.name = "Full Name is required";
+    if (!formData.role) newErrors.role = "Role is required";
+    if (!formData.phone) {
+        newErrors.phone = "Phone number is required";
+    } else if (formData.phone.length !== 10) {
+        newErrors.phone = "Phone number must be exactly 10 digits";
+    }
+    if (!formData.email) newErrors.email = "Email is required";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    let newErrors = {};
+    if (salaryMethod === 'Monthly') {
+         if(!formData.salary) newErrors.salary = "Base salary is required for monthly staff";
+         if(!formData.workingDays) newErrors.workingDays = "Working days are required";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (step === 1) {
+      if (validateStep1()) {
+        setStep(step + 1);
+      }
+    } else if (step === 2) {
+      if (validateStep2()) {
+         setStep(step + 1);
+      }
+    }
+  };
+
+  const handleBack = () => {
+    setStep(step - 1);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formData.name && formData.role && formData.department && formData.phone && formData.email) {
-      if (formData.phone.length !== 10) {
-        alert("Phone number must be exactly 10 digits");
-        return;
-      }
-      const submitData = { ...formData, phone: `+91 ${formData.phone}` };
-      onSubmit(submitData);
-      onClose();
-    }
+    const submitData = { 
+      ...formData, 
+      phone: `+91 ${formData.phone}`,
+      salaryMethod 
+    };
+    onSubmit(submitData);
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl shadow-2xl bg-white p-6"
+        className="w-full max-w-2xl rounded-3xl shadow-2xl bg-white overflow-hidden flex flex-col max-h-[90vh]"
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
+        {/* Header */}
+        <div className="bg-white px-8 py-5 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10 hidden md:flex">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Step {step} of 3: {step === 1 ? 'Basic Details' : step === 2 ? 'Salary Config' : 'Final Review'}
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <MdClose size={24} className="text-gray-600" />
+            <MdClose size={24} className="text-gray-400 hover:text-gray-600" />
           </button>
         </div>
+        {/* Mobile Header */}
+        <div className="bg-white px-4 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10 md:hidden">
+             <div>
+                <h2 className="text-lg font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add Staff'}</h2>
+                <p className="text-xs text-gray-500">Step {step} of 3</p>
+             </div>
+             <button onClick={onClose} className="p-2 bg-gray-50 rounded-full"><MdClose size={20} /></button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="Enter staff name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="e.g., Sales Manager"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Department *
-            </label>
-            <select
-              required
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-            >
-              <option value="">Select Department</option>
-              <option value="Sales">Sales</option>
-              <option value="Fleet">Fleet</option>
-              <option value="Garage">Garage</option>
-              <option value="Administration">Administration</option>
-              <option value="Finance">Finance</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone Number *
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <span className="text-gray-500 font-medium select-none">+91</span>
+        {/* Content */}
+        <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
+          {step === 1 && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Full Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if(errors.name) setErrors({...errors, name: null});
+                  }}
+                  className={`w-full px-4 py-3 bg-white border ${errors.name ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-medium text-gray-800`}
+                  placeholder="Rajesh Kumar"
+                />
+                {errors.name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.name}</p>}
               </div>
-              <input
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                  setFormData({ ...formData, phone: val });
-                }}
-                className="w-full pl-14 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-mono"
-                placeholder="98765 43210"
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address *
-            </label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="email@example.com"
-            />
-          </div>
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Role *</label>
+                <div className={`${errors.role ? 'border border-red-300 rounded-xl' : ''}`}>
+                    <ThemedDropdown
+                    options={['Sales Manager', 'Driver', 'Mechanic', 'Accountant', 'Admin Executive']}
+                    value={formData.role}
+                    onChange={(val) => {
+                        setFormData({ ...formData, role: val });
+                        if(errors.role) setErrors({...errors, role: null});
+                    }}
+                    placeholder="Select Role"
+                    className="w-full"
+                    />
+                </div>
+                {errors.role && <p className="text-red-500 text-xs mt-1 font-medium">{errors.role}</p>}
+              </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
-            >
-              {editingStaff ? 'Update Staff' : 'Add Staff'}
-            </button>
-          </div>
-        </form>
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Department</label>
+                <ThemedDropdown
+                  options={['Sales', 'Fleet', 'Garage', 'Administration', 'Finance']}
+                  value={formData.department}
+                  onChange={(val) => setFormData({ ...formData, department: val })}
+                  placeholder="Select Department"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Status</label>
+                <ThemedDropdown
+                  options={['Active', 'Inactive', 'On Leave']}
+                  value={formData.status}
+                  onChange={(val) => setFormData({ ...formData, status: val })}
+                  placeholder="Select Status"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Phone *</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">+91</span>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => {
+                         setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) });
+                         if(errors.phone) setErrors({...errors, phone: null});
+                    }}
+                    className={`w-full pl-12 pr-4 py-3 bg-gray-50 border ${errors.phone ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:bg-white focus:ring-2 focus:border-indigo-500 outline-none transition-all font-mono text-gray-800`}
+                    placeholder="98765 43210"
+                  />
+                </div>
+                {errors.phone && <p className="text-red-500 text-xs mt-1 font-medium">{errors.phone}</p>}
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Email *</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if(errors.email) setErrors({...errors, email: null});
+                  }}
+                  className={`w-full px-4 py-3 bg-gray-50 border ${errors.email ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:bg-white focus:ring-2 focus:border-indigo-500 outline-none transition-all text-gray-800`}
+                  placeholder="rajesh@example.com"
+                />
+                {errors.email && <p className="text-red-500 text-xs mt-1 font-medium">{errors.email}</p>}
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Joining Date</label>
+                <input
+                  type="date"
+                  value={formData.joiningDate}
+                  onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-800"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Employment</label>
+                <ThemedDropdown
+                  options={['Full Time', 'Part Time', 'Contract', 'Intern']}
+                  value={formData.employmentType}
+                  onChange={(val) => setFormData({ ...formData, employmentType: val })}
+                  placeholder="Select..."
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+              <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
+                <label className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-3 block">Salary Method</label>
+                <div className="grid grid-cols-3 gap-4">
+                  {['Monthly', 'Daily', 'Per Trip'].map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setSalaryMethod(method)}
+                      className={`
+                        py-3 px-4 rounded-xl font-bold text-sm transition-all shadow-sm
+                        ${salaryMethod === method 
+                          ? 'bg-[#1C205C] text-white shadow-indigo-200 transform scale-[1.02]' 
+                          : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}
+                      `}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {salaryMethod === 'Monthly' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Base Monthly Salary (₹) *</label>
+                    <input
+                      type="number"
+                      value={formData.salary}
+                      onChange={(e) => {
+                           setFormData({ ...formData, salary: e.target.value });
+                           if(errors.salary) setErrors({...errors, salary: null});
+                      }}
+                       className={`w-full px-4 py-3 bg-white border ${errors.salary ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
+                      placeholder="45000"
+                    />
+                     {errors.salary && <p className="text-red-500 text-xs mt-1 font-medium">{errors.salary}</p>}
+                  </div>
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Working Days *</label>
+                    <input
+                      type="number"
+                      value={formData.workingDays}
+                      onChange={(e) => {
+                          setFormData({ ...formData, workingDays: e.target.value });
+                          if(errors.workingDays) setErrors({...errors, workingDays: null});
+                      }}
+                      className={`w-full px-4 py-3 bg-white border ${errors.workingDays ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
+                      placeholder="26"
+                    />
+                    {errors.workingDays && <p className="text-red-500 text-xs mt-1 font-medium">{errors.workingDays}</p>}
+                  </div>
+
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Absent Deduction/Day</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        value={formData.absentDeduction}
+                        onChange={(e) => setFormData({ ...formData, absentDeduction: e.target.value })}
+                        className="w-full pl-8 pr-4 py-3 bg-rose-50 border border-rose-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-span-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Half Day Deduction</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        value={formData.halfDayDeduction}
+                        onChange={(e) => setFormData({ ...formData, halfDayDeduction: e.target.value })}
+                        className="w-full pl-8 pr-4 py-3 bg-orange-50 border border-orange-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-300 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                   <div className="col-span-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Overtime Rate/Hr</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">₹</span>
+                      <input
+                        type="number"
+                        value={formData.overtimeRate}
+                        onChange={(e) => setFormData({ ...formData, overtimeRate: e.target.value })}
+                        className="w-full pl-8 pr-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 text-sm text-blue-800">
+                  <MdVisibility className="shrink-0 mt-0.5" size={18} />
+                  <p><strong>NB:</strong> These rules will be locked and used to auto-calculate salary every month. Manual editing of salary is disabled to ensure accuracy.</p>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 3 && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-100">
+                <MdCheckCircle className="text-green-500" size={48} />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">All Set!</h2>
+              <p className="text-gray-500 max-w-sm mx-auto mb-8">
+                You are about to add <span className="font-bold text-gray-800">{formData.name}</span> as a <span className="font-bold text-gray-800">{formData.role}</span>.
+              </p>
+              
+              <div className="w-full bg-gray-50 rounded-2xl border border-gray-100 p-6 text-left grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Salary Type</label>
+                    <p className="font-bold text-gray-900 text-lg">{salaryMethod}</p>
+                 </div>
+                 <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Base Pay</label>
+                    <p className="font-bold text-gray-900 text-lg">₹{formData.salary || '0'}</p>
+                 </div>
+                 <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Phone</label>
+                    <p className="font-bold text-gray-900 text-lg font-mono">+91 {formData.phone}</p>
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-white border-t border-gray-100 p-6 flex justify-between items-center z-10">
+          <button
+             onClick={step === 1 ? onClose : handleBack}
+             className="px-6 py-3 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
+          >
+            {step === 1 ? 'Cancel' : 'Back'}
+          </button>
+          
+          {step < 3 ? (
+             <button
+               onClick={handleNext}
+               className="px-8 py-3 rounded-xl bg-[#1C205C] text-white font-bold shadow-lg shadow-indigo-200 hover:bg-[#2a306e] transition-all transform hover:-translate-y-0.5"
+             >
+                Next Step
+             </button>
+          ) : (
+             <button
+               onClick={handleSubmit}
+               className="px-8 py-3 rounded-xl bg-green-600 text-white font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all transform hover:-translate-y-0.5"
+             >
+                Confirm & Add
+             </button>
+          )}
+        </div>
       </motion.div>
     </div>
   );
@@ -466,12 +579,12 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
 
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-bold border-2 border-white shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] text-2xl font-bold border-2 border-white shadow-sm">
               {staff.name.charAt(0)}
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-900">{staff.name}</h3>
-              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wide">
+              <span className="px-2.5 py-1 bg-[#212c40]/10 text-[#212c40] rounded-lg text-xs font-bold uppercase tracking-wide">
                 {staff.role}
               </span>
             </div>
@@ -498,7 +611,7 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
 
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
+              <div className="w-8 h-8 rounded-lg bg-[#212c40]/10 flex items-center justify-center text-[#212c40]">
                 <MdPhone size={18} />
               </div>
               <div>
@@ -507,7 +620,7 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
               </div>
             </div>
             <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500">
+              <div className="w-8 h-8 rounded-lg bg-[#212c40]/10 flex items-center justify-center text-[#212c40]">
                 <MdEmail size={18} />
               </div>
               <div>
@@ -516,7 +629,7 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
               </div>
             </div>
             <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
+              <div className="w-8 h-8 rounded-lg bg-[#212c40]/10 flex items-center justify-center text-[#212c40]">
                 <MdAccessTime size={18} />
               </div>
               <div>
@@ -707,18 +820,12 @@ export const StaffDirectoryPage = () => {
           />
         </div>
         <div className="relative w-full md:w-auto min-w-[150px]">
-          <select
-            className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown
+            options={['All', 'Sales', 'Fleet', 'Garage', 'Administration']}
             value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-          >
-            <option>All</option>
-            <option>Sales</option>
-            <option>Fleet</option>
-            <option>Garage</option>
-            <option>Administration</option>
-          </select>
-          <MdFilterList className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            onChange={(val) => setDeptFilter(val)}
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -736,6 +843,7 @@ export const StaffDirectoryPage = () => {
                 <th className="p-4">Role & Dept</th>
                 <th className="p-4">Contact</th>
                 <th className="p-4">Joined</th>
+                <th className="p-4">Salary</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
@@ -764,37 +872,44 @@ export const StaffDirectoryPage = () => {
                   <td className="p-4 text-gray-500">
                     {staff.joinDate}
                   </td>
+                  <td className="p-4 font-medium text-gray-900">
+                    ₹ {Number(staff.baseSalary || 0).toLocaleString()}
+                  </td>
                   <td className="p-4">
                     {getStatusBadge(staff.status)}
                   </td>
                   <td className="p-4 text-right">
-                    <button
-                      onClick={() => handleViewClick(staff)}
-                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    >
-                      <MdVisibility size={18} />
-                    </button>
-                    <div className="relative">
-                      <button
-                        onClick={() => setActiveMenuId(activeMenuId === staff.id ? null : staff.id)}
-                        className={`p-2 rounded-xl transition-all shadow-sm border border-transparent 
-                                    ${activeMenuId === staff.id ? 'bg-indigo-600 text-white shadow-indigo-100' : 'text-gray-400 hover:text-gray-800 hover:bg-white hover:border-gray-200'}
-                                `}
-                      >
-                        <MdMoreVert size={18} />
-                      </button>
-                      <StaffActionMenu
-                        staff={staff}
-                        isOpen={activeMenuId === staff.id}
-                        onClose={() => setActiveMenuId(null)}
-                        onEdit={handleEditClick}
-                        onDelete={handleDeleteStaff}
-                        onChangeStatus={handleChangeStatus}
-                      />
+                    <div className="flex items-center justify-end gap-2">
+                        <button
+                        onClick={() => handleViewClick(staff)}
+                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                        <MdVisibility size={18} />
+                        </button>
+                        <div className="relative">
+                        <button
+                            onClick={() => setActiveMenuId(activeMenuId === staff.id ? null : staff.id)}
+                            className={`p-2 rounded-xl transition-all shadow-sm border border-transparent 
+                                        ${activeMenuId === staff.id ? 'bg-[#212c40] text-white shadow-lg shadow-gray-200' : 'text-gray-400 hover:text-gray-800 hover:bg-white hover:border-gray-200'}
+                                    `}
+                        >
+                            <MdMoreVert size={18} />
+                        </button>
+                        <StaffActionMenu
+                            staff={staff}
+                            isOpen={activeMenuId === staff.id}
+                            onClose={() => setActiveMenuId(null)}
+                            onEdit={handleEditClick}
+                            onDelete={handleDeleteStaff}
+                            onChangeStatus={handleChangeStatus}
+                        />
+                        </div>
                     </div>
                   </td>
                 </tr>
               ))}
+
+
               {!loading && filteredStaff.length === 0 && (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-gray-500">
@@ -858,11 +973,12 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <input required placeholder="Role Name" className="w-full p-2 border rounded-xl" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
               <textarea placeholder="Description" className="w-full p-2 border rounded-xl" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-              <select className="w-full p-2 border rounded-xl" value={formData.access} onChange={e => setFormData({ ...formData, access: e.target.value })}>
-                <option>Basic</option>
-                <option>Intermediate</option>
-                <option>Full Access</option>
-              </select>
+              <ThemedDropdown 
+                options={['Basic', 'Intermediate', 'Full Access']}
+                value={formData.access}
+                onChange={(val) => setFormData({ ...formData, access: val })}
+                className="bg-white"
+              />
               <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">
                 {initialData ? 'Update Role' : 'Save Role'}
               </button>
@@ -1133,9 +1249,9 @@ export const RolesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
             <span>/</span>
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
             <span className="text-gray-800 font-medium">Roles</span>
           </div>
@@ -1144,7 +1260,7 @@ export const RolesPage = () => {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm hover:bg-[#2a3550] transition-colors"
           style={{ backgroundColor: premiumColors.primary.DEFAULT }}
         >
           <MdAdd size={20} />
@@ -1156,7 +1272,7 @@ export const RolesPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-3 flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#212c40]"></div>
           </div>
         ) : (
           rolesList.map((role) => (
@@ -1166,13 +1282,13 @@ export const RolesPage = () => {
               className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative group hover:-translate-y-1"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                <div className="p-3 bg-[#212c40]/10 text-[#212c40] rounded-xl">
                   <MdSecurity size={24} />
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => handleEdit(e, role)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                    className="p-1.5 text-gray-400 hover:text-[#212c40] hover:bg-[#212c40]/10 rounded-lg"
                   >
                     <MdEdit size={18} />
                   </button>
@@ -1250,25 +1366,23 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
             exit={{ scale: 0.95, opacity: 0 }}
             className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
           >
-            <h3 className="text-xl font-bold mb-4">{initialData ? 'Edit Attendance' : 'Mark Attendance'}</h3>
+            <h3 className="text-xl font-bold mb-4 text-[#212c40]">{initialData ? 'Edit Attendance' : 'Mark Attendance'}</h3>
             <div className="space-y-4">
-              <select
-                className="w-full p-2 border rounded-xl"
+              <ThemedDropdown 
+                options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
                 value={formData.staffId}
-                onChange={e => setFormData({ ...formData, staffId: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, staffId: val })}
                 disabled={!!initialData}
-              >
-                {staffList.map(staff => (
-                  <option key={staff.id} value={staff.id}>{staff.name}</option>
-                ))}
-              </select>
+                placeholder="Select Staff"
+                className="bg-white"
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-gray-500 ml-1">In Time</label>
                   <input
                     type="time"
-                    className="w-full p-2 border rounded-xl bg-gray-50"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]"
                     value={formData.inTime}
                     onChange={e => setFormData({ ...formData, inTime: e.target.value })}
                   />
@@ -1277,7 +1391,7 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
                   <label className="text-xs font-bold text-gray-500 ml-1">Out Time</label>
                   <input
                     type="time"
-                    className="w-full p-2 border rounded-xl bg-gray-50"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]"
                     value={formData.outTime}
                     onChange={e => setFormData({ ...formData, outTime: e.target.value })}
                   />
@@ -1289,13 +1403,16 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
                   <button
                     key={status}
                     onClick={() => setFormData({ ...formData, status })}
-                    className={`flex-1 py-2 rounded-xl text-sm font-bold border ${formData.status === status ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200'}`}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${formData.status === status ? 'bg-[#212c40] text-white border-[#212c40]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                   >
                     {status}
                   </button>
                 ))}
               </div>
-              <button onClick={handleSubmit} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">
+              <button 
+                onClick={handleSubmit} 
+                className="w-full bg-[#212c40] text-white py-3 rounded-xl font-bold hover:bg-[#2a3550] shadow-lg shadow-gray-200 transition-all active:scale-95"
+              >
                 {initialData ? 'Update Attendance' : 'Submit'}
               </button>
             </div>
@@ -1303,6 +1420,59 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
         </div>
       )}
     </AnimatePresence>
+  );
+};
+
+const ViewLocationModal = ({ isOpen, onClose, data }) => {
+  if (!isOpen || !data) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl shadow-2xl bg-white overflow-hidden flex flex-col"
+      >
+        <div className="bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <MdLocationOn className="text-red-500" /> Live Location Tracker
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <MdClose size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 bg-white space-y-4">
+           <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] font-bold text-xl shrink-0">
+                 {data.name.charAt(0)}
+              </div>
+              <div className="flex-1">
+                 <h3 className="font-bold text-gray-900 text-lg">{data.name}</h3>
+                 <p className="text-sm text-gray-500">{data.role}</p>
+                 
+                 <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex gap-3 items-start">
+                    <MdLocationOn className="text-red-500 shrink-0 mt-0.5" size={18} />
+                    <div>
+                       <p className="text-xs font-bold text-gray-400 uppercase">Current Location</p>
+                       <p className="text-gray-800 font-medium text-sm mt-0.5">{data.location?.address || 'Location not available'}</p>
+                       <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                          Updated Just Now
+                       </p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 
@@ -1315,6 +1485,7 @@ export const AttendancePage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAttendance, setEditingAttendance] = useState(null);
+  const [viewingLocation, setViewingLocation] = useState(null);
   const [dateFilter, setDateFilter] = useState('Date: Today');
   const [roleFilter, setRoleFilter] = useState('Staff: All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1345,8 +1516,19 @@ export const AttendancePage = () => {
       if (attRes.data.success) {
         const records = attRes.data.data.records;
         // Merge staff with attendance
-        const mergedData = staffData.map(staff => {
+        const mergedData = staffData.map((staff, index) => {
           const record = records.find(r => r.staff._id === staff.id || r.staff === staff.id);
+          
+          // MOCK LOCATION DATA SIMULATION
+          const mockLocations = [
+             { status: 'Online', address: '24/7, Connaught Place, New Delhi', lat: 28.6139, lng: 77.2090 },
+             { status: 'Online', address: 'Tech Park, Sector 62, Noida', lat: 28.6280, lng: 77.3780 },
+             { status: 'Offline', address: 'Last seen: Home (2 hrs ago)', lat: 0, lng: 0 },
+             { status: 'Online', address: 'Cyber City, Gurugram', lat: 28.4595, lng: 77.0266 },
+             { status: 'Offline', address: 'Offline', lat: 0, lng: 0 }
+          ];
+          const mockLoc = mockLocations[index % mockLocations.length];
+
           return {
             id: staff.id, // Use staff ID as row ID mostly, or record ID if exists? 
             // Better to use record ID if exists, but we want to show ALL staff.
@@ -1359,7 +1541,8 @@ export const AttendancePage = () => {
             outTime: record?.outTime || '-',
             status: record?.status || 'Absent', // Default to Absent if no record
             workHours: record?.workHours || '-',
-            recordId: record?._id
+            recordId: record?._id,
+            location: mockLoc
           };
         });
         setAttendanceList(mergedData);
@@ -1512,13 +1695,20 @@ export const AttendancePage = () => {
         initialData={editingAttendance}
         staffList={staffInfoList}
       />
+      
+      <ViewLocationModal 
+        isOpen={!!viewingLocation}
+        onClose={() => setViewingLocation(null)}
+        data={viewingLocation}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
             <span>/</span>
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
+            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
             <span className="text-gray-800 font-medium">Attendance</span>
           </div>
@@ -1527,7 +1717,7 @@ export const AttendancePage = () => {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm hover:bg-[#2a3550] transition-colors"
           style={{ backgroundColor: premiumColors.primary.DEFAULT }}
         >
           <MdEventAvailable size={20} />
@@ -1548,24 +1738,20 @@ export const AttendancePage = () => {
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Staff: All', 'Sales', 'Drivers']}
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-          >
-            <option>Staff: All</option>
-            <option>Sales</option>
-            <option>Drivers</option>
-          </select>
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+            onChange={(val) => setRoleFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
+          <ThemedDropdown 
+            options={['Date: Today', 'Yesterday', 'Select Date']}
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option>Date: Today</option>
-            <option>Yesterday</option>
-            <option>Select Date</option>
-          </select>
+            onChange={(val) => setDateFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
         <div className="text-sm text-gray-500 font-medium">
           Total Present: <span className="text-green-600 font-bold">{filteredAttendance.filter(i => i.status === 'Present').length}</span> / <span className="text-gray-800">{filteredAttendance.length}</span>
@@ -1581,13 +1767,14 @@ export const AttendancePage = () => {
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
+              <tr className="bg-[#212c40]/5 border-b border-[#212c40]/10 text-xs uppercase tracking-wider text-[#212c40] font-bold">
                 <th className="p-4">Staff Member</th>
                 <th className="p-4">Role</th>
                 <th className="p-4">In Time</th>
                 <th className="p-4">Out Time</th>
                 <th className="p-4">Work Hours</th>
                 <th className="p-4">Status</th>
+                <th className="p-4">Live Location</th>
                 <th className="p-4 text-right">Action</th>
               </tr>
             </thead>
@@ -1617,6 +1804,20 @@ export const AttendancePage = () => {
                       {item.status === 'Absent' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Absent</span>}
                       {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Late</span>}
                     </td>
+                    <td className="p-4">
+                      {item.location?.status === 'Online' ? (
+                          <button 
+                            onClick={() => setViewingLocation(item)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#212c40]/10 text-[#212c40] rounded-lg text-xs font-bold border border-[#212c40]/20 hover:bg-[#212c40]/20 transition-colors animate-pulse"
+                          >
+                             <MdLocationOn /> Location
+                          </button>
+                      ) : (
+                          <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                             <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Offline
+                          </span>
+                      )}
+                    </td>
                     <td className="p-4 text-right">
                       {item.inTime === '-' ? (
                         <button
@@ -1645,9 +1846,11 @@ export const AttendancePage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-gray-400 text-sm">
+                <tr>
+                  <td colSpan="8" className="p-8 text-center text-gray-400 text-sm">
                     No attendance records found for this selection.
                   </td>
+                </tr>
                 </tr>
               )}
             </tbody>
@@ -1678,83 +1881,69 @@ export const SalaryPage = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    try {
-      const [staffRes, payrollRes] = await Promise.all([
-        api.get('/crm/staff'),
-        api.get(`/crm/payroll?month=${monthFilter}`)
-      ]);
-
-      let allStaff = [];
-      if (staffRes.data.success) {
-        allStaff = staffRes.data.data.staff;
+    // TEMPORARY: Dummy Data as per user request to demonstrate flow
+    const MOCK_SALARY_DATA = [
+      {
+        id: '101',
+        staffId: 's1',
+        name: 'Ravi Mishra',
+        role: 'Senior Driver',
+        baseSalary: '₹ 25,000',
+        deductions: '₹ 500',
+        netPay: '₹ 24,500',
+        status: 'Pending',
+        paymentDate: '-', // Not paid yet
+        isNew: true,
+        month: 'December 2025'
+      },
+      {
+        id: '102',
+        staffId: 's2',
+        name: 'Anita Desai',
+        role: 'Sales Executive',
+        baseSalary: '₹ 30,000',
+        deductions: '₹ 0',
+        netPay: '₹ 30,000',
+        status: 'Paid',
+        paymentDate: '01 Jan 2026',
+        isNew: false,
+        month: 'December 2025'
+      },
+       {
+        id: '103',
+        staffId: 's3',
+        name: 'Vikram Singh',
+        role: 'Mechanic',
+        baseSalary: '₹ 18,000',
+        deductions: '₹ 200',
+        netPay: '₹ 17,800',
+        status: 'Pending',
+        paymentDate: '-',
+        isNew: true,
+        month: 'December 2025'
       }
+    ];
 
-      let payrollRecords = [];
-      if (payrollRes.data.success) {
-        payrollRecords = payrollRes.data.data.payroll;
-      }
-
-      // Merge to show ALL staff, even if no salary record yet
-      const mergedList = allStaff.map(staff => {
-        const record = payrollRecords.find(p => p.staff._id === staff._id || p.staff === staff._id);
-
-        // Format base salary from number if needed, simple display
-        const baseSalaryVal = staff.baseSalary || 0;
-        const deductionsVal = record ? record.deductions : 0;
-        const netPayVal = record ? record.netPay : (baseSalaryVal - deductionsVal);
-
-        return {
-          id: record ? record._id : `new_${staff._id}`, // unique ID for key
-          staffId: staff._id,
-          name: staff.name,
-          role: staff.role,
-          baseSalary: `₹ ${baseSalaryVal.toLocaleString()}`,
-          deductions: `₹ ${deductionsVal.toLocaleString()}`,
-          netPay: `₹ ${netPayVal.toLocaleString()}`,
-          status: record ? record.status : 'Pending',
-          paymentDate: record?.paidDate ? new Date(record.paidDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
-          isNew: !record,
-          rawBase: baseSalaryVal,
-          rawDeductions: deductionsVal,
-          rawNet: netPayVal
-        };
-      });
-
-      setSalaryList(mergedList);
-
-    } catch (error) {
-      console.error("Error fetching salary data:", error);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+        setSalaryList(MOCK_SALARY_DATA);
+        setLoading(false);
+    }, 500); // Simulate network delay
   };
 
   const handlePayNow = async (item) => {
-    try {
-      if (item.isNew) {
-        // Create new record
-        const payload = {
-          staff: item.staffId,
-          month: monthFilter,
-          baseSalary: item.rawBase,
-          deductions: item.rawDeductions,
-          netPay: item.rawNet,
-          status: 'Paid',
-          advanceAmount: 0
-        };
-        const response = await api.post('/crm/payroll', payload);
-        if (response.data.success) {
-          fetchData();
-        }
-      } else {
-        // Update existing
-        const response = await api.put(`/crm/payroll/${item.id}`, { status: 'Paid' });
-        if (response.data.success) {
-          fetchData();
-        }
-      }
-    } catch (error) {
-      console.error("Error updating salary status:", error);
+    // Simulate payment processing
+    if(window.confirm(`Confirm payment of ${item.netPay} to ${item.name}?`)) {
+        const updatedList = salaryList.map(s => {
+            if (s.id === item.id) {
+                return {
+                    ...s,
+                    status: 'Paid',
+                    paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                };
+            }
+            return s;
+        });
+        setSalaryList(updatedList);
     }
   };
 
@@ -1877,24 +2066,20 @@ export const SalaryPage = () => {
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Staff: All', 'Sales', 'Drivers']}
             value={staffFilter}
-            onChange={(e) => setStaffFilter(e.target.value)}
-          >
-            <option>Staff: All</option>
-            <option>Sales</option>
-            <option>Drivers</option>
-          </select>
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+            onChange={(val) => setStaffFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
+          <ThemedDropdown 
+            options={['December 2025', 'November 2025', 'October 2025']}
             value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-          >
-            <option>December 2025</option>
-            <option>November 2025</option>
-            <option>October 2025</option>
-          </select>
+            onChange={(val) => setMonthFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
         <div className="text-sm font-medium flex gap-4">
           <div>Total Payout: <span className="text-gray-900 font-bold">₹ {salaryList.filter(s => s.status === 'Paid').reduce((acc, curr) => acc + curr.rawNet, 0).toLocaleString()}</span></div>
@@ -2006,15 +2191,13 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Advance</h3>
             <div className="space-y-4">
-              <select
-                className="w-full p-2 border rounded-xl"
+              <ThemedDropdown 
+                options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
                 value={formData.staffId}
-                onChange={e => setFormData({ ...formData, staffId: e.target.value })}
-              >
-                {staffList.map(staff => (
-                  <option key={staff.id} value={staff.id}>{staff.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, staffId: val })}
+                placeholder="Select Staff"
+                className="bg-white"
+              />
               <input
                 type="number"
                 placeholder="Amount (₹)"
@@ -2209,15 +2392,13 @@ export const AdvancesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Status: Active', 'Paid Off', 'All History']}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option>Status: Active</option>
-            <option>Paid Off</option>
-            <option>All History</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
       </div>
 
@@ -2314,22 +2495,25 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Performance Review</h3>
             <div className="space-y-4">
-              <select
-                className="w-full p-2 border rounded-xl"
+              <ThemedDropdown 
+                options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
                 value={formData.staffId}
-                onChange={e => setFormData({ ...formData, staffId: e.target.value })}
-              >
-                {staffList.map(staff => (
-                  <option key={staff.id} value={staff.id}>{staff.name}</option>
-                ))}
-              </select>
-              <select className="w-full p-2 border rounded-xl" value={formData.rating} onChange={e => setFormData({ ...formData, rating: e.target.value })}>
-                <option value="5">5 - Excellent</option>
-                <option value="4">4 - Very Good</option>
-                <option value="3">3 - Good</option>
-                <option value="2">2 - Needs Improvement</option>
-                <option value="1">1 - Poor</option>
-              </select>
+                onChange={(val) => setFormData({ ...formData, staffId: val })}
+                placeholder="Select Staff"
+                className="bg-white"
+              />
+              <ThemedDropdown 
+                options={[
+                   {value: '5', label: '5 - Excellent'},
+                   {value: '4', label: '4 - Very Good'},
+                   {value: '3', label: '3 - Good'},
+                   {value: '2', label: '2 - Needs Improvement'},
+                   {value: '1', label: '1 - Poor'}
+                ]}
+                value={formData.rating}
+                onChange={(val) => setFormData({ ...formData, rating: val })}
+                className="bg-white"
+              />
               <textarea
                 placeholder="Feedback Summary..."
                 className="w-full p-2 border rounded-xl h-24"
@@ -2361,6 +2545,7 @@ export const PerformancePage = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [staffFilter, setStaffFilter] = useState('Staff: All');
+  const [yearFilter, setYearFilter] = useState('Year: 2025');
 
   useEffect(() => {
     fetchData();
@@ -2453,19 +2638,20 @@ export const PerformancePage = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-3 w-full md:w-auto">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Staff: All', 'Sales', 'Drivers']}
             value={staffFilter}
-            onChange={(e) => setStaffFilter(e.target.value)}
-          >
-            <option>Staff: All</option>
-            <option>Sales</option>
-            <option>Drivers</option>
-          </select>
-          <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-            <option>Year: 2025</option>
-            <option>2024</option>
-          </select>
+            onChange={(val) => setStaffFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
+          <ThemedDropdown 
+            options={['Year: 2025', '2024']}
+            value={yearFilter}
+            onChange={(val) => setYearFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
       </div>
 
@@ -2556,21 +2742,19 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
               />
-              <select
-                className="w-full p-2 border rounded-xl"
+              <ThemedDropdown 
+                options={staffList.map(staff => ({ value: staff.id, label: `${staff.name} (${staff.role})` }))}
                 value={formData.assignedTo}
-                onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
-              >
-                {staffList.map(staff => (
-                  <option key={staff.id} value={staff.id}>{staff.name} ({staff.role})</option>
-                ))}
-              </select>
-              <select className="w-full p-2 border rounded-xl" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-                <option>Critical</option>
-              </select>
+                onChange={(val) => setFormData({ ...formData, assignedTo: val })}
+                placeholder="Select Staff"
+                className="bg-white"
+              />
+              <ThemedDropdown 
+                options={['Low', 'Medium', 'High', 'Critical']}
+                value={formData.priority}
+                onChange={(val) => setFormData({ ...formData, priority: val })}
+                className="bg-white"
+              />
               <button
                 onClick={() => {
                   onSubmit(formData);
@@ -2733,24 +2917,20 @@ export const StaffTasksPage = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-3 w-full md:w-auto">
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+          <ThemedDropdown 
+            options={['Assigned To: All', 'Sales', 'Garage']}
             value={assignedToFilter}
-            onChange={(e) => setAssignedToFilter(e.target.value)}
-          >
-            <option>Assigned To: All</option>
-            <option>Sales</option>
-            <option>Garage</option>
-          </select>
-          <select
-            className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+            onChange={(val) => setAssignedToFilter(val)}
+            className="bg-white text-sm"
+            width="w-44"
+          />
+          <ThemedDropdown 
+            options={['Status: Pending', 'Completed', 'All']}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option>Status: Pending</option>
-            <option>Completed</option>
-            <option>All</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
       </div>
 

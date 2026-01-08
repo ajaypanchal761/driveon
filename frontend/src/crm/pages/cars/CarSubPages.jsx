@@ -44,6 +44,7 @@ import {
 } from 'react-icons/md';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';
+import ThemedDropdown from '../../components/ThemedDropdown';
 
 // Mock Data for Cars
 const MOCK_CARS_DATA = [
@@ -103,7 +104,15 @@ export const AllCarsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
+  const [openActionMenu, setOpenActionMenu] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedCar, setSelectedCar] = useState(null);
 
+  const handleViewCar = (car) => {
+    setSelectedCar(car);
+    setIsViewModalOpen(true);
+    setOpenActionMenu(null);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -128,24 +137,16 @@ export const AllCarsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
               <span>/</span> 
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
               <span>/</span> 
               <span className="text-gray-800 font-medium">All Cars</span>
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Vehicle Inventory</h1>
             <p className="text-gray-500 text-sm">Manage your entire fleet and viewing details.</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm transition-colors hover:opacity-90 active:scale-95"
-            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-          >
-            <MdAdd size={20} />
-            Add New Car
-          </button>
-        </div>
+          </div>
   
         {/* Filters */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -162,24 +163,24 @@ export const AllCarsPage = () => {
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
                <select 
-                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] transition-all cursor-pointer"
                >
-                 <option value="All">Status: All</option>
-                 <option value="Active">Active</option>
-                 <option value="Maintenance">Maintenance</option>
-                 <option value="Idle">Idle</option>
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Idle">Idle</option>
                </select>
                <select 
-                  className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer min-w-[120px]"
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] transition-all cursor-pointer"
                >
-                 <option value="All">Type: All</option>
-                 <option value="SUV">SUV</option>
-                 <option value="Sedan">Sedan</option>
-                 <option value="Hatchback">Hatchback</option>
+                  <option value="All">All Types</option>
+                  <option value="SUV">SUV</option>
+                  <option value="Sedan">Sedan</option>
+                  <option value="Hatchback">Hatchback</option>
                </select>
             </div>
         </div>
@@ -224,15 +225,26 @@ export const AllCarsPage = () => {
                      </div>
                   </td>
                   <td className="p-4 text-right">
-                    <button 
-                        className="p-2 text-gray-400 rounded-lg transition-colors"
-                        style={{ ':hover': { color: premiumColors.primary.DEFAULT, backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1) } }}
-                    >
-                        <MdVisibility size={18} />
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MdMoreVert size={18} />
-                    </button>
+                    <div className="relative">
+                      <button 
+                          onClick={() => setOpenActionMenu(openActionMenu === car.id ? null : car.id)}
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                          <MdMoreVert size={18} />
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {openActionMenu === car.id && (
+                        <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
+                          <button 
+                            onClick={() => handleViewCar(car)}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#1c205c]/10 hover:text-[#1c205c] transition-colors flex items-center gap-2"
+                          >
+                            <MdVisibility size={16} /> View Details
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -244,6 +256,54 @@ export const AllCarsPage = () => {
           )}
         </div>
 
+        {/* View Car Details Modal */}
+        <SimpleModal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Vehicle Details">
+          {selectedCar && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-24 h-20 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                  <img src={selectedCar.image} alt={selectedCar.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900">{selectedCar.name}</h3>
+                  <p className="text-sm text-gray-500 font-mono">{selectedCar.plate}</p>
+                </div>
+                {getStatusBadge(selectedCar.status)}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 font-bold uppercase mb-1">Vehicle Type</p>
+                  <p className="text-sm font-medium text-gray-800">{selectedCar.type}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 font-bold uppercase mb-1">Fuel Type</p>
+                  <p className="text-sm font-medium text-gray-800">{selectedCar.fuel}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 font-bold uppercase mb-1">Seating</p>
+                  <p className="text-sm font-medium text-gray-800">{selectedCar.seats}</p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <p className="text-xs text-gray-500 font-bold uppercase mb-1">Price/Day</p>
+                  <p className="text-sm font-bold text-[#1c205c]">{selectedCar.price}</p>
+                </div>
+              </div>
+              
+              <div className="bg-[#1c205c]/10 p-4 rounded-lg border border-[#1c205c]/20">
+                <p className="text-xs text-[#1c205c] font-bold uppercase mb-1">Total Trips</p>
+                <p className="text-2xl font-bold text-[#1c205c]">{selectedCar.trips} Completed</p>
+              </div>
+
+              <button 
+                onClick={() => setIsViewModalOpen(false)}
+                className="w-full py-2.5 bg-[#1c205c] text-white rounded-xl font-bold hover:bg-[#252d6d] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          )}
+        </SimpleModal>
 
     </div>
   );
@@ -261,6 +321,8 @@ export const IdleCarsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('All');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState('Walk-in Customer');
+  const [selectedVehicle, setSelectedVehicle] = useState('');
 
   const getConditionBadge = (condition) => {
     switch (condition) {
@@ -308,16 +370,13 @@ export const IdleCarsPage = () => {
                 />
             </div>
             <div className="flex gap-3">
-               <select 
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer"
+               <ThemedDropdown 
+                 options={['All', 'Office HQ', 'Airport Yard', 'Sector 17']}
                  value={locationFilter}
-                 onChange={(e) => setLocationFilter(e.target.value)}
-               >
-                 <option value="All">Location: All</option>
-                 <option value="Office HQ">Office HQ</option>
-                 <option value="Airport Yard">Airport Yard</option>
-                 <option value="Sector 17">Sector 17</option>
-               </select>
+                 onChange={(val) => setLocationFilter(val)}
+                 className="bg-white text-sm"
+                 width="w-40"
+               />
             </div>
         </div>
   
@@ -376,16 +435,19 @@ export const IdleCarsPage = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select Customer</label>
-            <select className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100">
-              <option>Walk-in Customer</option>
-              <option>Rahul Sharma (Returning)</option>
-            </select>
+            <ThemedDropdown 
+              options={['Walk-in Customer', 'Rahul Sharma (Returning)']}
+              value={selectedCustomer}
+              onChange={(val) => setSelectedCustomer(val)}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select Vehicle</label>
-            <select className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100">
-              {MOCK_IDLE_CARS.map(car => <option key={car.id}>{car.car} - {car.reg}</option>)}
-            </select>
+            <ThemedDropdown 
+              options={MOCK_IDLE_CARS.map(car => `${car.car} - ${car.reg}`)}
+              value={selectedVehicle || `${MOCK_IDLE_CARS[0]?.car} - ${MOCK_IDLE_CARS[0]?.reg}`}
+              onChange={(val) => setSelectedVehicle(val)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -461,16 +523,13 @@ export const CarProfitLossPage = () => {
             <h1 className="text-2xl font-bold text-gray-900">Fleet Financial Analysis</h1>
             <p className="text-gray-500 text-sm">Revenue vs Expenses per vehicle breakdown.</p>
           </div>
-          <select 
+          <ThemedDropdown 
+            options={['Last 90 Days', 'This Month', 'Last Quarter', 'This Year']}
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium cursor-pointer shadow-sm"
-          >
-             <option>Last 90 Days</option>
-             <option>This Month</option>
-             <option>Last Quarter</option>
-             <option>This Year</option>
-          </select>
+            onChange={(val) => setTimeRange(val)}
+            className="bg-white text-sm"
+            width="w-40"
+          />
         </div>
   
         {/* KPI Cards */}
@@ -657,9 +716,9 @@ export const CarDocumentsPage = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+              <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
               <span>/</span> 
-              <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
+              <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/cars/all')}>Cars</span> 
               <span>/</span> 
               <span className="text-gray-800 font-medium">Documents</span>
             </div>
@@ -668,8 +727,7 @@ export const CarDocumentsPage = () => {
           </div>
           <button 
             onClick={() => setIsUploadModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#1c205c] text-white rounded-xl font-medium shadow-sm hover:bg-[#252d6d] transition-colors"
           >
             <MdFileUpload size={20} />
             Upload Document
@@ -683,34 +741,26 @@ export const CarDocumentsPage = () => {
                 <input 
                     type="text" 
                     placeholder="Search Vehicle, Reg No or Document..." 
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
             <div className="flex gap-3">
-               <select 
+               <ThemedDropdown 
+                 options={['All', 'Insurance', 'PUC', 'RC', 'Fitness', 'Permit']}
                  value={filterType}
-                 onChange={(e) => setFilterType(e.target.value)}
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
-               >
-                 <option value="All">Type: All</option>
-                 <option value="Insurance">Insurance</option>
-                 <option value="PUC">PUC</option>
-                 <option value="RC">RC</option>
-                 <option value="Fitness">Fitness</option>
-                 <option value="Permit">Permit</option>
-               </select>
-               <select 
+                 onChange={(val) => setFilterType(val)}
+                 className="bg-white text-sm"
+                 width="w-36"
+               />
+               <ThemedDropdown 
+                 options={['All', 'Valid', 'Expiring Soon', 'Expired']}
                  value={filterStatus}
-                 onChange={(e) => setFilterStatus(e.target.value)}
-                 className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer hover:border-indigo-300 transition-colors"
-               >
-                 <option value="All">Status: All</option>
-                 <option value="Valid">Valid</option>
-                 <option value="Expiring Soon">Expiring Soon</option>
-                 <option value="Expired">Expired</option>
-               </select>
+                 onChange={(val) => setFilterStatus(val)}
+                 className="bg-white text-sm"
+                 width="w-36"
+               />
             </div>
         </div>
   
@@ -718,7 +768,7 @@ export const CarDocumentsPage = () => {
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-blue-50/30 border-b border-blue-100 text-xs uppercase tracking-wider text-blue-800 font-bold">
+              <tr className="bg-[#1c205c]/5 border-b border-[#1c205c]/10 text-xs uppercase tracking-wider text-[#1c205c] font-bold">
                 <th className="p-4">Vehicle</th>
                 <th className="p-4">Document Details</th>
                 <th className="p-4">Expiry Date</th>
@@ -736,7 +786,7 @@ export const CarDocumentsPage = () => {
                     </td>
                     <td className="p-4">
                        <div className="flex items-center gap-2">
-                          <div className="p-2 bg-indigo-50 text-indigo-500 rounded-lg">
+                          <div className="p-2 bg-[#1c205c]/10 text-[#1c205c] rounded-lg">
                               <MdDescription size={18} />
                           </div>
                           <div>
@@ -758,7 +808,7 @@ export const CarDocumentsPage = () => {
                     <td className="p-4 text-right">
                           <button 
                             onClick={() => handleView(item)}
-                            className="text-blue-600 hover:underline text-xs font-bold flex items-center gap-1 ml-auto"
+                            className="text-[#1c205c] hover:underline text-xs font-bold flex items-center gap-1 ml-auto"
                           >
                               <MdVisibility size={14} /> View
                           </button>
@@ -784,30 +834,21 @@ export const CarDocumentsPage = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Select Vehicle</label>
-            <select
+            <ThemedDropdown
+              options={['Toyota Innova Crysta (PB 01 1234)', 'Mahindra Thar (PB 65 9876)', 'Swift Dzire (PB 10 5678)']}
               value={newDocData.vehicle}
-              onChange={(e) => setNewDocData({ ...newDocData, vehicle: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 bg-white"
-            >
-              <option>Toyota Innova Crysta (PB 01 1234)</option>
-              <option>Mahindra Thar (PB 65 9876)</option>
-              <option>Swift Dzire (PB 10 5678)</option>
-            </select>
+              onChange={(val) => setNewDocData({ ...newDocData, vehicle: val })}
+              className="bg-white"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
-            <select
+            <ThemedDropdown
+              options={['Insurance Policy', 'Pollution Certificate (PUC)', 'Registration Certificate (RC)', 'Fitness Certificate', 'Permit', 'Other']}
               value={newDocData.type}
-              onChange={(e) => setNewDocData({ ...newDocData, type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 bg-white"
-            >
-              <option>Insurance Policy</option>
-              <option>Pollution Certificate (PUC)</option>
-              <option>Registration Certificate (RC)</option>
-              <option>Fitness Certificate</option>
-              <option>Permit</option>
-              <option>Other</option>
-            </select>
+              onChange={(val) => setNewDocData({ ...newDocData, type: val })}
+              className="bg-white"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
@@ -815,7 +856,7 @@ export const CarDocumentsPage = () => {
               type="date"
               value={newDocData.expiry}
               onChange={(e) => setNewDocData({ ...newDocData, expiry: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
             />
           </div>
           <div>
@@ -840,8 +881,7 @@ export const CarDocumentsPage = () => {
           </div>
           <button
             onClick={handleSaveDocument}
-            className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+            className="w-full py-2.5 bg-[#1c205c] text-white rounded-xl font-bold hover:bg-[#252d6d] transition-colors shadow-lg shadow-gray-300"
           >
             Save Document
           </button>
@@ -937,6 +977,7 @@ const MOCK_ACCIDENTS = [
 export const AccidentActivePage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('Severity: All');
 
   const getSeverityColor = (severity) => {
     switch (severity) {
@@ -986,12 +1027,13 @@ export const AccidentActivePage = () => {
                 />
             </div>
             <div className="flex gap-3">
-               <select className="pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl appearance-none focus:outline-none text-sm font-medium cursor-pointer">
-                 <option>Severity: All</option>
-                 <option>Major</option>
-                 <option>Medium</option>
-                 <option>Minor</option>
-               </select>
+               <ThemedDropdown 
+                 options={['Severity: All', 'Major', 'Medium', 'Minor']}
+                 value={severityFilter}
+                 onChange={(val) => setSeverityFilter(val)}
+                 className="bg-white text-sm"
+                 width="w-40"
+               />
             </div>
         </div>
 
@@ -1055,6 +1097,8 @@ export const AccidentActivePage = () => {
 };
 export const AccidentAddPage = () => {
   const navigate = useNavigate();
+  const [vehicle, setVehicle] = useState('Select a car...');
+  const [severity, setSeverity] = useState('Minor (Scratches/Dents)');
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
@@ -1079,11 +1123,12 @@ export const AccidentAddPage = () => {
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Select Vehicle</label>
               <div className="relative">
                 <MdDirectionsCar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <select className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow appearance-none cursor-pointer">
-                  <option>Select a car...</option>
-                  <option>Toyota Innova Crysta (PB 01 1234)</option>
-                  <option>Mahindra Thar (PB 65 9876)</option>
-                </select>
+                <ThemedDropdown 
+                  options={['Select a car...', 'Toyota Innova Crysta (PB 01 1234)', 'Mahindra Thar (PB 65 9876)']}
+                  value={vehicle}
+                  onChange={(val) => setVehicle(val)}
+                  className="bg-gray-50 bg-white"
+                />
               </div>
             </div>
             <div>
@@ -1127,11 +1172,12 @@ export const AccidentAddPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Severity Level</label>
-                <select className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow appearance-none cursor-pointer">
-                  <option>Minor (Scratches/Dents)</option>
-                  <option>Major (Parts Replacement)</option>
-                  <option>Critical (Non-drivable)</option>
-                </select>
+                <ThemedDropdown 
+                  options={['Minor (Scratches/Dents)', 'Major (Parts Replacement)', 'Critical (Non-drivable)']}
+                  value={severity}
+                  onChange={(val) => setSeverity(val)}
+                  className="bg-gray-50 bg-white"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Estimated Cost (Optional)</label>

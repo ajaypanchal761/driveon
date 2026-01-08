@@ -23,6 +23,7 @@ import {
   MdAdd
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
+import ThemedDropdown from '../../components/ThemedDropdown';
 
 // --- Shared Components ---
 
@@ -69,11 +70,11 @@ const GarageCard = ({ garage, onDetails }) => (
     >
         <div className="flex justify-between items-start mb-4">
             <div className="flex gap-4">
-                <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-[#1c205c]/10 group-hover:text-[#1c205c] transition-colors">
                     <MdStore size={32} />
                 </div>
                 <div>
-                    <h3 className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{garage.name}</h3>
+                    <h3 className="font-bold text-gray-900 group-hover:text-[#1c205c] transition-colors">{garage.name}</h3>
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                         <MdLocationOn /> {garage.location}
                     </div>
@@ -104,7 +105,10 @@ const GarageCard = ({ garage, onDetails }) => (
     </motion.div>
 );
 
-const RepairItem = ({ repair }) => (
+const RepairItem = ({ repair, onDelete, onComplete }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    return (
     <motion.div 
        initial={{ opacity: 0, x: -10 }}
        animate={{ opacity: 1, x: 0 }}
@@ -124,10 +128,10 @@ const RepairItem = ({ repair }) => (
              <div className="flex-1 md:w-48">
                  <div className="flex justify-between text-xs font-bold mb-1.5">
                      <span className="text-gray-500">Progress</span>
-                     <span className="text-indigo-600">{repair.progress}%</span>
+                     <span className="text-[#1c205c]">{repair.progress}%</span>
                  </div>
                  <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                     <div className="bg-indigo-600 h-full rounded-full transition-all duration-1000" style={{ width: `${repair.progress}%` }}></div>
+                     <div className="bg-[#1c205c] h-full rounded-full transition-all duration-1000" style={{ width: `${repair.progress}%` }}></div>
                  </div>
                  <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
                      <span>Diagnostics</span>
@@ -141,12 +145,35 @@ const RepairItem = ({ repair }) => (
                  <p className="text-sm font-bold text-gray-800">{repair.completionDate}</p>
              </div>
              
-             <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors">
-                  <MdMoreVert size={24} />
-             </button>
+             <div className="relative">
+                 <button 
+                     onClick={() => setIsMenuOpen(!isMenuOpen)}
+                     className="p-2 text-gray-400 hover:text-[#1c205c] hover:bg-[#1c205c]/10 rounded-full transition-colors"
+                 >
+                      <MdMoreVert size={24} />
+                 </button>
+                 
+                 {isMenuOpen && (
+                     <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
+                         <button 
+                             onClick={() => { onComplete(repair.id); setIsMenuOpen(false); }}
+                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#1c205c]/10 hover:text-[#1c205c] transition-colors flex items-center gap-2"
+                         >
+                             <MdCheckCircle size={16} /> Mark as Complete
+                         </button>
+                         <button 
+                             onClick={() => { onDelete(repair.id); setIsMenuOpen(false); }}
+                             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                         >
+                             <MdClose size={16} /> Delete Repair
+                         </button>
+                     </div>
+                 )}
+             </div>
         </div>
     </motion.div>
-);
+    );
+};
 
 // --- Mock Data ---
 
@@ -211,9 +238,9 @@ export const AllGaragesPage = () => {
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">All Garages</span>
                     </div>
@@ -226,14 +253,14 @@ export const AllGaragesPage = () => {
                          <input 
                             type="text"
                             placeholder="Search garages..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] transition-all shadow-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                          />
                      </div>
                      <button 
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                        className="px-4 py-2.5 bg-[#1c205c] text-white rounded-xl shadow-lg shadow-gray-300 hover:bg-[#252d6d] font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
                      >
                          <MdStore /> Add Garage
                      </button>
@@ -263,7 +290,7 @@ export const AllGaragesPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Garage Name</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
                             placeholder="e.g. Speed Auto Works"
                             value={newGarage.name}
                             onChange={(e) => setNewGarage({...newGarage, name: e.target.value})}
@@ -273,7 +300,7 @@ export const AllGaragesPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
                             placeholder="e.g. Sector 15, Noida"
                             value={newGarage.location}
                             onChange={(e) => setNewGarage({...newGarage, location: e.target.value})}
@@ -283,7 +310,7 @@ export const AllGaragesPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
                             placeholder="+91..."
                             value={newGarage.phone}
                             onChange={(e) => setNewGarage({...newGarage, phone: e.target.value})}
@@ -293,7 +320,7 @@ export const AllGaragesPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Specialist In</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100" 
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
                             placeholder="e.g. Engine, Denting"
                             value={newGarage.specialist}
                             onChange={(e) => setNewGarage({...newGarage, specialist: e.target.value})}
@@ -301,7 +328,7 @@ export const AllGaragesPage = () => {
                      </div>
                      <button 
                         onClick={handleAddGarage}
-                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        className="w-full py-2.5 bg-[#1c205c] text-white rounded-xl font-bold hover:bg-[#252d6d] transition-colors shadow-lg shadow-gray-300"
                      >
                          Add Garage
                      </button>
@@ -335,9 +362,9 @@ export const AllGaragesPage = () => {
                                  </div>
                              </div>
                          </div>
-                         <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                             <p className="text-xs text-indigo-400 uppercase font-bold mb-1">Specialization</p>
-                             <div className="flex items-center gap-2 text-indigo-800 font-medium">
+                         <div className="bg-[#1c205c]/10 p-4 rounded-xl border border-[#1c205c]/20">
+                             <p className="text-xs text-[#1c205c] uppercase font-bold mb-1">Specialization</p>
+                             <div className="flex items-center gap-2 text-[#1c205c] font-medium">
                                  <MdBuild /> {selectedGarage.specialist}
                              </div>
                          </div>
@@ -368,15 +395,23 @@ export const ActiveRepairsPage = () => {
          setIsAddModalOpen(false);
          setNewRepair({ car: 'Toyota Innova Crysta', reg: 'PB 01 1234', garage: 'Bosch Car Service', issue: '', progress: 0, completionDate: 'Tomorrow' });
     };
+    
+    const handleDeleteRepair = (id) => {
+        setRepairs(repairs.filter(r => r.id !== id));
+    };
+    
+    const handleCompleteRepair = (id) => {
+        setRepairs(repairs.filter(r => r.id !== id));
+    };
 
     return (
         <div className="space-y-6">
              <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                  <div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
                         <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
                         <span>/</span> 
                         <span className="text-gray-800 font-medium">Active Repairs</span>
                     </div>
@@ -385,7 +420,7 @@ export const ActiveRepairsPage = () => {
                  </div>
                  <button 
                     onClick={() => setIsAddModalOpen(true)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 font-bold flex items-center gap-2"
+                    className="px-4 py-2 bg-[#1c205c] text-white rounded-xl shadow-lg shadow-gray-300 hover:bg-[#252d6d] font-bold flex items-center gap-2"
                  >
                      <MdAdd /> Logs New Repair
                  </button>
@@ -393,7 +428,7 @@ export const ActiveRepairsPage = () => {
              <div className="space-y-4">
                  {repairs.length > 0 ? (
                      repairs.map(repair => (
-                         <RepairItem key={repair.id} repair={repair} />
+                         <RepairItem key={repair.id} repair={repair} onDelete={handleDeleteRepair} onComplete={handleCompleteRepair} />
                      ))
                  ) : (
                      <div className="text-center py-10 text-gray-400">
@@ -407,25 +442,21 @@ export const ActiveRepairsPage = () => {
                  <div className="space-y-4">
                     <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle</label>
-                         <select 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                         <ThemedDropdown
+                            options={['Toyota Innova Crysta', 'Mahindra Thar', 'Maruti Swift']}
                             value={newRepair.car}
-                            onChange={(e) => setNewRepair({...newRepair, car: e.target.value})}
-                         >
-                             <option>Toyota Innova Crysta</option>
-                             <option>Mahindra Thar</option>
-                             <option>Maruti Swift</option>
-                         </select>
+                            onChange={(val) => setNewRepair({...newRepair, car: val})}
+                            className="bg-white"
+                         />
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Garage</label>
-                         <select 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                         <ThemedDropdown
+                            options={MOCK_GARAGES.map(g => g.name)}
                             value={newRepair.garage}
-                            onChange={(e) => setNewRepair({...newRepair, garage: e.target.value})}
-                         >
-                             {MOCK_GARAGES.map(g => <option key={g.id}>{g.name}</option>)}
-                         </select>
+                            onChange={(val) => setNewRepair({...newRepair, garage: val})}
+                            className="bg-white"
+                         />
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Issue / Service Type</label>
@@ -439,7 +470,7 @@ export const ActiveRepairsPage = () => {
                      </div>
                      <button 
                         onClick={handleAddRepair}
-                        className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                        className="w-full py-2.5 bg-[#1c205c] text-white rounded-xl font-bold hover:bg-[#252d6d] transition-colors shadow-lg shadow-gray-300"
                      >
                          Start Repair Log
                      </button>
@@ -498,7 +529,6 @@ export const ServiceHistoryPage = () => {
                              <th className="px-6 py-4">Service Details</th>
                              <th className="px-6 py-4">Cost</th>
                              <th className="px-6 py-4">Status</th>
-                             <th className="px-6 py-4"></th>
                          </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100 text-sm">
@@ -510,9 +540,6 @@ export const ServiceHistoryPage = () => {
                                  <td className="px-6 py-4 text-gray-600">{log.service}</td>
                                  <td className="px-6 py-4 font-bold text-gray-900">₹ {log.cost.toLocaleString()}</td>
                                  <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
-                                 <td className="px-6 py-4 text-right">
-                                     <button className="text-indigo-600 hover:text-indigo-800"><MdReceipt size={20} /></button>
-                                 </td>
                              </tr>
                          ))}
                      </tbody>

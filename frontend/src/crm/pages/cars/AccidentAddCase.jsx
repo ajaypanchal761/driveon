@@ -10,9 +10,12 @@ import {
   MdDriveEta, 
   MdCloudUpload 
 } from 'react-icons/md';
+import ThemedDropdown from '../../components/ThemedDropdown';
 
 const AccidentAddCase = () => {
     const navigate = useNavigate();
+    const [vehicle, setVehicle] = useState('Select a car...');
+    const [severity, setSeverity] = useState('Minor (Scratches/Dents)');
     
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-10">
@@ -35,7 +38,7 @@ const AccidentAddCase = () => {
                 {/* Step 1: Vehicle & Incident */}
                 <div className="p-6 border-b border-gray-100">
                     <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs">1</span>
+                        <span className="w-6 h-6 rounded-full bg-[#212c40]/10 text-[#212c40] flex items-center justify-center text-xs">1</span>
                         Vehicle & Incident Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -43,39 +46,41 @@ const AccidentAddCase = () => {
                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Select Vehicle</label>
                              <div className="relative">
                                  <MdDirectionsCar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                 <select className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow appearance-none cursor-pointer">
-                                     <option>Select a car...</option>
-                                     <option>Toyota Innova Crysta (PB 01 1234)</option>
-                                     <option>Mahindra Thar (PB 65 9876)</option>
-                                 </select>
+                                 <ThemedDropdown
+                                     options={['Select a car...', 'Toyota Innova Crysta (PB 01 1234)', 'Mahindra Thar (PB 65 9876)']}
+                                     value={vehicle}
+                                     onChange={(val) => setVehicle(val)}
+                                     className="bg-gray-50 bg-white" 
+                                     width="w-full"
+                                 />
                              </div>
                         </div>
                         <div>
                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Incident Date & Time</label>
                              <div className="relative">
                                  <MdAccessTime className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                 <input type="datetime-local" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow" />
+                                 <input type="datetime-local" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-shadow" />
                              </div>
                         </div>
                         <div className="md:col-span-2">
                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Incident Location</label>
                              <div className="relative">
                                  <MdLocationOn className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                 <input type="text" placeholder="Enter exact location (e.g. NH-44 near Ambala)" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow" />
+                                 <input type="text" placeholder="Enter exact location (e.g. NH-44 near Ambala)" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-shadow" />
                              </div>
                         </div>
                         <div>
                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Driver Name</label>
                              <div className="relative">
                                  <MdPerson className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                 <input type="text" placeholder="Driver on duty" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow" />
+                                 <input type="text" placeholder="Driver on duty" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-shadow" />
                              </div>
                         </div>
                         <div>
                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Driver License No.</label>
                              <div className="relative">
                                  <MdDriveEta className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                 <input type="text" placeholder="DL Number" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow" />
+                                 <input type="text" placeholder="DL Number" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-shadow" />
                              </div>
                         </div>
                     </div>
@@ -84,24 +89,26 @@ const AccidentAddCase = () => {
                 {/* Step 2: Damage Assessment */}
                 <div className="p-6 border-b border-gray-100">
                     <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs">2</span>
+                        <span className="w-6 h-6 rounded-full bg-[#212c40]/10 text-[#212c40] flex items-center justify-center text-xs">2</span>
                         Damage Assessment
                     </h3>
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Severity Level</label>
-                                <select className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow appearance-none cursor-pointer">
-                                     <option>Minor (Scratches/Dents)</option>
-                                     <option>Major (Parts Replacement)</option>
-                                     <option>Critical (Non-drivable)</option>
-                                </select>
+                                <ThemedDropdown
+                                    options={['Minor (Scratches/Dents)', 'Major (Parts Replacement)', 'Critical (Non-drivable)']}
+                                    value={severity}
+                                    onChange={(val) => setSeverity(val)}
+                                    className="bg-gray-50 bg-white"
+                                    width="w-full"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Estimated Cost (Optional)</label>
                                 <div className="relative">
                                     <MdAttachMoney className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input type="text" placeholder="Approx repair cost" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow" />
+                                    <input type="text" placeholder="Approx repair cost" className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-shadow" />
                                 </div>
                             </div>
                         </div>
@@ -110,7 +117,7 @@ const AccidentAddCase = () => {
                              <textarea 
                                 rows="4" 
                                 placeholder="Describe how the accident happened and visible damages..."
-                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-shadow resize-none"
+                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-shadow resize-none"
                              ></textarea>
                         </div>
                     </div>
@@ -119,12 +126,12 @@ const AccidentAddCase = () => {
                 {/* Step 3: Evidence */}
                 <div className="p-6">
                     <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs">3</span>
+                        <span className="w-6 h-6 rounded-full bg-[#212c40]/10 text-[#212c40] flex items-center justify-center text-xs">3</span>
                         Evidence & Photos
                     </h3>
                     
                     <div className="border-2 border-dashed border-gray-300 rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 transition-colors group">
-                        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 bg-[#212c40]/10 text-[#212c40] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                             <MdCloudUpload size={30} />
                         </div>
                         <h4 className="text-lg font-bold text-gray-700">Click to Upload Photos/Videos</h4>
@@ -142,7 +149,7 @@ const AccidentAddCase = () => {
                     </button>
                     <button 
                          onClick={() => navigate('/crm/cars/accidents/active')}
-                         className="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center gap-2"
+                         className="px-6 py-2.5 bg-[#212c40] text-white font-bold rounded-xl hover:bg-[#2a3550] transition-colors shadow-lg shadow-gray-300 flex items-center gap-2"
                     >
                         <MdWarning size={18} />
                         Alert Admin & Save Case

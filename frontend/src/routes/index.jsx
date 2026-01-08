@@ -378,10 +378,12 @@ const router = createBrowserRouter([
         path: "cars/all",
         element: <CRM_AllCars />,
       },
+      /*
       {
         path: "cars/idle",
         element: <CRM_IdleCars />,
       },
+      */
 
       {
         path: "cars/profit",
@@ -454,10 +456,12 @@ const router = createBrowserRouter([
         path: "garage/history",
         element: <CRM_ServiceHistory />,
       },
+      /*
       {
         path: "garage/parts",
         element: <CRM_PartsCost />,
       },
+      */
 
       // VENDOR ROUTES
       {
@@ -494,10 +498,12 @@ const router = createBrowserRouter([
         path: "finance/expenses",
         element: <CRM_Expenses />,
       },
+      /*
       {
         path: "finance/pending",
         element: <CRM_PendingPayments />,
       },
+      */
       {
         path: "finance/profit-loss",
         element: <CRM_ProfitLoss />,
