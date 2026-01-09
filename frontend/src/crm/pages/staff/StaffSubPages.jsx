@@ -16,6 +16,7 @@ import {
   MdGroup,
   MdAccessTime,
   MdEventAvailable,
+  MdDateRange,
   MdAttachMoney,
   MdReceipt,
   MdStar,
@@ -138,7 +139,9 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     role: '',
     status: 'Active',
     phone: '',
+    phone: '',
     email: '',
+    password: '',
     joiningDate: new Date().toISOString().split('T')[0],
     employmentType: '',
     salary: '',
@@ -176,6 +179,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           status: editingStaff.status || 'Active',
           phone: editingStaff.phone ? editingStaff.phone.replace(/^\+91\s*/, '') : '',
           email: editingStaff.email || '',
+          password: '',
           joiningDate: editingStaff.joinDate ? new Date(editingStaff.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           employmentType: editingStaff.employmentType || '',
           salary: editingStaff.salary || '',
@@ -193,7 +197,9 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           role: '',
           status: 'Active',
           phone: '',
+          phone: '',
           email: '',
+          password: '',
           joiningDate: new Date().toISOString().split('T')[0],
           employmentType: '',
           salary: '',
@@ -209,25 +215,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     }
   }, [isOpen, editingStaff]);
 
-  // Auto-calculate deductions when Salary or Working Days change
-  useEffect(() => {
-    if (salaryMethod === 'Monthly' && formData.salary && formData.workingDays) {
-      const salary = parseFloat(formData.salary);
-      const days = parseFloat(formData.workingDays);
-      if (salary > 0 && days > 0) {
-        const perDay = Math.round(salary / days); // Round to integer for Absent Deduction
-        const halfDay = parseFloat((perDay / 2).toFixed(2)); // Exact decimal for Half Day
-        const overtime = parseFloat((perDay / 9).toFixed(2)); // Exact decimal for Overtime
-
-        setFormData(prev => ({
-          ...prev,
-          absentDeduction: perDay,
-          halfDayDeduction: halfDay,
-          overtimeRate: overtime
-        }));
-      }
-    }
-  }, [formData.salary, formData.workingDays, salaryMethod]);
+  // Auto-calculation of deductions removed as per user request
+  // useEffect(() => { ... }, []);
 
   const validateStep1 = () => {
     let newErrors = {};
@@ -239,6 +228,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
       newErrors.phone = "Phone number must be exactly 10 digits";
     }
     if (!formData.email) newErrors.email = "Email is required";
+    if (!editingStaff && !formData.password) newErrors.password = "Password is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -402,6 +392,21 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               </div>
 
               <div className="col-span-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Password {editingStaff ? '(Optional)' : '*'}</label>
+                <input
+                  type="text"
+                  value={formData.password}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    if (errors.password) setErrors({ ...errors, password: null });
+                  }}
+                  className={`w-full px-4 py-3 bg-white border ${errors.password ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all text-gray-800`}
+                  placeholder={editingStaff ? "Leave blank to keep current" : "Set login password"}
+                />
+                {errors.password && <p className="text-red-500 text-xs mt-1 font-medium">{errors.password}</p>}
+              </div>
+
+              <div className="col-span-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Joining Date</label>
                 <input
                   type="date"
@@ -475,47 +480,6 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                       placeholder="26"
                     />
                     {errors.workingDays && <p className="text-red-500 text-xs mt-1 font-medium">{errors.workingDays}</p>}
-                  </div>
-
-                  <div className="col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Absent Deduction/Day</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-400 font-bold">₹</span>
-                      <input
-                        type="number"
-                        value={formData.absentDeduction}
-                        onChange={(e) => setFormData({ ...formData, absentDeduction: e.target.value })}
-                        className="w-full pl-8 pr-4 py-3 bg-rose-50 border border-rose-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300 outline-none transition-all"
-                        step="0.01"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Half Day Deduction</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-400 font-bold">₹</span>
-                      <input
-                        type="number"
-                        value={formData.halfDayDeduction}
-                        onChange={(e) => setFormData({ ...formData, halfDayDeduction: e.target.value })}
-                        className="w-full pl-8 pr-4 py-3 bg-orange-50 border border-orange-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-300 outline-none transition-all"
-                        step="0.01"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Overtime Rate/Hr</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">₹</span>
-                      <input
-                        type="number"
-                        value={formData.overtimeRate}
-                        onChange={(e) => setFormData({ ...formData, overtimeRate: e.target.value })}
-                        className="w-full pl-8 pr-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 outline-none transition-all"
-                        step="0.01"
-                      />
-                    </div>
                   </div>
                 </div>
               )}
@@ -1507,12 +1471,212 @@ const ViewLocationModal = ({ isOpen, onClose, data }) => {
   );
 };
 
+const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
+  if (!isOpen || !staff) return null;
+
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  // Mock Data Generators
+  const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
+  const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+  
+  const baseSalary = 25000; // Mock base salary if not in staff object
+  const workingDaysReq = 26;
+  
+  // Generating Mock Daily Status
+  const attendanceHistory = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const date = new Date(selectedYear, selectedMonth, day);
+    const dayOfWeek = date.getDay();
+    let status = 'Present';
+    
+    // Logic: Sundays are Week Offs. Random Absents.
+    if (dayOfWeek === 0) status = 'Week Off';
+    else if (Math.random() > 0.9) status = 'Absent';
+    else if (Math.random() > 0.95) status = 'Half Day';
+
+    // Future dates
+    if (date > new Date()) status = '-';
+
+    return { day, date: date.toDateString(), status };
+  });
+
+  // Calculate Stats
+  const presentDays = attendanceHistory.filter(d => d.status === 'Present').length;
+  const halfDays = attendanceHistory.filter(d => d.status === 'Half Day').length;
+  const absentDays = attendanceHistory.filter(d => d.status === 'Absent').length;
+  const weekOffs = attendanceHistory.filter(d => d.status === 'Week Off').length;
+  
+  // Salary Calc
+  const perDaySalary = baseSalary / workingDaysReq;
+  const deduction = (absentDays * perDaySalary) + (halfDays * (perDaySalary / 2));
+  const finalSalary = Math.max(0, baseSalary - deduction);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4 backdrop-blur-sm"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-4xl rounded-3xl shadow-2xl bg-white overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        {/* Header */}
+        <div className="bg-white px-8 py-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10">
+          <div>
+             <h2 className="text-2xl font-bold text-gray-900">Monthly Attendance & Payroll</h2>
+             <p className="text-gray-500 text-sm">Detailed view for <span className="font-bold text-[#1C205C]">{staff.name}</span></p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
+            >
+              {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+            <select 
+              value={selectedYear} 
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
+            >
+              <option value={2024}>2024</option>
+              <option value={2025}>2025</option>
+              <option value={2026}>2026</option>
+            </select>
+            <button
+              onClick={onClose}
+              className="p-2 ml-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <MdClose size={24} className="text-gray-400 hover:text-gray-600" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-8 overflow-y-auto custom-scrollbar">
+           {/* Stats Cards */}
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                  <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Total Days</p>
+                  <h3 className="text-2xl font-bold text-blue-900">{daysInMonth}</h3>
+                  <p className="text-xs text-blue-600 font-medium">{weekOffs} Week Offs</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
+                  <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Present</p>
+                  <h3 className="text-2xl font-bold text-green-900">{presentDays} <span className="text-sm font-medium text-green-600">Days</span></h3>
+                  <p className="text-xs text-green-600 font-medium">+ {halfDays} Half Days</p>
+              </div>
+              <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
+                  <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Absent</p>
+                  <h3 className="text-2xl font-bold text-red-900">{absentDays} <span className="text-sm font-medium text-red-600">Days</span></h3>
+                  <p className="text-xs text-red-600 font-medium">Unpaid Leaves</p>
+              </div>
+              <div className="bg-[#1C205C] p-4 rounded-2xl border border-[#1C205C] text-white overflow-hidden relative">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><MdAttachMoney size={48} /></div>
+                  <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Est. Salary</p>
+                  <h3 className="text-2xl font-bold">₹ {Math.round(finalSalary).toLocaleString()}</h3>
+                   <p className="text-xs text-indigo-300 font-medium">Base: ₹ {baseSalary.toLocaleString()}</p>
+              </div>
+           </div>
+
+           <div className="flex flex-col lg:flex-row gap-8">
+              {/* Calendar Grid */}
+              <div className="flex-1">
+                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdDateRange /> Daily Log</h4>
+                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-2">
+                        {/* Empty slots for start of month - Simplified for now assuming starts on appropriate day or just 1st */}
+                        {attendanceHistory.map((day) => (
+                            <div 
+                                key={day.day} 
+                                className={`
+                                    aspect-square rounded-xl flex flex-col items-center justify-center border text-xs font-bold relative group cursor-pointer transition-all hover:scale-105
+                                    ${day.status === 'Present' ? 'bg-white border-green-200 text-green-700 shadow-sm' : 
+                                      day.status === 'Absent' ? 'bg-red-50 border-red-100 text-red-600' :
+                                      day.status === 'Half Day' ? 'bg-orange-50 border-orange-100 text-orange-600' :
+                                      day.status === 'Week Off' ? 'bg-gray-100 border-gray-200 text-gray-400' : 
+                                      'bg-gray-50 border-gray-100 text-gray-300'}
+                                `}
+                            >
+                                <span className={day.status === '-' ? 'opacity-50' : ''}>{day.day}</span>
+                                {day.status === 'Present' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1"></div>}
+                                {day.status === 'Absent' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1"></div>}
+                                {day.status === 'Half Day' && <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1"></div>}
+
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full mb-2 bg-[#1C205C] text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                                    {day.status}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                 </div>
+              </div>
+
+              {/* Salary Breakdown Details */}
+              <div className="w-full lg:w-80">
+                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdReceipt /> Salary Breakdown</h4>
+                 <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm">
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Base Salary</span>
+                        <span className="font-bold text-gray-900">₹ {baseSalary.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full h-px bg-gray-100"></div>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Working Days</span>
+                        <span className="font-bold text-gray-900">{workingDaysReq}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Per Day Rate</span>
+                        <span className="font-bold text-gray-900">₹ {Math.round(perDaySalary).toLocaleString()}</span>
+                    </div>
+                    <div className="bg-red-50 p-3 rounded-xl space-y-2 mt-2 border border-red-100">
+                        <div className="flex justify-between items-center text-xs text-red-600 font-medium">
+                            <span>Absent Deduction ({absentDays})</span>
+                            <span>- ₹ {Math.round(absentDays * perDaySalary).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-orange-600 font-medium">
+                            <span>Half Day Deduction ({halfDays})</span>
+                            <span>- ₹ {Math.round(halfDays * (perDaySalary / 2)).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div className="w-full h-px bg-gray-100"></div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-gray-800 font-bold">Net Payable</span>
+                        <span className="font-bold text-xl text-[#1C205C]">₹ {Math.round(finalSalary).toLocaleString()}</span>
+                    </div>
+                    <button className="w-full py-3 mt-2 bg-[#1C205C] text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-[#2a3550] transition-colors">
+                        Process Salary
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 export const AttendancePage = () => {
   const navigate = useNavigate();
   const currentDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   const [attendanceList, setAttendanceList] = useState([]);
   const [staffInfoList, setStaffInfoList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewingMonthly, setViewingMonthly] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAttendance, setEditingAttendance] = useState(null);
@@ -1733,6 +1897,12 @@ export const AttendancePage = () => {
         data={viewingLocation}
       />
 
+      <StaffMonthlyAttendanceModal
+        isOpen={!!viewingMonthly}
+        onClose={() => setViewingMonthly(null)}
+        staff={viewingMonthly}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
@@ -1746,14 +1916,6 @@ export const AttendancePage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Attendance Tracker</h1>
           <p className="text-gray-500 text-sm">Today: {currentDate}</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl font-medium shadow-sm hover:bg-[#2a3550] transition-colors"
-          style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-        >
-          <MdEventAvailable size={20} />
-          Mark Attendance
-        </button>
       </div>
 
       {/* Filters */}
@@ -1801,8 +1963,6 @@ export const AttendancePage = () => {
               <tr className="bg-[#212c40]/5 border-b border-[#212c40]/10 text-xs uppercase tracking-wider text-[#212c40] font-bold">
                 <th className="p-4">Staff Member</th>
                 <th className="p-4">Role</th>
-                <th className="p-4">In Time</th>
-                <th className="p-4">Out Time</th>
                 <th className="p-4">Work Hours</th>
                 <th className="p-4">Status</th>
                 <th className="p-4">Live Location</th>
@@ -1820,12 +1980,6 @@ export const AttendancePage = () => {
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200">
                         {item.role}
                       </span>
-                    </td>
-                    <td className="p-4 font-medium text-gray-700">
-                      {item.inTime !== '-' ? <span className="flex items-center gap-1"><MdAccessTime size={14} className="text-green-500" /> {item.inTime}</span> : '-'}
-                    </td>
-                    <td className="p-4 font-medium text-gray-700">
-                      {item.outTime !== '-' ? <span className="flex items-center gap-1"><MdAccessTime size={14} className="text-red-500" /> {item.outTime}</span> : '-'}
                     </td>
                     <td className="p-4 text-gray-600">
                       {item.workHours}
@@ -1850,28 +2004,36 @@ export const AttendancePage = () => {
                       )}
                     </td>
                     <td className="p-4 text-right">
-                      {item.inTime === '-' ? (
+                      <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => handleMarkTime(item.id, 'in')}
-                          className="px-3 py-1 bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs font-bold hover:bg-green-100"
+                           onClick={() => setViewingMonthly(item)}
+                           className="text-[#1C205C] hover:text-[#2a3550] text-xs font-bold bg-[#1C205C]/5 hover:bg-[#1C205C]/10 px-2.5 py-1.5 rounded-lg transition-colors border border-[#1C205C]/10"
                         >
-                          Mark In
+                           Monthly View
                         </button>
-                      ) : item.outTime === '-' ? (
-                        <button
-                          onClick={() => handleMarkTime(item.id, 'out')}
-                          className="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded-lg text-xs font-bold hover:bg-red-100"
-                        >
-                          Mark Out
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleEditClick(item)}
-                          className="text-gray-400 hover:text-indigo-600 text-xs font-bold"
-                        >
-                          Edit
-                        </button>
-                      )}
+                        {item.inTime === '-' ? (
+                          <button
+                            onClick={() => handleMarkTime(item.id, 'in')}
+                            className="px-3 py-1 bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs font-bold hover:bg-green-100"
+                          >
+                            Mark In
+                          </button>
+                        ) : item.outTime === '-' ? (
+                          <button
+                            onClick={() => handleMarkTime(item.id, 'out')}
+                            className="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded-lg text-xs font-bold hover:bg-red-100"
+                          >
+                            Mark Out
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleEditClick(item)}
+                            className="text-gray-400 hover:text-indigo-600 text-xs font-bold"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -2190,310 +2352,7 @@ export const SalaryPage = () => {
     </div>
   );
 };
-// Mock Data for Advances - Removed for Backend Integration
-// const MOCK_ADVANCES_DATA = [ ... ];
 
-const AddAdvanceModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
-  const [formData, setFormData] = useState({ staffId: '', amount: '' });
-
-  // Reset or set default staff when modal opens
-  useEffect(() => {
-    if (isOpen && staffList.length > 0 && !formData.staffId) {
-      setFormData(prev => ({ ...prev, staffId: staffList[0].id }));
-    }
-  }, [isOpen, staffList]);
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
-          >
-            <h3 className="text-xl font-bold mb-4">New Advance</h3>
-            <div className="space-y-4">
-              <ThemedDropdown
-                options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
-                value={formData.staffId}
-                onChange={(val) => setFormData({ ...formData, staffId: val })}
-                placeholder="Select Staff"
-                className="bg-white"
-              />
-              <input
-                type="number"
-                placeholder="Amount (₹)"
-                className="w-full p-2 border rounded-xl"
-                value={formData.amount}
-                onChange={e => setFormData({ ...formData, amount: e.target.value })}
-              />
-              <button onClick={() => { onSubmit(formData); onClose(); setFormData({ staffId: staffList.length > 0 ? staffList[0].id : '', amount: '' }) }} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">Submit Request</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-const RepaymentModal = ({ isOpen, onClose, onSubmit }) => {
-  const [amount, setAmount] = useState('');
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
-          >
-            <h3 className="text-xl font-bold mb-4">Add Repayment</h3>
-            <div className="space-y-4">
-              <input
-                type="number"
-                placeholder="Repayment Amount (₹)"
-                className="w-full p-2 border rounded-xl"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-              />
-              <button
-                onClick={() => { onSubmit(amount); onClose(); setAmount(''); }}
-                className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
-              >
-                Submit Repayment
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-export const AdvancesPage = () => {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Status: Active');
-  const [advancesList, setAdvancesList] = useState([]);
-  const [staffList, setStaffList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [repayModalOpen, setRepayModalOpen] = useState(false);
-  const [repayAdvanceId, setRepayAdvanceId] = useState(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [advancesRes, staffRes] = await Promise.all([
-        api.get('/crm/advances'),
-        api.get('/crm/staff')
-      ]);
-
-      if (staffRes.data.success) {
-        setStaffList(staffRes.data.data.staff.map(s => ({
-          id: s._id,
-          name: s.name
-        })));
-      }
-
-      if (advancesRes.data.success) {
-        const formatted = advancesRes.data.data.advances.map(adv => ({
-          id: adv._id,
-          name: adv.staff?.name || 'Unknown Staff',
-          amount: `₹ ${adv.totalAmount.toLocaleString()}`,
-          paid: `₹ ${adv.repaidAmount.toLocaleString()}`,
-          balance: `₹ ${(adv.totalAmount - adv.repaidAmount).toLocaleString()}`,
-          status: adv.status,
-          date: new Date(adv.dateTaken).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-          rawBalance: (adv.totalAmount - adv.repaidAmount)
-        }));
-        setAdvancesList(formatted);
-      }
-
-    } catch (error) {
-      console.error("Error fetching advances:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddAdvance = async (data) => {
-    try {
-      const payload = {
-        staff: data.staffId,
-        totalAmount: data.amount,
-        status: 'Active',
-        dateTaken: new Date()
-      };
-      const response = await api.post('/crm/advances', payload);
-      if (response.data.success) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error adding advance:", error);
-    }
-  };
-
-  const handleRepayment = (id) => {
-    setRepayAdvanceId(id);
-    setRepayModalOpen(true);
-  };
-
-  const submitRepayment = async (amount) => {
-    if (amount && repayAdvanceId) {
-      try {
-        const response = await api.post(`/crm/advances/${repayAdvanceId}/repay`, { amount });
-        if (response.data.success) {
-          fetchData();
-        }
-      } catch (error) {
-        console.error("Error adding repayment:", error);
-      }
-    }
-    setRepayAdvanceId(null);
-  };
-
-  const filteredAdvances = advancesList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    if (statusFilter === 'All History') return matchesSearch;
-    if (statusFilter === 'Status: Active') return matchesSearch && item.status === 'Active';
-    if (statusFilter === 'Paid Off') return matchesSearch && item.status === 'Paid Off';
-    return matchesSearch;
-  });
-
-  return (
-    <div className="space-y-6">
-      <AddAdvanceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddAdvance} staffList={staffList} />
-      <RepaymentModal isOpen={repayModalOpen} onClose={() => setRepayModalOpen(false)} onSubmit={submitRepayment} />
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
-            <span>/</span>
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
-            <span>/</span>
-            <span className="text-gray-800 font-medium">Advances</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Advances & Loans</h1>
-          <p className="text-gray-500 text-sm">Track salary advances and repayment status.</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-          style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-        >
-          <MdAdd size={20} />
-          New Advance
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search Staff Name..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-3">
-          <ThemedDropdown
-            options={['Status: Active', 'Paid Off', 'All History']}
-            value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
-            className="bg-white text-sm"
-            width="w-40"
-          />
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center p-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          </div>
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-orange-50/30 border-b border-orange-100 text-xs uppercase tracking-wider text-orange-800 font-bold">
-                <th className="p-4">Staff Member</th>
-                <th className="p-4">Total Advance</th>
-                <th className="p-4">Repaid</th>
-                <th className="p-4">Balance Due</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
-              {filteredAdvances.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-900">{item.name}</div>
-                    <div className="text-xs text-gray-500">Taken on {item.date}</div>
-                  </td>
-                  <td className="p-4 text-gray-900 font-bold">
-                    {item.amount}
-                  </td>
-                  <td className="p-4 text-green-600 font-medium">
-                    {item.paid}
-                  </td>
-                  <td className="p-4 font-bold text-red-600">
-                    {item.balance}
-                  </td>
-                  <td className="p-4">
-                    {item.status === 'Active' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Active</span>}
-                    {item.status === 'Paid Off' && <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold border border-gray-200"><MdCheck size={14} /> Paid Off</span>}
-                  </td>
-                  <td className="p-4 text-right">
-                    {item.status === 'Active' && (
-                      <button
-                        onClick={() => handleRepayment(item.id)}
-                        className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
-                      >
-                        Add Repayment
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {filteredAdvances.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No active advances found.</div>
-        )}
-      </div>
-    </div>
-  );
-};
 // Mock Data for Performance - Removed for Backend Integration
 // const MOCK_PERFORMANCE_DATA = [...];
 

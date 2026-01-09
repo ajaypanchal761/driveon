@@ -7,20 +7,23 @@ import { AdminProvider } from './context/AdminContext';
 import router from './routes';
 import Toaster from './components/common/Toaster';
 import AuthInitializer from './components/auth/AuthInitializer';
+import { EmployeeProvider } from './context/EmployeeContext';
 import './App.css';
 
 /**
  * Main App Component
- * Wraps the app with Redux Provider, React Query Provider, Admin Provider, Router, and Toaster
+ * Wraps the app with Redux Provider, React Query Provider, Admin Provider, Employee Provider, Router, and Toaster
  */
 function App() {
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
-          <AuthInitializer />
-          <RouterProvider router={router} />
-          <Toaster />
+          <EmployeeProvider>
+            <AuthInitializer />
+            <RouterProvider router={router} />
+            <Toaster />
+          </EmployeeProvider>
         </AdminProvider>
       </QueryClientProvider>
     </Provider>

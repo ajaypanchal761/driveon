@@ -20,7 +20,8 @@ import {
   MdCheckCircle,
   MdAccessTime,
   MdClose,
-  MdAdd
+  MdAdd,
+  MdEdit
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
 import ThemedDropdown from '../../components/ThemedDropdown';
@@ -80,9 +81,6 @@ const GarageCard = ({ garage, onDetails }) => (
                     </div>
                 </div>
             </div>
-            <div className="flex items-center gap-1 px-2 py-1 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold">
-                <MdStar /> {garage.rating}
-            </div>
         </div>
         
         <div className="space-y-2 text-sm text-gray-600 mb-4">
@@ -105,7 +103,7 @@ const GarageCard = ({ garage, onDetails }) => (
     </motion.div>
 );
 
-const RepairItem = ({ repair, onDelete, onComplete }) => {
+const RepairItem = ({ repair, onDelete, onComplete, onEdit }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     return (
@@ -119,32 +117,12 @@ const RepairItem = ({ repair, onDelete, onComplete }) => {
                  <MdBuild size={24} />
              </div>
              <div>
-                 <h4 className="font-bold text-gray-900">{repair.car} <span className="text-gray-400 font-normal text-sm">({repair.reg})</span></h4>
+                 <h4 className="font-bold text-gray-900">{repair.car}</h4>
                  <p className="text-sm text-gray-500 mt-0.5">{repair.issue} • at <span className="font-medium text-gray-700">{repair.garage}</span></p>
              </div>
         </div>
 
         <div className="flex items-center gap-6 w-full md:w-auto">
-             <div className="flex-1 md:w-48">
-                 <div className="flex justify-between text-xs font-bold mb-1.5">
-                     <span className="text-gray-500">Progress</span>
-                     <span className="text-[#1c205c]">{repair.progress}%</span>
-                 </div>
-                 <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                     <div className="bg-[#1c205c] h-full rounded-full transition-all duration-1000" style={{ width: `${repair.progress}%` }}></div>
-                 </div>
-                 <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
-                     <span>Diagnostics</span>
-                     <span>Repair</span>
-                     <span>Testing</span>
-                 </div>
-             </div>
-             
-             <div className="text-right shrink-0">
-                 <p className="text-xs text-gray-400 font-bold uppercase">Est. Completion</p>
-                 <p className="text-sm font-bold text-gray-800">{repair.completionDate}</p>
-             </div>
-             
              <div className="relative">
                  <button 
                      onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -155,6 +133,12 @@ const RepairItem = ({ repair, onDelete, onComplete }) => {
                  
                  {isMenuOpen && (
                      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
+                         <button 
+                             onClick={() => { onEdit(repair); setIsMenuOpen(false); }}
+                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#1c205c]/10 hover:text-[#1c205c] transition-colors flex items-center gap-2"
+                         >
+                             <MdEdit size={16} /> Edit Repair
+                         </button>
                          <button 
                              onClick={() => { onComplete(repair.id); setIsMenuOpen(false); }}
                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#1c205c]/10 hover:text-[#1c205c] transition-colors flex items-center gap-2"
@@ -190,11 +174,7 @@ const MOCK_REPAIRS = [
     { id: 3, car: "Maruti Swift", reg: "PB 10 5678", garage: "AutoTech Solutions", issue: "AC Compressor Check", progress: 90, completionDate: "Tomorrow, 10:00 AM" },
 ];
 
-const MOCK_HISTORY = [
-    { id: 101, date: "15 Dec 2025", car: "Hyundai Creta", garage: "Wheel Force Centre", service: "Periodic Service (20k km)", cost: 5500, status: "Completed" },
-    { id: 102, date: "10 Nov 2025", car: "Toyota Fortuner", garage: "Bosch Car Service", service: "Battery Replacement", cost: 8500, status: "Completed" },
-    { id: 103, date: "05 Oct 2025", car: "Honda City", garage: "GoMechanic", service: "Denting/Painting", cost: 12000, status: "Completed" },
-];
+
 
 const MOCK_PARTS = [
     { id: 1, name: "Exide Battery 65Ah", category: "Battery", stock: 4, cost: 4500, supplier: "Exide Dealer Delhi" },
@@ -215,17 +195,32 @@ export const AllGaragesPage = () => {
     const [newGarage, setNewGarage] = useState({ name: '', location: '', phone: '', specialist: '', rating: '4.0' });
     const [searchTerm, setSearchTerm] = useState('');
 
+    const [errors, setErrors] = useState({});
+
     const filteredGarages = garages.filter(garage => 
         garage.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         garage.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
         garage.specialist.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const validate = () => {
+        let tempErrors = {};
+        if (!newGarage.name) tempErrors.name = "Garage Name is required.";
+        if (!newGarage.location) tempErrors.location = "Location is required.";
+        if (!newGarage.specialist) tempErrors.specialist = "Specialist field is required.";
+        if (!/^\d{10}$/.test(newGarage.phone)) {
+            tempErrors.phone = "Phone number must be 10 digits.";
+        }
+        setErrors(tempErrors);
+        return Object.keys(tempErrors).length === 0;
+    };
+
     const handleAddGarage = () => {
-        if (!newGarage.name || !newGarage.location) return;
+        if (!validate()) return;
         setGarages([...garages, { ...newGarage, id: Date.now() }]);
         setIsAddModalOpen(false);
         setNewGarage({ name: '', location: '', phone: '', specialist: '', rating: '4.0' });
+        setErrors({});
     };
 
     const handleViewDetails = (garage) => {
@@ -290,41 +285,60 @@ export const AllGaragesPage = () => {
                          <label className="block text-sm font-medium text-gray-700 mb-1">Garage Name</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
                             placeholder="e.g. Speed Auto Works"
                             value={newGarage.name}
-                            onChange={(e) => setNewGarage({...newGarage, name: e.target.value})}
+                            onChange={(e) => {
+                                setNewGarage({...newGarage, name: e.target.value});
+                                if (errors.name) setErrors({...errors, name: null});
+                            }}
                          />
+                         {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] ${errors.location ? 'border-red-500' : 'border-gray-200'}`}
                             placeholder="e.g. Sector 15, Noida"
                             value={newGarage.location}
-                            onChange={(e) => setNewGarage({...newGarage, location: e.target.value})}
+                            onChange={(e) => {
+                                setNewGarage({...newGarage, location: e.target.value});
+                                if (errors.location) setErrors({...errors, location: null});
+                            }}
                          />
+                         {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
-                            placeholder="+91..."
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] ${errors.phone ? 'border-red-500' : 'border-gray-200'}`}
+                            placeholder="10 digit mobile number"
                             value={newGarage.phone}
-                            onChange={(e) => setNewGarage({...newGarage, phone: e.target.value})}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^\d*$/.test(val) && val.length <= 10) {
+                                    setNewGarage({...newGarage, phone: val});
+                                    if (errors.phone) setErrors({...errors, phone: null});
+                                }
+                            }}
                          />
+                         {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Specialist In</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]" 
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c] ${errors.specialist ? 'border-red-500' : 'border-gray-200'}`}
                             placeholder="e.g. Engine, Denting"
                             value={newGarage.specialist}
-                            onChange={(e) => setNewGarage({...newGarage, specialist: e.target.value})}
+                            onChange={(e) => {
+                                setNewGarage({...newGarage, specialist: e.target.value});
+                                if (errors.specialist) setErrors({...errors, specialist: null});
+                            }}
                          />
+                         {errors.specialist && <p className="text-xs text-red-500 mt-1">{errors.specialist}</p>}
                      </div>
                      <button 
                         onClick={handleAddGarage}
@@ -350,16 +364,10 @@ export const AllGaragesPage = () => {
                                  </div>
                              </div>
                          </div>
-                         <div className="grid grid-cols-2 gap-4">
+                         <div className="grid grid-cols-1 gap-4">
                              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                                  <p className="text-xs text-gray-400 uppercase font-bold">Contact</p>
                                  <p className="font-medium text-gray-800">{selectedGarage.phone}</p>
-                             </div>
-                             <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                 <p className="text-xs text-gray-400 uppercase font-bold">Rating</p>
-                                 <div className="flex items-center gap-1 font-medium text-gray-800">
-                                     <MdStar className="text-yellow-500" /> {selectedGarage.rating}
-                                 </div>
                              </div>
                          </div>
                          <div className="bg-[#1c205c]/10 p-4 rounded-xl border border-[#1c205c]/20">
@@ -380,6 +388,7 @@ export const ActiveRepairsPage = () => {
     const navigate = useNavigate();
     const [repairs, setRepairs] = useState(MOCK_REPAIRS);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingRepair, setEditingRepair] = useState(null);
     const [newRepair, setNewRepair] = useState({
         car: 'Toyota Innova Crysta',
         reg: 'PB 01 1234',
@@ -391,7 +400,14 @@ export const ActiveRepairsPage = () => {
 
     const handleAddRepair = () => {
          if (!newRepair.issue) return;
-         setRepairs([{ ...newRepair, id: Date.now() }, ...repairs]);
+         
+         if (editingRepair) {
+             setRepairs(repairs.map(r => r.id === editingRepair.id ? { ...newRepair, id: editingRepair.id, progress: editingRepair.progress, completionDate: editingRepair.completionDate } : r));
+             setEditingRepair(null);
+         } else {
+             setRepairs([{ ...newRepair, id: Date.now() }, ...repairs]);
+         }
+         
          setIsAddModalOpen(false);
          setNewRepair({ car: 'Toyota Innova Crysta', reg: 'PB 01 1234', garage: 'Bosch Car Service', issue: '', progress: 0, completionDate: 'Tomorrow' });
     };
@@ -402,6 +418,12 @@ export const ActiveRepairsPage = () => {
     
     const handleCompleteRepair = (id) => {
         setRepairs(repairs.filter(r => r.id !== id));
+    };
+
+    const handleEditRepair = (repair) => {
+        setEditingRepair(repair);
+        setNewRepair(repair);
+        setIsAddModalOpen(true);
     };
 
     return (
@@ -419,7 +441,11 @@ export const ActiveRepairsPage = () => {
                      <p className="text-gray-500 text-sm">Real-time status of vehicles in garage.</p>
                  </div>
                  <button 
-                    onClick={() => setIsAddModalOpen(true)}
+                    onClick={() => {
+                        setEditingRepair(null);
+                        setNewRepair({ car: 'Toyota Innova Crysta', reg: 'PB 01 1234', garage: 'Bosch Car Service', issue: '', progress: 0, completionDate: 'Tomorrow' });
+                        setIsAddModalOpen(true);
+                    }}
                     className="px-4 py-2 bg-[#1c205c] text-white rounded-xl shadow-lg shadow-gray-300 hover:bg-[#252d6d] font-bold flex items-center gap-2"
                  >
                      <MdAdd /> Logs New Repair
@@ -428,7 +454,7 @@ export const ActiveRepairsPage = () => {
              <div className="space-y-4">
                  {repairs.length > 0 ? (
                      repairs.map(repair => (
-                         <RepairItem key={repair.id} repair={repair} onDelete={handleDeleteRepair} onComplete={handleCompleteRepair} />
+                         <RepairItem key={repair.id} repair={repair} onDelete={handleDeleteRepair} onComplete={handleCompleteRepair} onEdit={handleEditRepair} />
                      ))
                  ) : (
                      <div className="text-center py-10 text-gray-400">
@@ -438,7 +464,7 @@ export const ActiveRepairsPage = () => {
              </div>
 
              {/* Add Repair Modal */}
-             <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Log New Repair">
+             <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={editingRepair ? "Edit Repair Log" : "Log New Repair"}>
                  <div className="space-y-4">
                     <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle</label>
@@ -472,7 +498,7 @@ export const ActiveRepairsPage = () => {
                         onClick={handleAddRepair}
                         className="w-full py-2.5 bg-[#1c205c] text-white rounded-xl font-bold hover:bg-[#252d6d] transition-colors shadow-lg shadow-gray-300"
                      >
-                         Start Repair Log
+                         {editingRepair ? "Update Repair Log" : "Start Repair Log"}
                      </button>
                  </div>
              </SimpleModal>
@@ -480,74 +506,7 @@ export const ActiveRepairsPage = () => {
     );
 };
 
-export const ServiceHistoryPage = () => {
-    const navigate = useNavigate();
-    const [history, setHistory] = useState(MOCK_HISTORY);
-    const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredHistory = history.filter(log => 
-        log.car.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        log.garage.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.service.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-                <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
-                        <span>/</span> 
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span> 
-                        <span>/</span> 
-                        <span className="text-gray-800 font-medium">Service Logs</span>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Service Logs</h1>
-                    <p className="text-gray-500 text-sm">Archive of all maintenance activities.</p>
-                </div>
-                <div className="flex gap-3">
-                     <div className="relative">
-                          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input 
-                            type="text" 
-                            placeholder="Search logs..." 
-                            className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500" 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                          />
-                     </div>
-                </div>
-            </div>
-    
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                 <table className="w-full text-left">
-                     <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                         <tr>
-                             <th className="px-6 py-4">Date</th>
-                             <th className="px-6 py-4">Vehicle</th>
-                             <th className="px-6 py-4">Garage</th>
-                             <th className="px-6 py-4">Service Details</th>
-                             <th className="px-6 py-4">Cost</th>
-                             <th className="px-6 py-4">Status</th>
-                         </tr>
-                     </thead>
-                     <tbody className="divide-y divide-gray-100 text-sm">
-                         {filteredHistory.map((log) => (
-                             <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                                 <td className="px-6 py-4 font-bold text-gray-800">{log.date}</td>
-                                 <td className="px-6 py-4 text-gray-700 font-medium">{log.car}</td>
-                                 <td className="px-6 py-4 text-gray-500">{log.garage}</td>
-                                 <td className="px-6 py-4 text-gray-600">{log.service}</td>
-                                 <td className="px-6 py-4 font-bold text-gray-900">₹ {log.cost.toLocaleString()}</td>
-                                 <td className="px-6 py-4"><StatusBadge status={log.status} /></td>
-                             </tr>
-                         ))}
-                     </tbody>
-                 </table>
-            </div>
-        </div>
-    );
-};
 
 export const PartsCostPage = () => {
     const navigate = useNavigate();
