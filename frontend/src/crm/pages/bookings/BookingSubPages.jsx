@@ -16,7 +16,7 @@ import {
     MdClose,
     MdEdit,
     MdTrendingUp,
-    MdTrendingDown, 
+    MdTrendingDown,
     MdLocalGasStation,
     MdReceipt,
     MdVisibility,
@@ -523,7 +523,7 @@ export const BookingPaymentStatusPage = () => {
                                     <PaymentStatusBadge status={payment.status} />
                                 </td>
                                 <td className="px-6 py-4 text-right relative">
-                                    <button 
+                                    <button
                                         onClick={() => handleEditPayment(payment)}
                                         className="text-gray-400 hover:text-[#1c205c] p-2 hover:bg-[#1c205c]/5 rounded-lg transition-colors"
                                         title="Edit Payment"
@@ -556,28 +556,28 @@ export const BookingPaymentStatusPage = () => {
                                 <MdClose size={24} />
                             </button>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount (₹)</label>
-                                <input 
-                                    type="number" 
-                                    defaultValue={selectedPayment.amount} 
+                                <input
+                                    type="number"
+                                    defaultValue={selectedPayment.amount}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
                                     readOnly
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount Received (₹)</label>
-                                <input 
-                                    type="number" 
-                                    defaultValue={selectedPayment.paid} 
+                                <input
+                                    type="number"
+                                    defaultValue={selectedPayment.paid}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
                                 />
                             </div>
-                             <div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
-                                <select 
+                                <select
                                     defaultValue={selectedPayment.status}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1c205c]/20 focus:border-[#1c205c]"
                                 >
@@ -587,15 +587,15 @@ export const BookingPaymentStatusPage = () => {
                                     <option value="Refunded">Refunded</option>
                                 </select>
                             </div>
-                            
+
                             <div className="pt-4 flex gap-3">
-                                <button 
+                                <button
                                     onClick={() => setIsEditModalOpen(false)}
                                     className="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => {
                                         alert('Payment details updated successfully!');
                                         setIsEditModalOpen(false);

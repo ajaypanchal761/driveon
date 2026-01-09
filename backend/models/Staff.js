@@ -45,7 +45,28 @@ const staffSchema = new mongoose.Schema(
         avatar: {
             type: String,
         },
-        baseSalary: {
+        salary: {
+            type: Number,
+            default: 0,
+        },
+        salaryMethod: {
+            type: String,
+            enum: ['Monthly', 'Daily', 'Per Trip'],
+            default: 'Monthly',
+        },
+        workingDays: {
+            type: Number,
+            default: 26,
+        },
+        absentDeduction: {
+            type: Number,
+            default: 0,
+        },
+        halfDayDeduction: {
+            type: Number,
+            default: 0,
+        },
+        overtimeRate: {
             type: Number,
             default: 0,
         },

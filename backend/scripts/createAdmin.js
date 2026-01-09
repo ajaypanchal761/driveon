@@ -17,15 +17,31 @@ const createAdmin = async () => {
     const adminData = {
       name: 'Ajay Panchal',
       email: 'panchalajay717@gmail.com',
-      password: '110211', // Will be hashed by pre-save hook
+      password: '123456', // Will be hashed by pre-save hook
       role: 'admin',
+      permissions: [
+        'users.manage',
+        'users.view',
+        'cars.manage',
+        'cars.view',
+        'bookings.manage',
+        'bookings.view',
+        'payments.manage',
+        'payments.view',
+        'kyc.manage',
+        'kyc.view',
+        'reports.view',
+        'settings.manage',
+      ],
       isActive: true,
       phone: '7610416911',
+      department: '',
+      notes: 'Initial admin account',
     };
 
     // Check if admin already exists
     const existingAdmin = await Admin.findOne({ email: adminData.email.toLowerCase() });
-    
+
     if (existingAdmin) {
       console.log('⚠️ Admin with this email already exists:');
       console.log({
@@ -50,22 +66,22 @@ const createAdmin = async () => {
     console.log('  Phone:', admin.phone || 'Not set');
     console.log('  Role:', admin.role);
     console.log('  Status: Active');
-    console.log('  Password: 110211');
+    console.log('  Password: 123456');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('\n📝 You can now login with:');
     console.log('   Email: panchalajay717@gmail.com');
-    console.log('   Password: 110211');
+    console.log('   Password: 123456');
     console.log('\n');
 
     process.exit(0);
   } catch (error) {
     console.error('\n❌ Error creating admin account:');
     console.error(error.message);
-    
+
     if (error.code === 11000) {
       console.error('\n⚠️ Admin with this email already exists!');
     }
-    
+
     process.exit(1);
   }
 };

@@ -136,7 +136,6 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
   const [formData, setFormData] = useState({
     name: '',
     role: '',
-    department: '',
     status: 'Active',
     phone: '',
     email: '',
@@ -148,8 +147,25 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     halfDayDeduction: '',
     overtimeRate: ''
   });
-  
+
   const [errors, setErrors] = useState({});
+  const [availableRoles, setAvailableRoles] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchRoles = async () => {
+        try {
+          const response = await api.get('/crm/roles');
+          if (response.data.success) {
+            setAvailableRoles(response.data.data.roles.map(r => r.roleName));
+          }
+        } catch (error) {
+          console.error("Error fetching roles:", error);
+        }
+      };
+      fetchRoles();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -157,7 +173,6 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
         setFormData({
           name: editingStaff.name || '',
           role: editingStaff.role || '',
-          department: editingStaff.department || '',
           status: editingStaff.status || 'Active',
           phone: editingStaff.phone ? editingStaff.phone.replace(/^\+91\s*/, '') : '',
           email: editingStaff.email || '',
@@ -170,12 +185,12 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           overtimeRate: editingStaff.overtimeRate || ''
         });
         setStep(1);
+        setSalaryMethod(editingStaff.salaryMethod || 'Monthly');
         setErrors({});
       } else {
         setFormData({
           name: '',
           role: '',
-          department: '',
           status: 'Active',
           phone: '',
           email: '',
@@ -188,22 +203,43 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           overtimeRate: ''
         });
         setStep(1);
+        setSalaryMethod('Monthly');
         setErrors({});
       }
     }
   }, [isOpen, editingStaff]);
+
+  // Auto-calculate deductions when Salary or Working Days change
+  useEffect(() => {
+    if (salaryMethod === 'Monthly' && formData.salary && formData.workingDays) {
+      const salary = parseFloat(formData.salary);
+      const days = parseFloat(formData.workingDays);
+      if (salary > 0 && days > 0) {
+        const perDay = Math.round(salary / days); // Round to integer for Absent Deduction
+        const halfDay = parseFloat((perDay / 2).toFixed(2)); // Exact decimal for Half Day
+        const overtime = parseFloat((perDay / 9).toFixed(2)); // Exact decimal for Overtime
+
+        setFormData(prev => ({
+          ...prev,
+          absentDeduction: perDay,
+          halfDayDeduction: halfDay,
+          overtimeRate: overtime
+        }));
+      }
+    }
+  }, [formData.salary, formData.workingDays, salaryMethod]);
 
   const validateStep1 = () => {
     let newErrors = {};
     if (!formData.name) newErrors.name = "Full Name is required";
     if (!formData.role) newErrors.role = "Role is required";
     if (!formData.phone) {
-        newErrors.phone = "Phone number is required";
+      newErrors.phone = "Phone number is required";
     } else if (formData.phone.length !== 10) {
-        newErrors.phone = "Phone number must be exactly 10 digits";
+      newErrors.phone = "Phone number must be exactly 10 digits";
     }
     if (!formData.email) newErrors.email = "Email is required";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -211,8 +247,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
   const validateStep2 = () => {
     let newErrors = {};
     if (salaryMethod === 'Monthly') {
-         if(!formData.salary) newErrors.salary = "Base salary is required for monthly staff";
-         if(!formData.workingDays) newErrors.workingDays = "Working days are required";
+      if (!formData.salary) newErrors.salary = "Base salary is required for monthly staff";
+      if (!formData.workingDays) newErrors.workingDays = "Working days are required";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -225,7 +261,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
       }
     } else if (step === 2) {
       if (validateStep2()) {
-         setStep(step + 1);
+        setStep(step + 1);
       }
     }
   };
@@ -236,10 +272,10 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const submitData = { 
-      ...formData, 
+    const submitData = {
+      ...formData,
       phone: `+91 ${formData.phone}`,
-      salaryMethod 
+      salaryMethod
     };
     onSubmit(submitData);
     onClose();
@@ -277,11 +313,11 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
         </div>
         {/* Mobile Header */}
         <div className="bg-white px-4 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10 md:hidden">
-             <div>
-                <h2 className="text-lg font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add Staff'}</h2>
-                <p className="text-xs text-gray-500">Step {step} of 3</p>
-             </div>
-             <button onClick={onClose} className="p-2 bg-gray-50 rounded-full"><MdClose size={20} /></button>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add Staff'}</h2>
+            <p className="text-xs text-gray-500">Step {step} of 3</p>
+          </div>
+          <button onClick={onClose} className="p-2 bg-gray-50 rounded-full"><MdClose size={20} /></button>
         </div>
 
         {/* Content */}
@@ -294,8 +330,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => {
-                      setFormData({ ...formData, name: e.target.value });
-                      if(errors.name) setErrors({...errors, name: null});
+                    setFormData({ ...formData, name: e.target.value });
+                    if (errors.name) setErrors({ ...errors, name: null });
                   }}
                   className={`w-full px-4 py-3 bg-white border ${errors.name ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-medium text-gray-800`}
                   placeholder="Rajesh Kumar"
@@ -306,29 +342,21 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               <div className="col-span-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Role *</label>
                 <div className={`${errors.role ? 'border border-red-300 rounded-xl' : ''}`}>
-                    <ThemedDropdown
-                    options={['Sales Manager', 'Driver', 'Mechanic', 'Accountant', 'Admin Executive']}
+                  <ThemedDropdown
+                    options={availableRoles.length > 0 ? availableRoles : ['Sales Manager', 'Driver', 'Mechanic', 'Accountant', 'Admin Executive']}
                     value={formData.role}
                     onChange={(val) => {
-                        setFormData({ ...formData, role: val });
-                        if(errors.role) setErrors({...errors, role: null});
+                      setFormData({ ...formData, role: val });
+                      if (errors.role) setErrors({ ...errors, role: null });
                     }}
                     placeholder="Select Role"
                     className="w-full"
-                    />
+                  />
                 </div>
                 {errors.role && <p className="text-red-500 text-xs mt-1 font-medium">{errors.role}</p>}
               </div>
 
-              <div className="col-span-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Department</label>
-                <ThemedDropdown
-                  options={['Sales', 'Fleet', 'Garage', 'Administration', 'Finance']}
-                  value={formData.department}
-                  onChange={(val) => setFormData({ ...formData, department: val })}
-                  placeholder="Select Department"
-                />
-              </div>
+
 
               <div className="col-span-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Status</label>
@@ -348,8 +376,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => {
-                         setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) });
-                         if(errors.phone) setErrors({...errors, phone: null});
+                      setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) });
+                      if (errors.phone) setErrors({ ...errors, phone: null });
                     }}
                     className={`w-full pl-12 pr-4 py-3 bg-gray-50 border ${errors.phone ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:bg-white focus:ring-2 focus:border-indigo-500 outline-none transition-all font-mono text-gray-800`}
                     placeholder="98765 43210"
@@ -364,8 +392,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      if(errors.email) setErrors({...errors, email: null});
+                    setFormData({ ...formData, email: e.target.value });
+                    if (errors.email) setErrors({ ...errors, email: null });
                   }}
                   className={`w-full px-4 py-3 bg-gray-50 border ${errors.email ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:bg-white focus:ring-2 focus:border-indigo-500 outline-none transition-all text-gray-800`}
                   placeholder="rajesh@example.com"
@@ -407,8 +435,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                       onClick={() => setSalaryMethod(method)}
                       className={`
                         py-3 px-4 rounded-xl font-bold text-sm transition-all shadow-sm
-                        ${salaryMethod === method 
-                          ? 'bg-[#1C205C] text-white shadow-indigo-200 transform scale-[1.02]' 
+                        ${salaryMethod === method
+                          ? 'bg-[#1C205C] text-white shadow-indigo-200 transform scale-[1.02]'
                           : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}
                       `}
                     >
@@ -426,13 +454,13 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                       type="number"
                       value={formData.salary}
                       onChange={(e) => {
-                           setFormData({ ...formData, salary: e.target.value });
-                           if(errors.salary) setErrors({...errors, salary: null});
+                        setFormData({ ...formData, salary: e.target.value });
+                        if (errors.salary) setErrors({ ...errors, salary: null });
                       }}
-                       className={`w-full px-4 py-3 bg-white border ${errors.salary ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
+                      className={`w-full px-4 py-3 bg-white border ${errors.salary ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
                       placeholder="45000"
                     />
-                     {errors.salary && <p className="text-red-500 text-xs mt-1 font-medium">{errors.salary}</p>}
+                    {errors.salary && <p className="text-red-500 text-xs mt-1 font-medium">{errors.salary}</p>}
                   </div>
                   <div className="col-span-1">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Working Days *</label>
@@ -440,8 +468,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                       type="number"
                       value={formData.workingDays}
                       onChange={(e) => {
-                          setFormData({ ...formData, workingDays: e.target.value });
-                          if(errors.workingDays) setErrors({...errors, workingDays: null});
+                        setFormData({ ...formData, workingDays: e.target.value });
+                        if (errors.workingDays) setErrors({ ...errors, workingDays: null });
                       }}
                       className={`w-full px-4 py-3 bg-white border ${errors.workingDays ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
                       placeholder="26"
@@ -458,6 +486,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                         value={formData.absentDeduction}
                         onChange={(e) => setFormData({ ...formData, absentDeduction: e.target.value })}
                         className="w-full pl-8 pr-4 py-3 bg-rose-50 border border-rose-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300 outline-none transition-all"
+                        step="0.01"
                       />
                     </div>
                   </div>
@@ -471,10 +500,11 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                         value={formData.halfDayDeduction}
                         onChange={(e) => setFormData({ ...formData, halfDayDeduction: e.target.value })}
                         className="w-full pl-8 pr-4 py-3 bg-orange-50 border border-orange-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-300 outline-none transition-all"
+                        step="0.01"
                       />
                     </div>
                   </div>
-                   <div className="col-span-1">
+                  <div className="col-span-1">
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Overtime Rate/Hr</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">₹</span>
@@ -483,6 +513,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                         value={formData.overtimeRate}
                         onChange={(e) => setFormData({ ...formData, overtimeRate: e.target.value })}
                         className="w-full pl-8 pr-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 outline-none transition-all"
+                        step="0.01"
                       />
                     </div>
                   </div>
@@ -490,8 +521,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               )}
 
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 text-sm text-blue-800">
-                  <MdVisibility className="shrink-0 mt-0.5" size={18} />
-                  <p><strong>NB:</strong> These rules will be locked and used to auto-calculate salary every month. Manual editing of salary is disabled to ensure accuracy.</p>
+                <MdVisibility className="shrink-0 mt-0.5" size={18} />
+                <p><strong>NB:</strong> These rules will be locked and used to auto-calculate salary every month. Manual editing of salary is disabled to ensure accuracy.</p>
               </div>
             </motion.div>
           )}
@@ -505,20 +536,20 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               <p className="text-gray-500 max-w-sm mx-auto mb-8">
                 You are about to add <span className="font-bold text-gray-800">{formData.name}</span> as a <span className="font-bold text-gray-800">{formData.role}</span>.
               </p>
-              
+
               <div className="w-full bg-gray-50 rounded-2xl border border-gray-100 p-6 text-left grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">Salary Type</label>
-                    <p className="font-bold text-gray-900 text-lg">{salaryMethod}</p>
-                 </div>
-                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">Base Pay</label>
-                    <p className="font-bold text-gray-900 text-lg">₹{formData.salary || '0'}</p>
-                 </div>
-                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">Phone</label>
-                    <p className="font-bold text-gray-900 text-lg font-mono">+91 {formData.phone}</p>
-                 </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase">Salary Type</label>
+                  <p className="font-bold text-gray-900 text-lg">{salaryMethod}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase">Base Pay</label>
+                  <p className="font-bold text-gray-900 text-lg">₹{formData.salary || '0'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase">Phone</label>
+                  <p className="font-bold text-gray-900 text-lg font-mono">+91 {formData.phone}</p>
+                </div>
               </div>
             </motion.div>
           )}
@@ -527,26 +558,26 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
         {/* Footer */}
         <div className="bg-white border-t border-gray-100 p-6 flex justify-between items-center z-10">
           <button
-             onClick={step === 1 ? onClose : handleBack}
-             className="px-6 py-3 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
+            onClick={step === 1 ? onClose : handleBack}
+            className="px-6 py-3 rounded-xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
           >
             {step === 1 ? 'Cancel' : 'Back'}
           </button>
-          
+
           {step < 3 ? (
-             <button
-               onClick={handleNext}
-               className="px-8 py-3 rounded-xl bg-[#1C205C] text-white font-bold shadow-lg shadow-indigo-200 hover:bg-[#2a306e] transition-all transform hover:-translate-y-0.5"
-             >
-                Next Step
-             </button>
+            <button
+              onClick={handleNext}
+              className="px-8 py-3 rounded-xl bg-[#1C205C] text-white font-bold shadow-lg shadow-indigo-200 hover:bg-[#2a306e] transition-all transform hover:-translate-y-0.5"
+            >
+              Next Step
+            </button>
           ) : (
-             <button
-               onClick={handleSubmit}
-               className="px-8 py-3 rounded-xl bg-green-600 text-white font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all transform hover:-translate-y-0.5"
-             >
-                Confirm & Add
-             </button>
+            <button
+              onClick={handleSubmit}
+              className="px-8 py-3 rounded-xl bg-green-600 text-white font-bold shadow-lg shadow-green-200 hover:bg-green-700 transition-all transform hover:-translate-y-0.5"
+            >
+              Confirm & Add
+            </button>
           )}
         </div>
       </motion.div>
@@ -873,37 +904,37 @@ export const StaffDirectoryPage = () => {
                     {staff.joinDate}
                   </td>
                   <td className="p-4 font-medium text-gray-900">
-                    ₹ {Number(staff.baseSalary || 0).toLocaleString()}
+                    ₹ {(Number(staff.salary || staff.baseSalary || 0) - Number(staff.absentDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </td>
                   <td className="p-4">
                     {getStatusBadge(staff.status)}
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                        <button
+                      <button
                         onClick={() => handleViewClick(staff)}
                         className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        >
+                      >
                         <MdVisibility size={18} />
-                        </button>
-                        <div className="relative">
+                      </button>
+                      <div className="relative">
                         <button
-                            onClick={() => setActiveMenuId(activeMenuId === staff.id ? null : staff.id)}
-                            className={`p-2 rounded-xl transition-all shadow-sm border border-transparent 
+                          onClick={() => setActiveMenuId(activeMenuId === staff.id ? null : staff.id)}
+                          className={`p-2 rounded-xl transition-all shadow-sm border border-transparent 
                                         ${activeMenuId === staff.id ? 'bg-[#212c40] text-white shadow-lg shadow-gray-200' : 'text-gray-400 hover:text-gray-800 hover:bg-white hover:border-gray-200'}
                                     `}
                         >
-                            <MdMoreVert size={18} />
+                          <MdMoreVert size={18} />
                         </button>
                         <StaffActionMenu
-                            staff={staff}
-                            isOpen={activeMenuId === staff.id}
-                            onClose={() => setActiveMenuId(null)}
-                            onEdit={handleEditClick}
-                            onDelete={handleDeleteStaff}
-                            onChangeStatus={handleChangeStatus}
+                          staff={staff}
+                          isOpen={activeMenuId === staff.id}
+                          onClose={() => setActiveMenuId(null)}
+                          onEdit={handleEditClick}
+                          onDelete={handleDeleteStaff}
+                          onChangeStatus={handleChangeStatus}
                         />
-                        </div>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -973,7 +1004,7 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <input required placeholder="Role Name" className="w-full p-2 border rounded-xl" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
               <textarea placeholder="Description" className="w-full p-2 border rounded-xl" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={['Basic', 'Intermediate', 'Full Access']}
                 value={formData.access}
                 onChange={(val) => setFormData({ ...formData, access: val })}
@@ -1368,7 +1399,7 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
           >
             <h3 className="text-xl font-bold mb-4 text-[#212c40]">{initialData ? 'Edit Attendance' : 'Mark Attendance'}</h3>
             <div className="space-y-4">
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
                 value={formData.staffId}
                 onChange={(val) => setFormData({ ...formData, staffId: val })}
@@ -1409,8 +1440,8 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
                   </button>
                 ))}
               </div>
-              <button 
-                onClick={handleSubmit} 
+              <button
+                onClick={handleSubmit}
                 className="w-full bg-[#212c40] text-white py-3 rounded-xl font-bold hover:bg-[#2a3550] shadow-lg shadow-gray-200 transition-all active:scale-95"
               >
                 {initialData ? 'Update Attendance' : 'Submit'}
@@ -1449,27 +1480,27 @@ const ViewLocationModal = ({ isOpen, onClose, data }) => {
         </div>
 
         <div className="p-6 bg-white space-y-4">
-           <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] font-bold text-xl shrink-0">
-                 {data.name.charAt(0)}
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] font-bold text-xl shrink-0">
+              {data.name.charAt(0)}
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-900 text-lg">{data.name}</h3>
+              <p className="text-sm text-gray-500">{data.role}</p>
+
+              <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex gap-3 items-start">
+                <MdLocationOn className="text-red-500 shrink-0 mt-0.5" size={18} />
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase">Current Location</p>
+                  <p className="text-gray-800 font-medium text-sm mt-0.5">{data.location?.address || 'Location not available'}</p>
+                  <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    Updated Just Now
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                 <h3 className="font-bold text-gray-900 text-lg">{data.name}</h3>
-                 <p className="text-sm text-gray-500">{data.role}</p>
-                 
-                 <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex gap-3 items-start">
-                    <MdLocationOn className="text-red-500 shrink-0 mt-0.5" size={18} />
-                    <div>
-                       <p className="text-xs font-bold text-gray-400 uppercase">Current Location</p>
-                       <p className="text-gray-800 font-medium text-sm mt-0.5">{data.location?.address || 'Location not available'}</p>
-                       <p className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                          Updated Just Now
-                       </p>
-                    </div>
-                 </div>
-              </div>
-           </div>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>
@@ -1518,14 +1549,14 @@ export const AttendancePage = () => {
         // Merge staff with attendance
         const mergedData = staffData.map((staff, index) => {
           const record = records.find(r => r.staff._id === staff.id || r.staff === staff.id);
-          
+
           // MOCK LOCATION DATA SIMULATION
           const mockLocations = [
-             { status: 'Online', address: '24/7, Connaught Place, New Delhi', lat: 28.6139, lng: 77.2090 },
-             { status: 'Online', address: 'Tech Park, Sector 62, Noida', lat: 28.6280, lng: 77.3780 },
-             { status: 'Offline', address: 'Last seen: Home (2 hrs ago)', lat: 0, lng: 0 },
-             { status: 'Online', address: 'Cyber City, Gurugram', lat: 28.4595, lng: 77.0266 },
-             { status: 'Offline', address: 'Offline', lat: 0, lng: 0 }
+            { status: 'Online', address: '24/7, Connaught Place, New Delhi', lat: 28.6139, lng: 77.2090 },
+            { status: 'Online', address: 'Tech Park, Sector 62, Noida', lat: 28.6280, lng: 77.3780 },
+            { status: 'Offline', address: 'Last seen: Home (2 hrs ago)', lat: 0, lng: 0 },
+            { status: 'Online', address: 'Cyber City, Gurugram', lat: 28.4595, lng: 77.0266 },
+            { status: 'Offline', address: 'Offline', lat: 0, lng: 0 }
           ];
           const mockLoc = mockLocations[index % mockLocations.length];
 
@@ -1695,8 +1726,8 @@ export const AttendancePage = () => {
         initialData={editingAttendance}
         staffList={staffInfoList}
       />
-      
-      <ViewLocationModal 
+
+      <ViewLocationModal
         isOpen={!!viewingLocation}
         onClose={() => setViewingLocation(null)}
         data={viewingLocation}
@@ -1738,14 +1769,14 @@ export const AttendancePage = () => {
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Staff: All', 'Sales', 'Drivers']}
             value={roleFilter}
             onChange={(val) => setRoleFilter(val)}
             className="bg-white text-sm"
             width="w-40"
           />
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Date: Today', 'Yesterday', 'Select Date']}
             value={dateFilter}
             onChange={(val) => setDateFilter(val)}
@@ -1806,16 +1837,16 @@ export const AttendancePage = () => {
                     </td>
                     <td className="p-4">
                       {item.location?.status === 'Online' ? (
-                          <button 
-                            onClick={() => setViewingLocation(item)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#212c40]/10 text-[#212c40] rounded-lg text-xs font-bold border border-[#212c40]/20 hover:bg-[#212c40]/20 transition-colors animate-pulse"
-                          >
-                             <MdLocationOn /> Location
-                          </button>
+                        <button
+                          onClick={() => setViewingLocation(item)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#212c40]/10 text-[#212c40] rounded-lg text-xs font-bold border border-[#212c40]/20 hover:bg-[#212c40]/20 transition-colors animate-pulse"
+                        >
+                          <MdLocationOn /> Location
+                        </button>
                       ) : (
-                          <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                             <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Offline
-                          </span>
+                        <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Offline
+                        </span>
                       )}
                     </td>
                     <td className="p-4 text-right">
@@ -1846,11 +1877,11 @@ export const AttendancePage = () => {
                 ))
               ) : (
                 <tr>
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-gray-400 text-sm">
-                    No attendance records found for this selection.
-                  </td>
-                </tr>
+                  <tr>
+                    <td colSpan="8" className="p-8 text-center text-gray-400 text-sm">
+                      No attendance records found for this selection.
+                    </td>
+                  </tr>
                 </tr>
               )}
             </tbody>
@@ -1909,7 +1940,7 @@ export const SalaryPage = () => {
         isNew: false,
         month: 'December 2025'
       },
-       {
+      {
         id: '103',
         staffId: 's3',
         name: 'Vikram Singh',
@@ -1925,25 +1956,25 @@ export const SalaryPage = () => {
     ];
 
     setTimeout(() => {
-        setSalaryList(MOCK_SALARY_DATA);
-        setLoading(false);
+      setSalaryList(MOCK_SALARY_DATA);
+      setLoading(false);
     }, 500); // Simulate network delay
   };
 
   const handlePayNow = async (item) => {
     // Simulate payment processing
-    if(window.confirm(`Confirm payment of ${item.netPay} to ${item.name}?`)) {
-        const updatedList = salaryList.map(s => {
-            if (s.id === item.id) {
-                return {
-                    ...s,
-                    status: 'Paid',
-                    paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                };
-            }
-            return s;
-        });
-        setSalaryList(updatedList);
+    if (window.confirm(`Confirm payment of ${item.netPay} to ${item.name}?`)) {
+      const updatedList = salaryList.map(s => {
+        if (s.id === item.id) {
+          return {
+            ...s,
+            status: 'Paid',
+            paymentDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+          };
+        }
+        return s;
+      });
+      setSalaryList(updatedList);
     }
   };
 
@@ -2066,14 +2097,14 @@ export const SalaryPage = () => {
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Staff: All', 'Sales', 'Drivers']}
             value={staffFilter}
             onChange={(val) => setStaffFilter(val)}
             className="bg-white text-sm"
             width="w-40"
           />
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['December 2025', 'November 2025', 'October 2025']}
             value={monthFilter}
             onChange={(val) => setMonthFilter(val)}
@@ -2191,7 +2222,7 @@ const AddAdvanceModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Advance</h3>
             <div className="space-y-4">
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
                 value={formData.staffId}
                 onChange={(val) => setFormData({ ...formData, staffId: val })}
@@ -2392,7 +2423,7 @@ export const AdvancesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Status: Active', 'Paid Off', 'All History']}
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
@@ -2495,20 +2526,20 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Performance Review</h3>
             <div className="space-y-4">
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
                 value={formData.staffId}
                 onChange={(val) => setFormData({ ...formData, staffId: val })}
                 placeholder="Select Staff"
                 className="bg-white"
               />
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={[
-                   {value: '5', label: '5 - Excellent'},
-                   {value: '4', label: '4 - Very Good'},
-                   {value: '3', label: '3 - Good'},
-                   {value: '2', label: '2 - Needs Improvement'},
-                   {value: '1', label: '1 - Poor'}
+                  { value: '5', label: '5 - Excellent' },
+                  { value: '4', label: '4 - Very Good' },
+                  { value: '3', label: '3 - Good' },
+                  { value: '2', label: '2 - Needs Improvement' },
+                  { value: '1', label: '1 - Poor' }
                 ]}
                 value={formData.rating}
                 onChange={(val) => setFormData({ ...formData, rating: val })}
@@ -2638,14 +2669,14 @@ export const PerformancePage = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-3 w-full md:w-auto">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Staff: All', 'Sales', 'Drivers']}
             value={staffFilter}
             onChange={(val) => setStaffFilter(val)}
             className="bg-white text-sm"
             width="w-40"
           />
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Year: 2025', '2024']}
             value={yearFilter}
             onChange={(val) => setYearFilter(val)}
@@ -2742,14 +2773,14 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
               />
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={staffList.map(staff => ({ value: staff.id, label: `${staff.name} (${staff.role})` }))}
                 value={formData.assignedTo}
                 onChange={(val) => setFormData({ ...formData, assignedTo: val })}
                 placeholder="Select Staff"
                 className="bg-white"
               />
-              <ThemedDropdown 
+              <ThemedDropdown
                 options={['Low', 'Medium', 'High', 'Critical']}
                 value={formData.priority}
                 onChange={(val) => setFormData({ ...formData, priority: val })}
@@ -2917,14 +2948,14 @@ export const StaffTasksPage = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-3 w-full md:w-auto">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Assigned To: All', 'Sales', 'Garage']}
             value={assignedToFilter}
             onChange={(val) => setAssignedToFilter(val)}
             className="bg-white text-sm"
             width="w-44"
           />
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Status: Pending', 'Completed', 'All']}
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}

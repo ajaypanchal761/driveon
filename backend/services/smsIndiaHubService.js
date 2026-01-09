@@ -311,11 +311,11 @@ class SMSIndiaHubService {
         console.error("❌ SMSIndia Hub Configuration Error:");
         console.error(
           "   SMSINDIAHUB_API_KEY:",
-          apiKey ? "✓ Set" : "✗ Missing"
+          apiKey ? "✓ Set" : "Missing"
         );
         console.error(
           "   SMSINDIAHUB_SENDER_ID:",
-          senderId ? "✓ Set" : "✗ Missing"
+          senderId ? "✓ Set" : " Missing"
         );
         throw new Error(
           "SMSIndia Hub not configured. Please check your environment variables SMSINDIAHUB_API_KEY and SMSINDIAHUB_SENDER_ID in .env file."
