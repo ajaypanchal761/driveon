@@ -356,8 +356,6 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                 {errors.role && <p className="text-red-500 text-xs mt-1 font-medium">{errors.role}</p>}
               </div>
 
-
-
               <div className="col-span-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Status</label>
                 <ThemedDropdown
