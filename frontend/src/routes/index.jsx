@@ -67,9 +67,9 @@ const TasksPage = lazy(() => import("../employee/pages/TasksPage"));
 const ProfilePage = lazy(() => import("../employee/pages/ProfilePage"));
 const StaffDirectoryPage = lazy(() => import("../employee/pages/StaffDirectoryPage"));
 const SalaryPage = lazy(() => import("../employee/pages/SalaryPage"));
-const ExpenseClaimsPage = lazy(() => import("../employee/pages/ExpenseClaimsPage"));
 const PrivacySecurityPage = lazy(() => import("../employee/pages/PrivacySecurityPage"));
 const NotificationsPage = lazy(() => import("../employee/pages/NotificationsPage"));
+const EmployeeLoginPage = lazy(() => import("../employee/pages/EmployeeLoginPage"));
 
 
 
@@ -206,8 +206,7 @@ const CRM_EnquiryInProgress = lazy(() => import("../crm/pages/enquiries/EnquiryS
 const CRM_EnquiryFollowUp = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.FollowUpsEnquiriesPage })));
 const CRM_EnquiryConverted = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.ConvertedEnquiriesPage })));
 const CRM_EnquiryClosed = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.ClosedEnquiriesPage })));
-const CRM_EnquiryAnalytics = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.EnquiryAnalyticsPage })));
-const CRM_EnquiryCalendar = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.FollowUpCalendarPage })));
+
 const CRM_EnquiryDetails = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.EnquiryDetailsPage })));
 
 const CRM_StaffPage = lazy(() => import("../crm/pages/StaffPage"));
@@ -217,71 +216,41 @@ const CRM_StaffDirectory = lazy(() => import("../crm/pages/staff/StaffSubPages")
 const CRM_StaffRoles = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.RolesPage })));
 const CRM_StaffAttendance = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AttendancePage })));
 const CRM_StaffSalary = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.SalaryPage })));
-const CRM_StaffAdvances = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AdvancesPage })));
+
 const CRM_StaffPerformance = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.PerformancePage })));
 const CRM_StaffTasks = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.StaffTasksPage })));
 
-const CRM_CarsPage = lazy(() => import("../crm/pages/CarsPage"));
-// Import Car Subpages
-const CRM_AllCars = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.AllCarsPage })));
-const CRM_IdleCars = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.IdleCarsPage })));
 
-const CRM_CarProfit = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarProfitLossPage })));
 
-const CRM_CarDocs = lazy(() => import("../crm/pages/cars/CarSubPages").then(module => ({ default: module.CarDocumentsPage })));
-// Accident Subpages
-const CRM_AccidentActive = lazy(() => import("../crm/pages/cars/AccidentActiveCases"));
-const CRM_AccidentDetail = lazy(() => import("../crm/pages/cars/AccidentDetailPage").then(module => ({ default: module.AccidentDetailPage })));
-const CRM_AccidentAdd = lazy(() => import("../crm/pages/cars/AccidentAddCase"));
 
-const CRM_AccidentClosed = lazy(() => import("../crm/pages/cars/AccidentClosedCases"));
-const CRM_AccidentSummary = lazy(() => import("../crm/pages/cars/AccidentLossSummary"));
-
-const CRM_BookingsPage = lazy(() => import("../crm/pages/BookingsPage"));
-// Import Booking Subpages
-const CRM_ActiveBookings = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.ActiveBookingsPage })));
-
-const CRM_BookingPayments = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.BookingPaymentStatusPage })));
-const CRM_BookingProfit = lazy(() => import("../crm/pages/bookings/BookingSubPages").then(module => ({ default: module.BookingProfitViewPage })));
 
 const CRM_GaragePage = lazy(() => import("../crm/pages/GaragePage"));
 // Import Garage Subpages
 const CRM_AllGarages = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.AllGaragesPage })));
 const CRM_ActiveRepairs = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.ActiveRepairsPage })));
-const CRM_ServiceHistory = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.ServiceHistoryPage })));
+
 const CRM_PartsCost = lazy(() => import("../crm/pages/garage/GarageSubPages").then(module => ({ default: module.PartsCostPage })));
 
 
 const CRM_VendorsPage = lazy(() => import("../crm/pages/VendorsPage"));
 // Import Vendor Subpages
 const CRM_AllVendors = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.AllVendorsPage })));
-const CRM_VendorPayments = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorPaymentsPage })));
+
 const CRM_VendorHistory = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorHistoryPage })));
-const CRM_VendorCarUsage = lazy(() => import("../crm/pages/vendors/VendorSubPages").then(module => ({ default: module.VendorCarUsagePage })));
 
-const CRM_FinancePage = lazy(() => import("../crm/pages/FinancePage"));
-// Import Finance Subpages
-const CRM_Income = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.IncomePage })));
-const CRM_Expenses = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.ExpensesPage })));
-const CRM_PendingPayments = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.PendingPaymentsPage })));
-const CRM_ProfitLoss = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.ProfitLossPage })));
-const CRM_CashFlow = lazy(() => import("../crm/pages/finance/FinanceSubPages").then(module => ({ default: module.CashFlowPage })));
 
-const CRM_SettingsPage = lazy(() => import("../crm/pages/SettingsPage"));
-// Import Report Subpages
-const CRM_DailyReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.DailyReportsPage })));
-const CRM_MonthlyReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.MonthlyReportsPage })));
-const CRM_YearlyReports = lazy(() => import("../crm/pages/reports/ReportSubPages").then(module => ({ default: module.YearlyReportsPage })));
+
+
+
 
 
 
 // Import Setting Subpages
 const CRM_SettingsOverview = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.SettingsOverviewPage })));
 const CRM_Locations = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.LocationsPage })));
-const CRM_ExpenseCategories = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.ExpenseCategoriesPage })));
-const CRM_SalaryRules = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.SalaryRulesPage })));
-const CRM_RolesAccess = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.RolesAccessPage })));
-const CRM_AlertsLimits = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.AlertsLimitsPage })));
+
+
+
 
 // Create router configuration
 const router = createBrowserRouter([
@@ -324,14 +293,7 @@ const router = createBrowserRouter([
         path: "enquiries/closed",
         element: <CRM_EnquiryClosed />,
       },
-      {
-        path: "enquiries/analytics",
-        element: <CRM_EnquiryAnalytics />,
-      },
-      {
-        path: "enquiries/calendar",
-        element: <CRM_EnquiryCalendar />,
-      },
+
       {
         path: "enquiries/:id",
         element: <CRM_EnquiryDetails />,
@@ -353,14 +315,11 @@ const router = createBrowserRouter([
         path: "staff/attendance",
         element: <CRM_StaffAttendance />,
       },
-      {
-        path: "staff/salary",
-        element: <CRM_StaffSalary />,
-      },
-      {
-        path: "staff/advances",
-        element: <CRM_StaffAdvances />,
-      },
+      // {
+      //   path: "staff/salary",
+      //   element: <CRM_StaffSalary />,
+      // },
+
       {
         path: "staff/performance",
         element: <CRM_StaffPerformance />,
@@ -369,76 +328,8 @@ const router = createBrowserRouter([
         path: "staff/tasks",
         element: <CRM_StaffTasks />,
       },
-      // CAR ROUTES
-      {
-        path: "cars",
-        element: <Navigate to="cars/all" replace />,
-      },
-      {
-        path: "cars/all",
-        element: <CRM_AllCars />,
-      },
-      /*
-      {
-        path: "cars/idle",
-        element: <CRM_IdleCars />,
-      },
-      */
-
-      {
-        path: "cars/profit",
-        element: <CRM_CarProfit />,
-      },
-
-      {
-        path: "cars/documents",
-        element: <CRM_CarDocs />,
-      },
-      // Accident Routes
-      {
-        path: "cars/accidents",
-        element: <CRM_AccidentActive />,
-      },
-      {
-        path: "cars/accidents/:id",
-        element: <CRM_AccidentDetail />,
-      },
-      {
-        path: "cars/accidents/active",
-        element: <CRM_AccidentActive />,
-      },
-      {
-        path: "cars/accidents/add",
-        element: <CRM_AccidentAdd />,
-      },
 
 
-      {
-        path: "cars/accidents/closed",
-        element: <CRM_AccidentClosed />,
-      },
-      {
-        path: "cars/accidents/summary",
-        element: <CRM_AccidentSummary />,
-      },
-      // BOOKING ROUTES
-      {
-        path: "bookings",
-        element: <Navigate to="bookings/active" replace />,
-      },
-      {
-        path: "bookings/active",
-        element: <CRM_ActiveBookings />,
-      },
-
-      {
-        path: "bookings/payments",
-        element: <CRM_BookingPayments />,
-      },
-      {
-        path: "bookings/profit",
-        element: <CRM_BookingProfit />,
-      },
       // GARAGE ROUTES
       {
         path: "garage",
@@ -452,10 +343,7 @@ const router = createBrowserRouter([
         path: "garage/active",
         element: <CRM_ActiveRepairs />,
       },
-      {
-        path: "garage/history",
-        element: <CRM_ServiceHistory />,
-      },
+
       /*
       {
         path: "garage/parts",
@@ -472,63 +360,15 @@ const router = createBrowserRouter([
         path: "vendors/all",
         element: <CRM_AllVendors />,
       },
-      {
-        path: "vendors/payments",
-        element: <CRM_VendorPayments />,
-      },
-      {
-        path: "vendors/history",
-        element: <CRM_VendorHistory />,
-      },
 
-      {
-        path: "vendors/car-usage",
-        element: <CRM_VendorCarUsage />,
-      },
-      // FINANCE ROUTES
-      {
-        path: "finance",
-        element: <Navigate to="finance/profit-loss" replace />, // Default to P&L overview
-      },
-      {
-        path: "finance/income",
-        element: <CRM_Income />,
-      },
-      {
-        path: "finance/expenses",
-        element: <CRM_Expenses />,
-      },
-      /*
-      {
-        path: "finance/pending",
-        element: <CRM_PendingPayments />,
-      },
-      */
-      {
-        path: "finance/profit-loss",
-        element: <CRM_ProfitLoss />,
-      },
-      {
-        path: "finance/cash-flow",
-        element: <CRM_CashFlow />,
-      },
-      // REPORT ROUTES
-      {
-        path: "reports",
-        element: <Navigate to="reports/monthly" replace />,
-      },
-      {
-        path: "reports/daily",
-        element: <CRM_DailyReports />,
-      },
-      {
-        path: "reports/monthly",
-        element: <CRM_MonthlyReports />,
-      },
-      {
-        path: "reports/yearly",
-        element: <CRM_YearlyReports />,
-      },
+      // {
+      //   path: "vendors/history",
+      //   element: <CRM_VendorHistory />,
+      // },
+
+
+
+
 
       // SETTINGS ROUTES
       {
@@ -539,22 +379,9 @@ const router = createBrowserRouter([
         path: "settings/locations",
         element: <CRM_Locations />,
       },
-      {
-        path: "settings/expenses",
-        element: <CRM_ExpenseCategories />,
-      },
-      {
-        path: "settings/salary",
-        element: <CRM_SalaryRules />,
-      },
-      {
-        path: "settings/roles",
-        element: <CRM_RolesAccess />,
-      },
-      {
-        path: "settings/alerts",
-        element: <CRM_AlertsLimits />,
-      },
+
+
+
 
       {
         path: "*",
@@ -871,16 +698,16 @@ const router = createBrowserRouter([
     element: <SalaryPage />,
   },
   {
-    path: "/employee/expenses",
-    element: <ExpenseClaimsPage />,
-  },
-  {
     path: "/employee/privacy",
     element: <PrivacySecurityPage />,
   },
   {
     path: "/employee/notifications",
     element: <NotificationsPage />,
+  },
+  {
+    path: "/employee/login",
+    element: <EmployeeLoginPage />,
   },
 
   // 404 Page

@@ -1,28 +1,28 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiUser, FiLock, FiEye, FiEyeOff, FiSmartphone, FiArrowRight } from 'react-icons/fi';
+import { FiUser, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 const EmployeeLoginPage = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [view, setView] = useState('login'); // login | forgot-password
   const [formData, setFormData] = useState({
     username: '',
-    password: '',
-    code: ''
+    password: ''
   });
-  const [isCodeSent, setIsCodeSent] = useState(false);
 
   const handleLogin = (e) => {
     e.preventDefault();
     // In a real app, validation and auth would happen here
-    navigate('/employee/dashboard');
+    navigate('/employee');
   };
 
-  const handleSendCode = () => {
-    // Simulate sending code
-    setIsCodeSent(true);
-    // You could confirm sending with a toast here
+  const handleForgotPassword = (e) => {
+      e.preventDefault();
+      // Simulate sending logic
+      alert('Password reset link sent to your email.');
+      setView('login');
   };
 
   return (
@@ -55,6 +55,8 @@ const EmployeeLoginPage = () => {
         </div>
 
         {/* Welcome Text */}
+        {view === 'login' ? (
+        <>
         <div className="mb-8 text-center">
              <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
              <p className="text-gray-400 text-sm mt-1">Please login to continue</p>
@@ -98,34 +100,15 @@ const EmployeeLoginPage = () => {
                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                 </button>
              </div>
-          </div>
-
-          {/* Code Verification */}
-          <div className="flex items-end gap-4 overflow-hidden">
-             <div className="flex-1 relative group">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Authentication Code</label>
-                <input 
-                   type="text" 
-                   required
-                   placeholder="Enter Code"
-                   className="w-full py-2 bg-transparent border-b border-gray-200 focus:border-[#1C205C] outline-none transition-colors placeholder:text-gray-300 text-gray-700 font-medium tracking-widest"
-                   value={formData.code}
-                   onChange={(e) => setFormData({...formData, code: e.target.value})}
-                />
+             <div className="flex justify-end pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setView('forgot-password')}
+                  className="text-xs font-semibold text-[#1C205C] hover:text-blue-600 transition-colors"
+                >
+                  Forgot Password?
+                </button>
              </div>
-             <button 
-               type="button"
-               onClick={handleSendCode}
-               disabled={isCodeSent}
-               className={`h-10 px-5 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                 ${isCodeSent 
-                   ? 'bg-green-50 text-green-600 border border-green-100' 
-                   : 'bg-[#1C205C] text-white shadow-lg shadow-blue-900/30 hover:bg-blue-900 active:scale-95'
-                 }
-               `}
-             >
-                {isCodeSent ? 'Sent' : 'Send'}
-             </button>
           </div>
 
           {/* Login Button */}
@@ -139,6 +122,52 @@ const EmployeeLoginPage = () => {
             <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
           </motion.button>
         </form>
+        </>
+        ) : (
+        <>
+            <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+            >
+                <div className="mb-8 text-center">
+                    <h2 className="text-2xl font-bold text-gray-800">Forgot Password</h2>
+                    <p className="text-gray-400 text-sm mt-1">Enter your email to receive a reset link</p>
+                </div>
+                
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                    <div className="space-y-1">
+                        <div className="relative group">
+                            <FiUser className="absolute left-0 top-3.5 text-gray-400 group-focus-within:text-[#1C205C] transition-colors" size={20} />
+                            <input 
+                            type="email" 
+                            required
+                            placeholder="Enter your registered email"
+                            className="w-full pl-8 pr-4 py-3 bg-transparent border-b border-gray-200 focus:border-[#1C205C] outline-none transition-colors placeholder:text-gray-300 text-gray-700 font-medium"
+                            />
+                        </div>
+                    </div>
+
+                    <motion.button 
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        className="w-full bg-[#1C205C] text-white py-4 rounded-xl font-bold shadow-xl shadow-blue-900/20 hover:shadow-blue-900/40 transition-all flex items-center justify-center gap-2 group mt-6"
+                    >
+                        <span>SEND RESET LINK</span>
+                        <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    </motion.button>
+
+                    <button 
+                        type="button"
+                        onClick={() => setView('login')}
+                        className="w-full text-gray-500 text-sm font-bold hover:text-gray-800 transition-colors mt-4"
+                    >
+                        Back to Login
+                    </button>
+                </form>
+            </motion.div>
+        </>
+        )}
         
         {/* Footer Note */}
         <p className="text-center text-xs text-gray-400 mt-8 font-medium">

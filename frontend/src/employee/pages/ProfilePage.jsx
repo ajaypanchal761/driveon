@@ -95,13 +95,7 @@ const ProfilePage = () => {
                  bg="bg-emerald-50" 
                  onClick={() => navigate('/employee/salary')}
                />
-               <MenuRow 
-                 icon={<FiFileText />} 
-                 label="Expense Claims" 
-                 color="text-blue-600" 
-                 bg="bg-blue-50" 
-                 onClick={() => navigate('/employee/expenses')}
-               />
+
                <MenuRow 
                  icon={<FiShield />} 
                  label="Privacy & Security" 

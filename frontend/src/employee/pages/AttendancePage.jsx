@@ -5,10 +5,16 @@ import { useNavigate } from 'react-router-dom';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
 
+import { useEmployee } from '../../context/EmployeeContext';
+
 const AttendancePage = () => {
   const navigate = useNavigate();
+  const { clockedIn, handleClockToggle, startTime } = useEmployee();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isClockedIn, setIsClockedIn] = useState(false);
+  
+  // Use context state
+  const isClockedIn = clockedIn;
+  
   const [locationAddress, setLocationAddress] = useState('Location not detected');
   const [attendanceData] = useState([
     { date: new Date(2025, 11, 28), status: 'Present', checkIn: '09:30 AM', checkOut: '06:30 PM', hours: '9h 00m' },
@@ -64,11 +70,11 @@ const AttendancePage = () => {
     }
   };
 
-  const handleClockInOut = () => {
+  const onClockAction = () => {
     if (!isClockedIn) {
         fetchLocation();
     }
-    setIsClockedIn(!isClockedIn);
+    handleClockToggle();
   };
 
   const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -120,7 +126,7 @@ const AttendancePage = () => {
                 {/* ACTION BUTTON (SLIDER STYLE) */}
                 <motion.button 
                    whileTap={{ scale: 0.98 }}
-                   onClick={handleClockInOut}
+                   onClick={onClockAction}
                    className={`
                      w-full py-3 rounded-xl flex items-center justify-between px-2 relative overflow-hidden transition-all duration-300 group
                      ${isClockedIn 

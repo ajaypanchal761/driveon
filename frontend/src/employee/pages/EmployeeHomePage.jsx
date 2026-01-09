@@ -15,9 +15,11 @@ const THEME_COLOR = "#1C205C";
 // Using the reference image style: deep blue header with curve
 const GRADIENT_HEADER = "linear-gradient(135deg, #1C205C 0%, #0f1642 100%)";
 
+import { useEmployee } from '../../context/EmployeeContext';
+
 const EmployeeHomePage = () => {
   const navigate = useNavigate();
-  const [clockedIn, setClockedIn] = useState(true);
+  const { clockedIn, elapsedSeconds, handleClockToggle, formatDuration } = useEmployee();
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -28,6 +30,8 @@ const EmployeeHomePage = () => {
   const formatTime = (date) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
+
+
 
   // Animation Variants
   const containerVariants = {
@@ -132,23 +136,34 @@ const EmployeeHomePage = () => {
             >
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Working Time</p>
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Current Time</p>
                   <div className="flex items-baseline gap-1">
-                     <h2 className="text-4xl font-extrabold text-gray-800 tracking-tight">
+                     <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">
                       {formatTime(time).split(' ')[0]}
-                      <span className="text-lg text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
+                      <span className="text-sm text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
                     </h2>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
+                  
+                  {/* Timer Display */}
+                  <div className="mt-2 px-3 py-1.5 bg-blue-50/80 rounded-lg border border-blue-100 w-fit">
+                     <p className="text-blue-500 text-[9px] font-bold uppercase tracking-wider mb-0 leading-none">Session Timer</p>
+                     <div className="text-lg font-mono font-bold text-blue-700 flex items-center gap-1.5 mt-0.5 leading-none">
+                        <FiActivity className={`${clockedIn ? 'animate-pulse' : ''}`} size={14} />
+                        {formatDuration(elapsedSeconds)}
+                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-3">
                      <span className="text-xs text-gray-400 font-medium"> <FiBriefcase className="inline mr-1"/> Kuwaiti Mosque Rd </span>
                   </div>
                 </div>
+
                 {/* Clock Out Button - Prominent */}
                 <motion.button 
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setClockedIn(!clockedIn)}
+                  onClick={handleClockToggle}
                   className={`${clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
-                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2`}
+                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2 h-fit`}
                 >
                   <FiClock />
                   {clockedIn ? 'Check Out' : 'Check In'}

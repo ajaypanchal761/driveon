@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ThemedDropdown from '../../components/ThemedDropdown';
+
 import { 
   MdPerson, 
   MdStore, 
@@ -21,7 +21,8 @@ import {
   MdSearch,
   MdDownload,
   MdClose,
-  MdAdd
+  MdAdd,
+  MdBuild
 } from 'react-icons/md';
 import { motion } from 'framer-motion';
 
@@ -70,44 +71,23 @@ const VendorCard = ({ vendor }) => (
        whileHover={{ y: -4, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
        className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm transition-all group relative overflow-hidden"
     >
-        {vendor.verified && (
-            <div className="absolute top-0 right-0 bg-[#1c205c] text-white p-1 rounded-bl-xl shadow-sm z-10">
-                <MdVerified size={16} />
-            </div>
-        )}
-        
         <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden border-2 border-white shadow-sm">
                 <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
             </div>
             <div>
                 <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#212c40] transition-colors">{vendor.name}</h3>
-                <p className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-0.5 rounded-md inline-block mt-1">{vendor.type}</p>
+
             </div>
         </div>
 
-        <div className="space-y-2.5 text-sm text-gray-600 mb-5">
+        <div className="space-y-2.5 text-sm text-gray-600 mb-2">
             <div className="flex items-center gap-2">
                 <MdPhone className="text-[#212c40]/40" /> {vendor.phone}
             </div>
             <div className="flex items-center gap-2">
                 <MdEmail className="text-[#212c40]/40" /> {vendor.email}
             </div>
-            <div className="flex items-center gap-2">
-                <MdDirectionsCar className="text-[#212c40]/40" /> <span className="font-bold text-gray-800">{vendor.cars} Active Cars</span>
-            </div>
-        </div>
-
-        <div className="flex items-center justify-between border-t border-gray-50 pt-4">
-             <div className="flex items-center gap-1 text-amber-500 font-bold">
-                 <MdStar /> {vendor.rating}
-             </div>
-             <div className="text-right">
-                 <p className="text-[10px] text-gray-400 font-bold uppercase">Balance</p>
-                 <p className={`text-sm font-bold ${vendor.balance > 0 ? 'text-red-500' : 'text-green-600'}`}>
-                     ₹ {Math.abs(vendor.balance).toLocaleString()} {vendor.balance > 0 ? 'Due' : 'Cr'}
-                 </p>
-             </div>
         </div>
     </motion.div>
 );
@@ -157,13 +137,8 @@ const MOCK_HISTORY_LOGS = [
     { id: 3, date: "10 Dec 2025", vendor: "Rajesh Motors", action: "Payout", detail: "Monthly settlement processed", status: "Completed" },
 ];
 
-const MOCK_CAR_USAGE = [
-     { id: 1, vendor: "Rajesh Motors", car: "Toyota Innova Crysta", reg: "PB 01 1234", revenue: "₹ 45k", trips: 12, utilization: 85 },
-     { id: 2, vendor: "City Cabs Inc", car: "Maruti Swift", reg: "PB 10 5678", revenue: "₹ 22k", trips: 28, utilization: 92 },
-     { id: 3, vendor: "Elite Wheels", car: "Fortuner Legender", reg: "CH 01 9999", revenue: "₹ 1.2L", trips: 6, utilization: 60 },
-];
-// Hack for MdBuild since it was not pre-imported in MOCK_PERFORMANCE context due to ordering
-import { MdBuild } from 'react-icons/md';
+
+
 
 // --- Pages ---
 
@@ -174,6 +149,8 @@ export const AllVendorsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [newVendor, setNewVendor] = useState({ name: '', type: 'Car Provider', phone: '', email: '', image: 'https://randomuser.me/api/portraits/lego/1.jpg', balance: 0, cars: 0, rating: 5.0, verified: false });
 
+    const [errors, setErrors] = useState({});
+
     const filteredVendors = vendors.filter(vendor => 
         vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,11 +158,26 @@ export const AllVendorsPage = () => {
         vendor.type.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const validate = () => {
+        let tempErrors = {};
+        if (!/^\d{10}$/.test(newVendor.phone)) {
+            tempErrors.phone = "Phone number must be 10 digits.";
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newVendor.email)) {
+            tempErrors.email = "Invalid email format.";
+        }
+        setErrors(tempErrors);
+        return Object.keys(tempErrors).length === 0;
+    };
+
     const handleAddVendor = () => {
         if (!newVendor.name || !newVendor.phone) return;
+        if (!validate()) return;
+
         setVendors([...vendors, { ...newVendor, id: Date.now() }]);
         setIsAddModalOpen(false);
         setNewVendor({ name: '', type: 'Car Provider', phone: '', email: '', image: 'https://randomuser.me/api/portraits/lego/1.jpg', balance: 0, cars: 0, rating: 5.0, verified: false });
+        setErrors({});
     };
 
     return (
@@ -238,6 +230,31 @@ export const AllVendorsPage = () => {
              <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Vendor">
                  <div className="space-y-4">
                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Photo</label>
+                         <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden border border-gray-200">
+                                <img src={newVendor.image} alt="Preview" className="w-full h-full object-cover" />
+                            </div>
+                            <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                        const file = e.target.files[0];
+                                        const imageUrl = URL.createObjectURL(file);
+                                        setNewVendor({...newVendor, image: imageUrl});
+                                    }
+                                }}
+                                className="block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-full file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-indigo-50 file:text-indigo-700
+                                  hover:file:bg-indigo-100"
+                            />
+                         </div>
+                     </div>
+                     <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
                          <input 
                             type="text" 
@@ -247,31 +264,35 @@ export const AllVendorsPage = () => {
                          />
                      </div>
                      <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                         <ThemedDropdown 
-                            options={['Car Provider', 'Fleet Partner', 'Driver Partner', 'Premium Partner']}
-                            value={newVendor.type}
-                            onChange={(val) => setNewVendor({...newVendor, type: val})}
-                            className="bg-white"
-                         />
-                     </div>
-                     <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                          <input 
                             type="text" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]" 
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] ${errors.phone ? 'border-red-500' : 'border-gray-200'}`}
                             value={newVendor.phone}
-                            onChange={(e) => setNewVendor({...newVendor, phone: e.target.value})}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (/^\d*$/.test(val) && val.length <= 10) {
+                                    setNewVendor({...newVendor, phone: val});
+                                    if (errors.phone) setErrors({...errors, phone: null});
+                                }
+                            }}
+                            placeholder="10 digit mobile number"
                          />
+                         {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                      </div>
                      <div>
                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                          <input 
                             type="email" 
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]" 
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] ${errors.email ? 'border-red-500' : 'border-gray-200'}`}
                             value={newVendor.email}
-                            onChange={(e) => setNewVendor({...newVendor, email: e.target.value})}
+                            onChange={(e) => {
+                                setNewVendor({...newVendor, email: e.target.value});
+                                if (errors.email) setErrors({...errors, email: null});
+                            }}
+                            placeholder="example@domain.com"
                          />
+                         {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                      </div>
                      <button 
                         onClick={handleAddVendor}
@@ -285,62 +306,7 @@ export const AllVendorsPage = () => {
     );
 };
 
-export const VendorPaymentsPage = () => {
-    const navigate = useNavigate();
-    return (
-    <div className="space-y-6">
-         <div className="flex flex-col md:flex-row justify-between items-end gap-4">
-             <div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
-                    <span>/</span> 
-                    <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
-                    <span>/</span> 
-                    <span className="text-gray-800 font-medium">Payments</span>
-                </div>
-                 <h1 className="text-2xl font-bold text-gray-900">Payments & Settlements</h1>
-                 <p className="text-gray-500 text-sm">Track vendor payouts and commissions.</p>
-             </div>
-         </div>
 
-         {/* Stats */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div className="bg-red-50 p-6 rounded-2xl border border-red-100">
-                 <p className="text-red-800 text-xs font-bold uppercase">Total Due (Payouts)</p>
-                 <h3 className="text-2xl font-bold text-red-700 mt-1">₹ 2,45,000</h3>
-             </div>
-             <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
-                 <p className="text-green-800 text-xs font-bold uppercase">Paid This Month</p>
-                 <h3 className="text-2xl font-bold text-green-700 mt-1">₹ 8,20,000</h3>
-             </div>
-             <div className="bg-[#1c205c]/10 p-6 rounded-2xl border border-[#1c205c]/20">
-                 <p className="text-[#1c205c] text-xs font-bold uppercase">Commission Earned</p>
-                 <h3 className="text-2xl font-bold text-[#1c205c] mt-1">₹ 1,15,000</h3>
-             </div>
-         </div>
-
-         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-             <table className="w-full text-left">
-                 <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                     <tr>
-                         <th className="px-6 py-4">Date</th>
-                         <th className="px-6 py-4">Vendor</th>
-                         <th className="px-6 py-4">Reference ID</th>
-                         <th className="px-6 py-4">Amount</th>
-                         <th className="px-6 py-4">Type</th>
-                         <th className="px-6 py-4">Status</th>
-                     </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-100 text-sm">
-                     {MOCK_PAYMENTS.map((payment) => (
-                         <PaymentRow key={payment.id} payment={payment} />
-                     ))}
-                 </tbody>
-             </table>
-         </div>
-    </div>
-);
-}
 
 export const VendorHistoryPage = () => {
     const navigate = useNavigate();
@@ -388,56 +354,4 @@ export const VendorHistoryPage = () => {
 );
 }
 
-export const VendorCarUsagePage = () => {
-    const navigate = useNavigate();
-    return (
-    <div className="space-y-6">
-         <div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span> 
-                <span>/</span> 
-                <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span> 
-                <span>/</span> 
-                <span className="text-gray-800 font-medium">Car Usage</span>
-            </div>
-             <h1 className="text-2xl font-bold text-gray-900">Fleet Utilization</h1>
-             <p className="text-gray-500 text-sm">Performance of vendor-owned vehicles.</p>
-         </div>
 
-         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-             <table className="w-full text-left">
-                 <thead className="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                     <tr>
-                         <th className="px-6 py-4">Vendor</th>
-                         <th className="px-6 py-4">Vehicle</th>
-                         <th className="px-6 py-4">Trips (Available)</th>
-                         <th className="px-6 py-4">Revenue Generated</th>
-                         <th className="px-6 py-4">Utilization</th>
-                     </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-100 text-sm">
-                     {MOCK_CAR_USAGE.map((item) => (
-                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                             <td className="px-6 py-4 font-bold text-indigo-600">{item.vendor}</td>
-                             <td className="px-6 py-4">
-                                 <div className="font-medium text-gray-900">{item.car}</div>
-                                 <div className="text-xs text-gray-500">{item.reg}</div>
-                             </td>
-                             <td className="px-6 py-4 text-gray-700 font-bold">{item.trips} Trips</td>
-                             <td className="px-6 py-4 text-green-600 font-bold">{item.revenue}</td>
-                             <td className="px-6 py-4">
-                                 <div className="flex items-center gap-3">
-                                     <div className="flex-1 bg-gray-100 rounded-full h-2 w-24 overflow-hidden">
-                                         <div className={`h-full rounded-full ${item.utilization > 80 ? 'bg-green-500' : item.utilization > 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${item.utilization}%` }}></div>
-                                     </div>
-                                     <span className="text-xs font-bold text-gray-600">{item.utilization}%</span>
-                                 </div>
-                             </td>
-                         </tr>
-                     ))}
-                 </tbody>
-             </table>
-         </div>
-    </div>
-);
-}

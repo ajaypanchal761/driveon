@@ -45,8 +45,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/enquiries/follow-ups', name: 'Follow-ups' },
         { path: '/crm/enquiries/converted', name: 'Converted' },
         { path: '/crm/enquiries/closed', name: 'Closed' },
-        { path: '/crm/enquiries/analytics', name: 'Enquiry Analytics' },
-        { path: '/crm/enquiries/calendar', name: 'Follow-up Calendar' },
+
       ]
     },
     { 
@@ -57,45 +56,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/staff/directory', name: 'Staff Directory' },
         { path: '/crm/staff/roles', name: 'Roles & Designation' },
         { path: '/crm/staff/attendance', name: 'Attendance Tracker' },
-        { path: '/crm/staff/salary', name: 'Salary' },
-        { path: '/crm/staff/advances', name: 'Advances' },
+        // { path: '/crm/staff/salary', name: 'Salary' },
+
         { path: '/crm/staff/performance', name: 'Performance' },
         { path: '/crm/staff/tasks', name: 'Staff Tasks' },
       ]
     },
-    { 
-      name: 'Cars', 
-      icon: <MdDirectionsCar />,
-      id: 'Cars',
-      subItems: [
-        { path: '/crm/cars/all', name: 'All Cars' },
-        // { path: '/crm/cars/idle', name: 'Idle Cars' },
-        { path: '/crm/cars/profit', name: 'Profit / Loss' },
 
-        { path: '/crm/cars/documents', name: 'Documents' },
-        { 
-          name: 'Accidents',
-          subItems: [
-             { path: '/crm/cars/accidents/active', name: 'Active Cases' },
-             { path: '/crm/cars/accidents/add', name: 'Add Accident Case' },
 
-             { path: '/crm/cars/accidents/closed', name: 'Closed Cases' },
-             { path: '/crm/cars/accidents/summary', name: 'Loss Recovery Summary' },
-          ]
-        },
-      ]
-    },
-    { 
-      name: 'Bookings', 
-      icon: <MdEventNote />,
-      id: 'Bookings',
-      subItems: [
-        { path: '/crm/bookings/active', name: 'Active' },
-
-        { path: '/crm/bookings/payments', name: 'Payment Status' },
-        { path: '/crm/bookings/profit', name: 'Booking Profit View' },
-      ]
-    },
     { 
       name: 'Garage', 
       icon: <MdBuild />,
@@ -103,7 +71,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       subItems: [
         { path: '/crm/garage/all', name: 'All Garages' },
         { path: '/crm/garage/active', name: 'Active Repairs' },
-        { path: '/crm/garage/history', name: 'Service History' },
+
         // { path: '/crm/garage/parts', name: 'Parts Cost' },
 
       ]
@@ -114,33 +82,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'Vendors',
       subItems: [
         { path: '/crm/vendors/all', name: 'All Vendors' },
-        { path: '/crm/vendors/payments', name: 'Vendor Payments' },
-        { path: '/crm/vendors/history', name: 'Vendor History' },
-        { path: '/crm/vendors/car-usage', name: 'Vendor Car Usage' },
+
+        // { path: '/crm/vendors/history', name: 'Vendor History' },
+
       ]
     },
-    { 
-      name: 'Finance', 
-      icon: <MdAttachMoney />,
-      id: 'Finance',
-      subItems: [
-        { path: '/crm/finance/income', name: 'Income' },
-        { path: '/crm/finance/expenses', name: 'Expenses' },
-        // { path: '/crm/finance/pending', name: 'Pending Payments' },
-        { path: '/crm/finance/profit-loss', name: 'Profit & Loss Overview' },
-        { path: '/crm/finance/cash-flow', name: 'Cash Flow' },
-      ]
-    },
-    { 
-      name: 'Reports', 
-      icon: <MdBarChart />,
-      id: 'Reports',
-      subItems: [
-        { path: '/crm/reports/daily', name: 'Daily' },
-        { path: '/crm/reports/monthly', name: 'Monthly' },
-        { path: '/crm/reports/yearly', name: 'Yearly' },
-      ]
-    },
+
+
 
     { 
       name: 'Settings', 
@@ -148,10 +96,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       id: 'Settings',
       subItems: [
         { path: '/crm/settings/locations', name: 'Cities & Locations' },
-        { path: '/crm/settings/expenses', name: 'Expense Categories' },
-        { path: '/crm/settings/salary', name: 'Salary Rules' },
-        { path: '/crm/settings/roles', name: 'Roles & Access' },
-        { path: '/crm/settings/alerts', name: 'Alerts & Limits' },
+
+
+
       ]
     },
   ];
