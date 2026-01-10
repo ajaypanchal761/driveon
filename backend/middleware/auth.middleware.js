@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Staff from '../models/Staff.js';
 
 /**
  * Authentication Middleware
@@ -29,7 +30,15 @@ export const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, jwtSecret || 'your-secret-key');
 
     // Get user from database
-    const user = await User.findById(decoded.id);
+    let user = await User.findById(decoded.id);
+
+    // If not found in User collection, check Staff collection (for Employee App)
+    if (!user) {
+      const staff = await Staff.findById(decoded.id);
+      if (staff) {
+        user = staff;
+      }
+    }
 
     if (!user) {
       return res.status(401).json({
@@ -38,7 +47,8 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    if (!user.isActive) {
+    // Check active status (handle both User.isActive and Staff.status)
+    if (user.isActive === false || (user.status && user.status === 'Inactive')) {
       return res.status(401).json({
         success: false,
         message: 'User account is deactivated',
@@ -74,6 +84,41 @@ export const authenticate = async (req, res, next) => {
       message: 'Server error during authentication',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+  }
+};
+
+/**
+ * Staff Authentication Middleware
+ */
+export const authenticateStaff = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'No token provided' });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+    const staff = await Staff.findById(decoded.id);
+
+    if (!staff) {
+      return res.status(401).json({ success: false, message: 'Staff not found' });
+    }
+
+    // Check if staff is active (if status field exists)
+    if (staff.status && staff.status === 'Inactive') {
+      return res.status(401).json({ success: false, message: 'Staff account is inactive' });
+    }
+
+    req.user = staff; // Attach to req.user for consistency
+    next();
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 

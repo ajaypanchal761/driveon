@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Staff from '../models/Staff.js';
 import { uploadImage, isConfigured } from '../services/cloudinary.service.js';
 
 /**
@@ -16,16 +17,16 @@ const calculateProfileComplete = (user) => {
     'address',
     'profilePhoto',
   ];
-  
+
   let completedFields = 0;
-  
+
   fields.forEach((field) => {
     // Check if field exists and is not empty
     if (user[field] !== undefined && user[field] !== null && user[field] !== '') {
       completedFields++;
     }
   });
-  
+
   return Math.round((completedFields / fields.length) * 100);
 };
 
@@ -47,7 +48,7 @@ export const getProfile = async (req, res) => {
 
     // Calculate profile completion
     const profileComplete = calculateProfileComplete(user);
-    
+
     // Update profile completion in database if changed
     if (user.profileComplete !== profileComplete) {
       user.profileComplete = profileComplete;
@@ -97,7 +98,7 @@ export const updateProfile = async (req, res) => {
   try {
     const { name, age, gender, address } = req.body;
     console.log('📝 Update Profile - Received data:', { name, age, gender, address });
-    
+
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -112,7 +113,7 @@ export const updateProfile = async (req, res) => {
       user.name = name.trim();
       console.log('✅ Updated name:', user.name);
     }
-    
+
     // Handle age - can be number or string
     if (age !== undefined && age !== null && age !== '') {
       const ageNum = typeof age === 'number' ? age : parseInt(String(age), 10);
@@ -126,7 +127,7 @@ export const updateProfile = async (req, res) => {
     } else {
       console.log('ℹ️ Age not provided or empty');
     }
-    
+
     // Handle gender
     if (gender !== undefined && gender !== null && gender !== '') {
       const genderLower = String(gender).toLowerCase();
@@ -139,7 +140,7 @@ export const updateProfile = async (req, res) => {
     } else {
       console.log('ℹ️ Gender not provided or empty');
     }
-    
+
     // Handle address
     if (address !== undefined && address !== null && address !== '') {
       user.address = address.trim();
@@ -151,7 +152,7 @@ export const updateProfile = async (req, res) => {
     // Calculate and update profile completion
     user.profileComplete = calculateProfileComplete(user);
     console.log('📊 Profile completion:', user.profileComplete + '%');
-    
+
     await user.save();
     console.log('💾 User saved successfully');
 
@@ -178,7 +179,7 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    
+
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
@@ -257,7 +258,7 @@ export const uploadPhoto = async (req, res) => {
 
     // Update user profile photo
     const user = await User.findById(req.user._id);
-    
+
     // Delete old photo from Cloudinary if exists
     if (user.profilePhoto) {
       try {
@@ -437,12 +438,17 @@ export const updateLocation = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id);
+
+    // If not found in User, check/try Staff (for Employee App)
+    if (!user) {
+      user = await Staff.findById(req.user._id);
+    }
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: 'User/Staff not found',
       });
     }
 

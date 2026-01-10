@@ -28,21 +28,21 @@ export const userService = {
         },
       };
     }
-    
+
     try {
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
-      
+
       console.log('📡 userService.getProfile - Making API call to:', API_ENDPOINTS.USER.PROFILE);
       const response = await api.get(API_ENDPOINTS.USER.PROFILE);
-      
+
       console.log('📡 userService.getProfile - Raw axios response:', response);
       console.log('📡 userService.getProfile - response.status:', response.status);
       console.log('📡 userService.getProfile - response.data:', response.data);
       console.log('📡 userService.getProfile - response.data.success:', response.data?.success);
       console.log('📡 userService.getProfile - response.data.data:', response.data?.data);
       console.log('📡 userService.getProfile - response.data.data.user:', response.data?.data?.user);
-      
+
       // Backend returns: { success: true, data: { user: {...} } }
       // Axios wraps it in response.data, so response.data = { success: true, data: { user: {...} } }
       // Return the full response.data so components can extract user data properly
@@ -50,18 +50,45 @@ export const userService = {
         console.error('❌ userService.getProfile - No data in response');
         throw new Error('No data received from server');
       }
-      
+
       if (!response.data.success) {
         console.error('❌ userService.getProfile - API returned success: false');
         console.error('❌ Error message:', response.data.message);
         throw new Error(response.data.message || 'Failed to fetch profile');
       }
-      
+
       console.log('✅ userService.getProfile - Successfully received response');
       return response.data;
     } catch (error) {
       console.error('Get profile error:', error);
       console.error('Get profile error response:', error.response);
+      throw error;
+    }
+  },
+
+  /**
+   * Get staff profile
+   * @returns {Promise}
+   */
+  getStaffProfile: async () => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+
+      console.log('📡 userService.getStaffProfile - Making API call to:', API_ENDPOINTS.AUTH.STAFF_PROFILE);
+      const response = await api.get(API_ENDPOINTS.AUTH.STAFF_PROFILE);
+
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to fetch staff profile');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Get staff profile error:', error);
       throw error;
     }
   },
@@ -82,7 +109,7 @@ export const userService = {
         success: true,
       };
     }
-    
+
     try {
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
@@ -90,7 +117,7 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Update profile error:', error);
-      
+
       // Enhance error with user-friendly message
       if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
         const enhancedError = new Error(
@@ -100,7 +127,7 @@ export const userService = {
         enhancedError.isNetworkError = true;
         throw enhancedError;
       }
-      
+
       throw error;
     }
   },
@@ -118,7 +145,7 @@ export const userService = {
         drivingLicenseVerified: false,
       };
     }
-    
+
     try {
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
@@ -140,7 +167,7 @@ export const userService = {
       await mockDelay(1000);
       // Create a mock URL from the file (data URL)
       const file = formData.get('photo') || formData.get('file') || formData.get('image');
-      
+
       if (file instanceof File) {
         return new Promise((resolve) => {
           const reader = new FileReader();
@@ -157,26 +184,26 @@ export const userService = {
           reader.readAsDataURL(file);
         });
       }
-      
+
       // Fallback if file not found
       return {
         profilePhoto: 'mock_photo_url',
         success: true,
       };
     }
-    
+
     try {
       // Production mode - actual API call
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
-      
+
       // Don't set Content-Type header - let axios/browser set it with boundary
       // The API interceptor will handle adding the Authorization header
       const response = await api.post(API_ENDPOINTS.USER.UPLOAD_PHOTO, formData);
       return response.data;
     } catch (error) {
       console.error('Upload photo error:', error);
-      
+
       // Provide user-friendly error messages
       if (error.response?.status === 401) {
         const errorMessage = error.response?.data?.message || 'Authentication failed. Please log in again.';
@@ -185,7 +212,7 @@ export const userService = {
         authError.status = 401;
         throw authError;
       }
-      
+
       throw error;
     }
   },
@@ -287,7 +314,7 @@ export const userService = {
         message: 'Password changed successfully',
       };
     }
-    
+
     try {
       const api = (await import('./api')).default;
       const { API_ENDPOINTS } = await import('../constants');
@@ -295,7 +322,7 @@ export const userService = {
       return response.data;
     } catch (error) {
       console.error('Change password error:', error);
-      
+
       // Enhance error with user-friendly message
       if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
         const enhancedError = new Error(
@@ -305,7 +332,7 @@ export const userService = {
         enhancedError.isNetworkError = true;
         throw enhancedError;
       }
-      
+
       throw error;
     }
   },

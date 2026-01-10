@@ -30,7 +30,7 @@ const ModuleLoginPage = () => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -42,10 +42,10 @@ const ModuleLoginPage = () => {
     if (!value) {
       return 'Phone number is required';
     }
-    
+
     const phoneRegex = /^[6-9]\d{9}$/;
     const cleanedPhone = value.replace(/\D/g, '');
-    
+
     if (phoneRegex.test(cleanedPhone)) {
       return '';
     }
@@ -79,9 +79,9 @@ const ModuleLoginPage = () => {
       }
     } catch (error) {
       console.error('Login Error:', error);
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
         'Failed to send OTP. Please try again.';
       setError(errorMessage);
       toastUtils.error(errorMessage);
@@ -130,14 +130,14 @@ const ModuleLoginPage = () => {
       }
 
       toastUtils.success('OTP verified successfully!');
-      
+
       // Navigate to home page after successful login
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Verify OTP Error:', error);
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
         'Invalid OTP. Please try again.';
       setError(errorMessage);
       toastUtils.error(errorMessage);
@@ -166,9 +166,9 @@ const ModuleLoginPage = () => {
       }
     } catch (error) {
       console.error('Resend OTP Error:', error);
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
         'Failed to resend OTP. Please try again.';
       setError(errorMessage);
       toastUtils.error(errorMessage);
@@ -178,9 +178,9 @@ const ModuleLoginPage = () => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex flex-col overflow-hidden md:overflow-auto"
-      style={{ 
+      style={{
         backgroundColor: '#f8f8f8',
         margin: 0,
         padding: 0,
@@ -197,62 +197,62 @@ const ModuleLoginPage = () => {
     >
       {/* Web View Container - Centered Card Layout */}
       <div className="hidden md:flex min-h-screen items-center justify-center p-8">
-        <div 
+        <div
           className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
           style={{ backgroundColor: colors.backgroundSecondary }}
         >
           {/* Header Section - Dark Background with Wave Graphics */}
-          <div 
+          <div
             className="relative flex flex-col justify-center px-8 py-12"
-            style={{ 
+            style={{
               background: colors.gradientHeader,
               minHeight: '200px'
             }}
           >
             {/* Abstract Wave Graphics */}
             <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-              <svg 
-                className="absolute top-0 right-0 w-64 h-64" 
-                viewBox="0 0 200 200" 
+              <svg
+                className="absolute top-0 right-0 w-64 h-64"
+                viewBox="0 0 200 200"
                 fill="none"
                 style={{ color: colors.backgroundSecondary }}
               >
                 {/* Wave 1 */}
-                <path 
-                  d="M50 50 Q100 20, 150 50 T250 50" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                <path
+                  d="M50 50 Q100 20, 150 50 T250 50"
+                  stroke="currentColor"
+                  strokeWidth="2"
                   fill="none"
                   className="opacity-50"
                 />
                 {/* Wave 2 */}
-                <path 
-                  d="M30 100 Q80 70, 130 100 T230 100" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                <path
+                  d="M30 100 Q80 70, 130 100 T230 100"
+                  stroke="currentColor"
+                  strokeWidth="2"
                   fill="none"
                   className="opacity-30"
                 />
                 {/* Wave 3 */}
-                <path 
-                  d="M10 150 Q60 120, 110 150 T210 150" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                <path
+                  d="M10 150 Q60 120, 110 150 T210 150"
+                  stroke="currentColor"
+                  strokeWidth="2"
                   fill="none"
                   className="opacity-20"
                 />
                 {/* Additional flowing lines */}
-                <path 
-                  d="M70 30 Q120 0, 170 30" 
-                  stroke="currentColor" 
-                  strokeWidth="1.5" 
+                <path
+                  d="M70 30 Q120 0, 170 30"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   fill="none"
                   className="opacity-40"
                 />
-                <path 
-                  d="M90 80 Q140 50, 190 80" 
-                  stroke="currentColor" 
-                  strokeWidth="1.5" 
+                <path
+                  d="M90 80 Q140 50, 190 80"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   fill="none"
                   className="opacity-25"
                 />
@@ -271,198 +271,198 @@ const ModuleLoginPage = () => {
           </div>
 
           {/* Main Content Area - White Background */}
-          <div 
+          <div
             className="px-8 py-8 overflow-y-auto"
-            style={{ 
+            style={{
               backgroundColor: colors.backgroundSecondary
             }}
           >
-        <form onSubmit={showOTP ? handleVerifyOTP : handleSendOTP}>
-          {/* Title */}
-          <h2 className="text-2xl font-bold mb-6" style={{ color: colors.backgroundTertiary }}>
-            Sign in
-          </h2>
+            <form onSubmit={showOTP ? handleVerifyOTP : handleSendOTP}>
+              {/* Title */}
+              <h2 className="text-2xl font-bold mb-6" style={{ color: colors.backgroundTertiary }}>
+                Sign in
+              </h2>
 
-          {/* Phone Number Input Field */}
-          <div className="mb-4">
-            <div 
-              className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-              style={{ 
-                borderColor: error && !showOTP ? colors.error : colors.backgroundTertiary + '40',
-                backgroundColor: colors.backgroundPrimary
-              }}
-            >
-              {/* Phone Icon */}
-              <svg 
-                className="w-5 h-5 mr-3 flex-shrink-0" 
-                style={{ color: colors.backgroundTertiary }}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" 
-                />
-              </svg>
-              
-              {/* Input */}
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                  setPhoneNumber(value);
-                  setError('');
-                }}
-                placeholder="Enter your phone number"
-                className="flex-1 bg-transparent border-none outline-none text-sm"
-                style={{ color: colors.backgroundTertiary }}
-                disabled={showOTP}
-                maxLength={10}
-                onFocus={(e) => {
-                  if (!showOTP) {
-                    e.target.parentElement.style.borderColor = colors.backgroundTertiary;
-                    e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
-                  }
-                }}
-                onBlur={(e) => {
-                  if (!showOTP) {
-                    e.target.parentElement.style.borderColor = colors.backgroundTertiary + '40';
-                    e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
-                  }
-                }}
-              />
-            </div>
-            {error && !showOTP && (
-              <p className="text-xs mt-1 ml-1" style={{ color: colors.error }}>
-                {error}
-              </p>
-            )}
-          </div>
-
-          {/* OTP Input Field (shown after email/phone is submitted) */}
-          {showOTP && (
-            <div className="mb-4">
-              <div 
-                className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                style={{ 
-                  borderColor: error ? colors.error : colors.backgroundTertiary + '40',
-                  backgroundColor: colors.backgroundPrimary
-                }}
-              >
-                {/* Lock/OTP Icon */}
-                <svg 
-                  className="w-5 h-5 mr-3 flex-shrink-0" 
-                  style={{ color: colors.backgroundTertiary }}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+              {/* Phone Number Input Field */}
+              <div className="mb-4">
+                <div
+                  className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
+                  style={{
+                    borderColor: error && !showOTP ? colors.error : colors.backgroundTertiary + '40',
+                    backgroundColor: colors.backgroundPrimary
+                  }}
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+                  {/* Phone Icon */}
+                  <svg
+                    className="w-5 h-5 mr-3 flex-shrink-0"
+                    style={{ color: colors.backgroundTertiary }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                    />
+                  </svg>
+
+                  {/* Input */}
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setPhoneNumber(value);
+                      setError('');
+                    }}
+                    placeholder="Enter your phone number"
+                    className="flex-1 bg-transparent border-none outline-none text-sm"
+                    style={{ color: colors.backgroundTertiary }}
+                    disabled={showOTP}
+                    maxLength={10}
+                    onFocus={(e) => {
+                      if (!showOTP) {
+                        e.target.parentElement.style.borderColor = colors.backgroundTertiary;
+                        e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!showOTP) {
+                        e.target.parentElement.style.borderColor = colors.backgroundTertiary + '40';
+                        e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
+                      }
+                    }}
                   />
-                </svg>
-                
-                {/* OTP Input */}
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                    setOtp(value);
-                    setError('');
-                  }}
-                  placeholder="Enter OTP"
-                  className="flex-1 bg-transparent border-none outline-none text-sm tracking-widest"
-                  style={{ color: colors.backgroundTertiary }}
-                  maxLength={6}
-                  onFocus={(e) => {
-                    e.target.parentElement.style.borderColor = colors.backgroundTertiary;
-                    e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
-                  }}
-                  onBlur={(e) => {
-                    e.target.parentElement.style.borderColor = colors.backgroundTertiary + '40';
-                    e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
-                  }}
-                />
+                </div>
+                {error && !showOTP && (
+                  <p className="text-xs mt-1 ml-1" style={{ color: colors.error }}>
+                    {error}
+                  </p>
+                )}
               </div>
-              {error && (
-                <p className="text-xs mt-1 ml-1" style={{ color: colors.error }}>
-                  {error}
-                </p>
+
+              {/* OTP Input Field (shown after email/phone is submitted) */}
+              {showOTP && (
+                <div className="mb-4">
+                  <div
+                    className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
+                    style={{
+                      borderColor: error ? colors.error : colors.backgroundTertiary + '40',
+                      backgroundColor: colors.backgroundPrimary
+                    }}
+                  >
+                    {/* Lock/OTP Icon */}
+                    <svg
+                      className="w-5 h-5 mr-3 flex-shrink-0"
+                      style={{ color: colors.backgroundTertiary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+
+                    {/* OTP Input */}
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOtp(value);
+                        setError('');
+                      }}
+                      placeholder="Enter OTP"
+                      className="flex-1 bg-transparent border-none outline-none text-sm tracking-widest"
+                      style={{ color: colors.backgroundTertiary }}
+                      maxLength={6}
+                      onFocus={(e) => {
+                        e.target.parentElement.style.borderColor = colors.backgroundTertiary;
+                        e.target.parentElement.style.backgroundColor = colors.backgroundSecondary;
+                      }}
+                      onBlur={(e) => {
+                        e.target.parentElement.style.borderColor = colors.backgroundTertiary + '40';
+                        e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
+                      }}
+                    />
+                  </div>
+                  {error && (
+                    <p className="text-xs mt-1 ml-1" style={{ color: colors.error }}>
+                      {error}
+                    </p>
+                  )}
+                  <p className="text-xs mt-1 ml-1" style={{ color: colors.backgroundTertiary }}>
+                    OTP sent to +91 {phoneNumber}
+                  </p>
+                </div>
               )}
-              <p className="text-xs mt-1 ml-1" style={{ color: colors.backgroundTertiary }}>
-                OTP sent to +91 {phoneNumber}
-              </p>
-            </div>
-          )}
 
-          {/* Remember Me and Resend OTP */}
-          <div className="flex items-center justify-between mb-6">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-5 h-5 rounded mr-2 cursor-pointer"
-                style={{ accentColor: colors.backgroundTertiary }}
-              />
-              <span className="text-sm" style={{ color: colors.backgroundTertiary }}>
-                Remember me
-              </span>
-            </label>
-            {showOTP && (
+              {/* Remember Me and Resend OTP */}
+              <div className="flex items-center justify-between mb-6">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-5 h-5 rounded mr-2 cursor-pointer"
+                    style={{ accentColor: colors.backgroundTertiary }}
+                  />
+                  <span className="text-sm" style={{ color: colors.backgroundTertiary }}>
+                    Remember me
+                  </span>
+                </label>
+                {showOTP && (
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={isLoading}
+                    className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ color: colors.backgroundTertiary }}
+                  >
+                    Resend OTP?
+                  </button>
+                )}
+              </div>
+
+              {/* Sign In Button */}
               <button
-                type="button"
-                onClick={handleResendOTP}
+                type="submit"
                 disabled={isLoading}
-                className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ color: colors.backgroundTertiary }}
+                className="w-full py-4 rounded-xl font-bold text-base shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
+                style={{
+                  backgroundColor: colors.backgroundTertiary,
+                  color: colors.backgroundSecondary,
+                  boxShadow: isLoading
+                    ? 'none'
+                    : `0 4px 20px ${colors.backgroundTertiary}40`
+                }}
               >
-                Resend OTP?
+                {isLoading
+                  ? (showOTP ? 'Verifying...' : 'Sending OTP...')
+                  : (showOTP ? 'Verify OTP' : 'Sign in')
+                }
               </button>
-            )}
-          </div>
 
-          {/* Sign In Button */}
-          <button
-            type="submit"
-            disabled={isLoading || (!showOTP && (!phoneNumber || phoneNumber.length !== 10)) || (showOTP && otp.length !== 6)}
-            className="w-full py-4 rounded-xl font-bold text-base shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-            style={{ 
-              backgroundColor: colors.backgroundTertiary,
-              color: colors.backgroundSecondary,
-              boxShadow: (isLoading || (!showOTP && (!phoneNumber || phoneNumber.length !== 10)) || (showOTP && otp.length !== 6))
-                ? 'none' 
-                : `0 4px 20px ${colors.backgroundTertiary}40`
-            }}
-          >
-            {isLoading 
-              ? (showOTP ? 'Verifying...' : 'Sending OTP...') 
-              : (showOTP ? 'Verify OTP' : 'Sign in')
-            }
-          </button>
-
-          {/* Sign Up Link */}
-          <div className="text-center mt-6">
-            <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="font-semibold hover:underline"
-                style={{ color: colors.backgroundTertiary }}
-              >
-                Sign up
-              </Link>
-            </p>
-          </div>
-        </form>
+              {/* Sign Up Link */}
+              <div className="text-center mt-6">
+                <p className="text-sm" style={{ color: colors.backgroundTertiary }}>
+                  Don't have an account?{' '}
+                  <Link
+                    to="/register"
+                    className="font-semibold hover:underline"
+                    style={{ color: colors.backgroundTertiary }}
+                  >
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -473,57 +473,57 @@ const ModuleLoginPage = () => {
         <div className="h-6" style={{ backgroundColor: '#f8f8f8' }}></div>
 
         {/* Header Section - Dark Background with Wave Graphics */}
-        <div 
+        <div
           className="relative flex-1 flex flex-col justify-center px-6 pb-8"
-          style={{ 
+          style={{
             background: colors.gradientHeader,
             minHeight: '40%'
           }}
         >
           {/* Abstract Wave Graphics */}
           <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-            <svg 
-              className="absolute top-0 right-0 w-64 h-64" 
-              viewBox="0 0 200 200" 
+            <svg
+              className="absolute top-0 right-0 w-64 h-64"
+              viewBox="0 0 200 200"
               fill="none"
               style={{ color: colors.backgroundSecondary }}
             >
               {/* Wave 1 */}
-              <path 
-                d="M50 50 Q100 20, 150 50 T250 50" 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d="M50 50 Q100 20, 150 50 T250 50"
+                stroke="currentColor"
+                strokeWidth="2"
                 fill="none"
                 className="opacity-50"
               />
               {/* Wave 2 */}
-              <path 
-                d="M30 100 Q80 70, 130 100 T230 100" 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d="M30 100 Q80 70, 130 100 T230 100"
+                stroke="currentColor"
+                strokeWidth="2"
                 fill="none"
                 className="opacity-30"
               />
               {/* Wave 3 */}
-              <path 
-                d="M10 150 Q60 120, 110 150 T210 150" 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d="M10 150 Q60 120, 110 150 T210 150"
+                stroke="currentColor"
+                strokeWidth="2"
                 fill="none"
                 className="opacity-20"
               />
               {/* Additional flowing lines */}
-              <path 
-                d="M70 30 Q120 0, 170 30" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
+              <path
+                d="M70 30 Q120 0, 170 30"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 fill="none"
                 className="opacity-40"
               />
-              <path 
-                d="M90 80 Q140 50, 190 80" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
+              <path
+                d="M90 80 Q140 50, 190 80"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 fill="none"
                 className="opacity-25"
               />
@@ -542,9 +542,9 @@ const ModuleLoginPage = () => {
         </div>
 
         {/* Main Content Area - White Background */}
-        <div 
+        <div
           className="flex-1 bg-white rounded-t-3xl px-6 py-8 overflow-y-auto"
-          style={{ 
+          style={{
             backgroundColor: colors.backgroundSecondary,
             minHeight: '60%'
           }}
@@ -557,29 +557,29 @@ const ModuleLoginPage = () => {
 
             {/* Phone Number Input Field */}
             <div className="mb-4">
-              <div 
+              <div
                 className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                style={{ 
+                style={{
                   borderColor: error && !showOTP ? colors.error : colors.backgroundTertiary + '40',
                   backgroundColor: colors.backgroundPrimary
                 }}
               >
                 {/* Phone Icon */}
-                <svg 
-                  className="w-5 h-5 mr-3 flex-shrink-0" 
+                <svg
+                  className="w-5 h-5 mr-3 flex-shrink-0"
                   style={{ color: colors.backgroundTertiary }}
-                  fill="none" 
-                  stroke="currentColor" 
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                   />
                 </svg>
-                
+
                 {/* Input */}
                 <input
                   type="tel"
@@ -618,29 +618,29 @@ const ModuleLoginPage = () => {
             {/* OTP Input Field (shown after email/phone is submitted) */}
             {showOTP && (
               <div className="mb-4">
-                <div 
+                <div
                   className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                  style={{ 
+                  style={{
                     borderColor: error ? colors.error : colors.backgroundTertiary + '40',
                     backgroundColor: colors.backgroundPrimary
                   }}
                 >
                   {/* Lock/OTP Icon */}
-                  <svg 
-                    className="w-5 h-5 mr-3 flex-shrink-0" 
+                  <svg
+                    className="w-5 h-5 mr-3 flex-shrink-0"
                     style={{ color: colors.backgroundTertiary }}
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                     />
                   </svg>
-                  
+
                   {/* OTP Input */}
                   <input
                     type="text"
@@ -707,16 +707,16 @@ const ModuleLoginPage = () => {
               type="submit"
               disabled={isLoading || (!showOTP && (!phoneNumber || phoneNumber.length !== 10)) || (showOTP && otp.length !== 6)}
               className="w-full py-4 rounded-xl font-bold text-base shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-              style={{ 
+              style={{
                 backgroundColor: colors.backgroundTertiary,
                 color: colors.backgroundSecondary,
                 boxShadow: (isLoading || (!showOTP && (!phoneNumber || phoneNumber.length !== 10)) || (showOTP && otp.length !== 6))
-                  ? 'none' 
+                  ? 'none'
                   : `0 4px 20px ${colors.backgroundTertiary}40`
               }}
             >
-              {isLoading 
-                ? (showOTP ? 'Verifying...' : 'Sending OTP...') 
+              {isLoading
+                ? (showOTP ? 'Verifying...' : 'Sending OTP...')
                 : (showOTP ? 'Verify OTP' : 'Sign in')
               }
             </button>

@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 import { connectDB } from "./config/database.js";
 import Location from "./models/Location.js";
 import User from "./models/User.js";
+import Staff from "./models/Staff.js";
 
 // Load environment variables
 dotenv.config();
@@ -275,6 +276,7 @@ io.on("connection", (socket) => {
 // IMPORTANT: Mount admin routes BEFORE user routes to avoid route conflicts
 // Admin routes are more specific, so they should be checked first
 app.use("/api/admin", adminRoutes);
+app.use("/api/crm", crmRoutes);
 app.use("/api/cars", carRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
@@ -285,7 +287,6 @@ app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api", locationRoutes);
 app.use("/api", referralRoutes);
-app.use("/api/crm", crmRoutes);
 
 // Basic route
 app.get("/", (req, res) => {
@@ -310,6 +311,7 @@ server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`🔐 Authentication System: Dual Collection Support (User/Staff) Active`);
   console.log(`🔌 Socket.IO enabled for real-time location tracking`);
 
   // Verify Cloudinary configuration

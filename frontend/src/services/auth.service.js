@@ -25,14 +25,14 @@ export const authService = {
       localStorage.setItem('mockOTPEmail', data.email || '');
       localStorage.setItem('mockOTPPhone', data.phone || '');
       localStorage.setItem('mockOTPType', 'register');
-      
+
       return {
         success: true,
         message: 'OTP sent successfully',
         otp: mockOTP, // Only in mock mode for testing
       };
     }
-    
+
     // Production mode - actual API call
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
@@ -59,7 +59,7 @@ export const authService = {
         user: { role: 'user' },
       };
     }
-    
+
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
     const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
@@ -79,14 +79,14 @@ export const authService = {
       localStorage.setItem('mockOTP', mockOTP);
       localStorage.setItem('mockOTPEmailOrPhone', data.emailOrPhone);
       localStorage.setItem('mockOTPType', 'login');
-      
+
       return {
         success: true,
         message: 'OTP sent successfully',
         otp: mockOTP, // Only in mock mode for testing
       };
     }
-    
+
     // Production mode - actual API call
     try {
       const api = (await import('./api')).default;
@@ -101,7 +101,7 @@ export const authService = {
         error.response?.data?.message?.toLowerCase().includes('user not found') ||
         error.response?.data?.message?.toLowerCase().includes('signup first')
       );
-      
+
       if (!isUserNotFound) {
         console.error('sendLoginOTP error:', error);
         console.error('Error response:', error.response?.data);
@@ -128,19 +128,19 @@ export const authService = {
       await mockDelay(1000);
       const storedOTP = localStorage.getItem('mockOTP');
       const enteredOTP = data.otp;
-      
+
       // Accept any 6-digit OTP or the stored mock OTP
       if (enteredOTP === storedOTP || enteredOTP === '123456' || enteredOTP.length === 6) {
         const mockToken = 'mock_token_' + Date.now();
         const mockRefreshToken = 'mock_refresh_token_' + Date.now();
-        
+
         // Store mock auth in localStorage
         localStorage.setItem('authToken', mockToken);
         localStorage.setItem('refreshToken', mockRefreshToken);
-        
+
         // Clear mock OTP
         localStorage.removeItem('mockOTP');
-        
+
         return {
           token: mockToken,
           refreshToken: mockRefreshToken,
@@ -155,12 +155,12 @@ export const authService = {
         throw new Error('Invalid OTP. Please try again.');
       }
     }
-    
+
     // Production mode - actual API call
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
     const response = await api.post(API_ENDPOINTS.AUTH.VERIFY_OTP, data);
-    
+
     // Return data in expected format
     if (response.data && response.data.data) {
       return response.data.data;
@@ -180,12 +180,13 @@ export const authService = {
         token: 'mock_token_' + Date.now(),
       };
     }
-    
+
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
+    // Pass _retry: true to prevent interceptor recursion
     const response = await api.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
       refreshToken,
-    });
+    }, { _retry: true });
     return response.data;
   },
 
@@ -205,7 +206,7 @@ export const authService = {
         otp: mockOTP,
       };
     }
-    
+
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
     const response = await api.post(API_ENDPOINTS.AUTH.RESEND_OTP, data);
@@ -224,7 +225,7 @@ export const authService = {
       localStorage.removeItem('mockOTP');
       return { success: true };
     }
-    
+
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
     const response = await api.post(API_ENDPOINTS.AUTH.LOGOUT);

@@ -29,7 +29,7 @@ const initialState = {
   refreshToken: localStorage.getItem('refreshToken') || null,
   // Don't set isAuthenticated to true initially - wait for AuthInitializer to verify token
   // This prevents showing login form during token verification on page refresh
-  isAuthenticated: false, // Will be set to true by AuthInitializer after token verification
+  isAuthenticated: !!localStorage.getItem('authToken'), // Assume logged in if token exists to prevent flashing login page
   isLoading: false,
   isInitializing: true, // Track if auth is being initialized on app mount
   error: null,
@@ -55,10 +55,23 @@ const authSlice = createSlice({
       state.error = null;
 
       // Store in localStorage
-      localStorage.setItem('authToken', action.payload.token);
-      if (action.payload.refreshToken) {
-        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      const isEmployee = action.payload.userRole === 'employee';
+
+      if (isEmployee) {
+        localStorage.setItem('staffToken', action.payload.token);
+      } else {
+        localStorage.setItem('authToken', action.payload.token);
       }
+
+      // Store refresh token based on role to avoid overwriting user/staff sessions
+      if (action.payload.refreshToken) {
+        if (isEmployee) {
+          localStorage.setItem('staffRefreshToken', action.payload.refreshToken);
+        } else {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
+      }
+
       if (action.payload.userRole) {
         localStorage.setItem('userRole', action.payload.userRole);
       }
@@ -73,20 +86,29 @@ const authSlice = createSlice({
 
     // Logout action (synchronous - for immediate state clearing)
     logout: (state) => {
+      // Determine what to clear based on current role
+      const isEmployee = state.userRole === 'employee';
+
+      if (isEmployee) {
+        localStorage.removeItem('staffToken');
+        localStorage.removeItem('staffRefreshToken');
+      } else {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+      }
+
+      // Always clear common items
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('profileComplete');
+
       state.isAuthenticated = false;
-      state.isInitializing = false; // Auth initialization complete (even if failed)
+      state.isInitializing = false;
       state.token = null;
       state.refreshToken = null;
       state.userRole = null;
       state.error = null;
-
-      // Clear localStorage
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('profileComplete');
     },
-    
+
     // Mark auth initialization as complete
     authInitialized: (state) => {
       state.isInitializing = false;
@@ -95,7 +117,13 @@ const authSlice = createSlice({
     // Token refresh
     refreshTokenSuccess: (state, action) => {
       state.token = action.payload.token;
-      localStorage.setItem('authToken', action.payload.token);
+
+      const isEmployee = state.userRole === 'employee';
+      if (isEmployee) {
+        localStorage.setItem('staffToken', action.payload.token);
+      } else {
+        localStorage.setItem('authToken', action.payload.token);
+      }
     },
 
     // Clear error
@@ -111,31 +139,47 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.isLoading = false;
+
+        const isEmployee = state.userRole === 'employee';
+
+        if (isEmployee) {
+          localStorage.removeItem('staffToken');
+          localStorage.removeItem('staffRefreshToken');
+        } else {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+        }
+
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('profileComplete');
+
         state.isAuthenticated = false;
         state.token = null;
         state.refreshToken = null;
         state.userRole = null;
         state.error = null;
-
-        // Clear localStorage
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('profileComplete');
       })
       .addCase(logoutUser.rejected, (state) => {
         state.isLoading = false;
         // Even if API call fails, clear local state
+
+        const isEmployee = state.userRole === 'employee';
+
+        if (isEmployee) {
+          localStorage.removeItem('staffToken');
+          localStorage.removeItem('staffRefreshToken');
+        } else {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+        }
+
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('profileComplete');
+
         state.isAuthenticated = false;
         state.token = null;
         state.refreshToken = null;
         state.userRole = null;
-
-        // Clear localStorage
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('profileComplete');
       });
   },
 });

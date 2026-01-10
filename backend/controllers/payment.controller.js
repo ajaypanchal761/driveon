@@ -820,6 +820,7 @@ export const razorpayCallback = async (req, res) => {
 
     const isGet = req.method === 'GET';
     const src = isGet ? req.query : req.body;
+    const source = req.query.source; // Params in URL are always in req.query
 
     // Extract fields from either GET query or POST body
     let razorpay_order_id = src.razorpay_order_id || src.orderId || src.order_id;
@@ -828,7 +829,13 @@ export const razorpayCallback = async (req, res) => {
 
     // Build frontend callback URL
     const frontendBase = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://driveon.com' : 'http://localhost:5173');
-    const url = new URL('/booking/payment-callback', frontendBase);
+
+    let redirectPath = '/booking/payment-callback';
+    if (source === 'crm_salary') {
+      redirectPath = '/crm/staff/directory';
+    }
+
+    const url = new URL(redirectPath, frontendBase);
 
     // Add payment parameters
     if (razorpay_order_id) {

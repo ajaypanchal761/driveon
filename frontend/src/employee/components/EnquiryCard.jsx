@@ -13,7 +13,7 @@ const EnquiryCard = ({ enquiry, onClick }) => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -30,7 +30,7 @@ const EnquiryCard = ({ enquiry, onClick }) => {
           <div>
             <h4 className="font-bold text-gray-800 text-base">{enquiry.name}</h4>
             <div className="flex items-center gap-1 text-xs text-gray-400">
-               <FiPhone className="text-[10px]" /> {enquiry.phone}
+              <FiPhone className="text-[10px]" /> {enquiry.phone}
             </div>
           </div>
         </div>
@@ -44,10 +44,8 @@ const EnquiryCard = ({ enquiry, onClick }) => {
           <FiCalendar />
           <span>{enquiry.date}</span>
         </div>
-        
-        <button className="flex items-center gap-1 text-xs font-bold text-[#1C205C] hover:text-blue-700">
-          View Details <FiArrowRight />
-        </button>
+
+
       </div>
     </motion.div>
   );

@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     RESEND_OTP: '/auth/resend-otp',
     REFRESH_TOKEN: '/auth/refresh-token',
     LOGOUT: '/auth/logout',
+    STAFF_PROFILE: '/auth/staff-profile',
   },
   USER: {
     PROFILE: '/user/profile',

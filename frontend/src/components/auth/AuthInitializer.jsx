@@ -17,9 +17,19 @@ const AuthInitializer = () => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      // Get token from localStorage
-      const storedToken = localStorage.getItem('authToken');
-      const storedRefreshToken = localStorage.getItem('refreshToken');
+      // Determine context based on URL to enforce strict model separation
+      const currentPath = window.location.pathname;
+      const isEmployeeApp = currentPath.startsWith('/employee');
+
+      // Get token from localStorage based on context
+      const storedToken = isEmployeeApp
+        ? localStorage.getItem('staffToken')
+        : localStorage.getItem('authToken');
+
+      // Select correct refresh token based on context
+      const storedRefreshToken = isEmployeeApp
+        ? localStorage.getItem('staffRefreshToken')
+        : localStorage.getItem('refreshToken');
 
       // If no token, user is not authenticated
       if (!storedToken) {
@@ -43,31 +53,39 @@ const AuthInitializer = () => {
       // This handles the case where page was refreshed and user data needs to be restored
       if (storedToken) {
         try {
-          // Try to fetch user profile to verify token
-          const profileResponse = await userService.getProfile();
-          
+
+          let profileResponse;
+
+          if (isEmployeeApp) {
+            console.log('🔄 Restoring STAFF session (Employee Context)...');
+            profileResponse = await userService.getStaffProfile();
+          } else {
+            console.log('🔄 Restoring USER session (User Context)...');
+            profileResponse = await userService.getProfile();
+          }
+
           if (profileResponse.success && profileResponse.data?.user) {
             const userData = profileResponse.data.user;
-            
+
             // Restore authentication state
             dispatch(loginSuccess({
               token: storedToken,
-              refreshToken: storedRefreshToken,
-              userRole: userData.role || 'user',
+              refreshToken: storedRefreshToken, // Pass the one we used
+              // Strictly rely on context for role
+              userRole: isEmployeeApp ? 'employee' : (userData.role || 'user'),
             }));
-            
+
             // Restore user data
             dispatch(setUser(userData));
-            
+
             // Mark initialization as complete
             dispatch(authInitialized());
-            
-            console.log('✅ Authentication restored on refresh');
+
+            console.log('✅ Authentication restored');
           } else {
-            // Profile fetch failed - token might be invalid
-            console.warn('⚠️ Failed to restore session - token may be invalid');
-            dispatch(authInitialized()); // Mark initialization as complete
-            // Don't logout immediately - let API interceptor handle it
+            // Profile fetch failed - token might be invalid for this context
+            console.warn('⚠️ Failed to restore session - token invalid or wrong context');
+            dispatch(authInitialized());
           }
         } catch (error) {
           // If profile fetch fails, token might be expired
@@ -75,55 +93,68 @@ const AuthInitializer = () => {
           if (storedRefreshToken) {
             try {
               const refreshResponse = await authService.refreshToken(storedRefreshToken);
-              
+
               if (refreshResponse?.token || refreshResponse?.data?.token) {
                 const newToken = refreshResponse.token || refreshResponse.data.token;
                 const newRefreshToken = refreshResponse.refreshToken || refreshResponse.data.refreshToken || storedRefreshToken;
-                
-                // Store new tokens
-                localStorage.setItem('authToken', newToken);
-                if (newRefreshToken) {
-                  localStorage.setItem('refreshToken', newRefreshToken);
+
+                // Store new tokens in correct slots
+                if (isEmployeeApp) {
+                  localStorage.setItem('staffToken', newToken);
+                } else {
+                  localStorage.setItem('authToken', newToken);
                 }
-                
-                // Try to fetch profile again with new token
-                const profileResponse = await userService.getProfile();
-                
+
+                // Store new refresh token in correct slot
+                if (newRefreshToken) {
+                  if (isEmployeeApp) {
+                    localStorage.setItem('staffRefreshToken', newRefreshToken);
+                  } else {
+                    localStorage.setItem('refreshToken', newRefreshToken);
+                  }
+                }
+
+                // Retry profile fetch based on URL context
+                let profileResponse;
+
+                if (isEmployeeApp) {
+                  profileResponse = await userService.getStaffProfile();
+                } else {
+                  profileResponse = await userService.getProfile();
+                }
+
                 if (profileResponse.success && profileResponse.data?.user) {
                   const userData = profileResponse.data.user;
-                  
+
                   // Restore authentication state
                   dispatch(loginSuccess({
                     token: newToken,
                     refreshToken: newRefreshToken,
-                    userRole: userData.role || 'user',
+                    userRole: isEmployeeApp ? 'employee' : (userData.role || 'user'),
                   }));
-                  
+
                   // Restore user data
                   dispatch(setUser(userData));
-                  
+
                   // Mark initialization as complete
                   dispatch(authInitialized());
-                  
-                  console.log('✅ Authentication restored after token refresh');
+
+                  console.log('✅ Authentication restored after refresh');
                 } else {
-                  // Still failed - clear auth
+                  // Still failed (e.g., Staff trying to access User App) -> Logout
                   dispatch(logout());
                   dispatch(authInitialized());
                 }
               } else {
-                // Refresh failed - clear auth
                 dispatch(logout());
                 dispatch(authInitialized());
               }
             } catch (refreshError) {
-              // Refresh failed - clear auth
-              console.error('Token refresh failed on initialization:', refreshError);
+              console.error('Token refresh failed:', refreshError);
               dispatch(logout());
               dispatch(authInitialized());
             }
           } else {
-            // No refresh token - clear auth
             dispatch(logout());
             dispatch(authInitialized());
           }
@@ -140,4 +171,3 @@ const AuthInitializer = () => {
 };
 
 export default AuthInitializer;
-

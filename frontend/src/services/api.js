@@ -23,17 +23,32 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    // Check if this is an admin route
-    const isAdminRoute = config.url?.includes('/admin/');
-    
+    // Check if this is an admin or crm route
+    const isAdminRoute = config.url?.includes('/admin/') || config.url?.includes('/crm/');
+
     // Get appropriate token (admin or user)
+
     let token;
-    if (isAdminRoute) {
+
+    // Check for specific route types
+    const isStrictAdminRoute = config.url?.includes('/admin/');
+    const isCrmRoute = config.url?.includes('/crm/');
+
+    if (isStrictAdminRoute) {
       token = localStorage.getItem('adminToken');
+    } else if (isCrmRoute) {
+      // For CRM, try admin token first, then fall back to user token
+      // This allows both Admins and Staff to access CRM endpoints
+      token = localStorage.getItem('adminToken') || store.getState().auth.token || localStorage.getItem('authToken');
     } else {
-      token = store.getState().auth.token || localStorage.getItem('authToken');
+      const isEmployeeApp = window.location.pathname.startsWith('/employee');
+      if (isEmployeeApp) {
+        token = store.getState().auth.token || localStorage.getItem('staffToken');
+      } else {
+        token = store.getState().auth.token || localStorage.getItem('authToken');
+      }
     }
-    
+
     // List of public routes that don't require authentication
     const publicRoutes = [
       '/auth/register',
@@ -45,17 +60,17 @@ api.interceptors.request.use(
       '/admin/login',
       '/admin/refresh-token', // Also include refresh token
     ];
-    
+
     // Check if this is a public route
     // Use exact URL matching to avoid false positives
     const requestUrl = config.url || '';
     const isPublicRoute = publicRoutes.some(route => {
       // Check if URL exactly matches or ends with the route
-      return requestUrl === route || 
-             requestUrl.endsWith(route) ||
-             requestUrl.includes(route);
+      return requestUrl === route ||
+        requestUrl.endsWith(route) ||
+        requestUrl.includes(route);
     });
-    
+
     // CRITICAL: Never add Authorization header for public routes
     // This prevents middleware from being triggered incorrectly
     if (isPublicRoute) {
@@ -66,7 +81,7 @@ api.interceptors.request.use(
       if (config.headers.common) {
         delete config.headers.common.Authorization;
       }
-      
+
       if (isAdminRoute) {
         console.log('✅ Public admin route - NO token sent:', {
           url: config.url,
@@ -143,18 +158,23 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      // Check if this is an admin route
-      const isAdminRoute = originalRequest.url?.includes('/admin/');
-      
+      // If error occurs on logout, don't try to refresh, just let it fail so we can clear local state
+      if (originalRequest.url?.includes('/logout')) {
+        return Promise.reject(error);
+      }
+
+      // Check if this is an admin or crm route
+      const isAdminRoute = originalRequest.url?.includes('/admin/') || originalRequest.url?.includes('/crm/');
+
       // List of public admin routes that don't require token refresh
       const publicAdminRoutes = [
         '/admin/login',
         '/admin/signup',
         '/admin/refresh-token',
       ];
-      
+
       const isPublicAdminRoute = publicAdminRoutes.some(route => originalRequest.url?.includes(route));
-      
+
       // For public admin routes (login, signup), don't try to refresh - just reject the error
       // These routes can return 401 for invalid credentials, not token issues
       // Don't log confusing messages for these routes
@@ -162,10 +182,10 @@ api.interceptors.response.use(
         // For public routes, preserve the original error but don't try to refresh token
         // The error might be a legitimate backend error (like validation failure)
         // Create a clean error object without token-related messages
-        
+
         // Extract the actual backend error message
         let errorMessage = 'Request failed';
-        
+
         // For login route, check if it's a credential error or route issue
         if (originalRequest.url?.includes('/admin/login')) {
           // For login, the backend should return proper error messages
@@ -193,16 +213,16 @@ api.interceptors.response.use(
             errorMessage = error.message;
           }
         }
-        
+
         // Create a clean error object
         const cleanError = new Error(errorMessage);
         cleanError.response = error.response;
         cleanError.config = error.config;
         cleanError.status = error.response?.status;
-        
+
         // Only log if it's not a normal login failure
-        if (!originalRequest.url?.includes('/admin/login') || 
-            (error.response?.data?.message && !error.response.data.message.includes('Invalid'))) {
+        if (!originalRequest.url?.includes('/admin/login') ||
+          (error.response?.data?.message && !error.response.data.message.includes('Invalid'))) {
           console.log('Public route error:', {
             url: originalRequest.url,
             message: errorMessage,
@@ -210,30 +230,30 @@ api.interceptors.response.use(
             backendMessage: error.response?.data?.message,
           });
         }
-        
+
         return Promise.reject(cleanError);
       }
-      
+
       // Only try to refresh token for protected admin routes
       if (isAdminRoute) {
         // Try to refresh admin token
         const adminRefreshToken = localStorage.getItem('adminRefreshToken');
-        
+
         if (adminRefreshToken) {
           try {
             const refreshResponse = await axios.post(`${API_BASE_URL}/admin/refresh-token`, {
               refreshToken: adminRefreshToken,
             });
-            
+
             if (refreshResponse.data?.success && refreshResponse.data?.data) {
               const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data.data;
-              
+
               // Store new tokens
               localStorage.setItem('adminToken', newToken);
               if (newRefreshToken) {
                 localStorage.setItem('adminRefreshToken', newRefreshToken);
               }
-              
+
               // Update authorization header and retry original request
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
               return api(originalRequest);
@@ -243,28 +263,30 @@ api.interceptors.response.use(
             // Refresh failed, clear tokens
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminRefreshToken');
+
+            // Redirect to admin login
+            if (!window.location.pathname.includes('/admin/login')) {
+              window.location.href = '/admin/login';
+            }
             return Promise.reject(refreshError);
           }
         }
-        
+
         // No refresh token or refresh failed
         // Only log for protected routes, not public routes
         if (!isPublicAdminRoute) {
-          console.error('Admin authentication failed:', {
-            url: originalRequest.url,
-            message: error.response?.data?.message || 'Unauthorized',
-            hasAdminToken: !!localStorage.getItem('adminToken'),
-            hasRefreshToken: !!adminRefreshToken,
-          });
-          
-          // Clear admin tokens only for protected routes
+          console.error('Admin authentication failed - No refresh token');
           localStorage.removeItem('adminToken');
           localStorage.removeItem('adminRefreshToken');
+
+          if (!window.location.pathname.includes('/admin/login')) {
+            window.location.href = '/admin/login';
+          }
         }
-        
+
         return Promise.reject(error);
       }
-      
+
       // For public admin routes (login, signup), just pass through the error
       // Don't log confusing messages - these routes can legitimately return 401 for invalid credentials
 
@@ -278,24 +300,38 @@ api.interceptors.response.use(
 
       try {
         // Try to refresh token (only for user routes)
-        const refreshToken = store.getState().auth.refreshToken || 
-                            localStorage.getItem('refreshToken');
+        const currentPath = window.location.pathname;
+        const isEmployeeApp = currentPath.startsWith('/employee');
+
+        // Select correct refresh token based on context
+        const refreshToken = store.getState().auth.refreshToken ||
+          (isEmployeeApp ? localStorage.getItem('staffRefreshToken') : localStorage.getItem('refreshToken'));
 
         if (refreshToken) {
           const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
             refreshToken,
-          });
+          }, { _retry: true });
 
-          // Handle different response formats
+          // Handle different response formats - Standardize on nested data.data.token usually
           const token = response.data?.data?.token || response.data?.token;
-          
+          const newRefreshToken = response.data?.data?.refreshToken || response.data?.refreshToken;
+
           if (token) {
             // Update Redux store
             store.dispatch(refreshTokenSuccess({ token }));
-            
+
+            // Also update refresh token if returned - in correct slot
+            if (newRefreshToken) {
+              if (isEmployeeApp) {
+                localStorage.setItem('staffRefreshToken', newRefreshToken);
+              } else {
+                localStorage.setItem('refreshToken', newRefreshToken);
+              }
+            }
+
             // Update authorization header
             originalRequest.headers.Authorization = `Bearer ${token}`;
-            
+
             // Retry original request
             return api(originalRequest);
           } else {
@@ -303,58 +339,51 @@ api.interceptors.response.use(
             throw new Error('Token refresh failed');
           }
         } else {
-          // No refresh token, logout user
-          console.warn('No refresh token available, logging out user');
-          store.dispatch(logout());
-          
-          // Don't redirect if auth is still initializing
-          const authState = store.getState().auth;
-          if (authState.isInitializing) {
-            console.log('Auth still initializing, skipping redirect');
-            return Promise.reject(error);
-          }
-          
-          // Only redirect to login if we're on a protected route
-          const currentPath = window.location.pathname;
-          const publicRoutes = ['/', '/login', '/register', '/search', '/faq', '/about', '/contact', '/privacy-policy', '/terms'];
-          const isPublicRoute = publicRoutes.includes(currentPath) || 
-                               currentPath.startsWith('/car-details/') ||
-                               (currentPath.startsWith('/car-details/') && currentPath.includes('/reviews'));
-          
-          // Only redirect if not already on a public route
-          if (!isPublicRoute && !currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
-            // Use setTimeout to avoid redirect during render
-            setTimeout(() => {
-              window.location.href = '/login';
-            }, 100);
-          }
-          return Promise.reject(error);
+          throw new Error('No valid refresh token found');
         }
       } catch (refreshError) {
         // Refresh failed, logout user
-        console.error('Token refresh error:', refreshError);
+        console.warn('Token refresh failed/expired, logging out user:', refreshError.message);
         store.dispatch(logout());
-        
+
         // Don't redirect if auth is still initializing
         const authState = store.getState().auth;
         if (authState.isInitializing) {
-          console.log('Auth still initializing, skipping redirect');
           return Promise.reject(refreshError);
         }
-        
-        // Only redirect to login if we're on a protected route
+
         const currentPath = window.location.pathname;
+        const userRole = localStorage.getItem('userRole'); // Check configured role
+
+        // Check if we are in admin or crm section - should have been handled above, but double check
+        if (currentPath.startsWith('/admin') || currentPath.startsWith('/crm')) {
+          if (!currentPath.includes('/login')) {
+            window.location.href = '/admin/login';
+          }
+          return Promise.reject(refreshError);
+        }
+
+        // Employee App Redirect
+        if (currentPath.startsWith('/employee') || userRole === 'employee') {
+          if (!currentPath.includes('/login') && !originalRequest.url?.includes('/logout')) {
+            // Avoid infinite loop
+            if (!window.location.pathname.endsWith('/employee/login')) {
+              window.location.href = '/employee/login';
+            }
+          }
+          return Promise.reject(refreshError);
+        }
+
+        // User App Redirect
         const publicRoutes = ['/', '/login', '/register', '/search', '/faq', '/about', '/contact', '/privacy-policy', '/terms'];
-        const isPublicRoute = publicRoutes.includes(currentPath) || 
-                             currentPath.startsWith('/car-details/') ||
-                             (currentPath.startsWith('/car-details/') && currentPath.includes('/reviews'));
-        
-        // Only redirect if not already on a public route
+        // Relax strict check for public routes to ensure we don't trap users on protected pages
+        const isPublicRoute = publicRoutes.some(r => currentPath === r) ||
+          currentPath.startsWith('/car-details/');
+
         if (!isPublicRoute && !currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
-          // Use setTimeout to avoid redirect during render
-          setTimeout(() => {
+          if (!window.location.pathname.startsWith('/login')) {
             window.location.href = '/login';
-          }, 100);
+          }
         }
         return Promise.reject(refreshError);
       }
@@ -364,14 +393,14 @@ api.interceptors.response.use(
     if (error.response) {
       // Server responded with error
       const { status, data } = error.response;
-      
+
       // Handle specific error codes
       // Don't log expected errors (like user not found for login)
       const isExpectedError = status === 400 && (
         data?.message?.toLowerCase().includes('user not found') ||
         data?.message?.toLowerCase().includes('signup first')
       );
-      
+
       if (!isExpectedError) {
         switch (status) {
           case 403:
@@ -381,7 +410,8 @@ api.interceptors.response.use(
             console.error('Not Found: The requested resource was not found');
             break;
           case 500:
-            console.error('Server Error: Something went wrong on the server');
+            console.error('Server Error:', data?.message || 'Something went wrong on the server');
+            if (data?.error) console.error('Error Details:', data.error);
             break;
           default:
             console.error(`API Error: ${status} - ${data?.message || 'Unknown error'}`);
@@ -390,13 +420,13 @@ api.interceptors.response.use(
     } else if (error.request) {
       // Request was made but no response received
       const isNetworkError = error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED';
-      
+
       if (isNetworkError) {
         // Provide helpful error message for network issues
         const errorMessage = error.code === 'ERR_CONNECTION_REFUSED'
           ? 'Cannot connect to server. Please check if the backend server is running.'
           : 'Network error. Please check your internet connection and try again.';
-        
+
         // Create a more informative error object
         const networkError = new Error(errorMessage);
         networkError.code = error.code;
@@ -405,7 +435,7 @@ api.interceptors.response.use(
         console.error('Network Error:', errorMessage);
         return Promise.reject(networkError);
       }
-      
+
       console.error('Network Error: No response from server');
     } else {
       // Something else happened

@@ -34,7 +34,39 @@ const salarySchema = new mongoose.Schema(
         advanceAmount: {
             type: Number,
             default: 0,
-        }
+        },
+        transactions: [{
+            transactionId: {
+                type: String,
+                required: true,
+            },
+            razorpayOrderId: {
+                type: String,
+            },
+            razorpayPaymentId: {
+                type: String,
+            },
+            razorpaySignature: {
+                type: String,
+            },
+            amount: {
+                type: Number,
+                required: true,
+            },
+            status: {
+                type: String,
+                enum: ['pending', 'success', 'failed'],
+                default: 'pending',
+            },
+            paymentMethod: {
+                type: String,
+                enum: ['razorpay', 'manual', 'bank_transfer'],
+                default: 'razorpay',
+            },
+            paymentDate: {
+                type: Date,
+            }
+        }]
     },
     {
         timestamps: true,

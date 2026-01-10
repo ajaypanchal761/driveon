@@ -9,14 +9,11 @@ const CouponCarBanner = ({ onDataAvailability }) => {
     useEffect(() => {
         const fetchCoupons = async () => {
             try {
-                // Ensure base URL doesn't have trailing /api for consistent path construction
-                const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-                const base = rawBase.replace(/\/api\/?$/, '');
-                const response = await axios.get(`${base}/api/common/coupons/car-specific`);
-                console.log('Coupon API Response:', response.data);
-                if (response.data.success && response.data.data.coupons) {
+                const data = await commonService.getCarSpecificCoupons();
+                console.log('Coupon API Response:', data);
+                if (data.success && data.data && data.data.coupons) {
                     // Filter only valid coupons that have car data
-                    const validCoupons = response.data.data.coupons.filter(c => c.cars && c.cars.length > 0 && c.cars[0] && c.cars[0].brand);
+                    const validCoupons = data.data.coupons.filter(c => c.cars && c.cars.length > 0 && c.cars[0] && c.cars[0].brand);
                     setCoupons(validCoupons);
                     if (onDataAvailability && validCoupons.length > 0) {
                         onDataAvailability(true);

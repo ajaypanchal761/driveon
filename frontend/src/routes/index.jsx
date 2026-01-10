@@ -9,7 +9,7 @@ import RouteErrorBoundary from "../components/common/RouteErrorBoundary";
 // Module pages (new frontend)
 const ModuleHomePage = lazy(() => import("../module/pages/HomePage"));
 const ModuleSearchPage = lazy(() => import("../module/pages/SearchPage"));
-const ModuleCarDetailsPage = lazy(() => 
+const ModuleCarDetailsPage = lazy(() =>
   import("../module/pages/CarDetailsPage").catch((error) => {
     console.error("Failed to load CarDetailsPage:", error);
     // Return a fallback component
@@ -70,6 +70,7 @@ const SalaryPage = lazy(() => import("../employee/pages/SalaryPage"));
 const PrivacySecurityPage = lazy(() => import("../employee/pages/PrivacySecurityPage"));
 const NotificationsPage = lazy(() => import("../employee/pages/NotificationsPage"));
 const EmployeeLoginPage = lazy(() => import("../employee/pages/EmployeeLoginPage"));
+const EmployeeResetPasswordPage = lazy(() => import("../employee/pages/EmployeeResetPasswordPage"));
 
 
 
@@ -176,7 +177,7 @@ const ModuleResponsiveProfile = () => {
  */
 const AdminRedirectRoute = () => {
   const { isAuthenticated, isLoading } = useAdminAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -187,11 +188,11 @@ const AdminRedirectRoute = () => {
       </div>
     );
   }
-  
+
   if (isAuthenticated) {
     return <Navigate to="/admin/dashboard" replace />;
   }
-  
+
   return <Navigate to="/admin/login" replace />;
 };
 
@@ -271,7 +272,7 @@ const router = createBrowserRouter([
       },
       {
         path: "enquiries/all",
-        element: <CRM_EnquirySub />, 
+        element: <CRM_EnquirySub />,
       },
       {
         path: "enquiries/new",
@@ -708,6 +709,10 @@ const router = createBrowserRouter([
   {
     path: "/employee/login",
     element: <EmployeeLoginPage />,
+  },
+  {
+    path: "/employee/reset-password/:token",
+    element: <EmployeeResetPasswordPage />,
   },
 
   // 404 Page

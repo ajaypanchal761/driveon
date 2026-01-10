@@ -25,6 +25,7 @@ import Invoice from '../models/Invoice.js';
 import ExpenseCategory from '../models/ExpenseCategory.js';
 import City from '../models/City.js';
 import { uploadImage } from '../services/cloudinary.service.js';
+import razorpayService from '../services/razorpay.service.js';
 
 /**
  * @desc    Get All Enquiries (with filters)
@@ -210,6 +211,24 @@ export const getEnquiryDetails = async (req, res) => {
             message: 'Server error fetching enquiry details',
             error: error.message
         });
+    }
+};
+
+/**
+ * @desc    Get All Cars (Simple list for Dropdowns)
+ * @route   GET /api/crm/cars-simple
+ * @access  Admin
+ */
+export const getAllCarsSimple = async (req, res) => {
+    try {
+        const cars = await Car.find().select('brand model registrationNumber').sort({ brand: 1 });
+        const formatted = cars.map(car => ({
+            value: car._id,
+            label: `${car.brand} ${car.model} (${car.registrationNumber})`
+        }));
+        res.status(200).json({ success: true, data: { cars: formatted } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
@@ -601,22 +620,34 @@ export const createStaff = async (req, res) => {
  */
 export const updateStaff = async (req, res) => {
     try {
-        let updateData = { ...req.body };
-
-        // Handle Avatar Upload if file is present
-        if (req.file) {
-            const uploadResult = await uploadImage(req.file, { folder: 'crm/staff' });
-            updateData.avatar = uploadResult.secure_url;
-        }
-
-        const staff = await Staff.findByIdAndUpdate(req.params.id, updateData, {
-            new: true,
-            runValidators: true
-        });
+        let staff = await Staff.findById(req.params.id);
 
         if (!staff) {
             return res.status(404).json({ success: false, message: 'Staff not found' });
         }
+
+        const updateData = { ...req.body };
+
+        // Handle Avatar Upload if file is present
+        if (req.file) {
+            const uploadResult = await uploadImage(req.file, { folder: 'crm/staff' });
+            staff.avatar = uploadResult.secure_url;
+        }
+
+        // Update fields
+        Object.keys(updateData).forEach((key) => {
+            // Skip password if it's empty string (from frontend placeholder)
+            if (key === 'password') {
+                if (updateData[key] && updateData[key].trim() !== '') {
+                    staff[key] = updateData[key];
+                }
+            } else if (key !== '_id' && key !== 'employeeId' && key !== 'createdAt' && key !== 'updatedAt') {
+                // Prevent updating immutable fields
+                staff[key] = updateData[key];
+            }
+        });
+
+        await staff.save();
 
         res.status(200).json({
             success: true,
@@ -837,6 +868,74 @@ export const markAttendance = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Server error marking attendance',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * @desc    Get Team Presence Summary
+ * @route   GET /api/crm/team-presence
+ * @access  Admin/Staff
+ */
+export const getTeamPresence = async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // 1. Total Staff (Active) - excluding Resigned if applicable, but for now counting all as per schema defaults
+        const totalStaff = await Staff.countDocuments({ status: { $ne: 'Resigned' } });
+
+        // 2. Present Today (Present or Late)
+        const presentCount = await Attendance.countDocuments({
+            date: today,
+            status: { $in: ['Present', 'Late'] }
+        });
+
+        // 3. On Leave (Status is 'Leave')
+        // Note: Staff status might be 'Leave' regardless of daily attendance check, or we check if there is an attendance logic for leave.
+        // For accurate daily checking: typically if someone is on leave, there might be an attendance record with status 'Absent' or specific 'Leave'.
+        // However, given the schema has Staff status 'Leave', we'll rely on that for "On Leave" count.
+        const leaveCount = await Staff.countDocuments({ status: 'Leave' });
+
+        // 4. Absent (Total - Present - Leave)
+        // This logic assumes everyone else is absent.
+        const absentCount = Math.max(0, totalStaff - presentCount - leaveCount);
+
+        // 5. Get some avatars of present staff for the UI (limit 5)
+        const presentAttendances = await Attendance.find({
+            date: today,
+            status: { $in: ['Present', 'Late'] }
+        }).select('staff').limit(5);
+
+        const presentStaffDetails = await Staff.find({
+            _id: { $in: presentAttendances.map(a => a.staff) }
+        }).select('employeeId name avatar status'); // Selecting minimal fields
+
+        // Map to format suitable for UI (U1, U2 etc from employeeId or create short code)
+        const presentStaffMapped = presentStaffDetails.map(s => ({
+            id: s._id,
+            shortName: s.employeeId || s.name.substring(0, 2).toUpperCase(),
+            name: s.name,
+            avatar: s.avatar
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: {
+                total: totalStaff,
+                present: presentCount,
+                absent: absentCount,
+                leave: leaveCount,
+                activeStaff: presentStaffMapped
+            }
+        });
+
+    } catch (error) {
+        console.error('Get team presence error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error fetching team presence',
             error: error.message
         });
     }
@@ -1597,6 +1696,24 @@ export const createGarage = async (req, res) => {
     }
 };
 
+export const updateGarage = async (req, res) => {
+    try {
+        const garage = await Garage.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ success: true, data: { garage } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const deleteGarage = async (req, res) => {
+    try {
+        await Garage.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Garage deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 /**
  * @desc    Repair Jobs Management
  */
@@ -1633,15 +1750,29 @@ export const createRepairJob = async (req, res) => {
     }
 };
 
-export const updateRepairProgress = async (req, res) => {
+export const deleteRepairJob = async (req, res) => {
     try {
-        const { status, progress, cost } = req.body;
-        let updateData = { status, progress, cost };
-        if (status === 'Completed') {
+        await RepairJob.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Repair job deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const updateRepairJob = async (req, res) => {
+    try {
+        let updateData = { ...req.body };
+
+        // Handle completion logic if status is changed to Completed
+        if (updateData.status === 'Completed') {
             updateData.completedAt = new Date();
             updateData.progress = 100;
         }
-        const repair = await RepairJob.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+        const repair = await RepairJob.findByIdAndUpdate(req.params.id, updateData, { new: true })
+            .populate('car', 'brand model registrationNumber')
+            .populate('garage', 'name');
+
         res.json({ success: true, data: { repair } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
@@ -1711,6 +1842,31 @@ export const getVendorDirectory = async (req, res) => {
         res.json({ success: true, count: vendors.length, data: { vendors } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const updateVendor = async (req, res) => {
+    try {
+        let updateData = { ...req.body };
+        if (req.file) {
+            const uploadResult = await uploadImage(req.file, { folder: 'crm/vendors' });
+            updateData.profileImage = uploadResult.secure_url;
+        }
+
+        const vendor = await Vendor.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        res.json({ success: true, data: { vendor } });
+    } catch (error) {
+        console.error('Update vendor error:', error);
+        res.status(500).json({ success: false, message: 'Server error updating vendor' });
+    }
+};
+
+export const deleteVendor = async (req, res) => {
+    try {
+        await Vendor.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Vendor deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error deleting vendor' });
     }
 };
 
@@ -2229,5 +2385,308 @@ export const getDashboardAlerts = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @desc    Get Staff Monthly Payroll Details
+ * @route   GET /api/crm/staff/:id/payroll
+ * @access  Admin
+ */
+export const getStaffPayroll = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { month, year } = req.query;
+
+        // Default to current month/year if not provided
+        const now = new Date();
+        const targetMonth = month !== undefined ? parseInt(month) : now.getMonth();
+        const targetYear = year ? parseInt(year) : now.getFullYear();
+
+        const staff = await Staff.findById(id);
+        if (!staff) {
+            return res.status(404).json({ success: false, message: 'Staff not found' });
+        }
+
+        const baseSalary = staff.salary || 0;
+
+        // Calculate total days in the month
+        const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+        // Calculations
+        // Per Day Salary (Base / Total Days) - Do not round
+        const perDaySalary = daysInMonth > 0 ? (baseSalary / daysInMonth) : 0;
+
+        // Half Day Salary (Per Day / 2) - Do not round
+        const halfDaySalary = perDaySalary / 2;
+
+        // Fetch Attendance Records
+        const startDate = new Date(targetYear, targetMonth, 1);
+        const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+        const records = await Attendance.find({
+            staff: id,
+            date: { $gte: startDate, $lte: endDate }
+        });
+
+        // Compute days from records
+        let presentCount = 0;
+        let halfDayCount = 0;
+        let absentCount = 0;
+        let extraWorkAmount = 0;
+        let totalExtraMinutes = 0;
+
+        // Helper to parse "Xh Ym"
+        const parseWorkHours = (str) => {
+            if (!str) return 0;
+            const match = str.match(/(\d+)h\s*(\d+)m/);
+            if (!match) {
+                // Try just hours if format differs
+                const hoursMatch = str.match(/(\d+)h/);
+                if (hoursMatch) return parseInt(hoursMatch[1]) * 60;
+                return 0;
+            }
+            return (parseInt(match[1]) * 60) + parseInt(match[2]);
+        };
+
+        const recordsMap = {};
+        records.forEach(r => {
+            const day = new Date(r.date).getDate();
+            recordsMap[day] = r;
+        });
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const record = recordsMap[day];
+
+            if (record) {
+                const durationMinutes = parseWorkHours(record.workHours);
+                let status = record.status;
+
+                // Dynamic Status Calculation based on user request rules
+                // "Working hours hamesha 9 hours fix rahenge"
+                // Logic suggestion:
+                // > 9 hours -> Overtime
+                // < 4.5 hours -> Half Day (Assumption based on standard practice)
+                // Else -> Present
+
+                // Only override status if duration is available. If manual status 'Absent', keep it.
+                if (status !== 'Absent' && durationMinutes > 0) {
+                    if (durationMinutes > 540) { // > 9 hours
+                        status = 'Present'; // Count as Present
+                        const extraMinutes = durationMinutes - 540;
+                        totalExtraMinutes += extraMinutes;
+
+                        // Overtime Rate: (Per Day Salary / 9 hours / 60 minutes) per minute
+                        const perMinuteRate = (perDaySalary / 9) / 60;
+                        extraWorkAmount += (extraMinutes * perMinuteRate);
+
+                    } else if (durationMinutes < 270) { // < 4.5 hours
+                        status = 'Half Day';
+                    } else {
+                        status = 'Present';
+                    }
+                }
+
+                if (status === 'Present' || status === 'Late') {
+                    presentCount++;
+                } else if (status === 'Half Day') {
+                    halfDayCount++;
+                } else {
+                    absentCount++;
+                }
+            } else {
+                // Key assumption: No record = Absent
+                // (Unless future date? But payroll usually viewed for past/current)
+                // For current month, future days are effectively "Absent" until worked, or ignored?
+                // User requirement: "Month ke Total Days" -> implies we assume full month calculation.
+                // If distinct logic needed for "Future days", user didn't specify.
+                // "Month change karte hi salary... auto-update".
+                // We will count them as absent to show potential deduction, OR
+                // maybe only count up to today?
+                // "Net Payable" usually implies "to date" or "projected".
+                // "Estimated Salary aur Net Salary Final calculated... hongi"
+                // I will count all non-records as Absent for the month view to show "If you don't show up, this is the deduction".
+                // Effectively "Projected Salary assuming absent for rest of month" vs "Earned so far".
+                // BUT "Base Salary - Absent" implies starting full and deducting.
+                // So treating future days as Absent reduces Net Pay.
+                // Is this desired?
+                // Maybe check if day > Today?
+                // User said "Estimated Salary same hogi jo Net Payable Salary hai".
+                // Usually Estimated = Projected (assuming Present for future).
+                // Net Payable = Earned (Absent for future).
+                // User wants them SAME.
+                // This implies strict calculation based on RECORDS.
+                // If I am on Day 1, and Day 2-31 are absent, my salary is 1/31 of Base.
+                // This is correct for "Net Payable".
+                // So I will count all missing records as Absent.
+                absentCount++;
+            }
+        }
+
+        const absentDeduction = absentCount * perDaySalary;
+        const halfDayDeduction = halfDayCount * halfDaySalary;
+
+        const netPayable = baseSalary - absentDeduction - halfDayDeduction + extraWorkAmount;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                baseSalary,
+                daysInMonth,
+                presentDays: presentCount,
+                halfDays: halfDayCount,
+                absentDays: absentCount,
+                perDaySalary,
+                halfDaySalary,
+                absentDeduction,
+                halfDayDeduction,
+                extraWorkAmount,
+                netPayable,
+                month: targetMonth,
+                year: targetYear,
+                totalExtraMinutes // Debugging/Info
+            }
+        });
+    } catch (error) {
+        console.error('Get Staff Payroll Error:', error);
+        res.status(500).json({ success: false, message: 'Server error calculating payroll' });
+    }
+};
+
+/**
+ * @desc    Create Razorpay Order for Staff Salary
+ * @route   POST /api/crm/staff/salary/create-order
+ * @access  Admin
+ */
+export const createSalaryPaymentOrder = async (req, res) => {
+    try {
+        const { amount, staffId, month, year, description } = req.body;
+
+        if (!amount || !staffId) {
+            return res.status(400).json({ success: false, message: 'Amount and Staff ID are required' });
+        }
+
+        // Generate transaction ID
+        const transactionId = razorpayService.generateTransactionId('SAL');
+
+        // Create Razorpay order
+        const order = await razorpayService.createOrder({
+            amount: parseFloat(amount),
+            receipt: `sal_${staffId.slice(-4)}_${Date.now()}`,
+            notes: {
+                staff_id: staffId,
+                month: month,
+                year: year,
+                transaction_id: transactionId,
+                payment_type: 'staff_salary',
+                description: description || 'Staff Salary Payment'
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                orderId: order.id,
+                amount: order.amount,
+                currency: order.currency,
+                transactionId,
+                key: process.env.RAZORPAY_KEY_ID
+            }
+        });
+    } catch (error) {
+        console.error('Create Salary Order Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create payment order',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * @desc    Verify Salary Payment
+ * @route   POST /api/crm/staff/salary/verify
+ * @access  Admin
+ */
+export const verifySalaryPayment = async (req, res) => {
+    try {
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            staffId,
+            amount,
+            month,
+            year,
+            baseSalary,
+            deductions
+        } = req.body;
+
+        // Verify signature
+        const isValid = razorpayService.verifySignature(
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+        );
+
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+        }
+
+        // Format month string, e.g., "January 2024"
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+
+        // Handle month as number (0-11) or string
+        let monthName = month;
+        if (!isNaN(month) && parseInt(month) >= 0 && parseInt(month) <= 11) {
+            monthName = monthNames[parseInt(month)];
+        }
+        const monthString = `${monthName} ${year}`;
+
+        // Create or Update Salary Record
+        // Check if record exists
+        let payroll = await Salary.findOne({ staff: staffId, month: monthString });
+
+        const transactionData = {
+            transactionId: req.body.transaction_id || razorpayService.generateTransactionId('SAL'),
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            razorpaySignature: razorpay_signature,
+            amount: amount,
+            status: 'success',
+            paymentMethod: 'razorpay',
+            paymentDate: new Date()
+        };
+
+        if (payroll) {
+            payroll.status = 'Paid';
+            payroll.paidDate = new Date();
+            payroll.netPay = amount;
+            // Push new transaction
+            payroll.transactions.push(transactionData);
+            await payroll.save();
+        } else {
+            payroll = await Salary.create({
+                staff: staffId,
+                month: monthString,
+                baseSalary: baseSalary || amount,
+                deductions: deductions || 0,
+                netPay: amount,
+                status: 'Paid',
+                paidDate: new Date(),
+                transactions: [transactionData]
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Payment verified successfully and payroll recorded',
+            data: payroll
+        });
+
+    } catch (error) {
+        console.error('Verify Salary Payment Error:', error);
+        res.status(500).json({ success: false, message: 'Payment verification failed' });
     }
 };

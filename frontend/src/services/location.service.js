@@ -32,9 +32,9 @@ export const getAddressFromCoordinates = async (lat, lng) => {
     // language=hi for Hindi, en for English
     // region=in for India (helps with better results)
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en&region=in`;
-    
+
     console.log('Fetching address from Google Maps API...', { lat, lng });
-    
+
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -56,7 +56,7 @@ export const getAddressFromCoordinates = async (lat, lng) => {
       return '';
     } else if (data.status === 'REQUEST_DENIED') {
       const errorMsg = data.error_message || 'Unknown error';
-      
+
       // Show detailed error only once to prevent console spam
       if (!apiKeyErrorShown) {
         console.error('❌ Google Maps API Error:', errorMsg);
@@ -69,7 +69,7 @@ export const getAddressFromCoordinates = async (lat, lng) => {
         console.error('6. Make sure API key restrictions allow your domain/localhost');
         apiKeyErrorShown = true;
       }
-      
+
       // Store error in sessionStorage to show UI message
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('google_maps_api_error', JSON.stringify({
@@ -78,7 +78,7 @@ export const getAddressFromCoordinates = async (lat, lng) => {
           timestamp: Date.now()
         }));
       }
-      
+
       return '';
     } else if (data.status === 'OVER_QUERY_LIMIT') {
       console.error('Google Maps API quota exceeded. Please check your billing.');
@@ -112,7 +112,7 @@ export const searchPlaces = async (query, coordinates = null) => {
     const params = new URLSearchParams({
       query: query.trim(),
     });
-    
+
     // Add location bias if coordinates provided
     if (coordinates && coordinates.lat && coordinates.lng) {
       params.append('lat', coordinates.lat);
@@ -120,11 +120,11 @@ export const searchPlaces = async (query, coordinates = null) => {
     }
 
     const response = await api.get(`/common/places/search?${params.toString()}`);
-    
+
     if (response.data && response.data.success && response.data.data) {
       return response.data.data.places || [];
     }
-    
+
     return [];
   } catch (error) {
     console.error('Error searching places:', error);
@@ -178,11 +178,11 @@ export const getCurrentPosition = (options = {}) => {
     }
 
     // Check if we're in a secure context (HTTPS or localhost)
-    const isSecure = window.isSecureContext || 
-                     window.location.protocol === 'https:' || 
-                     window.location.hostname === 'localhost' || 
-                     window.location.hostname === '127.0.0.1' ||
-                     window.location.hostname === '[::1]';
+    const isSecure = window.isSecureContext ||
+      window.location.protocol === 'https:' ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '[::1]';
 
     if (!isSecure) {
       const error = new Error('Geolocation requires HTTPS or localhost. Current protocol: ' + window.location.protocol);
@@ -219,7 +219,7 @@ export const getCurrentPosition = (options = {}) => {
           POSITION_UNAVAILABLE: 2,
           TIMEOUT: 3
         };
-        
+
         // Only log non-timeout errors as errors, timeout is expected in some cases
         if (error.code === 3) {
           // Timeout - this is common, log as warning instead of error

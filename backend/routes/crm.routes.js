@@ -18,6 +18,7 @@ import {
     createRole,
     updateRole,
     deleteRole,
+    getTeamPresence,
     getAttendance,
     markAttendance,
     getPayroll,
@@ -31,6 +32,7 @@ import {
     getStaffWorkTasks,
     createStaffWorkTask,
     updateStaffWorkTask,
+    getAllCarsSimple,
     getCarDocuments,
     uploadCarDocument,
     createFastBooking,
@@ -43,14 +45,19 @@ import {
     getProfitabilityAnalysis,
     getGarages,
     createGarage,
+    updateGarage,
+    deleteGarage,
     createCarExpense,
     getActiveRepairs,
     getRepairLogs,
     createRepairJob,
-    updateRepairProgress,
+    updateRepairJob,
+    deleteRepairJob,
     getInventory,
     createInventoryItem,
     onboardVendor,
+    updateVendor,
+    deleteVendor,
     getVendorDirectory,
     getVendorSettlements,
     getVendorHistory,
@@ -71,7 +78,10 @@ import {
     createCity,
     updateCity,
     deleteCity,
-    getDashboardAlerts
+    getDashboardAlerts,
+    getStaffPayroll,
+    createSalaryPaymentOrder,
+    verifySalaryPayment
 } from '../controllers/crm.controller.js';
 // import { protect, admin } from '../middleware/auth.middleware.js'; // Assuming you have auth middleware
 
@@ -121,6 +131,10 @@ router.route('/staff/:id')
     .put(handleFileUpload('avatar'), updateStaff)
     .delete(deleteStaff);
 
+router.get('/staff/:id/payroll', getStaffPayroll);
+router.post('/staff/salary/create-order', createSalaryPaymentOrder);
+router.post('/staff/salary/verify', verifySalaryPayment);
+
 // Roles Routes
 router.route('/roles')
     .get(getRoles)
@@ -131,6 +145,7 @@ router.route('/roles/:id')
     .delete(deleteRole);
 
 // Attendance Routes
+router.get('/team-presence', getTeamPresence);
 router.route('/attendance')
     .get(getAttendance)
     .post(markAttendance);
@@ -169,6 +184,8 @@ router.route('/car-documents')
     .get(getCarDocuments)
     .post(handleFileUpload('file'), uploadCarDocument);
 
+router.get('/cars-simple', getAllCarsSimple);
+
 // Fast Booking Route
 router.post('/fast-booking', createFastBooking);
 
@@ -195,13 +212,18 @@ router.route('/garages')
     .get(getGarages)
     .post(handleFileUpload('logo'), createGarage);
 
+router.route('/garages/:id')
+    .put(updateGarage)
+    .delete(deleteGarage);
+
 router.post('/expenses', createCarExpense);
 
 // Repair Job Routes
 router.get('/repairs/active', getActiveRepairs);
 router.get('/repairs/logs', getRepairLogs);
 router.post('/repairs', createRepairJob);
-router.put('/repairs/:id', updateRepairProgress);
+router.put('/repairs/:id', updateRepairJob);
+router.delete('/repairs/:id', deleteRepairJob);
 
 // Inventory Routes
 router.route('/inventory')
@@ -212,6 +234,10 @@ router.route('/inventory')
 router.route('/vendors')
     .post(handleFileUpload('profileImage'), onboardVendor)
     .get(getVendorDirectory);
+
+router.route('/vendors/:id')
+    .put(handleFileUpload('profileImage'), updateVendor)
+    .delete(deleteVendor);
 
 router.get('/vendors/settlements', getVendorSettlements);
 router.get('/vendors/history', getVendorHistory);

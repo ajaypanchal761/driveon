@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const staffSchema = new mongoose.Schema(
     {
@@ -33,6 +34,10 @@ const staffSchema = new mongoose.Schema(
             trim: true,
             lowercase: true,
         },
+        password: {
+            type: String,
+            //select: false, // Do not return password by default
+        },
         status: {
             type: String,
             enum: ['Active', 'On Duty', 'Leave'],
@@ -44,6 +49,7 @@ const staffSchema = new mongoose.Schema(
         },
         avatar: {
             type: String,
+            default: '',
         },
         salary: {
             type: Number,
@@ -56,7 +62,7 @@ const staffSchema = new mongoose.Schema(
         },
         workingDays: {
             type: Number,
-            default: 26,
+            default: 0,
         },
         absentDeduction: {
             type: Number,
@@ -70,11 +76,34 @@ const staffSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        location: {
+            latitude: Number,
+            longitude: Number,
+            address: String,
+            lastLocationUpdate: Date,
+        },
+        resetPasswordToken: String,
+        resetPasswordExpire: Date,
     },
     {
         timestamps: true,
     }
 );
+
+// Encrypt password using bcrypt
+staffSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) {
+        next();
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+});
+
+// Match user entered password to hashed password in database
+staffSchema.methods.matchPassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+};
 
 const Staff = mongoose.model('Staff', staffSchema);
 

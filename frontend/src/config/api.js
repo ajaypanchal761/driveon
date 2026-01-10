@@ -14,7 +14,14 @@ const getApiBaseUrl = () => {
       return envUrl;
     }
   }
-  
+
+  // Check if running on localhost
+  // Backend port changed to 5001
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    console.log('🔗 Using Localhost API URL: http://localhost:5001/api');
+    return 'http://localhost:5001/api';
+  }
+
   // Use production backend by default
   // For local development, set VITE_API_BASE_URL=http://localhost:5000/api in .env file
   const productionUrl = 'https://driveon-19hg.onrender.com/api';
@@ -29,15 +36,15 @@ const getApiBaseUrl = () => {
 export const getSocketUrl = () => {
   const apiUrl = getApiBaseUrl();
   let socketUrl = apiUrl.replace('/api', '');
-  
+
   // Remove trailing slash if present
   socketUrl = socketUrl.replace(/\/$/, '');
-  
+
   // If it's a full URL, use it; otherwise construct it
   if (socketUrl.startsWith('http')) {
     return socketUrl;
   }
-  
+
   // Fallback to current origin
   return window.location.origin;
 };

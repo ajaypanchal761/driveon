@@ -66,7 +66,7 @@ const HomePage = () => {
   const heroBannerSwiperRef = useRef(null);
 
   // Get authentication state
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isInitializing } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
   // Cars state - fetched from API
@@ -642,7 +642,9 @@ const HomePage = () => {
 
             {/* Right - Login/Signup and Profile Icon */}
             <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
-              {isAuthenticated ? (
+              {isInitializing ? (
+                <div className="w-20 h-10"></div> // Placeholder to prevent flash
+              ) : isAuthenticated ? (
                 <Link
                   to="/profile"
                   className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"

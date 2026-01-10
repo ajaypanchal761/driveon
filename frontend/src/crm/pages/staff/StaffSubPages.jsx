@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import razorpayService from '../../../services/razorpay.service';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import {
@@ -349,7 +351,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               <div className="col-span-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Status</label>
                 <ThemedDropdown
-                  options={['Active', 'Inactive', 'On Leave']}
+                  options={['Active', 'On Duty', 'Leave']}
                   value={formData.status}
                   onChange={(val) => setFormData({ ...formData, status: val })}
                   placeholder="Select Status"
@@ -1474,47 +1476,83 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [payroll, setPayroll] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Mock Data Generators
-  const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
-  const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
-  
-  const baseSalary = 25000; // Mock base salary if not in staff object
-  const workingDaysReq = 26;
-  
-  // Generating Mock Daily Status
-  const attendanceHistory = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = i + 1;
-    const date = new Date(selectedYear, selectedMonth, day);
-    const dayOfWeek = date.getDay();
-    let status = 'Present';
-    
-    // Logic: Sundays are Week Offs. Random Absents.
-    if (dayOfWeek === 0) status = 'Week Off';
-    else if (Math.random() > 0.9) status = 'Absent';
-    else if (Math.random() > 0.95) status = 'Half Day';
+  useEffect(() => {
+    fetchPayroll();
+  }, [selectedMonth, selectedYear, staff.id]);
 
-    // Future dates
-    if (date > new Date()) status = '-';
+  const fetchPayroll = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/crm/staff/${staff.id}/payroll`, {
+        params: { month: selectedMonth, year: selectedYear }
+      });
+      if (res.data.success) {
+        setPayroll(res.data.data);
+      }
+    } catch (error) {
+      console.error("Payroll fetch error", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return { day, date: date.toDateString(), status };
-  });
+  const handleProcessSalary = async () => {
+    if (!payroll || payroll.netPayable <= 0) {
+      toast.error('Invalid salary amount');
+      return;
+    }
 
-  // Calculate Stats
-  const presentDays = attendanceHistory.filter(d => d.status === 'Present').length;
-  const halfDays = attendanceHistory.filter(d => d.status === 'Half Day').length;
-  const absentDays = attendanceHistory.filter(d => d.status === 'Absent').length;
-  const weekOffs = attendanceHistory.filter(d => d.status === 'Week Off').length;
-  
-  // Salary Calc
-  const perDaySalary = baseSalary / workingDaysReq;
-  const deduction = (absentDays * perDaySalary) + (halfDays * (perDaySalary / 2));
-  const finalSalary = Math.max(0, baseSalary - deduction);
+    try {
+      await razorpayService.processSalaryPayment({
+        staffId: staff.id,
+        amount: payroll.netPayable,
+        baseSalary: payroll.baseSalary,
+        deductions: (payroll.absentDeduction || 0) + (payroll.halfDayDeduction || 0),
+        month: selectedMonth,
+        year: selectedYear,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        onSuccess: (response) => {
+          toast.success('Salary processed successfully!');
+          fetchPayroll(); // Refresh data
+          // Close modal after short delay to show success state
+          setTimeout(() => {
+            onClose();
+            // Optional: Redirect to directory if needed
+            // navigate('/crm/staff/directory');
+          }, 1500);
+        },
+        onError: (error) => {
+          console.error('Payment Error:', error);
+          toast.error('Payment Failed: ' + (error.message || 'Unknown error'));
+        }
+      });
+    } catch (error) {
+      console.error('Payment initialization error:', error);
+      toast.error('Failed to initialize payment');
+    }
+  };
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
+
+  // Calendar Grid Data
+  const daysInMonth = payroll?.daysInMonth || new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const calendarGrid = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const date = new Date(selectedYear, selectedMonth, day);
+    const dayOfWeek = date.getDay(); // 0 = Sun
+    return {
+      day,
+      isWeekend: dayOfWeek === 0 // Sunday
+    };
+  });
 
   return (
     <div
@@ -1532,19 +1570,19 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
         {/* Header */}
         <div className="bg-white px-8 py-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10">
           <div>
-             <h2 className="text-2xl font-bold text-gray-900">Monthly Attendance & Payroll</h2>
-             <p className="text-gray-500 text-sm">Detailed view for <span className="font-bold text-[#1C205C]">{staff.name}</span></p>
+            <h2 className="text-2xl font-bold text-gray-900">Monthly Attendance & Payroll</h2>
+            <p className="text-gray-500 text-sm">Detailed view for <span className="font-bold text-[#1C205C]">{staff.name}</span></p>
           </div>
           <div className="flex items-center gap-2">
-            <select 
-              value={selectedMonth} 
+            <select
+              value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
             >
               {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
             >
@@ -1561,108 +1599,121 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
           </div>
         </div>
 
-        <div className="p-8 overflow-y-auto custom-scrollbar">
-           {/* Stats Cards */}
-           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {loading || !payroll ? (
+          <div className="flex-1 flex items-center justify-center p-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          <div className="p-8 overflow-y-auto custom-scrollbar">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
               <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                  <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Total Days</p>
-                  <h3 className="text-2xl font-bold text-blue-900">{daysInMonth}</h3>
-                  <p className="text-xs text-blue-600 font-medium">{weekOffs} Week Offs</p>
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Total Days</p>
+                <h3 className="text-2xl font-bold text-blue-900">{payroll.daysInMonth}</h3>
+                <p className="text-xs text-blue-600 font-medium">Month Duration</p>
               </div>
               <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
-                  <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Present</p>
-                  <h3 className="text-2xl font-bold text-green-900">{presentDays} <span className="text-sm font-medium text-green-600">Days</span></h3>
-                  <p className="text-xs text-green-600 font-medium">+ {halfDays} Half Days</p>
+                <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1">Present</p>
+                <h3 className="text-2xl font-bold text-green-900">{payroll.presentDays} <span className="text-sm font-medium text-green-600">Days</span></h3>
+                <p className="text-xs text-green-600 font-medium">+ {payroll.halfDays} Half Days</p>
               </div>
               <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
-                  <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Absent</p>
-                  <h3 className="text-2xl font-bold text-red-900">{absentDays} <span className="text-sm font-medium text-red-600">Days</span></h3>
-                  <p className="text-xs text-red-600 font-medium">Unpaid Leaves</p>
+                <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Absent</p>
+                <h3 className="text-2xl font-bold text-red-900">{payroll.absentDays} <span className="text-sm font-medium text-red-600">Days</span></h3>
+                <p className="text-xs text-red-600 font-medium">Unpaid</p>
               </div>
               <div className="bg-[#1C205C] p-4 rounded-2xl border border-[#1C205C] text-white overflow-hidden relative">
-                  <div className="absolute top-0 right-0 p-4 opacity-10"><MdAttachMoney size={48} /></div>
-                  <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Est. Salary</p>
-                  <h3 className="text-2xl font-bold">₹ {Math.round(finalSalary).toLocaleString()}</h3>
-                   <p className="text-xs text-indigo-300 font-medium">Base: ₹ {baseSalary.toLocaleString()}</p>
+                <div className="absolute top-0 right-0 p-4 opacity-10"><MdAttachMoney size={48} /></div>
+                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Est. Salary</p>
+                <h3 className="text-2xl font-bold">₹ {payroll.netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                <p className="text-xs text-indigo-300 font-medium">Base: ₹ {payroll.baseSalary.toLocaleString()}</p>
               </div>
-           </div>
+            </div>
 
-           <div className="flex flex-col lg:flex-row gap-8">
-              {/* Calendar Grid */}
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Calendar Grid (Simplified View) */}
               <div className="flex-1">
-                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdDateRange /> Daily Log</h4>
-                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                    <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase">
-                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-                    </div>
-                    <div className="grid grid-cols-7 gap-2">
-                        {/* Empty slots for start of month - Simplified for now assuming starts on appropriate day or just 1st */}
-                        {attendanceHistory.map((day) => (
-                            <div 
-                                key={day.day} 
-                                className={`
-                                    aspect-square rounded-xl flex flex-col items-center justify-center border text-xs font-bold relative group cursor-pointer transition-all hover:scale-105
-                                    ${day.status === 'Present' ? 'bg-white border-green-200 text-green-700 shadow-sm' : 
-                                      day.status === 'Absent' ? 'bg-red-50 border-red-100 text-red-600' :
-                                      day.status === 'Half Day' ? 'bg-orange-50 border-orange-100 text-orange-600' :
-                                      day.status === 'Week Off' ? 'bg-gray-100 border-gray-200 text-gray-400' : 
-                                      'bg-gray-50 border-gray-100 text-gray-300'}
-                                `}
-                            >
-                                <span className={day.status === '-' ? 'opacity-50' : ''}>{day.day}</span>
-                                {day.status === 'Present' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-1"></div>}
-                                {day.status === 'Absent' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-1"></div>}
-                                {day.status === 'Half Day' && <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-1"></div>}
-
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full mb-2 bg-[#1C205C] text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
-                                    {day.status}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                 </div>
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdDateRange /> Daily Log (Overview)</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                  <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase">
+                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {/* Note: Simplified grid, real daily status logic would require daily data map */}
+                    {calendarGrid.map((item) => (
+                      <div
+                        key={item.day}
+                        className={`
+                            aspect-square rounded-xl flex flex-col items-center justify-center border text-xs font-bold relative group cursor-pointer transition-all hover:scale-105
+                            ${item.isWeekend ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-white border-gray-100 text-gray-600'}
+                          `}
+                      >
+                        {item.day}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 text-center italic">Detailed daily status is available in the list view.</p>
+                </div>
               </div>
 
               {/* Salary Breakdown Details */}
               <div className="w-full lg:w-80">
-                 <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdReceipt /> Salary Breakdown</h4>
-                 <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm">
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500">Base Salary</span>
-                        <span className="font-bold text-gray-900">₹ {baseSalary.toLocaleString()}</span>
+                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdReceipt /> Salary Breakdown</h4>
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Base Salary</span>
+                    <span className="font-bold text-gray-900">₹ {payroll.baseSalary.toLocaleString()}</span>
+                  </div>
+                  <div className="w-full h-px bg-gray-100"></div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Total Days</span>
+                    <span className="font-bold text-gray-900">{payroll.daysInMonth}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Per Day Salary</span>
+                    <span className="font-bold text-gray-900">₹ {payroll.perDaySalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+
+                  {/* Deductions */}
+                  <div className="bg-red-50 p-3 rounded-xl space-y-2 mt-2 border border-red-100">
+                    <div className="flex justify-between items-center text-xs text-red-600 font-medium">
+                      <span>Absent Deduction ({payroll.absentDays})</span>
+                      <span>- ₹ {payroll.absentDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-                    <div className="w-full h-px bg-gray-100"></div>
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500">Working Days</span>
-                        <span className="font-bold text-gray-900">{workingDaysReq}</span>
+                    {payroll.halfDays > 0 && (
+                      <div className="flex justify-between items-center text-xs text-orange-600 font-medium">
+                        <span>Half Day Deduction ({payroll.halfDays})</span>
+                        <span>- ₹ {payroll.halfDayDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Extra Work / Overtime */}
+                  {payroll.extraWorkAmount > 0 && (
+                    <div className="bg-green-50 p-3 rounded-xl space-y-2 mt-2 border border-green-100">
+                      <div className="flex justify-between items-center text-xs text-green-600 font-medium">
+                        <span>Extra Work Amount</span>
+                        <span>+ ₹ {payroll.extraWorkAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500">Per Day Rate</span>
-                        <span className="font-bold text-gray-900">₹ {Math.round(perDaySalary).toLocaleString()}</span>
-                    </div>
-                    <div className="bg-red-50 p-3 rounded-xl space-y-2 mt-2 border border-red-100">
-                        <div className="flex justify-between items-center text-xs text-red-600 font-medium">
-                            <span>Absent Deduction ({absentDays})</span>
-                            <span>- ₹ {Math.round(absentDays * perDaySalary).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs text-orange-600 font-medium">
-                            <span>Half Day Deduction ({halfDays})</span>
-                            <span>- ₹ {Math.round(halfDays * (perDaySalary / 2)).toLocaleString()}</span>
-                        </div>
-                    </div>
-                    <div className="w-full h-px bg-gray-100"></div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-gray-800 font-bold">Net Payable</span>
-                        <span className="font-bold text-xl text-[#1C205C]">₹ {Math.round(finalSalary).toLocaleString()}</span>
-                    </div>
-                    <button className="w-full py-3 mt-2 bg-[#1C205C] text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-[#2a3550] transition-colors">
-                        Process Salary
-                    </button>
-                 </div>
+                  )}
+
+                  <div className="w-full h-px bg-gray-100"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-800 font-bold">Net Payable</span>
+                    <span className="font-bold text-xl text-[#1C205C]">₹ {payroll.netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <button
+                    onClick={handleProcessSalary}
+                    className="w-full py-3 mt-2 bg-[#1C205C] text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-[#2a3550] transition-colors"
+                  >
+                    Process Salary
+                  </button>
+                </div>
               </div>
-           </div>
-        </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </div>
   );
@@ -1701,7 +1752,10 @@ export const AttendancePage = () => {
           id: s._id,
           name: s.name,
           role: s.role,
-          department: s.department
+          department: s.department,
+          email: s.email,
+          phone: s.phone,
+          location: s.location
         }));
         setStaffInfoList(staffData);
       }
@@ -1712,15 +1766,31 @@ export const AttendancePage = () => {
         const mergedData = staffData.map((staff, index) => {
           const record = records.find(r => r.staff._id === staff.id || r.staff === staff.id);
 
-          // MOCK LOCATION DATA SIMULATION
-          const mockLocations = [
-            { status: 'Online', address: '24/7, Connaught Place, New Delhi', lat: 28.6139, lng: 77.2090 },
-            { status: 'Online', address: 'Tech Park, Sector 62, Noida', lat: 28.6280, lng: 77.3780 },
-            { status: 'Offline', address: 'Last seen: Home (2 hrs ago)', lat: 0, lng: 0 },
-            { status: 'Online', address: 'Cyber City, Gurugram', lat: 28.4595, lng: 77.0266 },
-            { status: 'Offline', address: 'Offline', lat: 0, lng: 0 }
-          ];
-          const mockLoc = mockLocations[index % mockLocations.length];
+          // Live Location Data
+          let liveLoc = { status: 'Offline', address: 'Location Unavailable', lat: 0, lng: 0 };
+
+          if (staff.location && staff.location.latitude) {
+            const lastUpdate = new Date(staff.location.lastLocationUpdate);
+            const now = new Date();
+            const diffMins = (now - lastUpdate) / (1000 * 60);
+            // Consider "Online" if location was updated within the last 15 minutes
+            const isOnline = diffMins < 15;
+
+            liveLoc = {
+              status: isOnline ? 'Online' : 'Offline',
+              address: staff.location.address || 'Address Unavailable',
+              lat: staff.location.latitude,
+              lng: staff.location.longitude,
+              lastUpdate: lastUpdate
+            };
+          }
+
+          // Fallback for "Offline" but with known location (show as Offline with address)
+          if (liveLoc.status === 'Offline' && staff.location?.address) {
+            liveLoc.address = `Last seen: ${staff.location.address}`;
+          }
+
+          const mockLoc = liveLoc; // Keep variable name to match return object usage or rename below
 
           return {
             id: staff.id, // Use staff ID as row ID mostly, or record ID if exists? 
@@ -1988,13 +2058,21 @@ export const AttendancePage = () => {
                       {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Late</span>}
                     </td>
                     <td className="p-4">
-                      {item.location?.status === 'Online' ? (
-                        <button
-                          onClick={() => setViewingLocation(item)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#212c40]/10 text-[#212c40] rounded-lg text-xs font-bold border border-[#212c40]/20 hover:bg-[#212c40]/20 transition-colors animate-pulse"
-                        >
-                          <MdLocationOn /> Location
-                        </button>
+                      {item.location?.lat ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewingLocation(item)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors
+                              ${item.location.status === 'Online'
+                                ? 'bg-[#212c40]/10 text-[#212c40] border-[#212c40]/20 hover:bg-[#212c40]/20 animate-pulse'
+                                : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                              }
+                            `}
+                          >
+                            <MdLocationOn /> {item.location.status === 'Online' ? 'Live' : 'Last SEEN'}
+                          </button>
+                          {item.location.status === 'Offline' && <span className="text-[10px] text-gray-400 font-medium">Offline</span>}
+                        </div>
                       ) : (
                         <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                           <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> Offline
@@ -2004,10 +2082,10 @@ export const AttendancePage = () => {
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                           onClick={() => setViewingMonthly(item)}
-                           className="text-[#1C205C] hover:text-[#2a3550] text-xs font-bold bg-[#1C205C]/5 hover:bg-[#1C205C]/10 px-2.5 py-1.5 rounded-lg transition-colors border border-[#1C205C]/10"
+                          onClick={() => setViewingMonthly(item)}
+                          className="text-[#1C205C] hover:text-[#2a3550] text-xs font-bold bg-[#1C205C]/5 hover:bg-[#1C205C]/10 px-2.5 py-1.5 rounded-lg transition-colors border border-[#1C205C]/10"
                         >
-                           Monthly View
+                          Monthly View
                         </button>
                         {item.inTime === '-' ? (
                           <button

@@ -8,7 +8,7 @@ export const generateToken = (userId) => {
     { id: userId },
     process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     {
-      expiresIn: process.env.JWT_EXPIRE || '15m',
+      expiresIn: process.env.JWT_EXPIRE || '7d', // Default to 7 days if env var invalid
     }
   );
 };
@@ -21,7 +21,7 @@ export const generateAdminToken = (adminId) => {
     { id: adminId },
     process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     {
-      expiresIn: process.env.JWT_ADMIN_EXPIRE || '30d', // 30 days for admin (much longer)
+      expiresIn: process.env.JWT_ADMIN_EXPIRE || '30d', // 30 days for admin
     }
   );
 };
@@ -47,7 +47,7 @@ export const generateRefreshToken = (userId) => {
     { id: userId },
     process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key-change-in-production',
     {
-      expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d',
+      expiresIn: process.env.JWT_REFRESH_EXPIRE || '30d', // Increased to 30 days
     }
   );
 };

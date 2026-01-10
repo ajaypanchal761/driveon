@@ -1,9 +1,12 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Staff from '../models/Staff.js';
 import OTP from '../models/OTP.js';
 import { generateOTP, getOTPExpiry, isOTPExpired, sendOTP } from '../utils/otp.service.js';
 import { generateToken, generateRefreshToken } from '../utils/generateToken.js';
 import { processReferralSignup } from './referral.controller.js';
+import sendEmail from '../utils/sendEmail.js';
 
 /**
  * @desc    Register new user (Send OTP)
@@ -39,7 +42,7 @@ export const register = async (req, res) => {
         message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number (starting with 6-9).',
       });
     }
-    
+
     // Use cleaned phone number for all operations
     const normalizedPhone = cleanedPhone;
 
@@ -93,15 +96,15 @@ export const register = async (req, res) => {
     let smsSent = false;
     let smsErrorOccurred = false;
     let smsErrorMessage = null;
-    
+
     try {
       console.log(`\n📱 ===== Registration OTP Send Attempt =====`);
       console.log(`📱 Phone: ${normalizedPhone}`);
       console.log(`📱 OTP: ${otp}`);
       console.log(`📱 Purpose: register`);
-      
+
       const smsResult = await sendOTP(normalizedPhone, otp, 'register');
-      
+
       // Verify SMS was actually sent successfully (all users receive real SMS)
       if (smsResult.success === false || smsResult.status === 'failed') {
         smsErrorOccurred = true;
@@ -130,12 +133,12 @@ export const register = async (req, res) => {
       });
       console.error('❌ =================================\n');
     }
-    
+
     // Check if SMS failed and handle accordingly
     if (smsErrorOccurred || !smsSent) {
       // Check if it's a test number (allow failure for test numbers in development)
       const isTestNumber = normalizedPhone && ['9993911855'].some(testNum => normalizedPhone.endsWith(testNum));
-      
+
       if (isTestNumber && process.env.NODE_ENV === 'development') {
         console.log(`⚠️ Test number - SMS failed but allowing registration in development mode. OTP: ${otp}`);
         smsSent = true; // Mark as sent for test numbers
@@ -144,7 +147,7 @@ export const register = async (req, res) => {
         console.error(`\n❌ SMS FAILED for real number: ${normalizedPhone}`);
         console.error(`❌ Real numbers must receive real SMS from SMS Hub. Registration blocked.`);
         console.error(`❌ Error: ${smsErrorMessage || 'Unknown error'}\n`);
-        
+
         return res.status(500).json({
           success: false,
           message: 'Failed to send OTP. Please check your phone number and try again.',
@@ -153,14 +156,14 @@ export const register = async (req, res) => {
         });
       }
     }
-    
+
     console.log(`📱 ===== Registration OTP Send Complete =====\n`);
 
     // Create user (but not verified yet)
     // Save name if provided during registration (will be updated during profile completion)
     const userName = (fullName || name || '').trim();
     console.log('📝 Registration - Name received:', { fullName, name, userName });
-    
+
     const user = await User.create({
       email,
       phone: normalizedPhone,
@@ -171,7 +174,7 @@ export const register = async (req, res) => {
       isPhoneVerified: false,
       profileComplete: 0, // Will be updated during profile completion
     });
-    
+
     console.log('✅ User created with name:', user.name);
 
     res.status(200).json({
@@ -216,11 +219,11 @@ export const sendLoginOTP = async (req, res) => {
     const isEmail = emailOrPhone.includes('@');
     let phone = isEmail ? null : emailOrPhone.replace(/\D/g, '');
     const email = isEmail ? emailOrPhone : null;
-    
+
     console.log(`📱 Type: ${isEmail ? 'Email' : 'Phone'}`);
     console.log(`📱 Phone: ${phone || 'N/A'}`);
     console.log(`📱 Email: ${email || 'N/A'}`);
-    
+
     // Validate and normalize phone number if provided (10 digits, must start with 6-9 for Indian mobile)
     let normalizedPhone = phone;
     if (phone) {
@@ -232,7 +235,7 @@ export const sendLoginOTP = async (req, res) => {
       }
       normalizedPhone = phone; // Already cleaned, use as normalized
     }
-    
+
     // Validate email if provided
     if (email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -274,24 +277,24 @@ export const sendLoginOTP = async (req, res) => {
     const otpValue = generateOTP(normalizedPhone || null);
     const otp = otpValue.toString();
     const expiresAt = getOTPExpiry(10); // 10 minutes
-    
+
     console.log(`🔐 OTP Generated: ${otp}`);
     console.log(`🔐 Expires At: ${expiresAt}`);
     console.log(`🔐 For: ${normalizedPhone ? `Phone ${normalizedPhone}` : `Email ${email}`}`);
 
     // Store OTP in database (use normalized phone)
     const identifier = normalizedPhone || email;
-    
+
     // Validate identifier is not empty
     if (!identifier || identifier.trim() === '') {
       console.error(`❌ Invalid identifier: ${identifier}`);
       throw new Error('Invalid identifier: phone or email is required');
     }
-    
+
     console.log(`💾 Storing OTP in database...`);
     console.log(`💾 Identifier: ${identifier}`);
     console.log(`💾 Type: ${normalizedPhone ? 'phone' : 'email'}`);
-    
+
     try {
       const otpRecord = await OTP.create({
         identifier: identifier.trim(),
@@ -319,16 +322,16 @@ export const sendLoginOTP = async (req, res) => {
     let smsSent = false;
     let smsErrorOccurred = false;
     let smsErrorMessage = null;
-    
+
     try {
       if (normalizedPhone) {
         console.log(`\n📱 ===== Login OTP Send Attempt =====`);
         console.log(`📱 Phone: ${normalizedPhone}`);
         console.log(`📱 OTP: ${otp}`);
         console.log(`📱 Purpose: login`);
-        
+
         const smsResult = await sendOTP(normalizedPhone, otp, 'login');
-        
+
         if (smsResult.isTest) {
           console.log(`🧪 Test mode: Login OTP ${otp} generated for ${normalizedPhone} (SMS skipped)`);
           smsSent = true;
@@ -367,12 +370,12 @@ export const sendLoginOTP = async (req, res) => {
       });
       console.error('❌ =================================\n');
     }
-    
+
     // Check if SMS failed and handle accordingly (same as register)
     if (smsErrorOccurred || !smsSent) {
       // Check if it's a test number (only allow failure for test numbers in development)
       const isTestNumber = normalizedPhone && ['9993911855'].some(testNum => normalizedPhone.endsWith(testNum));
-      
+
       if (isTestNumber && process.env.NODE_ENV === 'development') {
         console.log(`⚠️ Test number - SMS failed but allowing login in development mode. OTP: ${otp}`);
         smsSent = true; // Mark as sent for test numbers
@@ -381,7 +384,7 @@ export const sendLoginOTP = async (req, res) => {
         console.error(`\n❌ SMS FAILED for real number: ${normalizedPhone}`);
         console.error(`❌ This number should receive real SMS. Login blocked.`);
         console.error(`❌ Error: ${smsErrorMessage || 'Unknown error'}\n`);
-        
+
         return res.status(500).json({
           success: false,
           message: 'Failed to send OTP. Please check your phone number and try again.',
@@ -407,12 +410,12 @@ export const sendLoginOTP = async (req, res) => {
     console.error('❌ Error Name:', error.name);
     console.error('❌ Error Message:', error.message);
     console.error('❌ Error Code:', error.code);
-    
+
     // Log more details in development
     if (process.env.NODE_ENV === 'development') {
       console.error('❌ Full Error:', error);
       console.error('❌ Stack Trace:', error.stack);
-      
+
       // Check for specific error types
       if (error.name === 'ValidationError') {
         console.error('❌ Validation Errors:', error.errors);
@@ -423,13 +426,13 @@ export const sendLoginOTP = async (req, res) => {
       }
     }
     console.error('❌ =================================\n');
-    
+
     // Return detailed error in development, generic in production
     const errorResponse = {
       success: false,
       message: 'Server error during login OTP send',
     };
-    
+
     if (process.env.NODE_ENV === 'development') {
       errorResponse.error = error.message;
       errorResponse.errorType = error.name;
@@ -437,7 +440,7 @@ export const sendLoginOTP = async (req, res) => {
         errorResponse.stack = error.stack.split('\n').slice(0, 5).join('\n'); // First 5 lines of stack
       }
     }
-    
+
     res.status(500).json(errorResponse);
   }
 };
@@ -538,12 +541,12 @@ export const verifyOTP = async (req, res) => {
 
     // Check if this is a signup verification (not login)
     const isSignupVerification = otpRecord.purpose === 'register';
-    
+
     // Check if this is the first verification (both phone and email were unverified before)
     const wasPhoneVerified = user.isPhoneVerified;
     const wasEmailVerified = user.isEmailVerified;
     const isFirstVerification = !wasPhoneVerified && !wasEmailVerified;
-    
+
     // Mark phone/email as verified (use normalized phone)
     if (normalizedPhone) {
       user.isPhoneVerified = true;
@@ -580,7 +583,7 @@ export const verifyOTP = async (req, res) => {
       });
       return Math.round((completedFields / fields.length) * 100);
     };
-    
+
     user.profileComplete = calculateProfileComplete(user);
     await user.save();
 
@@ -613,6 +616,126 @@ export const verifyOTP = async (req, res) => {
       success: false,
       message: 'Server error during OTP verification',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Staff Login
+ * @route   POST /api/auth/staff-login
+ * @access  Public
+ */
+export const staffLogin = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide username/email and password',
+      });
+    }
+
+    // Check for staff by Name or Email
+    // Case insensitive search for Name
+    const staff = await Staff.findOne({
+      $or: [
+        { email: username.toLowerCase() },
+        { name: { $regex: new RegExp(`^${username}$`, 'i') } }
+      ]
+    });
+
+    if (!staff) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+      });
+    }
+
+    // Check if password matches
+    // Assuming matchPassword method exists on Staff model
+    const isMatch = await staff.matchPassword(password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+      });
+    }
+
+    // Generate token
+    const token = generateToken(staff._id);
+    const refreshToken = generateRefreshToken(staff._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        token,
+        refreshToken,
+        user: {
+          id: staff._id,
+          name: staff.name,
+          email: staff.email,
+          role: staff.role,
+          employeeId: staff.employeeId,
+          phone: staff.phone,
+          department: staff.department,
+          avatar: staff.avatar,
+          joinDate: staff.joinDate,
+          status: staff.status
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Staff login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get Staff Profile
+ * @route   GET /api/auth/staff-profile
+ * @access  Private (Staff)
+ */
+export const getStaffProfile = async (req, res) => {
+  try {
+    const staff = req.user; // Attached by authenticateStaff middleware
+
+    if (!staff) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff profile not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: staff._id,
+          name: staff.name,
+          email: staff.email,
+          role: staff.role,
+          employeeId: staff.employeeId,
+          phone: staff.phone,
+          department: staff.department,
+          avatar: staff.avatar,
+          joinDate: staff.joinDate,
+          status: staff.status
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get Staff Profile Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching profile'
     });
   }
 };
@@ -691,7 +814,7 @@ export const resendOTP = async (req, res) => {
         console.log(`📱 Attempting to resend OTP to phone: ${normalizedPhone}`);
         const smsResult = await sendOTP(normalizedPhone, otp, purpose);
         smsSent = true;
-        
+
         if (smsResult.isTest) {
           console.log(`🧪 Test mode: OTP ${otp} resent for ${normalizedPhone} (SMS skipped)`);
         } else {
@@ -714,11 +837,11 @@ export const resendOTP = async (req, res) => {
         error: smsError.message,
         stack: process.env.NODE_ENV === 'development' ? smsError.stack : undefined,
       });
-      
+
       // Always return error if SMS fails (even in development for real numbers)
       // Only allow in development if it's a test number
       const isTestNumber = normalizedPhone && ['9993911855'].some(testNum => normalizedPhone.endsWith(testNum));
-      
+
       if (isTestNumber && process.env.NODE_ENV === 'development') {
         console.log(`⚠️ Test number - SMS failed but allowing resend in development mode. OTP: ${otp}`);
       } else {
@@ -773,20 +896,42 @@ export const refreshToken = async (req, res) => {
     );
 
     // Get user from database
-    const user = await User.findById(decoded.id);
+    let user = await User.findById(decoded.id);
+    let isStaff = false;
+
+    // If not found in User collection, check Staff collection (for Employee App)
+    if (!user) {
+      const staff = await Staff.findById(decoded.id);
+      if (staff) {
+        user = staff;
+        isStaff = true;
+      }
+    }
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'User not found',
+        message: 'User/Staff not found',
       });
     }
 
-    if (!user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'User account is deactivated',
-      });
+    // Check active status
+    if (isStaff) {
+      // Staff status check (Active, On Duty, Leave are valid for login, Inactive/Terminated would be invalid if they existed)
+      // Assuming 'Active' or similar is required. The enum is ['Active', 'On Duty', 'Leave'].
+      // If there's no explicit 'Inactive' status in enum, we might assume they are active unless deleted.
+      // However, let's keep it simple: if they exist, they are likely active enough to refresh token unless blocked.
+      // If you strictly want to block others:
+      // if (!['Active', 'On Duty', 'Leave'].includes(user.status)) ... 
+      // For now, we'll assume existence implies access unless restricted logic is added.
+    } else {
+      // User active check
+      if (!user.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'User account is deactivated',
+        });
+      }
     }
 
     // Generate new access token
@@ -801,21 +946,21 @@ export const refreshToken = async (req, res) => {
     });
   } catch (error) {
     console.error('Refresh token error:', error);
-    
+
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
         message: 'Invalid refresh token',
       });
     }
-    
+
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
         message: 'Refresh token expired. Please log in again.',
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Server error during token refresh',
@@ -843,6 +988,168 @@ export const logout = async (req, res) => {
       message: 'Server error during logout',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+  }
+};
+
+
+/**
+ * @desc    Forgot Password for Staff
+ * @route   POST /api/auth/staff-forgot-password
+ * @access  Public
+ */
+export const staffForgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const staff = await Staff.findOne({ email });
+
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'No staff account found with this email' });
+    }
+
+    // Generate token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+
+    // Hash token and save to database
+    staff.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set expiry (10 minutes)
+    staff.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+    await staff.save({ validateBeforeSave: false });
+
+    // Create reset URL
+    // Use origin from request or fallback to localhost:5174 (Employee App Port)
+    const frontendUrl = req.headers.origin || 'http://localhost:5174';
+    const resetUrl = `${frontendUrl}/employee/reset-password/${resetToken}`;
+
+    const message = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 0; color: #333; -webkit-font-smoothing: antialiased; }
+          .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e4e4e7; }
+          .header { background-color: #1C205C; padding: 32px 24px; text-align: center; background-image: linear-gradient(135deg, #1C205C 0%, #1e1b4b 100%); }
+          .logo-text { color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; font-style: italic; letter-spacing: -0.025em; }
+          .logo-highlight { color: #3B82F6; }
+          .subheader { color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 8px; }
+          .content { padding: 40px 32px; text-align: left; line-height: 1.6; color: #374151; }
+          .greeting { font-size: 18px; font-weight: 600; margin-bottom: 24px; color: #111827; }
+          .button-container { text-align: center; margin: 32px 0; }
+          .button { display: inline-block; background-color: #1C205C; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; transition: background-color 0.2s; box-shadow: 0 4px 6px -1px rgba(28, 32, 92, 0.2); }
+          .expiry-note { background-color: #fff1f2; border-left: 4px solid #e11d48; padding: 12px 16px; margin: 24px 0; font-size: 14px; color: #be123c; border-radius: 4px; }
+          .footer { background-color: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+          .link-secondary { margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280; }
+          .plain-link { color: #3b82f6; word-break: break-all; text-decoration: none; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 class="logo-text">Drive<span class="logo-highlight">On</span></h1>
+            <div class="subheader">Employee Portal</div>
+          </div>
+          <div class="content">
+            <div class="greeting">Hello,</div>
+            <p>We received a request to reset the password for your DriveOn Employee account.</p>
+            <p>If you didn't ask to reset your password, you can simply ignore this email. Your account is safe and no changes were made.</p>
+            
+            <div class="button-container">
+              <a href="${resetUrl}" class="button">Reset Password</a>
+            </div>
+
+            <div class="expiry-note">
+              <strong>Note:</strong> For security reasons, this password reset link will expire in 10 minutes.
+            </div>
+
+            <div class="link-secondary">
+              <p style="margin-bottom: 8px;">Button not working? Copy and paste this link into your browser:</p>
+              <a href="${resetUrl}" class="plain-link">${resetUrl}</a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} DriveOn Systems. All rights reserved.</p>
+            <p>This is an automated message, please do not reply to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      await sendEmail({
+        email: staff.email,
+        subject: 'Password Reset Request - DriveOn Employee',
+        html: message,
+      });
+
+      res.status(200).json({ success: true, message: 'Email sent' });
+    } catch (error) {
+      console.error('Email send error:', error);
+
+      // In development mode, if email fails, log the URL and return success to allow testing
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚠️ Development Mode: Email sending failed, but here is the reset URL:');
+        console.log(resetUrl);
+
+        // Don't clear the token
+        return res.status(200).json({
+          success: true,
+          message: 'Email sending failed (Dev Mode). Check server console for link.',
+          devUrl: resetUrl
+        });
+      }
+
+      staff.resetPasswordToken = undefined;
+      staff.resetPasswordExpire = undefined;
+      await staff.save({ validateBeforeSave: false });
+      return res.status(500).json({ success: false, message: 'Email could not be sent', error: error.message });
+    }
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Reset Password for Staff
+ * @route   POST /api/auth/staff-reset-password/:resetToken
+ * @access  Public
+ */
+export const staffResetPassword = async (req, res) => {
+  try {
+    // Get token from params and hash it to match database
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.resetToken)
+      .digest('hex');
+
+    const staff = await Staff.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!staff) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    }
+
+    // Set new password
+    staff.password = req.body.password;
+    staff.resetPasswordToken = undefined;
+    staff.resetPasswordExpire = undefined;
+
+    await staff.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
