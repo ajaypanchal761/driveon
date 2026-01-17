@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  MdDashboard, 
-  MdPeople, 
-  MdBadge, 
-  MdDirectionsCar, 
-  MdEventNote, 
-  MdBuild, 
-  MdStore, 
-  MdAttachMoney, 
-  MdBarChart, 
-  MdImportExport, 
+import {
+  MdDashboard,
+  MdPeople,
+  MdBadge,
+  MdDirectionsCar,
+  MdEventNote,
+  MdBuild,
+  MdStore,
+  MdAttachMoney,
+  MdBarChart,
+  MdImportExport,
   MdSettings,
   MdKeyboardArrowDown,
   MdKeyboardArrowRight,
@@ -33,9 +33,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   };
 
   const menuItems = [
-    { path: '/crm/dashboard', name: 'Dashboard', icon: <MdDashboard /> },
-    { 
-      name: 'Enquiries', 
+    {
+      name: 'Enquiries',
       icon: <MdPeople />,
       id: 'Enquiries',
       subItems: [
@@ -48,8 +47,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       ]
     },
-    { 
-      name: 'Staff Operations', 
+    {
+      name: 'Staff Operations',
       icon: <MdBadge />,
       id: 'Staff',
       subItems: [
@@ -64,8 +63,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     },
 
 
-    { 
-      name: 'Garage', 
+    {
+      name: 'Garage',
       icon: <MdBuild />,
       id: 'Garage',
       subItems: [
@@ -76,8 +75,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
       ]
     },
-    { 
-      name: 'Vendors', 
+    {
+      name: 'Vendors',
       icon: <MdStore />,
       id: 'Vendors',
       subItems: [
@@ -90,8 +89,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
 
 
-    { 
-      name: 'Settings', 
+    {
+      name: 'Settings',
       icon: <MdSettings />,
       id: 'Settings',
       subItems: [
@@ -104,7 +103,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   ];
 
   return (
-    <aside 
+    <aside
       className={`fixed top-0 left-0 z-30 h-screen transition-all duration-300 transform bg-white border-r border-gray-200
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 md:w-64`}
       style={{ borderColor: premiumColors.border.light }}
@@ -113,7 +112,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* Logo Area */}
         <div className="h-16 flex items-center justify-center border-b border-gray-200 px-6 shrink-0">
           <h1 className="text-xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>
-             DriveOn <span className="text-sm font-normal text-gray-500">CRM</span>
+            DriveOn <span className="text-sm font-normal text-gray-500">CRM</span>
           </h1>
         </div>
 
@@ -127,102 +126,102 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             if (item.subItems) {
               return (
                 <div key={item.name} className="space-y-1">
-                   {/* Parent Item */}
-                   <button
-                      onClick={() => toggleSubmenu(item.name)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group
+                  {/* Parent Item */}
+                  <button
+                    onClick={() => toggleSubmenu(item.name)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group
                         ${isChildActive ? 'font-bold' : 'font-semibold text-gray-700 hover:bg-gray-50'}
                       `}
-                      style={isChildActive ? {
-                        backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
-                        color: premiumColors.primary.DEFAULT
-                      } : {}}
-                   >
-                      <div className="flex items-center">
-                         <span className={`text-xl mr-3 transition-transform ${isChildActive ? '' : 'text-gray-500'}`} style={isChildActive ? { color: premiumColors.primary.DEFAULT } : {}}>
-                           {item.icon}
-                         </span>
-                         <span className="text-sm tracking-wide">{item.name}</span>
-                      </div>
-                      <span className="text-gray-400">
-                        {isExpanded ? <MdKeyboardArrowDown /> : <MdKeyboardArrowRight />}
+                    style={isChildActive ? {
+                      backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
+                      color: premiumColors.primary.DEFAULT
+                    } : {}}
+                  >
+                    <div className="flex items-center">
+                      <span className={`text-xl mr-3 transition-transform ${isChildActive ? '' : 'text-gray-500'}`} style={isChildActive ? { color: premiumColors.primary.DEFAULT } : {}}>
+                        {item.icon}
                       </span>
-                   </button>
+                      <span className="text-sm tracking-wide">{item.name}</span>
+                    </div>
+                    <span className="text-gray-400">
+                      {isExpanded ? <MdKeyboardArrowDown /> : <MdKeyboardArrowRight />}
+                    </span>
+                  </button>
 
-                   {/* Submenu */}
-                   <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                      <div className="ml-4 pl-4 border-l-2 border-gray-100 space-y-1 py-1">
-                         {item.subItems.map((sub) => {
-                           // Level 3 Nesting Support
-                           if (sub.subItems) {
-                             const isSubExpanded = expandedMenus.includes(sub.name);
-                             return (
-                               <div key={sub.name} className="space-y-1 mt-2 mb-2">
-                                  <button
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       toggleSubmenu(sub.name);
-                                     }}
-                                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all font-semibold"
+                  {/* Submenu */}
+                  <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="ml-4 pl-4 border-l-2 border-gray-100 space-y-1 py-1">
+                      {item.subItems.map((sub) => {
+                        // Level 3 Nesting Support
+                        if (sub.subItems) {
+                          const isSubExpanded = expandedMenus.includes(sub.name);
+                          return (
+                            <div key={sub.name} className="space-y-1 mt-2 mb-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSubmenu(sub.name);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all font-semibold"
+                              >
+                                <div className="flex items-center">
+                                  <span className="mr-2 opacity-50 text-[6px]"><MdCircle /></span>
+                                  {sub.name}
+                                </div>
+                                <span className="text-gray-400 scale-75">
+                                  {isSubExpanded ? <MdKeyboardArrowDown /> : <MdKeyboardArrowRight />}
+                                </span>
+                              </button>
+
+                              <div className={`overflow-hidden transition-all duration-300 ml-3 pl-3 border-lborder-gray-100 ${isSubExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                {sub.subItems.map((child) => (
+                                  <NavLink
+                                    key={child.path}
+                                    to={child.path}
+                                    className={({ isActive }) =>
+                                      `flex items-center px-3 py-1.5 rounded-lg text-xs transition-all my-0.5
+                                              ${isActive
+                                        ? 'font-bold'
+                                        : 'font-semibold text-gray-600 hover:text-gray-900'
+                                      }`
+                                    }
+                                    style={({ isActive }) => isActive ? {
+                                      backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
+                                      color: premiumColors.primary.DEFAULT
+                                    } : {}}
                                   >
-                                     <div className="flex items-center">
-                                       <span className="mr-2 opacity-50 text-[6px]"><MdCircle /></span>
-                                       {sub.name}
-                                     </div>
-                                     <span className="text-gray-400 scale-75">
-                                       {isSubExpanded ? <MdKeyboardArrowDown /> : <MdKeyboardArrowRight />}
-                                     </span>
-                                  </button>
-                                  
-                                  <div className={`overflow-hidden transition-all duration-300 ml-3 pl-3 border-lborder-gray-100 ${isSubExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                     {sub.subItems.map((child) => (
-                                        <NavLink
-                                           key={child.path}
-                                           to={child.path}
-                                           className={({ isActive }) =>
-                                             `flex items-center px-3 py-1.5 rounded-lg text-xs transition-all my-0.5
-                                              ${isActive 
-                                                ? 'font-bold' 
-                                                : 'font-semibold text-gray-600 hover:text-gray-900'
-                                              }`
-                                           }
-                                           style={({ isActive }) => isActive ? {
-                                                backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
-                                                color: premiumColors.primary.DEFAULT
-                                           } : {}}
-                                        >
-                                           <span className="mr-2 opacity-30 text-[4px]"><MdCircle /></span>
-                                           {child.name}
-                                        </NavLink>
-                                     ))}
-                                  </div>
-                               </div>
-                             );
-                           }
+                                    <span className="mr-2 opacity-30 text-[4px]"><MdCircle /></span>
+                                    {child.name}
+                                  </NavLink>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
 
-                           return (
-                             <NavLink
-                               key={sub.path}
-                               to={sub.path}
-                               className={({ isActive }) =>
-                                 `flex items-center px-3 py-2 rounded-lg text-sm transition-all
-                                  ${isActive 
-                                    ? 'font-bold' 
-                                    : 'font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                  }`
-                               }
-                               style={({ isActive }) => isActive ? {
-                                    backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
-                                    color: premiumColors.primary.DEFAULT
-                               } : {}}
-                             >
-                               <span className="mr-2 opacity-50 text-[6px]"><MdCircle /></span>
-                               {sub.name}
-                             </NavLink>
-                           );
-                         })}
-                      </div>
-                   </div>
+                        return (
+                          <NavLink
+                            key={sub.path}
+                            to={sub.path}
+                            className={({ isActive }) =>
+                              `flex items-center px-3 py-2 rounded-lg text-sm transition-all
+                                  ${isActive
+                                ? 'font-bold'
+                                : 'font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                              }`
+                            }
+                            style={({ isActive }) => isActive ? {
+                              backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08),
+                              color: premiumColors.primary.DEFAULT
+                            } : {}}
+                          >
+                            <span className="mr-2 opacity-50 text-[6px]"><MdCircle /></span>
+                            {sub.name}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               );
             }
@@ -233,12 +232,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                 to={item.path}
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 rounded-xl transition-all duration-200 group
-                  ${isActive 
-                    ? 'font-bold shadow-sm' 
+                  ${isActive
+                    ? 'font-bold shadow-sm'
                     : 'font-semibold hover:bg-gray-50 text-gray-700'
                   }`
                 }
-                style={({ isActive }) => isActive ? { 
+                style={({ isActive }) => isActive ? {
                   color: premiumColors.primary.DEFAULT,
                   backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.08)
                 } : {}}
@@ -254,25 +253,25 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* User Profile / Footer */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 shrink-0">
-           <div className="flex flex-col gap-3">
-              <NavLink 
-                to="/admin/dashboard" 
-                className="flex items-center gap-2 px-3 py-2 bg-indigo-900 text-white rounded-xl hover:bg-indigo-800 transition-colors shadow-sm w-full"
-                style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-              >
-                  <MdKeyboardArrowLeft size={20} />
-                  <span className="text-sm font-medium">Back to Admin</span>
-              </NavLink>
-              <div className="flex items-center gap-3 ml-1">
+          <div className="flex flex-col gap-3">
+            <NavLink
+              to="/admin/dashboard"
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-900 text-white rounded-xl hover:bg-indigo-800 transition-colors shadow-sm w-full"
+              style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+            >
+              <MdKeyboardArrowLeft size={20} />
+              <span className="text-sm font-medium">Back to Admin</span>
+            </NavLink>
+            <div className="flex items-center gap-3 ml-1">
               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                 <span className="text-gray-500 font-bold">A</span>
+                <span className="text-gray-500 font-bold">A</span>
               </div>
               <div>
-                 <p className="text-sm font-semibold text-gray-800">Admin</p>
-                 <p className="text-xs text-gray-500">Manager</p>
+                <p className="text-sm font-semibold text-gray-800">Admin</p>
+                <p className="text-xs text-gray-500">Manager</p>
               </div>
-           </div>
-        </div>
+            </div>
+          </div>
         </div>
       </div>
     </aside>

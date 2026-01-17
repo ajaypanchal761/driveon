@@ -287,7 +287,7 @@ export const AllVendorsPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
                         <span>/</span>
                         <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span>
                         <span>/</span>
@@ -425,7 +425,7 @@ export const VendorHistoryPage = () => {
             <div className="flex justify-between items-end">
                 <div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
                         <span>/</span>
                         <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/vendors/all')}>Vendors</span>
                         <span>/</span>

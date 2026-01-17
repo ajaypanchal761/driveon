@@ -783,7 +783,7 @@ export const StaffDirectoryPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
             <span>/</span>
             <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
@@ -1244,7 +1244,7 @@ export const RolesPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
             <span>/</span>
             <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
@@ -1975,7 +1975,7 @@ export const AttendancePage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
             <span>/</span>
             <span className="hover:text-[#212c40] cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
@@ -2310,7 +2310,7 @@ export const SalaryPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
             <span>/</span>
             <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
@@ -2582,7 +2582,7 @@ export const PerformancePage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
             <span>/</span>
             <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
@@ -2861,7 +2861,7 @@ export const StaffTasksPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
             <span>/</span>
             <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>

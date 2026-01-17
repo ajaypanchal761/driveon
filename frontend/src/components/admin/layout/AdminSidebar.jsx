@@ -22,7 +22,7 @@ const AdminSidebar = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       ),
-      path: '/crm/dashboard',
+      path: '/crm/enquiries/all',
       badge: 'New'
     },
     {
@@ -177,7 +177,7 @@ const AdminSidebar = () => {
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg"
-        style={{ 
+        style={{
           color: colors.textPrimary,
           backgroundColor: colors.backgroundSecondary
         }}
@@ -198,13 +198,12 @@ const AdminSidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen w-64 shadow-lg z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col overflow-hidden ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 h-screen w-64 shadow-lg z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 flex flex-col overflow-hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         style={{ backgroundColor: colors.backgroundSecondary }}
       >
         {/* Logo Section */}
-        <div 
+        <div
           className="h-16 flex items-center justify-center border-b px-4 flex-shrink-0"
           style={{ borderBottomColor: colors.borderMedium }}
         >
@@ -222,20 +221,19 @@ const AdminSidebar = () => {
                 <button
                   key={item.id}
                   onClick={() => handleMenuClick(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
-                    active
-                      ? 'text-white shadow-md'
-                      : ''
-                  }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${active
+                    ? 'text-white shadow-md'
+                    : ''
+                    }`}
                   style={
                     active
                       ? {
-                          backgroundColor: colors.backgroundTertiary,
-                          color: colors.textWhite
-                        }
+                        backgroundColor: colors.backgroundTertiary,
+                        color: colors.textWhite
+                      }
                       : {
-                          color: colors.textPrimary
-                        }
+                        color: colors.textPrimary
+                      }
                   }
                   onMouseEnter={(e) => {
                     if (!active) {
@@ -251,7 +249,7 @@ const AdminSidebar = () => {
                   <span style={{ color: active ? colors.textWhite : colors.textPrimary }}>{item.icon}</span>
                   <span className="flex-1 text-left font-medium">{item.title}</span>
                   {item.badge && (
-                    <span 
+                    <span
                       className="text-white text-xs font-bold rounded-full px-2 py-0.5"
                       style={{ backgroundColor: colors.accentRed }}
                     >
@@ -265,7 +263,7 @@ const AdminSidebar = () => {
         </nav>
 
         {/* Footer Section */}
-        <div 
+        <div
           className="border-t p-4 flex-shrink-0"
           style={{ borderTopColor: colors.borderMedium }}
         >

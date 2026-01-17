@@ -319,7 +319,7 @@ export const AllGaragesPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
                         <span>/</span>
                         <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span>
                         <span>/</span>
@@ -631,7 +631,7 @@ export const ActiveRepairsPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
                         <span>/</span>
                         <span className="hover:text-[#1c205c] cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span>
                         <span>/</span>
@@ -719,7 +719,7 @@ export const PartsCostPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/dashboard')}>Home</span>
+                        <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
                         <span>/</span>
                         <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/garage/all')}>Garage</span>
                         <span>/</span>
