@@ -25,11 +25,12 @@ export const logoutUser = createAsyncThunk(
  * Manages authentication state (tokens, user authentication status)
  */
 const initialState = {
-  token: localStorage.getItem('authToken') || null,
-  refreshToken: localStorage.getItem('refreshToken') || null,
+  token: localStorage.getItem('authToken') || localStorage.getItem('staffToken') || null,
+  refreshToken: localStorage.getItem('refreshToken') || localStorage.getItem('staffRefreshToken') || null,
   // Don't set isAuthenticated to true initially - wait for AuthInitializer to verify token
   // This prevents showing login form during token verification on page refresh
-  isAuthenticated: !!localStorage.getItem('authToken'), // Assume logged in if token exists to prevent flashing login page
+  // Support both user and staff tokens for initial check
+  isAuthenticated: !!(localStorage.getItem('authToken') || localStorage.getItem('staffToken')),
   isLoading: false,
   isInitializing: true, // Track if auth is being initialized on app mount
   error: null,

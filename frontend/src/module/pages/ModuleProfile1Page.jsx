@@ -212,6 +212,12 @@ const ModuleProfile1Page = () => {
     );
   }
 
+  // If initialization is complete and user is not authenticated, redirect to login
+  if (!isInitializing && !isAuthenticated) {
+    navigate("/login", { replace: true });
+    return null;
+  }
+
   return (
     <div
       className="min-h-screen w-full relative pb-20 md:pb-0"
@@ -458,7 +464,7 @@ const ModuleProfile1Page = () => {
                 backgroundColor: "transparent",
               }}
             >
-              Logout
+              {isAuthenticated ? "Logout" : "Login"}
             </button>
           </div>
 

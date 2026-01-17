@@ -31,13 +31,12 @@ const AuthInitializer = () => {
         ? localStorage.getItem('staffRefreshToken')
         : localStorage.getItem('refreshToken');
 
-      // If no token, user is not authenticated
+      // If no token for this context, just finish initialization
+      // DO NOT call logout() here because it might clear a valid session from the OTHER context
+      // (e.g. if a staff visits a user page, we don't want to clear their staff session)
       if (!storedToken) {
-        if (isAuthenticated) {
-          // State says authenticated but no token - clear state
-          dispatch(logout());
-        }
-        dispatch(authInitialized()); // Mark initialization as complete
+        console.log(`ℹ️ No ${isEmployeeApp ? 'staff' : 'user'} token found for this context.`);
+        dispatch(authInitialized());
         return;
       }
 
@@ -50,10 +49,8 @@ const AuthInitializer = () => {
       }
 
       // If token exists but user is not in state, verify token and restore session
-      // This handles the case where page was refreshed and user data needs to be restored
       if (storedToken) {
         try {
-
           let profileResponse;
 
           if (isEmployeeApp) {
@@ -70,21 +67,20 @@ const AuthInitializer = () => {
             // Restore authentication state
             dispatch(loginSuccess({
               token: storedToken,
-              refreshToken: storedRefreshToken, // Pass the one we used
-              // Strictly rely on context for role
+              refreshToken: storedRefreshToken,
               userRole: isEmployeeApp ? 'employee' : (userData.role || 'user'),
             }));
 
             // Restore user data
             dispatch(setUser(userData));
-
-            // Mark initialization as complete
             dispatch(authInitialized());
 
             console.log('✅ Authentication restored');
           } else {
             // Profile fetch failed - token might be invalid for this context
-            console.warn('⚠️ Failed to restore session - token invalid or wrong context');
+            console.warn('⚠️ Failed to restore session - profile check returned success: false');
+            // If we have a token but profile check fails, it might be the wrong role
+            // Only logout if we are very sure it's invalid
             dispatch(authInitialized());
           }
         } catch (error) {
