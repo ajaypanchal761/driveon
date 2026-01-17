@@ -263,7 +263,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "dashboard",
-        element: <Navigate to="../enquiries/all" replace />,
+        element: <CRM_DashboardPage />,
       },
       // ENQUIRIES ROUTES
       {
@@ -386,7 +386,7 @@ const router = createBrowserRouter([
 
       {
         path: "*",
-        element: <Navigate to="enquiries/all" replace />,
+        element: <Navigate to="dashboard" replace />,
       }
     ]
   },

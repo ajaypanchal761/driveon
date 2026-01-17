@@ -432,102 +432,125 @@ export const getUpcomingBookings = async (req, res) => {
  */
 export const getCRMAnalytics = async (req, res) => {
     try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // 1. Enquiry Stats
         const totalEnquiries = await Enquiry.countDocuments();
-        const convertedCount = await Enquiry.countDocuments({ status: 'Converted' });
-        const lostCount = await Enquiry.countDocuments({ status: 'Closed' });
+        const enquiriesToday = await Enquiry.countDocuments({ createdAt: { $gte: today } });
+        const convertedThisMonth = await Enquiry.countDocuments({
+            status: 'Converted',
+            updatedAt: { $gte: startOfMonth }
+        });
 
-        const conversionRate = totalEnquiries > 0 ? (convertedCount / totalEnquiries) * 100 : 0;
+        // Calculate % change (Total vs Yesterday vs Today - let's do a mock trend or last 24h)
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const enquiriesYesterday = await Enquiry.countDocuments({
+            createdAt: { $gte: yesterday, $lt: today }
+        });
 
-        // Source Distribution
-        const sourceData = await Enquiry.aggregate([
-            { $group: { _id: "$source", value: { $sum: 1 } } },
+        let enquiryTrend = 0;
+        if (enquiriesYesterday > 0) {
+            enquiryTrend = Math.round(((enquiriesToday - enquiriesYesterday) / enquiriesYesterday) * 100);
+        } else if (enquiriesToday > 0) {
+            enquiryTrend = 100;
+        }
+
+        // 2. Active Repairs (In Garage)
+        const activeRepairsCount = await RepairJob.countDocuments({
+            status: { $nin: ['Completed', 'Cancelled'] }
+        });
+
+        // 3. Staff Presence Today
+        const totalStaff = await Staff.countDocuments({ status: { $ne: 'Resigned' } });
+        const presentStaffCount = await Attendance.countDocuments({
+            date: today,
+            status: { $in: ['Present', 'Late'] }
+        });
+
+        // 4. Lead Pipeline (Donut Chart Data)
+        const leadPipeline = await Enquiry.aggregate([
+            { $group: { _id: "$status", value: { $sum: 1 } } },
             { $project: { name: "$_id", value: 1, _id: 0 } }
         ]);
 
-        // Vehicle Interest
-        const vehicleInterest = await Enquiry.aggregate([
-            { $group: { _id: "$carInterested", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 10 },
-            {
-                $addFields: {
-                    carObjId: {
-                        $convert: {
-                            input: "$_id",
-                            to: "objectId",
-                            onError: null,
-                            onNull: null
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'cars',
-                    localField: 'carObjId',
-                    foreignField: '_id',
-                    as: 'carDetails'
-                }
-            },
-            {
-                $project: {
-                    name: {
-                        $cond: {
-                            if: { $gt: [{ $size: "$carDetails" }, 0] },
-                            then: {
-                                $concat: [
-                                    { $arrayElemAt: ["$carDetails.brand", 0] },
-                                    " ",
-                                    { $arrayElemAt: ["$carDetails.model", 0] }
-                                ]
-                            },
-                            else: "$_id"
-                        }
-                    },
-                    count: 1,
-                    _id: 0
+        // 5. Enquiry Pulse (Line Chart Data - Last 7 Days)
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            d.setHours(0, 0, 0, 0);
+
+            const nextD = new Date(d);
+            nextD.setDate(nextD.getDate() + 1);
+
+            const newCount = await Enquiry.countDocuments({ createdAt: { $gte: d, $lt: nextD } });
+            const convCount = await Enquiry.countDocuments({
+                status: 'Converted',
+                updatedAt: { $gte: d, $lt: nextD }
+            });
+
+            last7Days.push({
+                name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                new: newCount,
+                converted: convCount
+            });
+        }
+
+        // 6. Recent Enquiries (Last 5)
+        const recentEnquiries = await Enquiry.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .lean();
+
+        // Populate car data manually if needed
+        const recentWithCars = await Promise.all(recentEnquiries.map(async (enq) => {
+            let carName = "N/A";
+            if (enq.carInterested) {
+                if (mongoose.Types.ObjectId.isValid(enq.carInterested)) {
+                    const car = await mongoose.model('Car').findById(enq.carInterested).select('brand model').lean();
+                    if (car) carName = `${car.brand} ${car.model}`;
+                } else {
+                    carName = enq.carInterested;
                 }
             }
-        ]);
-
-        // Growth Trend (Weekly for last 4 weeks)
-        const fourWeeksAgo = new Date();
-        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-
-        const growthTrend = await Enquiry.aggregate([
-            { $match: { createdAt: { $gte: fourWeeksAgo } } },
-            {
-                $group: {
-                    _id: {
-                        week: { $floor: { $divide: [{ $subtract: [new Date(), "$createdAt"] }, 604800000] } }
-                    },
-                    enquiries: { $sum: 1 },
-                    conversions: {
-                        $sum: { $cond: [{ $eq: ["$status", "Converted"] }, 1, 0] }
-                    }
-                }
-            },
-            { $sort: { "_id.week": -1 } },
-            {
-                $project: {
-                    week: { $concat: ["Week ", { $toString: { $subtract: [4, "$_id.week"] } }] },
-                    enquiries: 1,
-                    conversions: 1,
-                    _id: 0
-                }
-            }
-        ]);
+            return {
+                id: enq._id,
+                name: enq.name,
+                action: `Inquired for ${carName}`,
+                time: "Recently", // You can use a timeago lib here or simple diff
+                status: enq.status,
+                type: enq.status === 'New' ? 'New' : enq.status
+            };
+        }));
 
         res.status(200).json({
             success: true,
             data: {
-                totalEnquiries,
-                convertedCount,
-                lostCount,
-                conversionRate: conversionRate.toFixed(2),
-                sourceData,
-                vehicleInterest,
-                growthTrend
+                stats: {
+                    enquiries: {
+                        total: totalEnquiries,
+                        today: enquiriesToday,
+                        trend: enquiryTrend
+                    },
+                    repairs: {
+                        active: activeRepairsCount
+                    },
+                    staff: {
+                        present: presentStaffCount,
+                        total: totalStaff
+                    },
+                    conversions: {
+                        month: convertedThisMonth
+                    }
+                },
+                enquiryPulse: last7Days,
+                leadPipeline,
+                recentEnquiries: recentWithCars
             }
         });
     } catch (error) {

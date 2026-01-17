@@ -1,144 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  MdWarning, 
-  MdPersonAdd, 
-  MdAttachMoney, 
-  MdEventAvailable, 
-  MdBuild, 
-  MdAssignment,
-  MdBarChart,
-  MdDownload,
+import {
+  MdPeople,
+  MdBuild,
+  MdEventAvailable,
+  MdCheckCircle,
+  MdShowChart,
+  MdPieChart,
+  MdArrowForward,
+  MdAdd,
+  MdSearch,
+  MdNotifications,
+  MdPersonAdd,
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { premiumColors } from '../../theme/colors';
 import { rgba } from 'polished';
+import crmService from '../../services/crm.service';
 
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
 
-  // Mock Data for Charts
-  const REVENUE_DATA = [
-    { name: 'Jan', revenue: 4000, expenses: 2400 },
-    { name: 'Feb', revenue: 3000, expenses: 1398 },
-    { name: 'Mar', revenue: 2000, expenses: 9800 },
-    { name: 'Apr', revenue: 2780, expenses: 3908 },
-    { name: 'May', revenue: 1890, expenses: 4800 },
-    { name: 'Jun', revenue: 2390, expenses: 3800 },
-    { name: 'Jul', revenue: 3490, expenses: 4300 },
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const FLEET_DISTRIBUTION = [
-    { name: 'Hatchback', value: 35 },
-    { name: 'Sedan', value: 25 },
-    { name: 'SUV', value: 30 },
-    { name: 'Luxury', value: 10 },
-  ];
-
-  const COLORS = ['#1C205C', '#4F46E5', '#818CF8', '#C7D2FE'];
-
-  // Local Mock Data for Dashboard Counters
-  const DASHBOARD_STATS = {
-    totalLeads: 24,
-    bookings: 8,
-    activeRepairs: 3,
-    salaryPending: 3,
-    insuranceExpiring: 2,
-    vendorPending: 1,
-    carIdle: 4,
-    garagePending: 2,
-    activeAccidents: 2,
-    todayFollowUps: 3
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await crmService.getAnalytics();
+      if (response.success) {
+        setData(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const RECENT_ENQUIRIES = [
-    { id: 1, name: "Rahul Kumar", action: "Inquired for Innova Crysta", time: "2m ago", img: "https://randomuser.me/api/portraits/men/32.jpg", type: "New" },
-    { id: 2, name: "Priya Sharma", action: "Booked Maruti Swift", time: "15m ago", img: "https://randomuser.me/api/portraits/women/44.jpg", type: "Booking" },
-    { id: 3, name: "Amit Singh", action: "Requested Call Back", time: "1h ago", img: "https://randomuser.me/api/portraits/men/86.jpg", type: "Lead" }
-  ];
+  if (loading || !data) {
+    return (
+      <div className="flex items-center justify-center h-[80vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#212c40]"></div>
+      </div>
+    );
+  }
 
-  // 1. Action Alerts Data (Mapped to Real Pages)
-  const actionAlerts = [
-    { 
-      id: 1, 
-      title: "Salary Pending", 
-      count: DASHBOARD_STATS.salaryPending, 
-      description: "Staff members awaiting payment",
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-100",
-      path: "/crm/staff/salary" 
-    },
-    { 
-      id: 2, 
-      title: "Insurance Expiring", 
-      count: DASHBOARD_STATS.insuranceExpiring, 
-      description: "Renew before 5th Jan",
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
-      borderColor: "border-amber-100",
-      path: "/crm/cars/documents" 
-    },
-    { 
-      id: 3, 
-      title: "Vendor Payment Due", 
-      count: DASHBOARD_STATS.vendorPending, 
-      description: "Rs. 15,000 pending for Garage A",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-100",
-      path: "/crm/vendors/payments" 
-    },
-    { 
-      id: 4, 
-      title: "Active Accidents", 
-      count: DASHBOARD_STATS.activeAccidents, 
-      description: "2 cases in recovery tracking",
-      color: "text-rose-600",
-      bgColor: "bg-rose-50",
-      borderColor: "border-rose-100",
-      path: "/crm/cars/accidents/active" 
-    },
-    /*
-    { 
-      id: 5, 
-      title: "Car Idle > 5 Days", 
-      count: DASHBOARD_STATS.carIdle, 
-      description: "Assign them to new bookings",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-100",
-      path: "/crm/cars/idle" 
-    },
-    */
-    { 
-      id: 6, 
-      title: "Garage Bill Pending", 
-      count: DASHBOARD_STATS.garagePending, 
-      description: "Check Active Repairs",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-100",
-      path: "/crm/garage/active" 
-    },
-  ];
+  const { stats, enquiryPulse, leadPipeline, recentEnquiries } = data;
 
-  // 2. Quick Actions Data (Functional)
-  const quickActions = [
-    { label: "New Enquiry", icon: <MdPersonAdd />, action: () => navigate('/crm/enquiries/new') },
-    { label: "Add Expense", icon: <MdAttachMoney />, action: () => navigate('/crm/finance/expenses') },
-    { label: "Attendance", icon: <MdEventAvailable />, action: () => navigate('/crm/staff/attendance') },
-    { label: "Vendor Pay", icon: <MdAttachMoney />, action: () => navigate('/crm/vendors/payments') },
-    { label: "Active Repairs", icon: <MdBuild />, action: () => navigate('/crm/garage/active') },
-    { label: "Report Accident", icon: <MdWarning />, action: () => navigate('/crm/cars/accidents/add') },
-  ];
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
-  // Animation Variants
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
@@ -153,296 +72,286 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
+    <div className="space-y-6 pb-10">
+      {/* Top Header Row as per screenshot */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: premiumColors.primary.DEFAULT }}>
-             Smart Command Center
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Here is what needs your attention today.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">CRM Overview</h1>
+          <p className="text-gray-500 text-sm">Welcome back! Here's your operations summary for today.</p>
         </div>
-        <div className="flex gap-3">
-            <div className="text-right cursor-pointer" onClick={() => navigate('/crm/enquiries/all')}>
-                <span className="block text-2xl font-bold text-gray-800">{DASHBOARD_STATS.totalLeads}</span>
-                <span className="text-xs text-gray-500 uppercase font-semibold">Leads</span>
-            </div>
-            <div className="w-px h-10 bg-gray-300"></div>
-            <div className="text-right cursor-pointer" onClick={() => navigate('/crm/bookings/active')}>
-                <span className="block text-2xl font-bold text-gray-800">{DASHBOARD_STATS.bookings}</span>
-                <span className="text-xs text-gray-500 uppercase font-semibold">Bookings</span>
-            </div>
-            <div className="w-px h-10 bg-gray-300"></div>
-            <div className="text-right cursor-pointer" onClick={() => navigate('/crm/garage/active')}>
-                <span className="block text-2xl font-bold text-orange-600">{DASHBOARD_STATS.activeRepairs}</span>
-                <span className="text-xs text-gray-500 uppercase font-semibold">Repairs</span>
-            </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-100 rounded-full">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="text-xs font-bold text-green-700">System Operational</span>
         </div>
       </div>
 
-      {/* 1. Action Alerts Grid */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <MdWarning className="text-amber-500" /> Action Required
-        </h2>
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-        >
-          {actionAlerts.map((alert) => (
-            <motion.div
-              key={alert.id}
-              variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate(alert.path)}
-              className={`p-5 rounded-2xl border ${alert.borderColor} ${alert.bgColor} cursor-pointer shadow-sm hover:shadow-md transition-all relative overflow-hidden`}
-            >
-               <div className="flex justify-between items-start z-10 relative">
-                  <div>
-                      <h3 className={`font-bold text-lg ${alert.color}`}>{alert.title}</h3>
-                      <p className="text-gray-600 text-sm mt-1">{alert.description}</p>
-                  </div>
-                  <div className={`text-2xl font-extrabold opacity-20 ${alert.color}`}>
-                     {alert.count}
-                  </div>
-               </div>
-               
-               {/* Make it look "urgent" if count is high */}
-               {alert.count > 0 && (
-                   <div className={`absolute bottom-4 right-4 text-xs font-bold px-2 py-1 rounded-lg bg-white/50 border border-white/50 ${alert.color}`}>
-                       {alert.count} Pending
-                   </div>
-               )}
-            </motion.div>
-          ))}
+      {/* 4 Stat Cards */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        {/* New Enquiries */}
+        <motion.div variants={itemVariants} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 transition-transform group-hover:scale-110">
+              <MdPeople size={24} />
+            </div>
+            <div className="text-xs font-bold text-green-500 flex items-center gap-1">
+              <MdAdd /> {stats.enquiries.trend}%
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-gray-900">{stats.enquiries.total}</h3>
+            <p className="text-gray-500 text-sm font-medium">New Enquiries</p>
+            <p className="text-blue-600 text-xs font-bold mt-1">+{stats.enquiries.today} today</p>
+          </div>
         </motion.div>
-      </section>
 
-      {/* 2. Quick Actions */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h2>
-        <motion.div 
-           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
-           variants={containerVariants}
-           initial="hidden"
-           animate="show"
+        {/* Active Repairs */}
+        <motion.div variants={itemVariants} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-2xl bg-orange-50 text-orange-600 transition-transform group-hover:scale-110">
+              <MdBuild size={24} />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-gray-900">{stats.repairs.active}</h3>
+            <p className="text-gray-500 text-sm font-medium">Active Repairs</p>
+            <p className="text-orange-600 text-xs font-bold mt-1">In Garage</p>
+          </div>
+        </motion.div>
+
+        {/* Staff Present */}
+        <motion.div variants={itemVariants} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-2xl bg-purple-50 text-purple-600 transition-transform group-hover:scale-110">
+              <MdEventAvailable size={24} />
+            </div>
+            <div className="text-xs font-bold text-green-500 flex items-center gap-1">
+              <MdAdd /> 12%
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-gray-900">{stats.staff.present}<span className="text-gray-400 text-xl font-medium">/{stats.staff.total}</span></h3>
+            <p className="text-gray-500 text-sm font-medium">Staff Present</p>
+            <p className="text-purple-600 text-xs font-bold mt-1">Today's Attendance</p>
+          </div>
+        </motion.div>
+
+        {/* Converted Leads */}
+        <motion.div variants={itemVariants} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group">
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 transition-transform group-hover:scale-110">
+              <MdCheckCircle size={24} />
+            </div>
+            <div className="text-xs font-bold text-green-500 flex items-center gap-1">
+              <MdAdd /> 12%
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-gray-900">{stats.conversions.month}</h3>
+            <p className="text-gray-500 text-sm font-medium">Converted Leads</p>
+            <p className="text-emerald-600 text-xs font-bold mt-1">This Month</p>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Main Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Enquiry Pulse - Line Chart */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="lg:col-span-2 bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm"
         >
-           {quickActions.map((action, idx) => (
-             <motion.button
-               key={idx}
-               variants={itemVariants}
-               initial="initial"
-               whileHover="hover"
-               whileTap="tap"
-               onClick={action.action}
-               className="flex flex-col items-center justify-center p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all group"
-               style={{ borderColor: 'transparent' }}
-             >
-                <motion.div 
-                    variants={{
-                        initial: { 
-                            backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), 
-                            color: premiumColors.primary.DEFAULT 
-                        },
-                        hover: { 
-                            backgroundColor: premiumColors.primary.DEFAULT, 
-                            color: "#ffffff" 
-                        }
-                    }}
-                    transition={{ duration: 0.2 }}
-                    className="p-3 rounded-full mb-3"
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Enquiry Pulse</h3>
+              <p className="text-xs text-gray-400">Weekly intake vs conversions</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div> New
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Converted
+              </div>
+            </div>
+          </div>
+
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={enquiryPulse}>
+                <defs>
+                  <linearGradient id="colorNew" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorConv" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9CA3AF', fontWeight: 600 }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9CA3AF', fontWeight: 600 }}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="new"
+                  stroke="#3B82F6"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorNew)"
+                  animationDuration={2000}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="converted"
+                  stroke="#10B981"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorConv)"
+                  animationDuration={2000}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Lead Pipeline - Donut Chart */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm flex flex-col items-center"
+        >
+          <div className="w-full text-left mb-6">
+            <h3 className="text-lg font-bold text-gray-900">Lead Pipeline</h3>
+            <p className="text-xs text-gray-400">Current status of active leads</p>
+          </div>
+
+          <div className="relative w-full h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={leadPipeline}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={90}
+                  paddingAngle={8}
+                  dataKey="value"
+                  animationDuration={1500}
                 >
-                   <span className="text-2xl">{action.icon}</span>
-                </motion.div>
-                <span className="text-sm font-medium text-gray-700 text-center">{action.label}</span>
-             </motion.button>
-           ))}
+                  {leadPipeline.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-4xl font-black text-gray-900">{stats.enquiries.total}</span>
+              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Total Leads</span>
+            </div>
+          </div>
+
+          <div className="w-full grid grid-cols-2 gap-3 mt-4">
+            {leadPipeline.slice(0, 4).map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx] }}></div>
+                <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">{item.name}</span>
+              </div>
+            ))}
+          </div>
         </motion.div>
-      </section>
+      </div>
 
-      {/* 3. Performance Overview */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm cursor-pointer"
-            onClick={() => navigate('/crm/finance/profit-loss')}
-          >
-              <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-                         <MdBarChart size={24} />
-                      </div>
-                      <div>
-                          <h3 className="text-lg font-bold text-gray-800">Business Analytics</h3>
-                          <p className="text-xs text-gray-400">Real-time revenue & expense tracking</p>
-                      </div>
-                  </div>
-                  {/* Export Report Button Removed */}
-              </div>
-
-              <div className="flex gap-4 mb-6">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
-                      <div className="w-3 h-3 rounded-full bg-indigo-600"></div> Revenue
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-red-500">
-                      <div className="w-3 h-3 rounded-full bg-red-400"></div> Expenses
-                  </div>
-              </div>
-
-              <div className="h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                          <defs>
-                              <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor={premiumColors.primary.DEFAULT} stopOpacity={0.1}/>
-                                  <stop offset="95%" stopColor={premiumColors.primary.DEFAULT} stopOpacity={0}/>
-                              </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                          <XAxis 
-                            dataKey="name" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 10, fill: '#94a3b8' }} 
-                            dy={10}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 10, fill: '#94a3b8' }}
-                          />
-                          <Tooltip 
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="revenue" 
-                            stroke={premiumColors.primary.DEFAULT} 
-                            strokeWidth={3}
-                            fillOpacity={1} 
-                            fill="url(#colorRev)" 
-                            animationDuration={2000}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="expenses" 
-                            stroke="#f87171" 
-                            strokeWidth={3}
-                            fillOpacity={0}
-                            strokeDasharray="5 5"
-                            animationDuration={2000}
-                          />
-                      </AreaChart>
-                  </ResponsiveContainer>
-              </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col cursor-pointer"
-            onClick={() => navigate('/crm/cars/all')}
-          >
-              <h3 className="text-lg font-bold text-gray-800 mb-2">Fleet Popularity</h3>
-              <p className="text-xs text-gray-400 mb-6">Booking distribution by car type</p>
-              
-              <div className="flex-1 flex flex-col justify-center items-center">
-                  <div className="h-64 w-full relative">
-                      <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                              <Pie
-                                  data={FLEET_DISTRIBUTION}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={60}
-                                  outerRadius={80}
-                                  paddingAngle={5}
-                                  dataKey="value"
-                                  animationDuration={1500}
-                              >
-                                  {FLEET_DISTRIBUTION.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                              </Pie>
-                              <Tooltip />
-                          </PieChart>
-                      </ResponsiveContainer>
-                      {/* Center Text for Donut */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-2xl font-bold text-gray-800">1.2K</span>
-                          <span className="text-[10px] uppercase font-bold text-gray-400">Bookings</span>
-                      </div>
-                  </div>
-                  
-                  <div className="w-full space-y-3 mt-6">
-                      {FLEET_DISTRIBUTION.map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx] }}></div>
-                                  <span className="text-xs font-semibold text-gray-600">{item.name}</span>
-                              </div>
-                              <span className="text-xs font-bold text-gray-800">{item.value}%</span>
-                          </div>
-                      ))}
-                  </div>
-              </div>
-          </motion.div>
-      </section>
-
-      {/* 4. Recent Activity & Garage */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="font-semibold text-gray-800 mb-4">Recent Enquiries</h3>
-            <div className="space-y-4">
-               {RECENT_ENQUIRIES.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer" onClick={() => navigate('/crm/enquiries/all')}>
-                     <img src={item.img} alt={item.name} className="w-10 h-10 rounded-full object-cover border border-gray-100" />
-                     <div>
-                        <p className="font-medium text-gray-800">{item.name}</p>
-                        <p className="text-xs text-gray-500">{item.action} • {item.time}</p>
-                     </div>
-                     <span 
-                        className="ml-auto text-xs font-semibold px-2 py-1 rounded"
-                        style={{ backgroundColor: rgba(premiumColors.primary.DEFAULT, 0.1), color: premiumColors.primary.DEFAULT }}
-                     >
-                        {item.type === 'New' ? 'New Lead' : item.type}
-                     </span>
-                  </div>
-               ))}
-               <button 
-                  onClick={() => navigate('/crm/enquiries/all')}
-                  className="w-full py-2 text-center text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors mt-2"
-               >
-                  View All Enquiries
-               </button>
+      {/* Bottom Section: Quick Actions & Recent Enquiries */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Quick Actions */}
+        <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-2 mb-8">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <MdArrowForward />
             </div>
-         </div>
-         
-         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="font-semibold text-gray-800 mb-4">Garage Status</h3>
-             <div className="space-y-4 cursor-pointer" onClick={() => navigate('/crm/garage/active')}>
-               <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Active Repairs</span>
-                  <span className="font-bold text-gray-800">3 Cars</span>
-               </div>
-               <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className="bg-orange-500 h-2 rounded-full" style={{ width: '30%' }}></div>
-               </div>
-               <div className="flex justify-between items-center mt-2">
-                  <p className="text-xs text-gray-500">Est. Cost: Rs. 12,000</p>
-                  <button className="text-xs font-semibold hover:underline" style={{ color: premiumColors.primary.DEFAULT }} onClick={(e) => { e.stopPropagation(); navigate('/crm/garage/active'); }}>View Details</button>
-               </div>
-            </div>
-         </div>
-      </section>
+            <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            {[
+              { label: 'New Lead', icon: <MdPersonAdd />, color: 'bg-indigo-50 text-indigo-600', path: '/crm/enquiries/new' },
+              { label: 'Staff Directory', icon: <MdPeople />, color: 'bg-purple-50 text-purple-600', path: '/crm/staff/directory' },
+              { label: 'Vendors', icon: <MdArrowForward />, color: 'bg-orange-50 text-orange-600', path: '/crm/vendors/all' },
+              { label: 'Performance', icon: <MdShowChart />, color: 'bg-emerald-50 text-emerald-600', path: '/crm/staff/performance' },
+              { label: 'Staff Tasks', icon: <MdArrowForward />, color: 'bg-blue-50 text-blue-600', path: '/crm/staff/tasks' },
+              { label: 'Garages', icon: <MdBuild />, color: 'bg-rose-50 text-rose-600', path: '/crm/garage/all' },
+            ].map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => navigate(item.path)}
+                className="flex flex-col items-center gap-3 p-4 rounded-2xl border border-gray-50 hover:bg-gray-50 hover:shadow-md transition-all group"
+              >
+                <div className={`w-12 h-12 rounded-xl ${item.color} flex items-center justify-center text-2xl transition-transform group-hover:scale-110`}>
+                  {item.icon}
+                </div>
+                <span className="text-xs font-bold text-gray-700">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Enquiries */}
+        <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-gray-900">Recent Enquiries</h3>
+            <button
+              onClick={() => navigate('/crm/enquiries/all')}
+              className="text-blue-600 text-xs font-black uppercase tracking-wider flex items-center gap-1 hover:underline"
+            >
+              View All <MdArrowForward />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {recentEnquiries.map((enq, idx) => (
+              <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl transition-all cursor-pointer border border-transparent hover:border-gray-100">
+                <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-white shadow-sm flex items-center justify-center text-gray-500 font-black text-lg">
+                  {enq.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900 truncate">{enq.name}</p>
+                  <p className="text-xs text-gray-400 font-medium truncate">{enq.action}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-gray-400 font-bold mb-1">Recently</p>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${enq.status === 'New' ? 'bg-blue-50 text-blue-600' :
+                      enq.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
+                        enq.status === 'In Progress' ? 'bg-orange-50 text-orange-600' :
+                          'bg-gray-50 text-gray-600'
+                    }`}>
+                    {enq.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

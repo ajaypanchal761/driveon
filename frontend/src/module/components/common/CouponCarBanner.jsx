@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { commonService } from '../../../services/common.service';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL } from '../../../config/api';
 
 const CouponCarBanner = ({ onDataAvailability }) => {
     const [coupons, setCoupons] = useState([]);
@@ -101,7 +102,7 @@ const CouponCarBanner = ({ onDataAvailability }) => {
                                                     if (src.startsWith('http') || src.startsWith('data:')) return src;
 
                                                     // Prepend base URL for relative paths
-                                                    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+                                                    const base = API_BASE_URL || 'http://localhost:5000';
                                                     return `${base}${src.startsWith('/') ? '' : '/'}${src}`;
                                                 }
                                                 return '/placeholder-car.png';

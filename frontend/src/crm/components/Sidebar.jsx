@@ -34,6 +34,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   const menuItems = [
     {
+      id: 'dashboard',
+      path: '/crm/dashboard',
+      name: 'Dashboard',
+      icon: <MdDashboard />
+    },
+    {
       name: 'Enquiries',
       icon: <MdPeople />,
       id: 'Enquiries',
@@ -228,7 +234,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
             return (
               <NavLink
-                key={item.path}
+                key={item.id || item.path}
                 to={item.path}
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3 rounded-xl transition-all duration-200 group
