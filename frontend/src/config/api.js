@@ -6,45 +6,50 @@
 // Base URL for backend API
 // Priority: 1. Environment variable, 2. Production URL, 3. Localhost (for development)
 const getApiBaseUrl = () => {
-  // Check if environment variable is set and is a valid URL (contains ://)
-  if (import.meta.env.VITE_API_BASE_URL) {
-    const envUrl = import.meta.env.VITE_API_BASE_URL.trim();
-    if (envUrl && envUrl.includes('://') && envUrl.length > 10) {
-      console.log('🔗 Using API URL from environment:', envUrl);
-      return envUrl;
+  // 1. Check environment variable
+  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  // Strict check: must be a full URL and not just "https" or "https://"
+  if (envUrl && envUrl.includes('://') && envUrl.length > 12) {
+    return envUrl;
+  }
+
+  // 2. Check if running on localhost
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5001/api';
     }
   }
 
-  // Check if running on localhost
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    console.log('🔗 Using Localhost API URL: http://localhost:5001/api');
-    return 'http://localhost:5001/api';
+  // 3. Default Production Fallback (Render or your Contabo domain)
+  // If we are on driveoncar.co.in, we should ideally use that as base
+  if (typeof window !== 'undefined' && window.location.origin.includes('driveoncar.co.in')) {
+    return `${window.location.origin}/api`;
   }
 
-  // Use production backend by default
-  const productionUrl = 'https://driveon-19hg.onrender.com/api';
-  console.log('🔗 Using production API URL:', productionUrl);
-  return productionUrl;
+  return 'https://driveon-19hg.onrender.com/api';
 };
 
 /**
  * Get Socket.IO server URL from API base URL
- * Removes /api suffix and returns the base server URL
  */
 export const getSocketUrl = () => {
   const apiUrl = getApiBaseUrl();
-  let socketUrl = apiUrl.replace('/api', '');
 
-  // Remove trailing slash if present
-  socketUrl = socketUrl.replace(/\/$/, '');
-
-  // If it's a full URL, use it; otherwise construct it
-  if (socketUrl.startsWith('http')) {
-    return socketUrl;
+  // If apiUrl is somehow still invalid, use window origin
+  if (!apiUrl || apiUrl.length < 10 || !apiUrl.includes('://')) {
+    return typeof window !== 'undefined' ? window.location.origin : '';
   }
 
-  // Fallback to current origin
-  return window.location.origin;
+  let socketUrl = apiUrl.replace('/api', '');
+  socketUrl = socketUrl.replace(/\/$/, '');
+
+  // CRITICAL: Ensure we don't return just "https" or something broken
+  if (socketUrl === 'https:/' || socketUrl === 'https' || socketUrl === 'http:/' || socketUrl === 'http') {
+    return typeof window !== 'undefined' ? window.location.origin : '';
+  }
+
+  return socketUrl;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

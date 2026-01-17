@@ -53,12 +53,13 @@ const TrackingPage = () => {
     }
 
     socketRef.current = io(SOCKET_URL, {
-      transports: ['polling', 'websocket'], // Allow polling fallback for better compatibility
+      transports: ['websocket', 'polling'], // Prioritize websocket
+      withCredentials: true, // Required for CORS when backend has credentials:true
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
-      timeout: 20000, // 20 second connection timeout
-      forceNew: false, // Reuse existing connection if available
+      timeout: 20000,
+      forceNew: false,
       auth: {
         token: adminToken,
       },
