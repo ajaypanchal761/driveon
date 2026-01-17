@@ -171,7 +171,10 @@ const EmployeeHomePage = () => {
     }
   };
 
-  const { user } = useSelector(state => state.user);
+  const { user, isInitializing } = useSelector(state => ({
+    user: state.user.user,
+    isInitializing: state.auth.isInitializing
+  }));
   const [targetsData, setTargetsData] = useState({
     daily: { total: 0, current: 0 },
     highPriority: { total: 0, current: 0 },
@@ -270,6 +273,18 @@ const EmployeeHomePage = () => {
       { id: 1, title: "Candidate Management", subtitle: "For - Zoho Project", progress: 88, due: "June 6, 2022" },
     ]
   };
+
+  if (isInitializing || !user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F7FA] p-4">
+        <div
+          className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mb-4"
+          style={{ borderColor: THEME_COLOR }}
+        ></div>
+        <p className="text-[#1C205C] font-medium">Initializing...</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div

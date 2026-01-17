@@ -17,7 +17,8 @@ const ProfilePage = () => {
         navigate('/employee/login');
     };
 
-    const userData = useSelector(state => state.user.user);
+    const { user: userData } = useSelector(state => state.user);
+    const { isInitializing } = useSelector(state => state.auth);
 
     // Fallback/Default data if backend data is missing structure
     const user = {
@@ -86,6 +87,19 @@ const ProfilePage = () => {
 
         fetchData();
     }, [userData]);
+
+    // Show loading state while initializing or if user data is still being fetched
+    if (isInitializing || !userData) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F7FA] p-4">
+                <div
+                    className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mb-4"
+                    style={{ borderColor: '#1C205C' }}
+                ></div>
+                <p className="text-[#1C205C] font-medium">Loading profile...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen overflow-y-auto bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100">
