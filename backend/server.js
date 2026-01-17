@@ -49,6 +49,8 @@ app.use(
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:5000",
+      "https://driveoncar.co.in",
+      "https://www.driveoncar.co.in",
       process.env.FRONTEND_URL
     ].filter(Boolean),
     credentials: true,
@@ -101,6 +103,8 @@ const io = new Server(server, {
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:5000",
+      "https://driveoncar.co.in",
+      "https://www.driveoncar.co.in",
       process.env.FRONTEND_URL
     ].filter(Boolean),
     methods: ["GET", "POST"],
