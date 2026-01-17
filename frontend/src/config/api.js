@@ -4,39 +4,32 @@
  */
 
 // Base URL for backend API
-// Priority: 1. Environment variable, 2. Production URL, 3. Localhost (for development)
+// Priority: 1. Localhost (for development), 2. Valid Environment variable, 3. Production Fallback
 const getApiBaseUrl = () => {
-  // 1. HARD RULE: If we are on your live domain, ALWAYS use it.
-  // This bypasses any broken environment variables on the live server.
+  // 1. Check for localhost (Development)
   if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    if (origin.includes('driveoncar.co.in')) {
-      return `${origin}/api`;
-    }
-
-    // 2. Check for localhost
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:5001/api';
     }
   }
 
-  // 3. Check environment variable as a secondary option
-  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
-
-  // Strict Validation: Host cannot be "https" or "http"
-  try {
-    if (envUrl && envUrl.includes('://')) {
+  // 2. Check environment variable
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || "").trim();
+  if (envUrl && envUrl.includes('://')) {
+    try {
       const url = new URL(envUrl);
       const host = url.hostname.toLowerCase();
+      // Ignore broken/malformed env vars like "https"
       if (host !== 'https' && host !== 'http' && host !== 'undefined' && host.length > 3) {
         return envUrl;
       }
+    } catch (e) {
+      // Logic handled by fallback below
     }
-  } catch (e) {
-    // Invalid URL format
   }
 
-  // 4. Final Fallback
+  // 3. PRODUCTION FALLBACK
+  // Point to Render directly since your domain's /api proxy is not working (405 error)
   return 'https://driveon-19hg.onrender.com/api';
 };
 
@@ -70,8 +63,8 @@ export const SOCKET_URL = getSocketUrl();
 
 // Log for debugging in production (visible in console)
 if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+  console.log('📡 DriveOn API Initialized at:', API_BASE_URL);
   console.log('🚀 DriveOn Socket Initialized at:', SOCKET_URL);
 }
 
 export default API_BASE_URL;
-
