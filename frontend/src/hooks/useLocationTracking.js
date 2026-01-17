@@ -43,20 +43,19 @@ export const useLocationTracking = ({
       // Connect to Socket.IO server
       // Use polling first, then upgrade to websocket (better Firefox compatibility)
       socketRef.current = io(SOCKET_URL, {
-        transports: ['polling', 'websocket'], // Allow polling fallback for better compatibility
+        transports: ['websocket', 'polling'], // Prioritize websocket
         reconnection: true,
-        reconnectionDelay: 2000, // Increased delay to reduce spam
-        reconnectionAttempts: 3, // Reduced attempts to fail faster
-        timeout: 10000, // Reduced timeout to 10 seconds
-        forceNew: false, // Reuse existing connection if available
+        reconnectionDelay: 2000,
+        reconnectionAttempts: 3,
+        timeout: 10000,
+        forceNew: false,
         autoConnect: true,
-        // Suppress connection errors in console
-        withCredentials: false,
+        withCredentials: true, // Set to true for consistent CORS with backend
       });
 
       socketRef.current.on('connect', () => {
         console.log('📍 Location tracking socket connected');
-        
+
         // Register with server
         socketRef.current.emit('register', {
           role: userType,
@@ -94,9 +93,9 @@ export const useLocationTracking = ({
         if (import.meta.env.DEV) {
           console.error('❌ Socket connection error:', err);
         }
-        
+
         const errorMessage = err.message || 'Failed to connect to server';
-        
+
         // Suppress connection errors if server is not available
         // Don't show error to user unless they explicitly enabled tracking
         if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network') || errorMessage.includes('xhr poll error')) {
@@ -172,7 +171,7 @@ export const useLocationTracking = ({
         },
         (err) => {
           let errorMessage = 'Location access denied';
-          
+
           switch (err.code) {
             case err.PERMISSION_DENIED:
               console.error('❌ Geolocation error: Permission denied');
@@ -193,7 +192,7 @@ export const useLocationTracking = ({
               errorMessage = 'An unknown error occurred while getting location.';
               break;
           }
-          
+
           // Only set error and stop tracking for non-timeout errors
           if (err.code !== err.TIMEOUT) {
             setError(errorMessage);
