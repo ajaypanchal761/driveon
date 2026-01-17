@@ -55,10 +55,19 @@ const TrackingPage = () => {
     // SUPER FALLBACK: If SOCKET_URL is broken (like "https://https"), 
     // force it to the correct production backend.
     let finalSocketUrl = SOCKET_URL;
-    if (!finalSocketUrl || finalSocketUrl.includes('https://https') || finalSocketUrl === 'https') {
-      console.warn('⚠️ Malformed SOCKET_URL detected, using production fallback');
+
+    // Extra aggressive check: if hostname is literally 'https' or url contains it incorrectly
+    try {
+      const checkUrl = new URL(finalSocketUrl);
+      if (checkUrl.hostname === 'https' || checkUrl.hostname === 'undefined' || !checkUrl.hostname.includes('.')) {
+        throw new Error('Invalid hostname');
+      }
+    } catch (e) {
+      console.warn('⚠️ Malformed SOCKET_URL detected, using production fallback:', finalSocketUrl);
       finalSocketUrl = 'https://driveon-19hg.onrender.com';
     }
+
+    console.log('🔌 Attempting socket connection to:', finalSocketUrl);
 
     socketRef.current = io(finalSocketUrl, {
       transports: ['websocket', 'polling'], // Prioritize websocket
