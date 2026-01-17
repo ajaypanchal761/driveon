@@ -1,70 +1,164 @@
+// /**
+//  * API Configuration
+//  * Centralized base URL configuration for backend API calls
+//  */
+
+// // Base URL for backend API
+// // Priority: 1. Localhost (for development), 2. Valid Environment variable, 3. Production Fallback
+// const getApiBaseUrl = () => {
+//   // 1. Check for localhost (Development)
+//   if (typeof window !== 'undefined') {
+//     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+//       return 'http://localhost:5001/api';
+//     }
+//   }
+
+//   // 2. Check environment variable
+//   const envUrl = (import.meta.env.VITE_API_BASE_URL || "").trim();
+//   if (envUrl && envUrl.includes('://')) {
+//     try {
+//       const url = new URL(envUrl);
+//       const host = url.hostname.toLowerCase();
+//       // Ignore broken/malformed env vars like "https"
+//       if (host !== 'https' && host !== 'http' && host !== 'undefined' && host.length > 3) {
+//         return envUrl;
+//       }
+//     } catch (e) {
+//       // Logic handled by fallback below
+//     }
+//   }
+
+//   // 3. PRODUCTION FALLBACK
+//   // Point to Render directly since your domain's /api proxy is not working (405 error)
+//   return 'https://driveon-19hg.onrender.com/api';
+// };
+
+// /**
+//  * Get Socket.IO server URL from API base URL
+//  */
+// export const getSocketUrl = () => {
+//   const apiUrl = getApiBaseUrl();
+
+//   if (!apiUrl || !apiUrl.includes('://')) {
+//     return typeof window !== 'undefined' ? window.location.origin : 'https://driveoncar.co.in';
+//   }
+
+//   // Remove /api and trailing slashes
+//   let socketUrl = apiUrl.replace('/api', '').replace(/\/$/, '');
+
+//   // Final Safety: If the result is still just "https://https", use window origin
+//   try {
+//     const url = new URL(socketUrl);
+//     if (url.hostname.toLowerCase() === 'https' || url.hostname.toLowerCase() === 'http') {
+//       throw new Error('Malformed URL');
+//     }
+//     return socketUrl;
+//   } catch (e) {
+//     return typeof window !== 'undefined' ? window.location.origin : 'https://driveoncar.co.in';
+//   }
+// };
+
+// export const API_BASE_URL = getApiBaseUrl();
+// export const SOCKET_URL = getSocketUrl();
+
+// // Log for debugging in production (visible in console)
+// if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+//   console.log('📡 DriveOn API Initialized at:', API_BASE_URL);
+//   console.log('🚀 DriveOn Socket Initialized at:', SOCKET_URL);
+// }
+
+// export default API_BASE_URL;
+
 /**
  * API Configuration
  * Centralized base URL configuration for backend API calls
+ * ✅ Updated for safe Socket.IO URL
  */
 
-// Base URL for backend API
-// Priority: 1. Localhost (for development), 2. Valid Environment variable, 3. Production Fallback
+// --------------------
+// 1️⃣ Get Base URL for API
+// Priority: 
+// 1. Localhost (Dev)
+// 2. Environment Variable
+// 3. Production Fallback
+// --------------------
 const getApiBaseUrl = () => {
-  // 1. Check for localhost (Development)
+  // 1️⃣ Development localhost
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:5001/api';
     }
   }
 
-  // 2. Check environment variable
+  // 2️⃣ Environment Variable
   const envUrl = (import.meta.env.VITE_API_BASE_URL || "").trim();
   if (envUrl && envUrl.includes('://')) {
     try {
       const url = new URL(envUrl);
       const host = url.hostname.toLowerCase();
-      // Ignore broken/malformed env vars like "https"
+
+      // Ignore broken/malformed env vars like "https" or "http"
       if (host !== 'https' && host !== 'http' && host !== 'undefined' && host.length > 3) {
         return envUrl;
       }
     } catch (e) {
-      // Logic handled by fallback below
+      // malformed, fallback to production
     }
   }
 
-  // 3. PRODUCTION FALLBACK
-  // Point to Render directly since your domain's /api proxy is not working (405 error)
+  // 3️⃣ Production fallback
   return 'https://driveon-19hg.onrender.com/api';
 };
 
-/**
- * Get Socket.IO server URL from API base URL
- */
+// --------------------
+// 2️⃣ Get Socket.IO URL
+// Safe sanitization to prevent wss://https errors
+// --------------------
 export const getSocketUrl = () => {
   const apiUrl = getApiBaseUrl();
 
+  // If apiUrl invalid, fallback to window.origin or main domain
   if (!apiUrl || !apiUrl.includes('://')) {
-    return typeof window !== 'undefined' ? window.location.origin : 'https://driveoncar.co.in';
+    return typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://www.driveoncar.co.in';
   }
 
-  // Remove /api and trailing slashes
-  let socketUrl = apiUrl.replace('/api', '').replace(/\/$/, '');
+  // Remove /api at the end and trailing slashes
+  let socketUrl = apiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
 
-  // Final Safety: If the result is still just "https://https", use window origin
+  // Remove duplicate protocols like https://https://
+  socketUrl = socketUrl.replace(/^(https?:\/\/)+/, '$1');
+
+  // Validate final URL
   try {
     const url = new URL(socketUrl);
-    if (url.hostname.toLowerCase() === 'https' || url.hostname.toLowerCase() === 'http') {
-      throw new Error('Malformed URL');
+
+    // Prevent malformed hostnames like 'https' or 'http'
+    if (!url.hostname || ['https', 'http', 'undefined'].includes(url.hostname.toLowerCase())) {
+      throw new Error('Malformed hostname');
     }
-    return socketUrl;
+
+    return url.origin;
   } catch (e) {
-    return typeof window !== 'undefined' ? window.location.origin : 'https://driveoncar.co.in';
+    // Fallback safe
+    return typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://www.driveoncar.co.in';
   }
 };
 
+// --------------------
+// 3️⃣ Exports
+// --------------------
 export const API_BASE_URL = getApiBaseUrl();
 export const SOCKET_URL = getSocketUrl();
 
-// Log for debugging in production (visible in console)
+// Log for debugging in production (optional)
 if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
   console.log('📡 DriveOn API Initialized at:', API_BASE_URL);
   console.log('🚀 DriveOn Socket Initialized at:', SOCKET_URL);
 }
 
 export default API_BASE_URL;
+
