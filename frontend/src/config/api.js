@@ -6,24 +6,22 @@
 // Base URL for backend API
 // Priority: 1. Environment variable, 2. Production URL, 3. Localhost (for development)
 const getApiBaseUrl = () => {
-  // Check if environment variable is set
+  // Check if environment variable is set and is a valid URL (contains ://)
   if (import.meta.env.VITE_API_BASE_URL) {
     const envUrl = import.meta.env.VITE_API_BASE_URL.trim();
-    if (envUrl) {
+    if (envUrl && envUrl.includes('://') && envUrl.length > 10) {
       console.log('🔗 Using API URL from environment:', envUrl);
       return envUrl;
     }
   }
 
   // Check if running on localhost
-  // Backend port changed to 5001
   if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     console.log('🔗 Using Localhost API URL: http://localhost:5001/api');
     return 'http://localhost:5001/api';
   }
 
   // Use production backend by default
-  // For local development, set VITE_API_BASE_URL=http://localhost:5000/api in .env file
   const productionUrl = 'https://driveon-19hg.onrender.com/api';
   console.log('🔗 Using production API URL:', productionUrl);
   return productionUrl;
