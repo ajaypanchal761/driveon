@@ -18,11 +18,17 @@ import { colors } from "../theme/colors";
 const ModuleProfile1Page = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { user } = useAppSelector((state) => state.user);
+  const { user, isInitializing } = useAppSelector((state) => ({
+    user: state.user.user,
+    isInitializing: state.auth.isInitializing,
+  }));
   const { profileComplete, kycStatus, guarantor } = useAppSelector(
     (state) => state.user
   );
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+
+  // loading state
+  const [isFetchingLocal, setIsFetchingLocal] = useState(false);
 
   // Calculate profile completion percentage
   const profileCompletePercentage = user?.profileComplete ?? 0;
@@ -38,6 +44,7 @@ const ModuleProfile1Page = () => {
 
     const fetchUserProfile = async () => {
       try {
+        setIsFetchingLocal(true);
         const response = await userService.getProfile();
         const userData =
           response?.data?.user || response?.user || response?.data;
@@ -53,6 +60,8 @@ const ModuleProfile1Page = () => {
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
+      } finally {
+        setIsFetchingLocal(false);
       }
     };
 
@@ -81,7 +90,7 @@ const ModuleProfile1Page = () => {
     user?.profilePhoto && user.profilePhoto.trim() !== ""
       ? user.profilePhoto
       : null;
-  
+
   // Format user ID as "user-XXXX" where XXXX is last 4 characters of ObjectId
   const getFormattedUserId = () => {
     const id = user?._id || user?.id;
@@ -186,6 +195,22 @@ const ModuleProfile1Page = () => {
       path: "/terms",
     },
   ];
+
+  // Show loading state while initializing or fetching user
+  if (isInitializing || (isFetchingLocal && !user)) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-4"
+        style={{ backgroundColor: colors.backgroundPrimary || "#F1F2F4" }}
+      >
+        <div
+          className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mb-4"
+          style={{ borderColor: primaryColor }}
+        ></div>
+        <p className="text-gray-600 font-medium">Loading your profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -476,13 +501,13 @@ const ModuleProfile1Page = () => {
                 backgroundColor: guarantor?.verified
                   ? `${successColor}15`
                   : guarantor?.added
-                  ? `${primaryColor}15`
-                  : `${colors.backgroundIcon || "#e0e0e0"}15`,
+                    ? `${primaryColor}15`
+                    : `${colors.backgroundIcon || "#e0e0e0"}15`,
                 color: guarantor?.verified
                   ? successColor
                   : guarantor?.added
-                  ? primaryColor
-                  : colors.textSecondary,
+                    ? primaryColor
+                    : colors.textSecondary,
               }}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -492,8 +517,8 @@ const ModuleProfile1Page = () => {
               {guarantor?.verified
                 ? "Verified"
                 : guarantor?.added
-                ? "Added"
-                : "Not Added"}
+                  ? "Added"
+                  : "Not Added"}
             </motion.span>
           </div>
         </motion.div>
