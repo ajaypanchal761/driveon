@@ -7,11 +7,15 @@
 // Priority: 1. Environment variable, 2. Production URL, 3. Localhost (for development)
 const getApiBaseUrl = () => {
   // 1. Check environment variable
-  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
 
-  // Strict check: must be a full URL and not just "https" or "https://"
-  if (envUrl && envUrl.includes('://') && envUrl.length > 12) {
-    return envUrl;
+  // Valid URL check: must contain "://" and have a domain after it
+  if (envUrl.includes('://') && envUrl.split('://')[1]?.length > 5) {
+    // Make sure the host isn't just "https" or "http"
+    const host = envUrl.split('://')[1].split('/')[0];
+    if (host !== 'https' && host !== 'http' && host !== 'undefined') {
+      return envUrl;
+    }
   }
 
   // 2. Check if running on localhost
@@ -21,8 +25,7 @@ const getApiBaseUrl = () => {
     }
   }
 
-  // 3. Default Production Fallback (Render or your Contabo domain)
-  // If we are on driveoncar.co.in, we should ideally use that as base
+  // 3. Fallback for Contabo / Live Domain
   if (typeof window !== 'undefined' && window.location.origin.includes('driveoncar.co.in')) {
     return `${window.location.origin}/api`;
   }
@@ -41,15 +44,18 @@ export const getSocketUrl = () => {
     return typeof window !== 'undefined' ? window.location.origin : '';
   }
 
-  let socketUrl = apiUrl.replace('/api', '');
-  socketUrl = socketUrl.replace(/\/$/, '');
+  let socketUrl = apiUrl.replace('/api', '').replace(/\/$/, '');
 
-  // CRITICAL: Ensure we don't return just "https" or something broken
-  if (socketUrl === 'https:/' || socketUrl === 'https' || socketUrl === 'http:/' || socketUrl === 'http') {
+  // CRITICAL: Ensure we have a valid hostname (not just "https")
+  try {
+    const url = new URL(socketUrl);
+    if (url.hostname === 'https' || url.hostname === 'http' || !url.hostname || url.hostname === 'undefined') {
+      throw new Error('Invalid hostname');
+    }
+    return socketUrl;
+  } catch (e) {
     return typeof window !== 'undefined' ? window.location.origin : '';
   }
-
-  return socketUrl;
 };
 
 export const API_BASE_URL = getApiBaseUrl();
