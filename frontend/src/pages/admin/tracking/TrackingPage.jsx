@@ -52,7 +52,15 @@ const TrackingPage = () => {
       return;
     }
 
-    socketRef.current = io(SOCKET_URL, {
+    // SUPER FALLBACK: If SOCKET_URL is broken (like "https://https"), 
+    // force it to the correct production backend.
+    let finalSocketUrl = SOCKET_URL;
+    if (!finalSocketUrl || finalSocketUrl.includes('https://https') || finalSocketUrl === 'https') {
+      console.warn('⚠️ Malformed SOCKET_URL detected, using production fallback');
+      finalSocketUrl = 'https://driveon-19hg.onrender.com';
+    }
+
+    socketRef.current = io(finalSocketUrl, {
       transports: ['websocket', 'polling'], // Prioritize websocket
       withCredentials: true, // Required for CORS when backend has credentials:true
       reconnection: true,
