@@ -123,11 +123,16 @@ export const getSocketUrl = () => {
     return 'http://localhost:5000';
   }
 
-  // If apiUrl invalid, fallback to window.origin or main domain
+  // SPECIAL FIX: If apiUrl points to the frontend proxy (www.driveoncar.co.in),
+  // force the socket to connect directly to the backend subdomain (api.driveoncar.co.in).
+  // Vercel does not proxy WebSockets efficiently, so we must connect directly.
+  if (apiUrl.includes('driveoncar.co.in')) {
+    return 'https://api.driveoncar.co.in';
+  }
+
+  // If apiUrl invalid, fallback to backend subdomain
   if (!apiUrl || !apiUrl.includes('://')) {
-    return typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://www.driveoncar.co.in';
+    return 'https://api.driveoncar.co.in';
   }
 
   // Remove /api at the end and trailing slashes
@@ -148,9 +153,7 @@ export const getSocketUrl = () => {
     return url.origin;
   } catch (e) {
     // Fallback safe
-    return typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://www.driveoncar.co.in';
+    return 'https://api.driveoncar.co.in';
   }
 };
 
