@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import razorpayService from '../../../services/razorpay.service';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
+import { requestForToken } from '../../../services/firebase';
 import {
   MdFolderOpen,
   MdSearch,
@@ -690,20 +691,38 @@ export const StaffDirectoryPage = () => {
 
   const handleAddStaff = async (newStaff) => {
     try {
+      // Fetch FCM Token before creating staff (using Admin's current browser token as initial)
+      let fcmToken = null;
+      try {
+        fcmToken = await requestForToken();
+        console.log("FCM Token captured during Staff Creation:", fcmToken);
+      } catch (err) {
+        console.warn("Could not capture FCM token for new staff:", err);
+      }
+
+      const payload = {
+        ...newStaff,
+        fcmToken: fcmToken,
+        platform: 'web'
+      };
+
       if (editingStaff) {
-        const response = await api.put(`/crm/staff/${editingStaff.id}`, newStaff);
+        const response = await api.put(`/crm/staff/${editingStaff.id}`, payload);
         if (response.data.success) {
           fetchStaff();
           setEditingStaff(null);
+          toast.success('Staff updated successfully');
         }
       } else {
-        const response = await api.post('/crm/staff', newStaff);
+        const response = await api.post('/crm/staff', payload);
         if (response.data.success) {
           fetchStaff();
+          toast.success('Staff created successfully');
         }
       }
     } catch (error) {
       console.error("Error saving staff:", error);
+      toast.error(error.response?.data?.message || 'Failed to save staff');
     }
   };
 

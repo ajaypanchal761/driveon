@@ -37,9 +37,12 @@ api.interceptors.request.use(
     if (isStrictAdminRoute) {
       token = localStorage.getItem('adminToken');
     } else if (isCrmRoute) {
-      // For CRM, try admin token first, then fall back to user token
+      // For CRM, try admin token first, then staff token, then general auth tokens
       // This allows both Admins and Staff to access CRM endpoints
-      token = localStorage.getItem('adminToken') || store.getState().auth.token || localStorage.getItem('authToken');
+      token = localStorage.getItem('adminToken') ||
+        localStorage.getItem('staffToken') ||
+        store.getState().auth.token ||
+        localStorage.getItem('authToken');
     } else {
       const isEmployeeApp = window.location.pathname.startsWith('/employee');
       if (isEmployeeApp) {
@@ -107,7 +110,9 @@ api.interceptors.request.use(
         console.error('❌ No admin token found for protected admin route:', config.url);
         console.error('Available tokens:', {
           adminToken: !!localStorage.getItem('adminToken'),
+          staffToken: !!localStorage.getItem('staffToken'),
           authToken: !!localStorage.getItem('authToken'),
+          reduxToken: !!store.getState().auth.token,
         });
       } else {
         console.warn('No authentication token found for request:', config.url);

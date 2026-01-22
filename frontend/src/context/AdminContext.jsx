@@ -26,7 +26,7 @@ export const AdminProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('adminToken');
         const refreshToken = localStorage.getItem('adminRefreshToken');
-        
+
         if (token) {
           try {
             // Verify token by fetching admin profile
@@ -39,20 +39,20 @@ export const AdminProvider = ({ children }) => {
           } catch (profileError) {
             // If profile fetch fails, try to refresh token
             console.log('Profile fetch failed, attempting token refresh...');
-            
+
             if (refreshToken) {
               try {
                 // Try to refresh admin token
                 const refreshResponse = await adminService.refreshToken(refreshToken);
                 if (refreshResponse.success && refreshResponse.data) {
                   const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data;
-                  
+
                   // Store new tokens
                   localStorage.setItem('adminToken', newToken);
                   if (newRefreshToken) {
                     localStorage.setItem('adminRefreshToken', newRefreshToken);
                   }
-                  
+
                   // Retry profile fetch with new token
                   const retryResponse = await adminService.getProfile();
                   if (retryResponse.success && retryResponse.data?.admin) {
@@ -72,7 +72,7 @@ export const AdminProvider = ({ children }) => {
               }
             }
           }
-          
+
           // If we reach here, token verification failed
           // Don't clear tokens immediately - might be a network issue
           console.warn('Admin token verification failed, but keeping token for retry');
@@ -99,7 +99,7 @@ export const AdminProvider = ({ children }) => {
   /**
    * Admin login function - connects to backend
    */
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, fcmToken = null) => {
     setIsLoading(true);
     setError(null);
 
@@ -109,7 +109,7 @@ export const AdminProvider = ({ children }) => {
       }
 
       // Call backend API
-      const response = await adminService.login({ email, password });
+      const response = await adminService.login({ email, password, fcmToken, platform: 'web' });
 
       if (response.success && response.data) {
         const { token, refreshToken, admin } = response.data;
@@ -138,14 +138,14 @@ export const AdminProvider = ({ children }) => {
     } catch (err) {
       // Extract error message from response
       let errorMessage = 'Login failed. Please check your credentials.';
-      
+
       console.log('Admin login catch block:', {
         hasResponse: !!err.response,
         responseData: err.response?.data,
         responseMessage: err.response?.data?.message,
         errorMessage: err.message,
       });
-      
+
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
         // Filter out misleading "No token provided" error for login
@@ -156,18 +156,18 @@ export const AdminProvider = ({ children }) => {
         }
       } else if (err.message) {
         // Filter out confusing messages
-        if (!err.message.includes('No token provided') && 
-            !err.message.includes('authorization denied') &&
-            !err.message.includes('Request failed with status code')) {
+        if (!err.message.includes('No token provided') &&
+          !err.message.includes('authorization denied') &&
+          !err.message.includes('Request failed with status code')) {
           errorMessage = err.message;
         } else if (err.message.includes('No token provided') && err.config?.url?.includes('/admin/login')) {
           // For login, show a better error message
           errorMessage = 'Invalid email or password. Please check your credentials.';
         }
       }
-      
+
       console.log('Final error message to show:', errorMessage);
-      
+
       setError(errorMessage);
       setIsAuthenticated(false);
       setAdminUser(null);
@@ -222,7 +222,7 @@ export const AdminProvider = ({ children }) => {
     } catch (err) {
       // Extract error message from various possible formats
       let errorMessage = 'Signup failed. Please try again.';
-      
+
       // Check for backend error response
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -242,14 +242,14 @@ export const AdminProvider = ({ children }) => {
           errorMessage = err.message;
         }
       }
-      
+
       console.error('Admin signup error details:', {
         message: err.message,
         response: err.response?.data,
         status: err.response?.status,
         url: err.config?.url,
       });
-      
+
       setError(errorMessage);
       setIsAuthenticated(false);
       setAdminUser(null);

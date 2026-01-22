@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
 import GuarantorPoints from '../models/GuarantorPoints.js';
+import { sendPushNotification } from '../services/firebase.service.js';
 
 /**
  * Process referral signup completion
@@ -41,6 +42,35 @@ export const processReferralSignup = async (userId) => {
     referrer.points = (referrer.points || 0) + pointsForSignup;
     referrer.totalPointsEarned = (referrer.totalPointsEarned || 0) + pointsForSignup;
     await referrer.save();
+
+    // Send Push Notification to Referrer
+    try {
+      const notificationTitle = "Referral Bonus Earned! 🎉";
+      const notificationBody = `You earned ${pointsForSignup} points! Your friend ${user.name || 'a new user'} just signed up using your referral code.`;
+      
+      const payload = {
+        notification: {
+          title: notificationTitle,
+          body: notificationBody,
+        },
+        data: {
+          type: 'referral_bonus',
+          points: pointsForSignup.toString(),
+          source: 'signup',
+          referredUserId: user._id.toString(),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      };
+
+      // Send to both Web and Mobile
+      // We use fire-and-forget to not block the process
+      sendPushNotification(referrer._id, payload, false).catch(err => console.error('Error sending referral web notification:', err));
+      sendPushNotification(referrer._id, payload, true).catch(err => console.error('Error sending referral mobile notification:', err));
+      
+      console.log(`📣 Sent referral signup notification to ${referrer._id}`);
+    } catch (notifError) {
+      console.error('Error sending referral notification:', notifError);
+    }
 
     console.log(`✅ Referral signup processed:`);
     console.log(`   - User: ${user.name || user.email} (${userId})`);
@@ -105,6 +135,34 @@ export const processReferralTripCompletion = async (userId) => {
     referrer.points = (referrer.points || 0) + pointsForTrip;
     referrer.totalPointsEarned = (referrer.totalPointsEarned || 0) + pointsForTrip;
     await referrer.save();
+
+    // Send Push Notification to Referrer
+    try {
+      const notificationTitle = "Referral Bonus Earned! 🚗";
+      const notificationBody = `You earned ${pointsForTrip} points! Your friend ${user.name || 'a new user'} completed their first trip.`;
+      
+      const payload = {
+        notification: {
+          title: notificationTitle,
+          body: notificationBody,
+        },
+        data: {
+          type: 'referral_bonus',
+          points: pointsForTrip.toString(),
+          source: 'trip_completion',
+          referredUserId: user._id.toString(),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      };
+
+      // Send to both Web and Mobile
+      sendPushNotification(referrer._id, payload, false).catch(err => console.error('Error sending referral web notification:', err));
+      sendPushNotification(referrer._id, payload, true).catch(err => console.error('Error sending referral mobile notification:', err));
+      
+      console.log(`📣 Sent referral trip completion notification to ${referrer._id}`);
+    } catch (notifError) {
+      console.error('Error sending referral notification:', notifError);
+    }
 
     console.log(`✅ Referral trip completion processed:`);
     console.log(`   - User: ${user.name || user.email} (${userId})`);

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { colors } from "../../../module/theme/colors";
 import Card from "../../../components/common/Card";
 import AdminCustomSelect from "../../../components/admin/common/AdminCustomSelect";
+import toastUtils from '../../../config/toast';
+import { onMessageListener } from "../../../services/firebase";
 
 /**
  * KYC List Page
@@ -40,6 +42,16 @@ const KYCListPage = () => {
     userType: "all", // all, regular, guarantor, owner
     submissionDate: "all", // all, today, week, month
   });
+
+  // Listen for notifications
+  useEffect(() => {
+    onMessageListener()
+      .then((payload) => {
+        toastUtils.info(`🔔 KYC Alert: ${payload.notification.title}`);
+        console.log("KYC Notification:", payload);
+      })
+      .catch((err) => console.log("failed: ", err));
+  }, []);
 
   // Mock KYC data
   useEffect(() => {
@@ -611,11 +623,10 @@ const KYCListPage = () => {
                         DigiLocker
                       </label>
                       <p
-                        className={`text-sm font-medium ${
-                          kyc.digiLockerVerified
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
+                        className={`text-sm font-medium ${kyc.digiLockerVerified
+                          ? "text-green-600"
+                          : "text-red-600"
+                          }`}
                       >
                         {kyc.digiLockerVerified ? "Verified" : "Not Verified"}
                       </p>
@@ -828,8 +839,8 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
                   {kyc.documentType === "aadhaar"
                     ? "Aadhaar"
                     : kyc.documentType === "pan"
-                    ? "PAN"
-                    : "Driving License"}
+                      ? "PAN"
+                      : "Driving License"}
                 </p>
               </div>
               <div>
@@ -845,9 +856,8 @@ const KYCDetailModal = ({ kyc, onClose, onApprove, onReject }) => {
                   DigiLocker Status
                 </label>
                 <p
-                  className={`text-sm font-medium ${
-                    kyc.digiLockerVerified ? "text-green-600" : "text-red-600"
-                  }`}
+                  className={`text-sm font-medium ${kyc.digiLockerVerified ? "text-green-600" : "text-red-600"
+                    }`}
                 >
                   {kyc.digiLockerVerified ? "Verified ✓" : "Not Verified ✗"}
                 </p>

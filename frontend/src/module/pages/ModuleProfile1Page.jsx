@@ -18,14 +18,13 @@ import { colors } from "../theme/colors";
 const ModuleProfile1Page = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { user, isInitializing } = useAppSelector((state) => ({
-    user: state.user.user,
-    isInitializing: state.auth.isInitializing,
-  }));
+  const user = useAppSelector((state) => state.user.user);
+  const isInitializing = useAppSelector((state) => state.auth.isInitializing);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+
   const { profileComplete, kycStatus, guarantor } = useAppSelector(
     (state) => state.user
   );
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
 
   // loading state
   const [isFetchingLocal, setIsFetchingLocal] = useState(false);
@@ -35,6 +34,13 @@ const ModuleProfile1Page = () => {
   const isProfileFullyComplete = profileCompletePercentage >= 100;
 
   const [imageError, setImageError] = useState(false);
+
+  // Handle redirect if not authenticated
+  useEffect(() => {
+    if (!isInitializing && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [isInitializing, isAuthenticated, navigate]);
 
   // Fetch user profile data when component mounts
   useEffect(() => {
@@ -60,6 +66,8 @@ const ModuleProfile1Page = () => {
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
+        // If profile fetch fails with 401, logic elsewhere (interceptor) usually handles logout
+        // or we can handle it here if needed, but for now we trust global state
       } finally {
         setIsFetchingLocal(false);
       }
@@ -212,9 +220,9 @@ const ModuleProfile1Page = () => {
     );
   }
 
-  // If initialization is complete and user is not authenticated, redirect to login
+  // If initialization is complete and user is not authenticated, prevent render
+  // Redirect handled by useEffect
   if (!isInitializing && !isAuthenticated) {
-    navigate("/login", { replace: true });
     return null;
   }
 

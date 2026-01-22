@@ -7,6 +7,7 @@ import { Button, Input } from '../../components/common';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
+import { requestForToken } from '../../services/firebase';
 
 /**
  * Login Schema Validation - OTP Based
@@ -44,7 +45,7 @@ const LoginPage = () => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -66,6 +67,13 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
+      let fcmToken = null;
+      try {
+        fcmToken = await requestForToken();
+      } catch (err) {
+        console.log('Error fetching FCM token:', err);
+      }
+
       // Send OTP for login
       const response = await authService.sendLoginOTP({
         emailOrPhone: data.emailOrPhone,
@@ -74,38 +82,39 @@ const LoginPage = () => {
       console.log('Login OTP Response:', response);
 
       toastUtils.success('OTP sent successfully!');
-      
+
       // Navigate to OTP verification
       navigate('/verify-otp', {
         state: {
           emailOrPhone: data.emailOrPhone,
           type: 'login',
           from: from,
+          fcmToken: fcmToken,
         },
         replace: true,
       });
     } catch (error) {
       // Extract error message from various possible formats
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.response?.data?.error || 
-        error.message || 
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
         'Failed to send OTP. Please try again.';
-      
+
       // Check if it's user not found error (expected error, don't log to console)
-      const isUserNotFound = errorMessage.toLowerCase().includes('user not found') || 
-                            errorMessage.toLowerCase().includes('signup first') ||
-                            (error.response?.status === 400 && error.response?.data?.message?.toLowerCase().includes('user not found'));
-      
+      const isUserNotFound = errorMessage.toLowerCase().includes('user not found') ||
+        errorMessage.toLowerCase().includes('signup first') ||
+        (error.response?.status === 400 && error.response?.data?.message?.toLowerCase().includes('user not found'));
+
       // Only log unexpected errors to console
       if (!isUserNotFound) {
         console.error('Login OTP Error:', error);
         console.error('Error Response:', error.response);
         console.error('Error Data:', error.response?.data);
       }
-      
+
       toastUtils.error(errorMessage);
-      
+
       // Don't navigate to OTP page if user not found - stay on login page
       // Only navigate if it's a different error (like network issue) or in mock mode
       if (!isUserNotFound) {
@@ -115,6 +124,7 @@ const LoginPage = () => {
             emailOrPhone: data.emailOrPhone,
             type: 'login',
             from: from,
+            fcmToken: fcmToken,
           },
           replace: true,
         });
@@ -126,9 +136,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center px-4"
-      style={{ 
+      style={{
         backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,

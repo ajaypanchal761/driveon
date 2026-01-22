@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE: '/user/profile',
     KYC_STATUS: '/user/kyc-status',
     UPLOAD_PHOTO: '/user/upload-photo',
+    UPLOAD_RC_DOCUMENT: '/user/upload-rc-document',
     CHANGE_PASSWORD: '/user/change-password',
     GUARANTOR_REQUESTS: '/user/guarantor-requests',
     GUARANTOR_POINTS: '/user/guarantor-points',
@@ -77,6 +78,11 @@ export const API_ENDPOINTS = {
     ADMIN_GET_TICKET: '/admin/tickets',
     ADMIN_UPDATE_STATUS: '/admin/tickets',
     ADMIN_ADD_RESPONSE: '/admin/tickets',
+  },
+  NOTIFICATIONS: {
+    GET_ALL: '/notifications',
+    MARK_READ: '/notifications', // + /:id/read
+    MARK_ALL_READ: '/notifications/read-all',
   },
 };
 

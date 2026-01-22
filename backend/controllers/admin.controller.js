@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Car from '../models/Car.js';
 import Booking from '../models/Booking.js';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
+import { sendPushNotification, sendPushToToken } from '../services/firebase.service.js';
 
 /**
  * Format user ID to USER001 format (same as frontend)
@@ -48,7 +49,7 @@ export const adminSignup = async (req, res) => {
 
     // Check if admin with this email already exists
     const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
-    
+
     if (existingAdmin) {
       return res.status(400).json({
         success: false,
@@ -123,8 +124,8 @@ export const adminLogin = async (req, res) => {
     console.log('Body:', { email: req.body?.email, hasPassword: !!req.body?.password });
     console.log('Headers:', { hasAuth: !!req.headers.authorization });
     console.log('========================================\n');
-    
-    const { email, password } = req.body;
+
+    const { email, password, fcmToken, platform } = req.body;
 
     // Validation
     if (!email || !password) {
@@ -138,7 +139,7 @@ export const adminLogin = async (req, res) => {
     console.log('🔍 Looking for admin with email:', email.toLowerCase().trim());
 
     // Find admin with password field
-    const admin = await Admin.findOne({ 
+    const admin = await Admin.findOne({
       email: email.toLowerCase().trim()
     }).select('+password'); // Include password field
 
@@ -182,7 +183,20 @@ export const adminLogin = async (req, res) => {
 
     // Update last login
     const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for']?.split(',')[0];
-    await admin.updateLastLogin(clientIP);
+    admin.lastLogin = new Date();
+    admin.lastLoginIP = clientIP;
+
+    // Save FCM Token if present
+    if (fcmToken) {
+      if (platform === 'mobile') {
+        admin.fcmTokenMobile = fcmToken;
+      } else {
+        admin.fcmToken = fcmToken;
+      }
+      console.log(`✅ Admin FCM Token updated for ${admin.name} [${platform || 'web'}]`);
+    }
+
+    await admin.save({ validateBeforeSave: false }); // One save call for both lastLogin and FCM
 
     // Generate tokens (access token with 24h expiry, refresh token with 7d expiry)
     const tokens = generateAdminTokenPair(admin._id.toString());
@@ -434,32 +448,32 @@ export const getAllUsers = async (req, res) => {
     // Calculate profile completion for each user
     const usersWithCompletion = users.map(user => {
       const userObj = user.toObject();
-      
+
       // Add id field for frontend compatibility
       userObj.id = userObj._id;
-      
+
       // Calculate KYC status
       if (userObj.isPhoneVerified && userObj.isEmailVerified) {
         userObj.kycStatus = 'verified';
       } else {
         userObj.kycStatus = 'pending';
       }
-      
+
       // Ensure accountStatus has a default value
       if (!userObj.accountStatus) {
         userObj.accountStatus = 'active';
       }
-      
+
       // Calculate profile completion
       const fields = ['name', 'email', 'phone', 'age', 'gender', 'address', 'profilePhoto'];
       let completedFields = 0;
-      
+
       fields.forEach(field => {
         if (userObj[field] !== undefined && userObj[field] !== null && userObj[field] !== '') {
           completedFields++;
         }
       });
-      
+
       userObj.profileCompletion = Math.round((completedFields / fields.length) * 100);
       return userObj;
     });
@@ -648,7 +662,7 @@ export const getDashboardStats = async (req, res) => {
     const activeTrips = activeBookings;
 
     // Get additional stats
-    const totalActiveUsers = await User.countDocuments({ 
+    const totalActiveUsers = await User.countDocuments({
       isActive: true,
       accountStatus: 'active',
     });
@@ -744,7 +758,7 @@ export const updateSystemSettings = async (req, res) => {
     // For now, we'll just return success
     // In future, you can store these in a database or environment variables
     // You could create a Settings model or use a config file
-    
+
     res.status(200).json({
       success: true,
       message: 'System settings updated successfully',
@@ -794,15 +808,15 @@ export const getUserById = async (req, res) => {
         const match = trimmedId.match(/^user-?([0-9a-fA-F]+)$/i);
         if (match) {
           const suffix = match[1].toLowerCase();
-          
+
           // If suffix is less than 4 characters, pad it (though typically it should be 4)
           // If more than 4, take last 4
-          const searchSuffix = suffix.length > 4 
-            ? suffix.slice(-4) 
+          const searchSuffix = suffix.length > 4
+            ? suffix.slice(-4)
             : suffix.padStart(4, '0');
-          
+
           console.log(`🔍 Searching for user with ObjectId ending in: ${searchSuffix} from input: ${trimmedId}`);
-          
+
           // Search for users whose ObjectId ends with the extracted suffix
           // MongoDB ObjectId is 24 hex characters, so we search by the last 4
           const allUsers = await User.find().select('-password -__v');
@@ -810,7 +824,7 @@ export const getUserById = async (req, res) => {
             const userId = u._id.toString().toLowerCase();
             return userId.endsWith(searchSuffix);
           }) || null;
-          
+
           if (user) {
             console.log(`✅ Found user with ObjectId ending in: ${searchSuffix}`);
           } else {
@@ -912,15 +926,15 @@ export const getUserById = async (req, res) => {
     // Calculate profile completion
     const fields = ['name', 'email', 'phone', 'age', 'gender', 'address', 'profilePhoto'];
     let completedFields = 0;
-    
+
     fields.forEach(field => {
       if (user[field] !== undefined && user[field] !== null && user[field] !== '') {
         completedFields++;
       }
     });
-    
+
     const profileCompletion = Math.round((completedFields / fields.length) * 100);
-    
+
     // Calculate KYC status
     let kycStatus = 'pending';
     if (user.isPhoneVerified && user.isEmailVerified) {
@@ -1037,7 +1051,7 @@ export const getAllReferrals = async (req, res) => {
     const referrals = await Promise.all(
       referredUsers.map(async (referredUser) => {
         const referrer = referredUser.referredBy;
-        
+
         // Count completed trips for the referred user
         const tripsCompleted = await Booking.countDocuments({
           user: referredUser._id,
@@ -1199,4 +1213,119 @@ export const updateReferralPoints = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Send manual push notification
+ * @route   POST /api/admin/send-notification
+ * @access  Private (Admin)
+ */
+// export const sendNotification = async (req, res) => {
+//   try {
+//     const { userId, token, title, body, data = {}, platform = 'web' } = req.body;
+
+//     if (!title || !body) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Title and body are required',
+//       });
+//     }
+
+//     let response;
+
+//     if (token) {
+//       // Send directly to the provided token
+//       console.log('📣 Sending notification to provided token...');
+//       response = await sendPushToToken(token, title, body, data);
+//     } else if (userId) {
+//       // Send based on userId (fetches from DB)
+//       console.log(`📣 Sending notification to userId: ${userId}`);
+//       const isMobile = platform === 'mobile';
+//       response = await sendPushNotification(userId, title, body, data, isMobile);
+//     } else {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Either userId or token is required',
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Notification sent successfully',
+//       data: {
+//         response,
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Send Notification Error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to send notification',
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+export const sendNotification = async (req, res) => {
+  try {
+    const {
+      userId,
+      token,
+      title,
+      body,
+      data = {},
+      platform = 'web', // 'web' | 'mobile'
+    } = req.body;
+
+    if (!title || !body) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and body are required',
+      });
+    }
+
+    // ✅ FINAL CORRECT PAYLOAD
+    const payload = {
+      notification: {
+        title: String(title),
+        body: String(body),
+      },
+      data: {
+        ...data,
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      },
+    };
+
+    let response;
+
+    if (token) {
+      console.log(`📣 Sending ${platform} notification to token...`);
+      response = await sendPushToToken(token, payload);
+    } else if (userId) {
+      console.log(`📣 Sending ${platform} notification to userId: ${userId}`);
+      const isMobile = platform === 'mobile';
+      response = await sendPushNotification(userId, payload, isMobile);
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Either userId or token is required',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Notification sent successfully',
+      data: { response },
+    });
+  } catch (error) {
+    console.error('Send Notification Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send notification',
+      error: error.message,
+    });
+  }
+};
+
 

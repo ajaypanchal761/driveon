@@ -8,6 +8,7 @@ import { connectDB } from "./config/database.js";
 import Location from "./models/Location.js";
 import User from "./models/User.js";
 import Staff from "./models/Staff.js";
+import "./services/firebase.service.js"; // Initialize Firebase Admin early
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +99,7 @@ import commonRoutes from "./routes/common.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import referralRoutes from "./routes/referral.routes.js";
 import crmRoutes from "./routes/crm.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 // Socket.IO Configuration
 // const io = new Server(server, {
@@ -298,6 +300,7 @@ app.use("/api/cars", carRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/common", commonRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api", supportRoutes);
 app.use("/api", authRoutes);

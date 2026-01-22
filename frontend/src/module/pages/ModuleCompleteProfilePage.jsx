@@ -33,6 +33,16 @@ const ModuleCompleteProfilePage = () => {
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [isSavingStep2, setIsSavingStep2] = useState(false);
   const fileInputRef = useRef(null);
+  const rcInputRef = useRef(null);
+  const [rcDocument, setRcDocument] = useState(null);
+  const [rcPreview, setRcPreview] = useState(user?.rcDocument || null);
+  const [isUploadingRc, setIsUploadingRc] = useState(false);
+
+  useEffect(() => {
+    if (user?.rcDocument) {
+      setRcPreview(user.rcDocument);
+    }
+  }, [user]);
 
   // Form state - Initialize with user data if available
   const [formData, setFormData] = useState(() => {
@@ -482,6 +492,54 @@ const ModuleCompleteProfilePage = () => {
     }, 1000);
   };
 
+  // Handle RC document upload
+  const handleRcChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toastUtils.error('Image size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toastUtils.error('Please select an image file');
+        return;
+      }
+      setRcDocument(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRcPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRcUpload = async () => {
+    if (!rcDocument) return;
+    setIsUploadingRc(true);
+    try {
+      const formData = new FormData();
+      formData.append('rcDocument', rcDocument);
+
+      const response = await userService.uploadRcDocument(formData);
+
+      const uploadedRcUrl = response.data?.rcDocument || response.data?.data?.rcDocument || response.rcDocument;
+      const userData = response.data?.user || response.data?.data?.user || response.user;
+
+      if (userData) {
+        dispatch(updateUser(userData));
+      } else if (uploadedRcUrl) {
+        dispatch(updateUser({ rcDocument: uploadedRcUrl }));
+      }
+
+      toastUtils.success('RC Document uploaded successfully!');
+    } catch (error) {
+      console.error('RC Upload Error:', error);
+      toastUtils.error('Failed to upload RC document');
+    } finally {
+      setIsUploadingRc(false);
+    }
+  };
+
   // Handle DigiLocker integration (placeholder)
   const handleDigiLockerConnect = (documentType) => {
     toastUtils.info(`${documentType} verification via DigiLocker will be available soon`);
@@ -772,21 +830,72 @@ const ModuleCompleteProfilePage = () => {
                 Verify your identity using DigiLocker. All documents are required for booking.
               </p>
 
-              {['Aadhaar', 'PAN', 'Driving License'].map((docType) => (
-                <div
-                  key={docType}
-                  className="p-4 rounded-xl border-2"
-                  style={{
-                    borderColor: colors.borderMedium,
-                    backgroundColor: colors.backgroundSecondary,
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="p-2 rounded-lg"
-                        style={{ backgroundColor: colors.backgroundPrimary }}
+              {/* Aadhaar */}
+              <div
+                className="p-4 rounded-xl border-2 mb-4"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="p-2 rounded-lg"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <svg
+                        className="w-6 h-6"
+                        style={{ color: colors.textPrimary }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
+                        Aadhaar
+                      </p>
+                      <p className="text-xs" style={{ color: colors.textSecondary }}>
+                        Verify via DigiLocker
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDigiLockerConnect('Aadhaar')}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm"
+                    style={{
+                      backgroundColor: colors.backgroundTertiary,
+                      color: colors.backgroundSecondary,
+                    }}
+                  >
+                    Connect
+                  </button>
+                </div>
+              </div>
+
+              {/* RC Document (Optional) */}
+              <div
+                className="p-4 rounded-xl border-2 mb-4"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="p-2 rounded-lg"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      {rcPreview ? (
+                        <div className="w-6 h-6 rounded overflow-hidden">
+                          <img src={rcPreview} alt="RC" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
                         <svg
                           className="w-6 h-6"
                           style={{ color: colors.textPrimary }}
@@ -794,37 +903,104 @@ const ModuleCompleteProfilePage = () => {
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
-                          {docType}
-                        </p>
-                        <p className="text-xs" style={{ color: colors.textSecondary }}>
-                          Verify via DigiLocker
-                        </p>
-                      </div>
+                      )}
                     </div>
+                    <div>
+                      <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
+                        Vehicle RC (Optional)
+                      </p>
+                      <p className="text-xs" style={{ color: colors.textSecondary }}>
+                        {rcPreview ? 'Uploaded' : 'Upload Vehicle Registration'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={rcInputRef}
+                    onChange={handleRcChange}
+                    className="hidden"
+                  />
+
+                  {rcDocument && !user?.rcDocument ? (
                     <button
                       type="button"
-                      onClick={() => handleDigiLockerConnect(docType)}
+                      onClick={handleRcUpload}
+                      disabled={isUploadingRc}
+                      className="px-4 py-2 rounded-lg font-semibold text-sm"
+                      style={{
+                        backgroundColor: colors.backgroundTertiary,
+                        color: colors.backgroundSecondary,
+                        opacity: isUploadingRc ? 0.7 : 1,
+                      }}
+                    >
+                      {isUploadingRc ? '...' : 'Upload'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => rcInputRef.current?.click()}
                       className="px-4 py-2 rounded-lg font-semibold text-sm"
                       style={{
                         backgroundColor: colors.backgroundTertiary,
                         color: colors.backgroundSecondary,
                       }}
                     >
-                      Connect
+                      {rcPreview ? 'Change' : 'Upload'}
                     </button>
-                  </div>
+                  )}
                 </div>
-              ))}
+              </div>
+
+              {/* Driving License */}
+              <div
+                className="p-4 rounded-xl border-2"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="p-2 rounded-lg"
+                      style={{ backgroundColor: colors.backgroundPrimary }}
+                    >
+                      <svg
+                        className="w-6 h-6"
+                        style={{ color: colors.textPrimary }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
+                        Driving License
+                      </p>
+                      <p className="text-xs" style={{ color: colors.textSecondary }}>
+                        Verify via DigiLocker
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDigiLockerConnect('Driving License')}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm"
+                    style={{
+                      backgroundColor: colors.backgroundTertiary,
+                      color: colors.backgroundSecondary,
+                    }}
+                  >
+                    Connect
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

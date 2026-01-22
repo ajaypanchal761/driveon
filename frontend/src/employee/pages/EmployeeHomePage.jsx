@@ -21,6 +21,8 @@ const GRADIENT_HEADER = "linear-gradient(135deg, #1C205C 0%, #0f1642 100%)";
 import { useEmployee } from '../../context/EmployeeContext';
 
 import { getCurrentPosition, getAddressFromCoordinates, watchPosition, clearWatch, updateUserLocation } from '../../services/location.service';
+import { requestForToken, onMessageListener } from '../../services/firebase';
+import toastUtils from '../../config/toast';
 
 const EmployeeHomePage = () => {
   const navigate = useNavigate();
@@ -35,6 +37,12 @@ const EmployeeHomePage = () => {
     formatTotalHours
   } = useEmployee();
   const [time, setTime] = useState(new Date());
+
+  // Get user data from Redux
+  const { user, isInitializing } = useSelector(state => ({
+    user: state.user.user,
+    isInitializing: state.auth.isInitializing
+  }));
 
   // Live Location State
   const [locationState, setLocationState] = useState({
@@ -145,6 +153,34 @@ const EmployeeHomePage = () => {
     }
   };
 
+  // FCM Notification Setup
+  useEffect(() => {
+    if (user && (user._id || user.id)) {
+      // Request and Save Token
+      requestForToken().then(async (token) => {
+        if (token) {
+          try {
+            await api.post('/auth/staff-fcm-token', {
+              fcmToken: token,
+              platform: 'web'
+            });
+            console.log("FCM Token saved for staff");
+          } catch (error) {
+            console.error("Error saving FCM token:", error);
+          }
+        }
+      });
+
+      // Listen for foreground messages
+      onMessageListener()
+        .then((payload) => {
+          toastUtils.info(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
+          console.log("Foreground Notification:", payload);
+        })
+        .catch((err) => console.log("failed: ", err));
+    }
+  }, [user]);
+
   const formatTime = (date) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
@@ -171,10 +207,6 @@ const EmployeeHomePage = () => {
     }
   };
 
-  const { user, isInitializing } = useSelector(state => ({
-    user: state.user.user,
-    isInitializing: state.auth.isInitializing
-  }));
   const [targetsData, setTargetsData] = useState({
     daily: { total: 0, current: 0 },
     highPriority: { total: 0, current: 0 },

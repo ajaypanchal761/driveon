@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema(
     profilePhoto: {
       type: String, // Cloudinary URL
     },
+    rcDocument: {
+      type: String, // Cloudinary URL
+      default: '',
+    },
     profileComplete: {
       type: Number,
       default: 0, // Percentage 0-100
@@ -124,6 +128,14 @@ const userSchema = new mongoose.Schema(
       select: false, // Don't include password in queries by default
       minlength: [6, 'Password must be at least 6 characters'],
     },
+    fcmToken: {
+      type: String,
+      default: null
+    },
+    fcmTokenMobile: {
+      type: String,
+      default: null
+    }
   },
   {
     timestamps: true,
@@ -137,16 +149,16 @@ userSchema.pre('save', async function (next) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
   }
-  
+
   // Generate referral code before saving (only for new users)
   if (this.isNew && !this.referralCode) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = 'DRIVE';
-    
+
     for (let i = 0; i < 6; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    
+
     // Check if code already exists
     const existingUser = await mongoose.model('User').findOne({ referralCode: code });
     if (!existingUser) {
@@ -157,7 +169,7 @@ userSchema.pre('save', async function (next) {
       this.referralCode = code;
     }
   }
-  
+
   // Generate guarantor ID before saving (only for new users)
   // Random generation similar to booking ID (GURN + timestamp + random chars)
   if (this.isNew && !this.guarantorId) {
@@ -165,14 +177,14 @@ userSchema.pre('save', async function (next) {
     let isUnique = false;
     let attempts = 0;
     const maxAttempts = 10;
-    
+
     // Try to generate a unique guarantorId with random format
     while (!isUnique && attempts < maxAttempts) {
       // Generate random guarantor ID: GURN + 6-digit timestamp + 3 random uppercase chars
       const timestamp = Date.now().toString().slice(-6);
       const random = Math.random().toString(36).substring(2, 5).toUpperCase();
       guarantorId = `GURN${timestamp}${random}`;
-      
+
       // Check if this guarantorId already exists
       const existing = await mongoose.model('User').findOne({ guarantorId });
       if (!existing) {
@@ -183,18 +195,18 @@ userSchema.pre('save', async function (next) {
         await new Promise(resolve => setTimeout(resolve, 10));
       }
     }
-    
+
     // If still not unique after max attempts, use more random ID
     if (!isUnique) {
       const timestamp = Date.now().toString().slice(-6);
       const random = Math.random().toString(36).substring(2, 6).toUpperCase();
       guarantorId = `GURN${timestamp}${random}`;
     }
-    
+
     this.guarantorId = guarantorId;
     console.log('✅ Generated guarantorId in pre-save hook:', this.guarantorId);
   }
-  
+
   next();
 });
 

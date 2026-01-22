@@ -83,9 +83,10 @@
 // 3. Production Fallback
 // --------------------
 const getApiBaseUrl = () => {
-  // 1️⃣ Development localhost
+  // 1️⃣ Development localhost check (Absolute priority)
   if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:5000/api';
     }
   }
@@ -97,12 +98,12 @@ const getApiBaseUrl = () => {
       const url = new URL(envUrl);
       const host = url.hostname.toLowerCase();
 
-      // Ignore broken/malformed env vars like "https" or "http"
+      // Ignore broken/malformed env vars
       if (host !== 'https' && host !== 'http' && host !== 'undefined' && host.length > 3) {
         return envUrl;
       }
     } catch (e) {
-      // malformed, fallback to production
+      // malformed
     }
   }
 
@@ -116,6 +117,11 @@ const getApiBaseUrl = () => {
 // --------------------
 export const getSocketUrl = () => {
   const apiUrl = getApiBaseUrl();
+
+  // If localhost, return localhost socket
+  if (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
+    return 'http://localhost:5000';
+  }
 
   // If apiUrl invalid, fallback to window.origin or main domain
   if (!apiUrl || !apiUrl.includes('://')) {

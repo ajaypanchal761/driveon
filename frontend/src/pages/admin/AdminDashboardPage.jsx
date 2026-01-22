@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { colors } from '../../module/theme/colors';
 import Card from '../../components/common/Card';
 import { adminService } from '../../services/admin.service';
+import { onMessageListener } from "../../services/firebase";
+import toastUtils from '../../config/toast';
 
 /**
  * Admin Dashboard Page
@@ -11,7 +13,7 @@ import { adminService } from '../../services/admin.service';
  */
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
-  
+
   // Dashboard data state (using useState)
   const [dashboardData, setDashboardData] = useState({
     loading: true,
@@ -31,6 +33,19 @@ const AdminDashboardPage = () => {
     userGrowth: [],
   });
 
+  // Listen for notifications
+  useEffect(() => {
+    onMessageListener()
+      .then((payload) => {
+        toastUtils.info(`🔔 Admin Alert: ${payload.notification.title}`);
+        console.log("Admin Notification:", payload);
+
+        // Refresh dashboard data on new notification if relevant
+        // fetchDashboardData(); 
+      })
+      .catch((err) => console.log("failed: ", err));
+  }, []);
+
   // Fetch dashboard data from API
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -42,7 +57,7 @@ const AdminDashboardPage = () => {
 
         if (statsResponse.success && statsResponse.data) {
           const stats = statsResponse.data.stats;
-          
+
           setDashboardData(prev => ({
             ...prev,
             loading: false,
@@ -63,7 +78,7 @@ const AdminDashboardPage = () => {
         setDashboardData(prev => ({ ...prev, loading: false }));
       }
     };
-    
+
     fetchDashboardData();
   }, []);
 
@@ -177,12 +192,12 @@ const AdminDashboardPage = () => {
 
   if (dashboardData.loading) {
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center"
         style={{ backgroundColor: colors.backgroundPrimary }}
       >
         <div className="text-center">
-          <div 
+          <div
             className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
             style={{ borderBottomColor: colors.backgroundTertiary }}
           ></div>
@@ -193,7 +208,7 @@ const AdminDashboardPage = () => {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen"
       style={{ backgroundColor: colors.backgroundPrimary }}
     >
@@ -225,19 +240,19 @@ const AdminDashboardPage = () => {
                     {stat.title}
                   </div>
                 </div>
-                
+
                 {/* Right Column: Number and Status */}
                 <div className="flex flex-col items-end justify-between flex-1 min-w-0">
                   <div className="text-lg md:text-xl font-bold text-right" style={{ color: stat.color }}>
                     {stat.value}
                   </div>
-                  <div 
+                  <div
                     className="text-xs font-medium whitespace-nowrap"
                     style={{
                       color: stat.changeType === 'positive' ? colors.success :
-                             stat.changeType === 'warning' ? colors.warning :
-                             stat.changeType === 'info' ? colors.info :
-                             stat.changeType === 'neutral' ? colors.textTertiary : colors.textSecondary
+                        stat.changeType === 'warning' ? colors.warning :
+                          stat.changeType === 'info' ? colors.info :
+                            stat.changeType === 'neutral' ? colors.textTertiary : colors.textSecondary
                     }}
                   >
                     {stat.change}
@@ -268,7 +283,7 @@ const AdminDashboardPage = () => {
                   <div
                     key={booking.id}
                     className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer"
-                    style={{ 
+                    style={{
                       backgroundColor: colors.backgroundLight,
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundIcon}
@@ -316,33 +331,33 @@ const AdminDashboardPage = () => {
             <div className="space-y-3">
               {dashboardData.pendingKYC.length > 0 ? (
                 dashboardData.pendingKYC.map((kyc) => (
-                <div
-                  key={kyc.id}
-                  className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer border-l-4"
-                  style={{ 
-                    borderLeftColor: colors.warning,
-                    backgroundColor: colors.lightGreen
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.lightGreenDark}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.lightGreen}
-                  onClick={() => navigate(`/admin/kyc/${kyc.id}`)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: colors.textPrimary }}>{kyc.userId}</p>
-                    <p className="text-xs capitalize" style={{ color: colors.textSecondary }}>{kyc.documentType}</p>
-                    <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>{kyc.time}</p>
-                  </div>
-                  <button
-                    className="ml-3 px-3 py-1 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: colors.backgroundTertiary }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/admin/kyc/${kyc.id}`);
+                  <div
+                    key={kyc.id}
+                    className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer border-l-4"
+                    style={{
+                      borderLeftColor: colors.warning,
+                      backgroundColor: colors.lightGreen
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.lightGreenDark}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.lightGreen}
+                    onClick={() => navigate(`/admin/kyc/${kyc.id}`)}
                   >
-                    Review
-                  </button>
-                </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium" style={{ color: colors.textPrimary }}>{kyc.userId}</p>
+                      <p className="text-xs capitalize" style={{ color: colors.textSecondary }}>{kyc.documentType}</p>
+                      <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>{kyc.time}</p>
+                    </div>
+                    <button
+                      className="ml-3 px-3 py-1 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
+                      style={{ backgroundColor: colors.backgroundTertiary }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/kyc/${kyc.id}`);
+                      }}
+                    >
+                      Review
+                    </button>
+                  </div>
                 ))
               ) : (
                 <div className="text-center py-8" style={{ color: colors.textSecondary }}>
@@ -367,33 +382,33 @@ const AdminDashboardPage = () => {
             <div className="space-y-3">
               {dashboardData.recentPayments.length > 0 ? (
                 dashboardData.recentPayments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer"
-                  style={{ 
-                    backgroundColor: colors.backgroundLight,
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundIcon}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
-                  onClick={() => navigate(`/admin/payments/${payment.id}`)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: colors.textPrimary }}>{payment.userId}</p>
-                    <p className="text-xs" style={{ color: colors.textSecondary }}>Booking: {payment.bookingId}</p>
-                    <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>{payment.time}</p>
+                  <div
+                    key={payment.id}
+                    className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer"
+                    style={{
+                      backgroundColor: colors.backgroundLight,
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundIcon}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
+                    onClick={() => navigate(`/admin/payments/${payment.id}`)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: colors.textPrimary }}>{payment.userId}</p>
+                      <p className="text-xs" style={{ color: colors.textSecondary }}>Booking: {payment.bookingId}</p>
+                      <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>{payment.time}</p>
+                    </div>
+                    <div className="flex flex-col items-end ml-3">
+                      <span className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+                        {formatCurrency(payment.amount)}
+                      </span>
+                      <span
+                        className="text-xs px-2 py-1 rounded-full text-white mt-1"
+                        style={{ backgroundColor: getStatusColor(payment.status) }}
+                      >
+                        {payment.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end ml-3">
-                    <span className="text-sm font-bold" style={{ color: colors.textPrimary }}>
-                      {formatCurrency(payment.amount)}
-                    </span>
-                    <span
-                      className="text-xs px-2 py-1 rounded-full text-white mt-1"
-                      style={{ backgroundColor: getStatusColor(payment.status) }}
-                    >
-                      {payment.status}
-                    </span>
-                  </div>
-                </div>
                 ))
               ) : (
                 <div className="text-center py-8" style={{ color: colors.textSecondary }}>

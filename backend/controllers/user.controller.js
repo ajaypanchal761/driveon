@@ -1,6 +1,57 @@
 import User from '../models/User.js';
 import Staff from '../models/Staff.js';
 import { uploadImage, isConfigured } from '../services/cloudinary.service.js';
+import Booking from '../models/Booking.js';
+import { sendPushNotification } from '../services/firebase.service.js';
+
+/**
+ * @desc    Send Returning Soon Notification
+ * @route   POST /api/user/notify-returning
+ * @access  Private
+ */
+export const sendReturningNotification = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    const booking = await Booking.findOne({ _id: bookingId, userId: req.user._id }).populate('carId');
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (user && user.fcmToken) {
+      const carName = booking.carId ? `${booking.carId.brand} ${booking.carId.model}` : 'Car';
+      const title = "Returning Soon ⏳";
+      const body = `Your ${carName} is returning in less than 2 hours. Please be on time!`;
+
+      await sendPushNotification(user.fcmToken, title, body, {
+        type: 'returning_soon',
+        bookingId: booking._id.toString(),
+        click_action: 'FLUTTER_NOTIFICATION_CLICK'
+      });
+
+      // Try to send to web token if exists (assuming field name, or rely on same field if shared)
+      // If separate web token exists (e.g. fcmTokenWeb), add here.
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification sent successfully',
+    });
+  } catch (error) {
+    console.error('Send returning notification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while sending notification',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
 
 /**
  * Calculate profile completion percentage
@@ -68,6 +119,7 @@ export const getProfile = async (req, res) => {
           gender: user.gender,
           address: user.address || '',
           profilePhoto: user.profilePhoto || '',
+          rcDocument: user.rcDocument || '',
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
@@ -484,3 +536,111 @@ export const updateLocation = async (req, res) => {
   }
 };
 
+
+
+/**
+ * @desc    Upload RC document
+ * @route   POST /api/user/upload-rc-document
+ * @access  Private
+ */
+export const uploadRcDocument = async (req, res) => {
+  try {
+    // Check if Cloudinary is configured
+    if (!isConfigured()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Image upload service not configured. Please contact administrator.',
+      });
+    }
+
+    // Check if file is provided (multer stores file in req.file)
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a RC document',
+      });
+    }
+
+    const file = req.file;
+
+    // Validate file type (already validated by multer, but double-check)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.',
+      });
+    }
+
+    // Validate file size (already validated by multer, but double-check)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'File size too large. Maximum size is 5MB.',
+      });
+    }
+
+    // Convert multer file to format expected by Cloudinary service
+    const fileForUpload = {
+      buffer: file.buffer,
+      mimetype: file.mimetype,
+      originalname: file.originalname,
+    };
+
+    // Upload to Cloudinary
+    const uploadResult = await uploadImage(fileForUpload, {
+      folder: 'driveon/rc-documents',
+      width: 1200,
+      crop: 'limit',
+    });
+
+    // Update user RC document
+    const user = await User.findById(req.user._id);
+
+    // Delete old RC document from Cloudinary if exists
+    if (user.rcDocument) {
+      try {
+        // Extract public_id from Cloudinary URL
+        const urlParts = user.rcDocument.split('/');
+        const uploadIndex = urlParts.findIndex(part => part === 'upload');
+        if (uploadIndex !== -1 && urlParts.length > uploadIndex + 2) {
+          const publicIdWithVersion = urlParts.slice(uploadIndex + 2).join('/');
+          const publicId = publicIdWithVersion.split('.')[0];
+          const { deleteImage } = await import('../services/cloudinary.service.js');
+          await deleteImage(publicId);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting old RC document:', deleteError);
+      }
+    }
+
+    user.rcDocument = uploadResult.secure_url;
+    // Don't update profileComplete for optional field unless requested
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'RC document uploaded successfully',
+      data: {
+        rcDocument: uploadResult.secure_url,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          profilePhoto: user.profilePhoto,
+          rcDocument: uploadResult.secure_url,
+          profileComplete: user.profileComplete,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Upload RC document error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while uploading RC document',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};

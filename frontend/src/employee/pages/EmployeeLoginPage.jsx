@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { setUser } from '../../store/slices/userSlice';
+import { requestForToken } from '../../services/firebase';
 
 const EmployeeLoginPage = () => {
   const navigate = useNavigate();
@@ -26,7 +27,27 @@ const EmployeeLoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/staff-login', formData);
+      // 1. Fetch FCM Token before login API
+      console.log("🔑 Attempting to fetch FCM Token for staff login...");
+      let fcmToken = null;
+      try {
+        // We await the token here. User might see a permission popup.
+        fcmToken = await requestForToken();
+        if (fcmToken) {
+          console.log("✅ Staff FCM Token captured:", fcmToken.substring(0, 10) + "...");
+        } else {
+          console.warn("⚠️ FCM Token not generated (Permission denied or browser block)");
+        }
+      } catch (err) {
+        console.error('❌ Error fetching FCM token for staff:', err);
+      }
+
+      // 2. Call staff-login with token
+      const response = await api.post('/auth/staff-login', {
+        ...formData,
+        fcmToken: fcmToken,
+        platform: 'web'
+      });
 
       if (response.data.success) {
         const { token, refreshToken, user } = response.data.data;

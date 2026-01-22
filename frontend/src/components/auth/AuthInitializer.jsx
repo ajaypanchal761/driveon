@@ -4,6 +4,9 @@ import { authService } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 import { loginSuccess, logout, authInitialized } from '../../store/slices/authSlice';
 import { setUser } from '../../store/slices/userSlice';
+import { requestForToken, onMessageListener } from '../../services/firebase';
+import toastUtils from '../../config/toast';
+import api from '../../services/api';
 
 /**
  * AuthInitializer Component
@@ -162,6 +165,43 @@ const AuthInitializer = () => {
     initializeAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - only run once on mount
+
+  // FCM Notification Setup for users
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    const isEmployeeApp = currentPath.startsWith('/employee');
+
+    // Only handle user FCM here if we are in user context
+    // Staff FCM is handled in EmployeeHomePage
+    if (isAuthenticated && user && (user._id || user.id) && !isEmployeeApp) {
+      console.log('🔔 Setting up FCM for user:', user.name);
+
+      // Request and Save Token
+      requestForToken().then(async (token) => {
+        if (token) {
+          try {
+            await api.post('/auth/user-fcm-token', {
+              fcmToken: token,
+              platform: 'web'
+            });
+            console.log("✅ User FCM Token saved via AuthInitializer");
+          } catch (error) {
+            console.error("❌ Error saving user FCM token:", error);
+          }
+        }
+      });
+
+      // Listen for foreground messages
+      onMessageListener()
+        .then((payload) => {
+          if (payload && payload.notification) {
+            toastUtils.info(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
+            console.log("Foreground Notification Received:", payload);
+          }
+        })
+        .catch((err) => console.error("FCM Listener error: ", err));
+    }
+  }, [isAuthenticated, user]);
 
   return null; // This component doesn't render anything
 };

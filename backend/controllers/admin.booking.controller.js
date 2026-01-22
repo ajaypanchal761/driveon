@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
+import { sendPushNotification } from '../services/firebase.service.js';
 
 /**
  * @desc    Get all bookings (Admin)
@@ -149,7 +150,7 @@ export const getBookingById = async (req, res) => {
           .populate('user', 'name phone email age gender address profilePhoto')
           .populate('car', 'brand model year color registrationNumber images pricePerDay owner')
           .populate('guarantor', 'name phone email');
-        
+
         if (booking) {
           console.log('✅ Booking found by _id:', booking.bookingId || booking._id);
         }
@@ -167,7 +168,7 @@ export const getBookingById = async (req, res) => {
           .populate('user', 'name phone email age gender address profilePhoto')
           .populate('car', 'brand model year color registrationNumber images pricePerDay owner')
           .populate('guarantor', 'name phone email');
-        
+
         if (booking) {
           console.log('✅ Booking found by bookingId:', booking.bookingId);
         } else {
@@ -244,7 +245,7 @@ export const updateBooking = async (req, res) => {
         booking.cancellationReason = cancellationReason || '';
         booking.isTrackingActive = false;
         booking.tripStatus = 'cancelled';
-        
+
         // Reverse guarantor points for cancelled booking
         try {
           await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled by admin');
@@ -283,6 +284,47 @@ export const updateBooking = async (req, res) => {
     }
 
     await booking.save();
+
+    // Send Push Notification based on status
+    if (status) {
+      let notificationTitle = "";
+      let notificationBody = "";
+      const bIdentifier = booking.bookingId || booking._id;
+
+      if (status === 'confirmed') {
+        notificationTitle = "Booking Confirmed";
+        notificationBody = `Yay! Your ride #${bIdentifier} is confirmed!`;
+      } else if (status === 'cancelled') {
+        notificationTitle = "Booking Cancelled";
+        notificationBody = "Booking Cancelled. Refund initiated.";
+      } else if (status === 'completed') {
+        notificationTitle = "Trip Completed";
+        notificationBody = "Trip Completed. Invoice generated.";
+      }
+
+      if (notificationTitle && booking.user) {
+        console.log(`📣 Sending ${status} notification to user ${booking.user}`);
+        
+        // Payload for Background & Foreground (Real-time)
+        const payload = {
+            notification: {
+                title: notificationTitle,
+                body: notificationBody,
+            },
+            data: {
+                bookingId: bIdentifier.toString(),
+                status: status,
+                type: 'booking_update',
+                click_action: 'FLUTTER_NOTIFICATION_CLICK'
+            }
+        };
+
+        // Send to both Web and Mobile
+        // We use the new signature: (userId, payload, isMobile)
+        sendPushNotification(booking.user, payload, false);
+        sendPushNotification(booking.user, payload, true);
+      }
+    }
 
     res.json({
       success: true,

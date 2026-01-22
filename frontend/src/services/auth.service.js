@@ -36,11 +36,14 @@ export const authService = {
     // Production mode - actual API call
     const api = (await import('./api')).default;
     const { API_ENDPOINTS } = await import('../constants');
+
     const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, {
       fullName: data.fullName,
       email: data.email,
       phone: data.phone,
       referralCode: data.referralCode,
+      fcmToken: data.fcmToken,
+      platform: data.platform
     });
     return response.data;
   },

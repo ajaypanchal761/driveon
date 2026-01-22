@@ -5,6 +5,7 @@ import Coupon from '../models/Coupon.js';
 import AddOnServices from '../models/AddOnServices.js';
 import { processReferralTripCompletion } from './referral.controller.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
+import { sendPushNotification, sendAdminNotification } from '../services/firebase.service.js';
 
 /**
  * @desc    Create new booking
@@ -397,6 +398,17 @@ export const createBooking = async (req, res) => {
       await booking.save();
       console.log('✅ Booking saved successfully:', booking.bookingId);
 
+      // Send Admin Notification
+      sendAdminNotification(
+        'New Booking Alert 🚗',
+        `New booking #${booking.bookingId || booking._id} created by ${req.user.name || 'User'}.`,
+        {
+          type: 'new_booking',
+          bookingId: (booking.bookingId || booking._id).toString(),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      ).catch(err => console.error('Failed to send admin booking notification:', err));
+
       // Increment coupon usage count if coupon was applied
       if (appliedCoupon) {
         await appliedCoupon.incrementUsage();
@@ -610,7 +622,7 @@ export const updateBookingStatus = async (req, res) => {
     const { status, cancellationReason } = req.body;
     const userId = req.user._id;
 
-    const booking = await Booking.findById(id);
+    const booking = await Booking.findById(id).populate('user');
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -619,7 +631,8 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     // Check permissions
-    if (booking.user.toString() !== userId.toString() && req.user.role !== 'admin') {
+    const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied',
@@ -628,12 +641,18 @@ export const updateBookingStatus = async (req, res) => {
 
     // Update status
     booking.status = status;
+    let notificationTitle = "";
+    let notificationBody = "";
+
     if (status === 'cancelled') {
       booking.cancelledBy = req.user.role === 'admin' ? 'admin' : 'user';
       booking.cancelledAt = new Date();
       booking.cancellationReason = cancellationReason || '';
       booking.isTrackingActive = false;
       booking.tripStatus = 'cancelled';
+
+      notificationTitle = "Booking Cancelled";
+      notificationBody = "Booking Cancelled. Refund initiated.";
 
       // Reverse guarantor points for cancelled booking
       try {
@@ -644,14 +663,18 @@ export const updateBookingStatus = async (req, res) => {
       }
     } else if (status === 'confirmed') {
       booking.confirmedAt = new Date();
+      notificationTitle = "Booking Confirmed";
+      notificationBody = `Yay! Your ride #${booking.bookingId || id} is confirmed!`;
     } else if (status === 'completed') {
       booking.completedAt = new Date();
       booking.tripStatus = 'completed';
       booking.isTrackingActive = false;
+      notificationTitle = "Trip Completed";
+      notificationBody = "Trip Completed. Invoice generated.";
 
       // Process referral trip completion
       try {
-        await processReferralTripCompletion(booking.user.toString());
+        await processReferralTripCompletion(booking.user._id.toString());
       } catch (referralError) {
         console.error('Error processing referral trip completion:', referralError);
         // Don't fail status update if referral processing fails
@@ -659,6 +682,15 @@ export const updateBookingStatus = async (req, res) => {
     }
 
     await booking.save();
+
+    // Send Notification
+    if (notificationTitle && booking.user) {
+      const uId = booking.user._id || booking.user;
+      // Send to Web
+      sendPushNotification(uId, notificationTitle, notificationBody, { bookingId: booking.bookingId || id }, false);
+      // Send to Mobile
+      sendPushNotification(uId, notificationTitle, notificationBody, { bookingId: booking.bookingId || id }, true);
+    }
 
     res.json({
       success: true,
@@ -687,7 +719,7 @@ export const startTrip = async (req, res) => {
     const { id } = req.params;
     const userId = req.user._id;
 
-    const booking = await Booking.findById(id);
+    const booking = await Booking.findById(id).populate('user');
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -696,7 +728,8 @@ export const startTrip = async (req, res) => {
     }
 
     // Check permissions
-    if (booking.user.toString() !== userId.toString() && req.user.role !== 'admin') {
+    const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied',
@@ -728,6 +761,17 @@ export const startTrip = async (req, res) => {
 
     await booking.save();
 
+    // Send Notification
+    if (booking.user) {
+      const uId = booking.user._id || booking.user;
+      const title = "Trip Started";
+      const body = "Your trip has started. Enjoy the ride!";
+      // Send to Web
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, false);
+      // Send to Mobile
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, true);
+    }
+
     res.json({
       success: true,
       message: 'Trip started successfully',
@@ -755,7 +799,7 @@ export const endTrip = async (req, res) => {
     const { id } = req.params;
     const userId = req.user._id;
 
-    const booking = await Booking.findById(id);
+    const booking = await Booking.findById(id).populate('user');
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -764,7 +808,8 @@ export const endTrip = async (req, res) => {
     }
 
     // Check permissions
-    if (booking.user.toString() !== userId.toString() && req.user.role !== 'admin') {
+    const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied',
@@ -781,9 +826,20 @@ export const endTrip = async (req, res) => {
 
     await booking.save();
 
+    // Send Notification
+    if (booking.user) {
+      const uId = booking.user._id || booking.user;
+      const title = "Trip Completed";
+      const body = "Trip Completed. Invoice generated.";
+      // Send to Web
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, false);
+      // Send to Mobile
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, true);
+    }
+
     // Process referral trip completion
     try {
-      await processReferralTripCompletion(booking.user.toString());
+      await processReferralTripCompletion(booking.user._id.toString());
     } catch (referralError) {
       console.error('Error processing referral trip completion:', referralError);
       // Don't fail booking completion if referral processing fails
@@ -805,6 +861,7 @@ export const endTrip = async (req, res) => {
     });
   }
 };
+
 
 /**
  * @desc    Update user location for active booking

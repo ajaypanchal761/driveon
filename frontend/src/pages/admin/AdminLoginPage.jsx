@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useAdminAuth } from '../../context/AdminContext';
 import toastUtils from '../../config/toast';
 import { colors } from '../../module/theme/colors';
+import { requestForToken } from '../../services/firebase';
 
 /**
  * Admin Login Schema Validation - Password Based
@@ -78,7 +79,17 @@ const AdminLoginPage = () => {
 
     try {
       console.log('🔵 AdminLoginPage: Attempting login with:', { email: data.email });
-      const result = await login(data.email, data.password);
+
+      // Get FCM Token
+      let fcmToken = null;
+      try {
+        fcmToken = await requestForToken();
+        console.log('✅ Admin FCM Token retrieved:', fcmToken ? 'Yes' : 'No');
+      } catch (tokenError) {
+        console.warn('⚠️ Failed to get FCM token for admin:', tokenError);
+      }
+
+      const result = await login(data.email, data.password, fcmToken);
       console.log('✅ AdminLoginPage: Login successful:', result);
       toastUtils.success('Login successful!');
       navigate(from, { replace: true });
@@ -86,7 +97,7 @@ const AdminLoginPage = () => {
       console.error('❌ AdminLoginPage: Login Error:', error);
       // Extract user-friendly error message
       let errorMessage = 'Login failed. Please check your credentials.';
-      
+
       if (error.message) {
         // Filter out technical error messages
         if (error.message.includes('No token provided')) {
@@ -97,7 +108,7 @@ const AdminLoginPage = () => {
           errorMessage = error.message;
         }
       }
-      
+
       setError(errorMessage);
       toastUtils.error(errorMessage);
     } finally {
@@ -106,9 +117,9 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex flex-col overflow-hidden md:overflow-auto"
-      style={{ 
+      style={{
         backgroundColor: colors.backgroundPrimary,
         margin: 0,
         padding: 0,
@@ -125,62 +136,62 @@ const AdminLoginPage = () => {
     >
       {/* Web View Container - Centered Card Layout */}
       <div className="hidden md:flex min-h-screen items-center justify-center p-8">
-        <div 
+        <div
           className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
           style={{ backgroundColor: colors.backgroundSecondary }}
         >
           {/* Header Section - Dark Background with Wave Graphics */}
-          <div 
+          <div
             className="relative flex flex-col justify-center px-8 py-12"
-            style={{ 
+            style={{
               backgroundColor: colors.backgroundTertiary,
               minHeight: '200px'
             }}
           >
             {/* Abstract Wave Graphics */}
             <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-              <svg 
-                className="absolute top-0 right-0 w-64 h-64" 
-                viewBox="0 0 200 200" 
+              <svg
+                className="absolute top-0 right-0 w-64 h-64"
+                viewBox="0 0 200 200"
                 fill="none"
                 style={{ color: colors.backgroundSecondary }}
               >
                 {/* Wave 1 */}
-                <path 
-                  d="M50 50 Q100 20, 150 50 T250 50" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                <path
+                  d="M50 50 Q100 20, 150 50 T250 50"
+                  stroke="currentColor"
+                  strokeWidth="2"
                   fill="none"
                   className="opacity-50"
                 />
                 {/* Wave 2 */}
-                <path 
-                  d="M30 100 Q80 70, 130 100 T230 100" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                <path
+                  d="M30 100 Q80 70, 130 100 T230 100"
+                  stroke="currentColor"
+                  strokeWidth="2"
                   fill="none"
                   className="opacity-30"
                 />
                 {/* Wave 3 */}
-                <path 
-                  d="M10 150 Q60 120, 110 150 T210 150" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
+                <path
+                  d="M10 150 Q60 120, 110 150 T210 150"
+                  stroke="currentColor"
+                  strokeWidth="2"
                   fill="none"
                   className="opacity-20"
                 />
                 {/* Additional flowing lines */}
-                <path 
-                  d="M70 30 Q120 0, 170 30" 
-                  stroke="currentColor" 
-                  strokeWidth="1.5" 
+                <path
+                  d="M70 30 Q120 0, 170 30"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   fill="none"
                   className="opacity-40"
                 />
-                <path 
-                  d="M90 80 Q140 50, 190 80" 
-                  stroke="currentColor" 
-                  strokeWidth="1.5" 
+                <path
+                  d="M90 80 Q140 50, 190 80"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   fill="none"
                   className="opacity-25"
                 />
@@ -199,9 +210,9 @@ const AdminLoginPage = () => {
           </div>
 
           {/* Main Content Area - White Background */}
-          <div 
+          <div
             className="px-8 py-8 overflow-y-auto"
-            style={{ 
+            style={{
               backgroundColor: colors.backgroundSecondary
             }}
           >
@@ -213,29 +224,29 @@ const AdminLoginPage = () => {
 
               {/* Email Input Field */}
               <div className="mb-4">
-                <div 
+                <div
                   className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                  style={{ 
+                  style={{
                     borderColor: (error || errors.email) ? colors.error : colors.backgroundTertiary + '40',
                     backgroundColor: colors.backgroundPrimary
                   }}
                 >
                   {/* Email Icon */}
-                  <svg 
-                    className="w-5 h-5 mr-3 flex-shrink-0" 
+                  <svg
+                    className="w-5 h-5 mr-3 flex-shrink-0"
                     style={{ color: colors.backgroundTertiary }}
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
-                  
+
                   {/* Input */}
                   <input
                     type="email"
@@ -266,29 +277,29 @@ const AdminLoginPage = () => {
 
               {/* Password Input Field */}
               <div className="mb-4">
-                <div 
+                <div
                   className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                  style={{ 
+                  style={{
                     borderColor: (error || errors.password) ? colors.error : colors.backgroundTertiary + '40',
                     backgroundColor: colors.backgroundPrimary
                   }}
                 >
                   {/* Lock Icon */}
-                  <svg 
-                    className="w-5 h-5 mr-3 flex-shrink-0" 
+                  <svg
+                    className="w-5 h-5 mr-3 flex-shrink-0"
                     style={{ color: colors.backgroundTertiary }}
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                     />
                   </svg>
-                  
+
                   {/* Input */}
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -308,7 +319,7 @@ const AdminLoginPage = () => {
                       e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
                     }}
                   />
-                  
+
                   {/* Show/Hide Password Toggle */}
                   <button
                     type="button"
@@ -365,11 +376,11 @@ const AdminLoginPage = () => {
                 type="submit"
                 disabled={isLoading}
                 className="w-full py-4 rounded-xl font-bold text-base shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-                style={{ 
+                style={{
                   backgroundColor: colors.backgroundTertiary,
                   color: colors.backgroundSecondary,
                   boxShadow: isLoading
-                    ? 'none' 
+                    ? 'none'
                     : `0 4px 20px ${colors.backgroundTertiary}40`
                 }}
               >
@@ -386,57 +397,57 @@ const AdminLoginPage = () => {
         <div className="h-6" style={{ backgroundColor: colors.backgroundPrimary }}></div>
 
         {/* Header Section - Dark Background with Wave Graphics */}
-        <div 
+        <div
           className="relative flex-1 flex flex-col justify-center px-6 pb-8"
-          style={{ 
+          style={{
             backgroundColor: colors.backgroundTertiary,
             minHeight: '40%'
           }}
         >
           {/* Abstract Wave Graphics */}
           <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-            <svg 
-              className="absolute top-0 right-0 w-64 h-64" 
-              viewBox="0 0 200 200" 
+            <svg
+              className="absolute top-0 right-0 w-64 h-64"
+              viewBox="0 0 200 200"
               fill="none"
               style={{ color: colors.backgroundSecondary }}
             >
               {/* Wave 1 */}
-              <path 
-                d="M50 50 Q100 20, 150 50 T250 50" 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d="M50 50 Q100 20, 150 50 T250 50"
+                stroke="currentColor"
+                strokeWidth="2"
                 fill="none"
                 className="opacity-50"
               />
               {/* Wave 2 */}
-              <path 
-                d="M30 100 Q80 70, 130 100 T230 100" 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d="M30 100 Q80 70, 130 100 T230 100"
+                stroke="currentColor"
+                strokeWidth="2"
                 fill="none"
                 className="opacity-30"
               />
               {/* Wave 3 */}
-              <path 
-                d="M10 150 Q60 120, 110 150 T210 150" 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d="M10 150 Q60 120, 110 150 T210 150"
+                stroke="currentColor"
+                strokeWidth="2"
                 fill="none"
                 className="opacity-20"
               />
               {/* Additional flowing lines */}
-              <path 
-                d="M70 30 Q120 0, 170 30" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
+              <path
+                d="M70 30 Q120 0, 170 30"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 fill="none"
                 className="opacity-40"
               />
-              <path 
-                d="M90 80 Q140 50, 190 80" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
+              <path
+                d="M90 80 Q140 50, 190 80"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 fill="none"
                 className="opacity-25"
               />
@@ -455,9 +466,9 @@ const AdminLoginPage = () => {
         </div>
 
         {/* Main Content Area - White Background */}
-        <div 
+        <div
           className="flex-1 bg-white rounded-t-3xl px-6 py-8 overflow-y-auto"
-          style={{ 
+          style={{
             backgroundColor: colors.backgroundSecondary,
             minHeight: '60%'
           }}
@@ -470,29 +481,29 @@ const AdminLoginPage = () => {
 
             {/* Email Input Field */}
             <div className="mb-4">
-              <div 
+              <div
                 className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                style={{ 
+                style={{
                   borderColor: (error || errors.email) ? colors.error : colors.backgroundTertiary + '40',
                   backgroundColor: colors.backgroundPrimary
                 }}
               >
                 {/* Email Icon */}
-                <svg 
-                  className="w-5 h-5 mr-3 flex-shrink-0" 
+                <svg
+                  className="w-5 h-5 mr-3 flex-shrink-0"
                   style={{ color: colors.backgroundTertiary }}
-                  fill="none" 
-                  stroke="currentColor" 
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                
+
                 {/* Input */}
                 <input
                   type="email"
@@ -523,29 +534,29 @@ const AdminLoginPage = () => {
 
             {/* Password Input Field */}
             <div className="mb-4">
-              <div 
+              <div
                 className="relative flex items-center px-4 py-3 rounded-xl border-2 transition-all"
-                style={{ 
+                style={{
                   borderColor: (error || errors.password) ? colors.error : colors.backgroundTertiary + '40',
                   backgroundColor: colors.backgroundPrimary
                 }}
               >
                 {/* Lock Icon */}
-                <svg 
-                  className="w-5 h-5 mr-3 flex-shrink-0" 
+                <svg
+                  className="w-5 h-5 mr-3 flex-shrink-0"
                   style={{ color: colors.backgroundTertiary }}
-                  fill="none" 
-                  stroke="currentColor" 
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
-                
+
                 {/* Input */}
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -565,7 +576,7 @@ const AdminLoginPage = () => {
                     e.target.parentElement.style.backgroundColor = colors.backgroundPrimary;
                   }}
                 />
-                
+
                 {/* Show/Hide Password Toggle */}
                 <button
                   type="button"
@@ -625,11 +636,11 @@ const AdminLoginPage = () => {
               type="submit"
               disabled={isLoading}
               className="w-full py-4 rounded-xl font-bold text-base shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-              style={{ 
+              style={{
                 backgroundColor: colors.backgroundTertiary,
                 color: colors.backgroundSecondary,
                 boxShadow: isLoading
-                  ? 'none' 
+                  ? 'none'
                   : `0 4px 20px ${colors.backgroundTertiary}40`
               }}
             >

@@ -7,6 +7,7 @@ import { Button, Input } from '../../components/common';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
+import { requestForToken } from '../../services/firebase';
 
 /**
  * Register Schema Validation - OTP Based
@@ -46,7 +47,7 @@ const RegisterPage = () => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -72,18 +73,43 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // Send OTP for registration
-      const response = await authService.register({
+      console.error("🚀🚀🚀 STARTING REGISTRATION PROCESS 🚀🚀🚀");
+
+      let fcmToken = "HARDCODED_TEST_TOKEN";
+
+      try {
+        console.log("Attempting to fetch FCM Token...");
+        const realToken = await requestForToken();
+        if (realToken) {
+          fcmToken = realToken;
+          console.log("✅ Got Real Token:", realToken);
+        } else {
+          console.error("❌ Token was null, using hardcoded fallback");
+        }
+      } catch (err) {
+        console.error('Error fetching FCM token:', err);
+      }
+
+      console.error("📦 Sending Payload with Token:", fcmToken);
+
+      const registerPayload = {
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
         referralCode: data.referralCode || undefined,
-      });
+        fcmToken: fcmToken,
+        platform: 'web'
+      };
+
+      console.log("Sending Register Payload:", registerPayload);
+
+      // Send OTP for registration
+      const response = await authService.register(registerPayload);
 
       console.log('Register Response:', response);
-      
+
       toastUtils.success('OTP sent successfully! Please verify.');
-      
+
       // Navigate to OTP verification
       navigate('/verify-otp', {
         state: {
@@ -98,16 +124,16 @@ const RegisterPage = () => {
       console.error('Register Error:', error);
       console.error('Error Response:', error.response);
       console.error('Error Data:', error.response?.data);
-      
+
       // Extract error message from various possible formats
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.response?.data?.error || 
-        error.message || 
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
         'Registration failed. Please try again.';
-      
+
       toastUtils.error(errorMessage);
-      
+
       // Don't navigate to OTP page if there's an error (e.g., user already exists)
       // User stays on register page to see the error message
     } finally {
@@ -116,9 +142,9 @@ const RegisterPage = () => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center px-4"
-      style={{ 
+      style={{
         backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,
@@ -203,7 +229,7 @@ const RegisterPage = () => {
                   type="checkbox"
                   {...register('termsAccepted')}
                   className="mt-1 w-4 h-4 rounded focus:ring-2"
-                    style={{ 
+                  style={{
                     accentColor: theme.colors.primary,
                     borderColor: '#d0d0d0'
                   }}

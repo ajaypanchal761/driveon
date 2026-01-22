@@ -79,6 +79,12 @@ const adminSchema = new mongoose.Schema(
       trim: true,
       maxlength: [500, 'Notes must not exceed 500 characters'],
     },
+    fcmToken: {
+      type: String, // Web Push Token
+    },
+    fcmTokenMobile: {
+      type: String, // Mobile Push Token
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',

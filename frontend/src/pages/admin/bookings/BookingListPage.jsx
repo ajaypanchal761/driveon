@@ -5,6 +5,8 @@ import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 import { generateBookingPDF } from '../../../utils/pdfGenerator';
+import toastUtils from '../../../config/toast';
+import { onMessageListener } from "../../../services/firebase";
 
 /**
  * Format user ID to USER001 format
@@ -12,14 +14,14 @@ import { generateBookingPDF } from '../../../utils/pdfGenerator';
  */
 const formatUserId = (userId) => {
   if (!userId) return 'N/A';
-  
+
   // Extract last 6 characters from ObjectId and convert to number
   const lastChars = userId.slice(-6);
   // Convert hex to decimal, then take modulo to get a number between 0-999
   const num = parseInt(lastChars, 16) % 1000;
   // Pad with zeros to make it 3 digits
   const paddedNum = String(num).padStart(3, '0');
-  
+
   return `USER${paddedNum}`;
 };
 
@@ -29,27 +31,27 @@ const formatUserId = (userId) => {
  */
 const formatTimeToAMPM = (timeString) => {
   if (!timeString) return '';
-  
+
   // If already contains AM/PM, return as is
   if (timeString.toLowerCase().includes('am') || timeString.toLowerCase().includes('pm')) {
     return timeString;
   }
-  
+
   // Parse time string (format: HH:mm or HH:mm:ss)
   const timeParts = timeString.split(':');
   if (timeParts.length < 2) return timeString;
-  
+
   let hours = parseInt(timeParts[0], 10);
   const minutes = timeParts[1];
-  
+
   if (isNaN(hours) || isNaN(parseInt(minutes, 10))) {
     return timeString;
   }
-  
+
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12; // 0 should be 12
-  
+
   return `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
 };
 
@@ -61,7 +63,7 @@ const formatTimeToAMPM = (timeString) => {
 const BookingListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get initial status from URL
   const getInitialStatus = () => {
     if (location.pathname.includes('/pending')) return 'pending';
@@ -77,7 +79,7 @@ const BookingListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, pending, confirmed, active, completed, cancelled
@@ -86,6 +88,16 @@ const BookingListPage = () => {
     car: 'all',
     user: 'all',
   });
+
+  // Listen for notifications
+  useEffect(() => {
+    onMessageListener()
+      .then((payload) => {
+        toastUtils.info(`🔔 Booking Alert: ${payload.notification.title}`);
+        console.log("Booking Notification:", payload);
+      })
+      .catch((err) => console.log("failed: ", err));
+  }, []);
 
   // Fetch bookings from API
   useEffect(() => {
@@ -97,10 +109,10 @@ const BookingListPage = () => {
           status: filters.status !== 'all' ? filters.status : undefined,
           paymentStatus: filters.paymentStatus !== 'all' ? filters.paymentStatus : undefined,
         });
-        
+
         // Extract bookings from response.data (backend returns { success: true, data: { bookings, ... } })
         const bookingsData = response?.data?.bookings || response?.bookings || [];
-        
+
         // Transform API response to match component structure
         const transformedBookings = bookingsData.map((booking) => ({
           originalData: booking, // Preserve original data for PDF generation
@@ -134,7 +146,7 @@ const BookingListPage = () => {
           cancellationReason: booking.cancellationReason,
           rating: booking.rating,
         })) || [];
-        
+
         setBookings(transformedBookings);
         setFilteredBookings(transformedBookings);
       } catch (err) {
@@ -228,7 +240,7 @@ const BookingListPage = () => {
             return booking;
           })
         );
-        
+
         // Show success message
         alert('Booking approved successfully! Status changed to Confirmed.');
       } else {
@@ -262,7 +274,7 @@ const BookingListPage = () => {
             return booking;
           })
         );
-        
+
         // Show success message
         alert('Booking rejected successfully!');
       } else {
@@ -276,7 +288,7 @@ const BookingListPage = () => {
 
   const handleCancel = async (bookingId) => {
     console.log('🔄 handleCancel called with bookingId:', bookingId);
-    
+
     if (!bookingId) {
       console.error('❌ No booking ID provided');
       alert('Error: Booking ID is missing');
@@ -315,7 +327,7 @@ const BookingListPage = () => {
           });
           return updated;
         });
-        
+
         // Also update filteredBookings to reflect the change immediately
         setFilteredBookings((prevList) => {
           const updated = prevList.map((booking) => {
@@ -332,10 +344,10 @@ const BookingListPage = () => {
           });
           return updated;
         });
-        
+
         // Show success message
         alert('Booking cancelled successfully!');
-        
+
         // Refresh bookings list to get updated data
         setTimeout(() => {
           window.location.reload();
@@ -382,7 +394,7 @@ const BookingListPage = () => {
             return booking;
           })
         );
-        
+
         // Show success message
         alert('Refund processed successfully! Payment status updated to refunded. User side will reflect the changes on next refresh.');
       } else {
@@ -396,7 +408,7 @@ const BookingListPage = () => {
 
   const handleMarkAsComplete = async (bookingId) => {
     console.log('🔄 handleMarkAsComplete called with bookingId:', bookingId);
-    
+
     if (!bookingId) {
       console.error('❌ No booking ID provided');
       alert('Error: Booking ID is missing');
@@ -433,7 +445,7 @@ const BookingListPage = () => {
           });
           return updated;
         });
-        
+
         // Also update filteredBookings to reflect the change immediately
         setFilteredBookings((prevList) => {
           const updated = prevList.map((booking) => {
@@ -449,10 +461,10 @@ const BookingListPage = () => {
           });
           return updated;
         });
-        
+
         // Show success message
         alert('Booking marked as completed! User will see it in completed bookings.');
-        
+
         // Refresh bookings list to get updated data
         setTimeout(() => {
           window.location.reload();
@@ -902,7 +914,7 @@ const BookingListPage = () => {
                   >
                     View Details
                   </button>
-                  
+
                   {booking.status === 'active' && (
                     <button
                       type="button"
@@ -912,7 +924,7 @@ const BookingListPage = () => {
                       Live Tracking
                     </button>
                   )}
-                  
+
                   {booking.status === 'pending' && (
                     <>
                       <button
@@ -931,7 +943,7 @@ const BookingListPage = () => {
                       </button>
                     </>
                   )}
-                  
+
                   {(booking.status === 'confirmed' || booking.status === 'active') && (
                     <>
                       <button
@@ -960,7 +972,7 @@ const BookingListPage = () => {
                       </button>
                     </>
                   )}
-                  
+
                   {booking.status === 'cancelled' && booking.paymentStatus !== 'refunded' && (
                     <button
                       type="button"
@@ -1020,7 +1032,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
   useEffect(() => {
     const fetchGuarantorPoints = async () => {
       if (!booking?.id) return;
-      
+
       try {
         setLoadingGuarantorPoints(true);
         const response = await adminService.getBookingGuarantorPoints(booking.id);
@@ -1041,10 +1053,10 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
   // Calculate remaining amount
   const remainingAmount = (booking.totalAmount || 0) - (booking.paidAmount || 0);
   const advanceAmount = booking.paidAmount || 0;
-  
+
   // Determine advance payment status
   const advancePaymentStatus = advanceAmount > 0 ? 'done' : 'pending';
-  
+
   // Determine remaining payment status based on overall payment status
   // If payment status is "paid", remaining payment is done, otherwise check remaining amount
   const remainingPaymentStatus = paymentStatus === 'paid' ? 'done' : (remainingAmount <= 0 ? 'done' : 'pending');
@@ -1065,12 +1077,12 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
         setPaymentStatus(newStatus);
         // Update booking object locally
         booking.paymentStatus = newStatus;
-        
+
         // If status is changed to "paid", update paidAmount to totalAmount
         if (newStatus === 'paid' && booking.paidAmount < booking.totalAmount) {
           booking.paidAmount = booking.totalAmount;
         }
-        
+
         alert('Payment status updated successfully! User side will reflect the changes on next refresh.');
       } else {
         alert('Failed to update payment status. Please try again.');
@@ -1115,11 +1127,10 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${
-                  activeTab === tab
-                    ? 'border-b-2 text-purple-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === tab
+                  ? 'border-b-2 text-purple-600'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -1280,7 +1291,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                               <p className="font-semibold text-green-600">{guarantorPoints.activeGuarantors || 0}</p>
                             </div>
                           </div>
-                          
+
                           <div className="mt-4 pt-3 border-t border-blue-200">
                             <h5 className="text-xs font-semibold text-gray-900 mb-2">Points Per Guarantor:</h5>
                             <div className="space-y-2">
@@ -1326,7 +1337,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
             {activeTab === 'payment' && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-                
+
                 {/* Payment Status Dropdown */}
                 <div className="mb-6">
                   <AdminCustomSelect
@@ -1361,11 +1372,10 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-700">Advance Payment Status</label>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      advancePaymentStatus === 'done' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${advancePaymentStatus === 'done'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                      }`}>
                       {advancePaymentStatus === 'done' ? 'Done' : 'Pending'}
                     </span>
                   </div>
@@ -1376,11 +1386,10 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-700">Remaining Payment Status</label>
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      remainingPaymentStatus === 'done' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${remainingPaymentStatus === 'done'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                      }`}>
                       {remainingPaymentStatus === 'done' ? 'Done' : 'Pending'}
                     </span>
                   </div>

@@ -5,6 +5,7 @@ import Card from '../../../components/common/Card';
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
+import { onMessageListener } from "../../../services/firebase";
 
 /**
  * Payment List Page
@@ -14,7 +15,7 @@ import toastUtils from '../../../config/toast';
 const PaymentListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get initial status from URL
   const getInitialStatus = () => {
     if (location.pathname.includes('/pending')) return 'pending';
@@ -29,7 +30,7 @@ const PaymentListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showPaymentDetail, setShowPaymentDetail] = useState(false);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, success, failed, pending, refunded
@@ -39,24 +40,34 @@ const PaymentListPage = () => {
     booking: 'all',
   });
 
+  // Listen for notifications
+  useEffect(() => {
+    onMessageListener()
+      .then((payload) => {
+        toastUtils.info(`🔔 Payment Alert: ${payload.notification.title}`);
+        console.log("Payment Notification:", payload);
+      })
+      .catch((err) => console.log("failed: ", err));
+  }, []);
+
   // Fetch payments from API (extract from bookings transactions)
   useEffect(() => {
     const fetchPayments = async () => {
       try {
         setLoading(true);
-        
+
         // Get all bookings to extract transactions
         const response = await adminService.getAllBookings({
           page: 1,
           limit: 1000, // Get all bookings to extract all transactions
         });
-        
+
         if (response.success && response.data?.bookings) {
           const bookings = response.data.bookings;
-          
+
           // Extract all transactions from bookings
           const allPayments = [];
-          
+
           bookings.forEach((booking) => {
             if (booking.transactions && Array.isArray(booking.transactions)) {
               booking.transactions.forEach((transaction) => {
@@ -71,25 +82,25 @@ const PaymentListPage = () => {
                     paymentType = 'partial'; // Remaining payment
                   }
                 }
-                
+
                 // Map payment method to display name
                 const paymentMethodMap = {
                   'phonepe': 'UPI',
                   'razorpay': transaction.razorpayPaymentId ? 'Credit Card' : 'UPI',
                   'stripe': 'Credit Card',
                 };
-                
+
                 const paymentMethod = paymentMethodMap[transaction.paymentMethod] || transaction.paymentMethod || 'UPI';
-                
+
                 // Map payment gateway
                 const paymentGatewayMap = {
                   'phonepe': 'PhonePe',
                   'razorpay': 'Razorpay',
                   'stripe': 'Stripe',
                 };
-                
+
                 const paymentGateway = paymentGatewayMap[transaction.paymentMethod] || 'Razorpay';
-                
+
                 allPayments.push({
                   id: transaction._id?.toString() || transaction.transactionId,
                   transactionId: transaction.transactionId,
@@ -112,10 +123,10 @@ const PaymentListPage = () => {
               });
             }
           });
-          
+
           // Sort by timestamp (newest first)
           allPayments.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          
+
           setPayments(allPayments);
         } else {
           setPayments([]);
@@ -128,7 +139,7 @@ const PaymentListPage = () => {
         setLoading(false);
       }
     };
-    
+
     fetchPayments();
   }, []);
 
@@ -547,7 +558,7 @@ const PaymentListPage = () => {
                   >
                     View Details
                   </button>
-                  
+
                   {payment.status === 'success' && !payment.invoiceGenerated && (
                     <button
                       onClick={() => handleGenerateInvoice(payment.id)}
@@ -556,7 +567,7 @@ const PaymentListPage = () => {
                       Generate Invoice
                     </button>
                   )}
-                  
+
                   {payment.status === 'success' && payment.status !== 'refunded' && (
                     <button
                       onClick={() => handleProcessRefund(payment.id)}
@@ -565,7 +576,7 @@ const PaymentListPage = () => {
                       Process Refund
                     </button>
                   )}
-                  
+
                   {payment.status === 'pending' && (
                     <button
                       onClick={() => handleMarkAsReceived(payment.id)}
@@ -728,9 +739,8 @@ const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceive
           <div className="mb-6">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <span className="text-sm text-gray-700">Invoice Generated</span>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                payment.invoiceGenerated ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${payment.invoiceGenerated ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                }`}>
                 {payment.invoiceGenerated ? 'Yes' : 'No'}
               </span>
             </div>

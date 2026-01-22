@@ -49,6 +49,16 @@ const ProfileCompletePage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const fileInputRef = useRef(null);
+  const rcInputRef = useRef(null);
+  const [rcDocument, setRcDocument] = useState(null);
+  const [rcPreview, setRcPreview] = useState(user?.rcDocument || null);
+  const [isUploadingRc, setIsUploadingRc] = useState(false);
+
+  useEffect(() => {
+    if (user?.rcDocument) {
+      setRcPreview(user.rcDocument);
+    }
+  }, [user]);
 
   const {
     register,
@@ -76,14 +86,14 @@ const ProfileCompletePage = () => {
       try {
         setIsLoadingProfile(true);
         const response = await userService.getProfile();
-        
+
         // Extract user data from response
         const userData = response.data?.user || response.data?.data?.user || response.user;
-        
+
         if (userData) {
           // Update Redux store with fetched data
           dispatch(updateUser(userData));
-          
+
           // Reset form with fetched data
           reset({
             name: userData.name || '',
@@ -93,7 +103,7 @@ const ProfileCompletePage = () => {
             gender: userData.gender || '',
             address: userData.address || '',
           });
-          
+
           // Set profile photo preview if exists
           if (userData.profilePhoto) {
             setPhotoPreview(userData.profilePhoto);
@@ -154,23 +164,23 @@ const ProfileCompletePage = () => {
       formData.append('photo', profilePhoto);
 
       const response = await userService.uploadPhoto(formData);
-      
+
       // Handle response from backend
       const uploadedPhotoUrl = response.data?.profilePhoto || response.data?.data?.profilePhoto || photoPreview;
       const userData = response.data?.user || response.data?.data?.user;
-      
+
       // Update Redux store with complete user data
       if (userData) {
         dispatch(updateUser(userData));
       } else {
         dispatch(updateUser({ profilePhoto: uploadedPhotoUrl }));
       }
-      
+
       toastUtils.success('Profile photo uploaded successfully!');
       setCurrentStep(3);
     } catch (error) {
       console.error('Photo upload error:', error);
-      
+
       // Handle authentication errors
       if (error.status === 401 || error.code === 'AUTH_ERROR') {
         toastUtils.error('Your session has expired. Please log in again.');
@@ -180,7 +190,7 @@ const ProfileCompletePage = () => {
         }, 2000);
         return;
       }
-      
+
       // In mock mode, even if there's an error, use the preview
       if (photoPreview) {
         dispatch(updateUser({ profilePhoto: photoPreview }));
@@ -193,6 +203,54 @@ const ProfileCompletePage = () => {
       }
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Handle RC document upload
+  const handleRcChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toastUtils.error('Image size must be less than 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toastUtils.error('Please select an image file');
+        return;
+      }
+      setRcDocument(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRcPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRcUpload = async () => {
+    if (!rcDocument) return;
+    setIsUploadingRc(true);
+    try {
+      const formData = new FormData();
+      formData.append('rcDocument', rcDocument);
+
+      const response = await userService.uploadRcDocument(formData);
+
+      const uploadedRcUrl = response.data?.rcDocument || response.data?.data?.rcDocument;
+      const userData = response.data?.user || response.data?.data?.user;
+
+      if (userData) {
+        dispatch(updateUser(userData));
+      } else if (uploadedRcUrl) {
+        dispatch(updateUser({ rcDocument: uploadedRcUrl }));
+      }
+
+      toastUtils.success('RC Document uploaded successfully!');
+    } catch (error) {
+      console.error('RC Upload Error:', error);
+      toastUtils.error('Failed to upload RC document');
+    } finally {
+      setIsUploadingRc(false);
     }
   };
 
@@ -218,7 +276,7 @@ const ProfileCompletePage = () => {
     setIsSubmitting(true);
     try {
       console.log('📝 Form submission data:', data);
-      
+
       // Parse age properly - ensure it's a valid number
       const ageValue = data.age ? parseInt(data.age, 10) : undefined;
       if (isNaN(ageValue)) {
@@ -226,7 +284,7 @@ const ProfileCompletePage = () => {
         setIsSubmitting(false);
         return;
       }
-      
+
       // Prepare update data
       const updateData = {
         name: data.name || '',
@@ -234,16 +292,16 @@ const ProfileCompletePage = () => {
         gender: data.gender || '',
         address: data.address || '',
       };
-      
+
       console.log('📤 Sending to backend:', updateData);
-      
+
       // Update profile with all form data
       const response = await userService.updateProfile(updateData);
 
       // Handle backend response
       const userData = response.data?.user || response.data?.data?.user || response.user;
       const profileComplete = userData?.profileComplete || 100;
-      
+
       // Update Redux store with complete user data
       if (userData) {
         dispatch(updateUser(userData));
@@ -256,14 +314,14 @@ const ProfileCompletePage = () => {
           address: data.address,
         }));
       }
-      
+
       dispatch(setProfileComplete(profileComplete >= 100));
-      
+
       toastUtils.success('Profile completed successfully!');
       navigate('/profile');
     } catch (error) {
       console.error('Profile update error:', error);
-      
+
       // Handle authentication errors
       if (error.status === 401 || error.code === 'AUTH_ERROR') {
         toastUtils.error('Your session has expired. Please log in again.');
@@ -272,19 +330,19 @@ const ProfileCompletePage = () => {
         }, 2000);
         return;
       }
-      
+
       // Handle network errors with user-friendly messages
       let errorMessage = 'Failed to update profile. Please try again.';
-      
+
       if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
-        errorMessage = error.message || 
+        errorMessage = error.message ||
           'Unable to connect to server. Please check your internet connection and try again.';
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toastUtils.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -367,7 +425,7 @@ const ProfileCompletePage = () => {
         {!isLoadingProfile && currentStep === 1 && (
           <form onSubmit={handleSubmit(async (data) => {
             console.log('✅ Step 1 form data validated:', data);
-            
+
             // Save Step 1 data to database immediately
             setIsSavingStep1(true);
             try {
@@ -377,18 +435,18 @@ const ProfileCompletePage = () => {
                 setIsSavingStep1(false);
                 return;
               }
-              
+
               const updateData = {
                 name: data.name || '',
                 age: ageValue,
                 gender: data.gender || '',
                 address: data.address || '',
               };
-              
+
               console.log('💾 Saving Step 1 data to database:', updateData);
-              
+
               const response = await userService.updateProfile(updateData);
-              
+
               // Update Redux store with saved data
               const userData = response.data?.user || response.data?.data?.user;
               if (userData) {
@@ -396,7 +454,7 @@ const ProfileCompletePage = () => {
                 console.log('✅ Step 1 data saved successfully');
                 toastUtils.success('Profile information saved!');
               }
-              
+
               // Move to next step
               setCurrentStep(2);
             } catch (error) {
@@ -478,9 +536,8 @@ const ProfileCompletePage = () => {
                     return (
                       <label
                         key={gender}
-                        className={`flex items-center justify-center p-1.5 md:p-2 rounded-lg border-2 cursor-pointer transition-colors ${
-                          isSelected ? '' : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        className={`flex items-center justify-center p-1.5 md:p-2 rounded-lg border-2 cursor-pointer transition-colors ${isSelected ? '' : 'border-gray-200 hover:border-gray-300'
+                          }`}
                         style={isSelected ? {
                           borderColor: theme.colors.primary,
                           backgroundColor: `${theme.colors.primary}1A`,
@@ -511,9 +568,8 @@ const ProfileCompletePage = () => {
                   {...register('address')}
                   placeholder="Enter your complete address"
                   rows={2}
-                  className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 ${
-                    errors.address ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 ${errors.address ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   style={!errors.address ? {
                     '--focus-border': theme.colors.primary,
                     '--focus-ring': `${theme.colors.primary}33`,
@@ -564,7 +620,7 @@ const ProfileCompletePage = () => {
                       src={photoPreview}
                       alt="Profile"
                       className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 object-cover shadow-lg"
-                    style={{ borderColor: theme.colors.primary }}
+                      style={{ borderColor: theme.colors.primary }}
                     />
                   ) : (
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-gray-300 bg-gray-100 flex items-center justify-center">
@@ -719,37 +775,51 @@ const ProfileCompletePage = () => {
                   </div>
                 </div>
 
-                {/* PAN */}
-                <div className="mb-3 md:mb-0 p-4 md:p-5 bg-yellow-50 border border-yellow-200 rounded-lg">
+                {/* Vehicle RC (Optional) */}
+                <div className="mb-3 md:mb-0 p-4 md:p-5 bg-purple-50 border border-purple-200 rounded-lg">
                   <div className="flex flex-col md:flex-col md:items-start md:justify-between gap-3">
                     <div className="flex items-center gap-3 w-full">
-                      <div className="w-12 h-12 md:w-14 md:h-14 bg-yellow-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg
-                          className="w-6 h-6 md:w-7 md:h-7 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                      <div className="w-12 h-12 md:w-14 md:h-14 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        {rcPreview ? (
+                          <img src={rcPreview} alt="RC Preview" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm md:text-base font-medium text-gray-900">PAN Card</p>
-                        <p className="text-xs md:text-sm text-gray-500">Verify via DigiLocker</p>
+                        <p className="text-sm md:text-base font-medium text-gray-900">Vehicle RC (Optional)</p>
+                        <p className="text-xs md:text-sm text-gray-500">{rcPreview ? 'RC Uploaded' : 'Upload Vehicle Registration'}</p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDigiLockerKYC('pan')}
-                      className="px-4 py-2 md:px-5 md:py-2.5 bg-yellow-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-yellow-600 transition-colors w-full"
-                    >
-                      Verify
-                    </button>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={rcInputRef}
+                      onChange={handleRcChange}
+                      className="hidden"
+                    />
+
+                    {rcDocument && !user?.rcDocument ? (
+                      <button
+                        type="button"
+                        onClick={handleRcUpload}
+                        disabled={isUploadingRc}
+                        className="px-4 py-2 md:px-5 md:py-2.5 bg-purple-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-purple-600 transition-colors w-full flex items-center justify-center"
+                      >
+                        {isUploadingRc ? <LoadingSpinner size="sm" color="white" /> : 'Upload'}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => rcInputRef.current?.click()}
+                        className="px-4 py-2 md:px-5 md:py-2.5 bg-purple-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-purple-600 transition-colors w-full"
+                      >
+                        {rcPreview ? 'Change' : 'Upload'}
+                      </button>
+                    )}
                   </div>
                 </div>
 

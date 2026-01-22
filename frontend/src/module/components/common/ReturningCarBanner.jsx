@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { colors } from "../../theme/colors";
 import { useAppSelector } from "../../../hooks/redux";
 import { bookingService } from "../../../services/booking.service";
+import { userService } from "../../../services/user.service";
 
-// Fallback car images
+
+
 import carImg1 from "../../../assets/car_img1-removebg-preview.png";
 import carImg4 from "../../../assets/car_img4-removebg-preview.png";
 import carImg5 from "../../../assets/car_img5-removebg-preview.png";
@@ -147,6 +149,20 @@ const ReturningCarBanner = () => {
 
       setDynamicState('returning');
       setDynamicBooking(booking);
+
+      // Trigger Push Notification Logic
+      const notifyKey = `notified_returning_${booking._id || booking.id}`;
+      const hasNotified = localStorage.getItem(notifyKey);
+
+      if (!hasNotified) {
+        console.log("🔔 Triggering Returning Soon Notification for", booking._id);
+        userService.sendReturningNotification(booking._id || booking.id)
+          .then(() => {
+            localStorage.setItem(notifyKey, 'true');
+            console.log("✅ Notification Sent");
+          })
+          .catch(err => console.error("❌ Notification Failed", err));
+      }
 
       const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -446,239 +462,241 @@ const ReturningCarBanner = () => {
 
   return (
     <>
-      {/* {dynamicBanner} - Dynamic banner removed per request */}
-      <div className="w-full mb-4 md:mb-6">
-        {/* Mobile View */}
-        <div className="block md:hidden">
-          <div
-            className="rounded-2xl overflow-hidden shadow-2xl relative"
-            style={{
-              background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
-              maxHeight: "280px",
-              height: "auto",
-            }}
-          >
+      {dynamicState !== 'hidden' && dynamicBooking ? dynamicBanner : null}
+
+      {(dynamicState === 'hidden' || !dynamicBooking) && (
+        <div className="w-full mb-4 md:mb-6">
+          {/* Mobile View */}
+          <div className="block md:hidden">
             <div
-              ref={mobileScrollRef}
-              className="flex overflow-x-auto scroll-smooth h-full"
+              className="rounded-2xl overflow-hidden shadow-2xl relative"
               style={{
-                scrollSnapType: "x mandatory",
-                touchAction: "pan-x",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                WebkitOverflowScrolling: "touch",
+                background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+                maxHeight: "280px",
+                height: "auto",
               }}
             >
-              {returningCars.map((car, index) => (
-                <div
-                  key={car.id || index}
-                  className="flex-shrink-0 flex items-center justify-between px-4 py-4 w-full cursor-default"
-                  style={{ scrollSnapAlign: "center" }}
-                >
-                  {/* Left Side - Text Content */}
+              <div
+                ref={mobileScrollRef}
+                className="flex overflow-x-auto scroll-smooth h-full"
+                style={{
+                  scrollSnapType: "x mandatory",
+                  touchAction: "pan-x",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch",
+                }}
+              >
+                {returningCars.map((car, index) => (
                   <div
-                    className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
-                      }`}
+                    key={car.id || index}
+                    className="flex-shrink-0 flex items-center justify-between px-4 py-4 w-full cursor-default"
+                    style={{ scrollSnapAlign: "center" }}
                   >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <svg
-                        className="w-4 h-4 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                        style={{ color: "#10B981" }}
-                      >
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                      </svg>
-                      <span
-                        className="text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: "#10B981" }}
-                      >
-                        Returning Soon
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-1 truncate">
-                      {car.name}
-                    </h3>
-                    <p className="text-sm text-white/90 mb-1.5">
-                      This car is returning in {car.returningIn}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-sm font-semibold text-white">
-                        Rs. {car.price} / day
-                      </span>
-                      <span className="text-xs text-white/60">•</span>
-                      <span className="text-sm text-white/80 truncate">
-                        {car.location}
-                      </span>
+                    {/* Left Side - Text Content */}
+                    <div
+                      className={`flex-1 min-w-0 pr-3 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-4"
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <svg
+                          className="w-4 h-4 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{ color: "#10B981" }}
+                        >
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                        <span
+                          className="text-xs font-semibold uppercase tracking-wide"
+                          style={{ color: "#10B981" }}
+                        >
+                          Returning Soon
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-1 truncate">
+                        {car.name}
+                      </h3>
+                      <p className="text-sm text-white/90 mb-1.5">
+                        This car is returning in {car.returningIn}
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="text-sm font-semibold text-white">
+                          Rs. {car.price} / day
+                        </span>
+                        <span className="text-xs text-white/60">•</span>
+                        <span className="text-sm text-white/80 truncate">
+                          {car.location}
+                        </span>
+                      </div>
+
                     </div>
 
-                  </div>
-
-                  {/* Right Side */}
-                  <div
-                    className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
-                    style={{
-                      width: "40%",
-                      minWidth: "120px",
-                      transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
-                      opacity: index === currentCarIndex ? 1 : 0.8
-                    }}
-                  >
-                    <img
-                      src={car.image}
-                      alt={car.name}
-                      className="w-full h-auto object-contain"
-                      draggable={false}
-                      loading="eager"
+                    {/* Right Side */}
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
                       style={{
-                        objectFit: "contain",
-                        maxHeight: "250px",
-                        width: "100%",
-                        transform: index === currentCarIndex ? "scale(1.25)" : "scale(1)",
-                        transition: "transform 0.3s ease-out"
+                        width: "40%",
+                        minWidth: "120px",
+                        transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
+                        opacity: index === currentCarIndex ? 1 : 0.8
                       }}
-                    />
+                    >
+                      <img
+                        src={car.image}
+                        alt={car.name}
+                        className="w-full h-auto object-contain"
+                        draggable={false}
+                        loading="eager"
+                        style={{
+                          objectFit: "contain",
+                          maxHeight: "250px",
+                          width: "100%",
+                          transform: index === currentCarIndex ? "scale(1.25)" : "scale(1)",
+                          transition: "transform 0.3s ease-out"
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {returningCars.length > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                {returningCars.map((_, index) => (
+                  <span
+                    key={index}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToIndex(index);
+                    }}
+                    className={`swiper-pagination-bullet-custom ${index === currentCarIndex
+                      ? "swiper-pagination-bullet-active-custom"
+                      : ""
+                      }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {returningCars.length > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-4">
-              {returningCars.map((_, index) => (
-                <span
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    goToIndex(index);
-                  }}
-                  className={`swiper-pagination-bullet-custom ${index === currentCarIndex
-                    ? "swiper-pagination-bullet-active-custom"
-                    : ""
-                    }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Web View */}
-        <div className="hidden md:block">
-          <div
-            className="rounded-3xl overflow-hidden shadow-2xl relative"
-            style={{
-              background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
-              maxHeight: "340px",
-              height: "340px",
-              overflow: "hidden",
-            }}
-          >
+          {/* Web View */}
+          <div className="hidden md:block">
             <div
-              ref={webScrollRef}
-              className="flex overflow-x-auto overflow-y-hidden scroll-smooth h-full"
+              className="rounded-3xl overflow-hidden shadow-2xl relative"
               style={{
-                scrollSnapType: "x mandatory",
-                touchAction: "pan-x",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-                overflowY: "hidden",
+                background: colors.gradientHeader || "linear-gradient(180deg, #1C205C 0%, #0D102D 100%)",
+                maxHeight: "340px",
+                height: "340px",
+                overflow: "hidden",
               }}
             >
-              {returningCars.map((car, index) => (
-                <div
-                  key={car.id || index}
-                  className="flex-shrink-0 flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full cursor-default"
-                  style={{ scrollSnapAlign: "center" }}
-                >
-                  {/* Left Side - Text Content */}
+              <div
+                ref={webScrollRef}
+                className="flex overflow-x-auto overflow-y-hidden scroll-smooth h-full"
+                style={{
+                  scrollSnapType: "x mandatory",
+                  touchAction: "pan-x",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                  overflowY: "hidden",
+                }}
+              >
+                {returningCars.map((car, index) => (
                   <div
-                    className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
-                      }`}
+                    key={car.id || index}
+                    className="flex-shrink-0 flex items-center justify-between px-6 py-2 lg:px-8 lg:py-3 w-full cursor-default"
+                    style={{ scrollSnapAlign: "center" }}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg
-                        className="w-5 h-5 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                        style={{ color: "#10B981" }}
-                      >
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                      </svg>
-                      <span
-                        className="text-sm font-semibold uppercase tracking-wide"
-                        style={{ color: "#10B981" }}
-                      >
-                        Returning Soon
-                      </span>
-                    </div>
-                    <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1.5">
-                      {car.name}
-                    </h3>
-                    <p className="text-lg lg:text-xl text-white/90 mb-2">
-                      This car is returning in{" "}
-                      <span className="font-semibold">{car.returningIn}</span>
-                    </p>
-                    <div className="flex items-center gap-4 mb-3">
-                      <span className="text-lg lg:text-xl font-semibold text-white">
-                        Rs. {car.price} / day
-                      </span>
-                      <span className="text-white/60">•</span>
-                      <span className="text-lg text-white/80">{car.location}</span>
+                    {/* Left Side - Text Content */}
+                    <div
+                      className={`flex-1 min-w-0 pr-6 transition-all duration-700 ease-out ${index === currentCarIndex ? "opacity-100 translate-y-0" : "opacity-50 translate-y-6"
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg
+                          className="w-5 h-5 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{ color: "#10B981" }}
+                        >
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                        <span
+                          className="text-sm font-semibold uppercase tracking-wide"
+                          style={{ color: "#10B981" }}
+                        >
+                          Returning Soon
+                        </span>
+                      </div>
+                      <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1.5">
+                        {car.name}
+                      </h3>
+                      <p className="text-lg lg:text-xl text-white/90 mb-2">
+                        This car is returning in{" "}
+                        <span className="font-semibold">{car.returningIn}</span>
+                      </p>
+                      <div className="flex items-center gap-4 mb-3">
+                        <span className="text-lg lg:text-xl font-semibold text-white">
+                          Rs. {car.price} / day
+                        </span>
+                        <span className="text-white/60">•</span>
+                        <span className="text-lg text-white/80">{car.location}</span>
+                      </div>
+
                     </div>
 
-                  </div>
-
-                  {/* Right Side */}
-                  <div
-                    className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
-                    style={{
-                      width: "45%",
-                      minWidth: "280px",
-                      transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
-                      opacity: index === currentCarIndex ? 1 : 0.8
-                    }}
-                  >
-                    <img
-                      src={car.image}
-                      alt={car.name}
-                      className="w-full h-auto object-contain"
-                      draggable={false}
-                      loading="eager"
+                    {/* Right Side */}
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center transition-all duration-700 ease-out"
                       style={{
-                        objectFit: "contain",
-                        maxHeight: "340px",
-                        width: "100%",
-                        transform: index === currentCarIndex ? "scale(1.15)" : "scale(1)",
-                        transition: "transform 0.3s ease-out"
+                        width: "45%",
+                        minWidth: "280px",
+                        transform: index === currentCarIndex ? "scale(1)" : "scale(0.9)",
+                        opacity: index === currentCarIndex ? 1 : 0.8
                       }}
-                    />
+                    >
+                      <img
+                        src={car.image}
+                        alt={car.name}
+                        className="w-full h-auto object-contain"
+                        draggable={false}
+                        loading="eager"
+                        style={{
+                          objectFit: "contain",
+                          maxHeight: "340px",
+                          width: "100%",
+                          transform: index === currentCarIndex ? "scale(1.15)" : "scale(1)",
+                          transition: "transform 0.3s ease-out"
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {returningCars.length > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                {returningCars.map((_, index) => (
+                  <span
+                    key={index}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToIndex(index);
+                    }}
+                    className={`swiper-pagination-bullet-custom ${index === currentCarIndex
+                      ? "swiper-pagination-bullet-active-custom"
+                      : ""
+                      }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {returningCars.length > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-4">
-              {returningCars.map((_, index) => (
-                <span
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    goToIndex(index);
-                  }}
-                  className={`swiper-pagination-bullet-custom ${index === currentCarIndex
-                    ? "swiper-pagination-bullet-active-custom"
-                    : ""
-                    }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <style>{`
+          <style>{`
         .overflow-x-auto::-webkit-scrollbar {
           display: none;
         }
@@ -707,7 +725,8 @@ const ReturningCarBanner = () => {
           animation: fade-in 0.5s ease-out forwards;
         }
       `}</style>
-      </div>
+        </div>
+      )}
     </>
   );
 };

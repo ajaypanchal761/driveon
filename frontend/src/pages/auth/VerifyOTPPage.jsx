@@ -18,20 +18,20 @@ const VerifyOTPPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  
+
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(60); // 60 seconds timer
   const [canResend, setCanResend] = useState(false);
 
   // Get email/phone and type from location state
-  const { email, phone, emailOrPhone, type = 'register', from = '/' } = location.state || {};
+  const { email, phone, emailOrPhone, type = 'register', from = '/', fcmToken } = location.state || {};
 
   // Prevent body scroll when component mounts
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -76,6 +76,8 @@ const VerifyOTPPage = () => {
         email: email || (emailOrPhone?.includes('@') ? emailOrPhone : undefined),
         phone: phone || (!emailOrPhone?.includes('@') ? emailOrPhone?.replace(/\D/g, '') : undefined),
         otp: otp,
+        fcmToken: fcmToken,
+        platform: 'web'
       });
 
       // Extract data from response (handle different response formats)
@@ -101,14 +103,14 @@ const VerifyOTPPage = () => {
       }
 
       toastUtils.success('OTP verified successfully!');
-      
+
       // Redirect to intended page or home
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Verify OTP Error:', error);
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
         'Invalid OTP. Please try again.';
       toastUtils.error(errorMessage);
       setOtp(''); // Clear OTP on error
@@ -158,9 +160,9 @@ const VerifyOTPPage = () => {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center px-4"
-      style={{ 
+      style={{
         backgroundColor: theme.colors.primary,
         margin: 0,
         padding: 0,

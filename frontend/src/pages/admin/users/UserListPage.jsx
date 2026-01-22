@@ -4,6 +4,7 @@ import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
+import { onMessageListener } from "../../../services/firebase";
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
 
 /**
@@ -42,14 +43,14 @@ const getUserId = (user) => {
  */
 const formatUserId = (userId) => {
   if (!userId) return 'N/A';
-  
+
   // Extract last 6 characters from ObjectId and convert to number
   const lastChars = userId.toString().slice(-6);
   // Convert hex to decimal, then take modulo to get a number between 0-999
   const num = parseInt(lastChars, 16) % 1000;
   // Pad with zeros to make it 3 digits
   const paddedNum = String(num).padStart(3, '0');
-  
+
   return `USER${paddedNum}`;
 };
 
@@ -60,7 +61,7 @@ const formatUserId = (userId) => {
  */
 const UserListPage = () => {
   const navigate = useNavigate();
-  
+
   // State management
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -68,7 +69,7 @@ const UserListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDetail, setShowUserDetail] = useState(false);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     accountStatus: 'all', // all, active, suspended, banned
@@ -77,6 +78,16 @@ const UserListPage = () => {
     userType: 'all', // all, regular, guarantor, owner
     registrationDate: 'all', // all, today, week, month, year
   });
+
+  // Listen for notifications
+  useEffect(() => {
+    onMessageListener()
+      .then((payload) => {
+        toastUtils.info(`🔔 Admin Alert: ${payload.notification.title}`);
+        console.log("Admin Notification:", payload);
+      })
+      .catch((err) => console.log("failed: ", err));
+  }, []);
 
   // Fetch users from API
   useEffect(() => {
@@ -122,7 +133,7 @@ const UserListPage = () => {
         // Use createdAt instead of registrationDate
         const regDate = user.createdAt ? new Date(user.createdAt) : null;
         if (!regDate) return false;
-        
+
         switch (filters.registrationDate) {
           case 'today':
             return regDate.toDateString() === now.toDateString();
@@ -148,10 +159,10 @@ const UserListPage = () => {
   const handleUserAction = async (userId, action) => {
     try {
       const response = await adminService.updateUserStatus(userId, action);
-      
+
       if (response.success) {
         toastUtils.success(`User ${action}ed successfully`);
-        
+
         // Update user status locally
         setUsers((prevUsers) =>
           prevUsers.map((user) => {
@@ -407,7 +418,7 @@ const UserListPage = () => {
               </div>
 
               {/* Quick Actions */}
-              <div 
+              <div
                 className="mt-3 pt-3 border-t flex gap-2"
                 style={{ borderTopColor: colors.borderMedium }}
               >
@@ -516,11 +527,10 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 font-medium text-xs transition-colors ${
-                  activeTab === tab
-                    ? 'border-b-2 text-purple-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`px-3 py-1.5 font-medium text-xs transition-colors ${activeTab === tab
+                  ? 'border-b-2 text-purple-600'
+                  : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}

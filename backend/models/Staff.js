@@ -82,6 +82,14 @@ const staffSchema = new mongoose.Schema(
             address: String,
             lastLocationUpdate: Date,
         },
+        fcmToken: {
+            type: String,
+            default: null,
+        },
+        fcmTokenMobile: {
+            type: String,
+            default: null,
+        },
         resetPasswordToken: String,
         resetPasswordExpire: Date,
     },

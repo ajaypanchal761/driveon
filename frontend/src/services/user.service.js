@@ -218,6 +218,46 @@ export const userService = {
   },
 
   /**
+   * Upload RC document
+   * @param {FormData} formData - Form data with document
+   * @returns {Promise}
+   */
+  uploadRcDocument: async (formData) => {
+    if (MOCK_MODE) {
+      await mockDelay(1000);
+      const file = formData.get('rcDocument') || formData.get('file');
+      if (file instanceof File) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve({
+              success: true,
+              data: {
+                rcDocument: reader.result
+              }
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      return { success: true };
+    }
+
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.post(API_ENDPOINTS.USER.UPLOAD_RC_DOCUMENT, formData);
+      return response.data;
+    } catch (error) {
+      console.error('Upload RC document error:', error);
+      if (error.response?.status === 401) {
+        throw error; // Let component handle auth errors
+      }
+      throw error;
+    }
+  },
+
+  /**
    * Get My Guarantor Requests
    * @returns {Promise}
    */
@@ -333,6 +373,22 @@ export const userService = {
         throw enhancedError;
       }
 
+      throw error;
+    }
+  },
+
+  /**
+   * Send Returning Notification
+   * @param {String} bookingId
+   * @returns {Promise}
+   */
+  sendReturningNotification: async (bookingId) => {
+    try {
+      const api = (await import('./api')).default;
+      const response = await api.post('/user/notify-returning', { bookingId });
+      return response.data;
+    } catch (error) {
+      console.error("Notify error:", error);
       throw error;
     }
   },

@@ -26,6 +26,7 @@ import ExpenseCategory from '../models/ExpenseCategory.js';
 import City from '../models/City.js';
 import { uploadImage } from '../services/cloudinary.service.js';
 import razorpayService from '../services/razorpay.service.js';
+import { createNotification } from './notification.controller.js';
 
 /**
  * @desc    Get All Enquiries (with filters)
@@ -126,6 +127,19 @@ export const createEnquiry = async (req, res) => {
     try {
         const enquiry = await Enquiry.create(req.body);
 
+        // Notify Staff if assigned
+        if (enquiry.assignedTo) {
+            await createNotification({
+                recipient: enquiry.assignedTo,
+                recipientModel: 'Staff',
+                title: 'New Enquiry Assigned',
+                message: `You have been assigned a new enquiry: ${enquiry.name}`,
+                type: 'enquiry_assigned',
+                relatedId: enquiry._id,
+                relatedModel: 'Enquiry'
+            });
+        }
+
         res.status(201).json({
             success: true,
             data: { enquiry }
@@ -156,10 +170,25 @@ export const updateEnquiry = async (req, res) => {
             });
         }
 
+        const oldAssignedTo = enquiry.assignedTo ? enquiry.assignedTo.toString() : null;
+
         enquiry = await Enquiry.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
         });
+
+        // Check for assignment change
+        if (req.body.assignedTo && req.body.assignedTo !== oldAssignedTo) {
+            await createNotification({
+                recipient: req.body.assignedTo,
+                recipientModel: 'Staff',
+                title: 'Enquiry Assigned',
+                message: `An enquiry has been assigned to you: ${enquiry.name}`,
+                type: 'enquiry_assigned',
+                relatedId: enquiry._id,
+                relatedModel: 'Enquiry'
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -283,6 +312,18 @@ export const createTask = async (req, res) => {
     try {
         const task = await CRMTask.create(req.body);
 
+        if (task.assignedTo) {
+            await createNotification({
+                recipient: task.assignedTo,
+                recipientModel: 'Staff',
+                title: 'New Task Assigned',
+                message: `New Task: ${task.title || 'Untitled Task'}`,
+                type: 'task_assigned',
+                relatedId: task._id,
+                relatedModel: 'CRMTask'
+            });
+        }
+
         res.status(201).json({
             success: true,
             data: { task }
@@ -313,10 +354,24 @@ export const updateTask = async (req, res) => {
             });
         }
 
+        const oldAssignedTo = task.assignedTo ? task.assignedTo.toString() : null;
+
         task = await CRMTask.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
         });
+
+        if (req.body.assignedTo && req.body.assignedTo !== oldAssignedTo) {
+            await createNotification({
+                recipient: req.body.assignedTo,
+                recipientModel: 'Staff',
+                title: 'Task Assigned',
+                message: `Task assigned to you: ${task.title || 'Untitled Task'}`,
+                type: 'task_assigned',
+                relatedId: task._id,
+                relatedModel: 'CRMTask'
+            });
+        }
 
         res.status(200).json({
             success: true,

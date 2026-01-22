@@ -21,3 +21,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Credentials
+config/newdriveon-firebase-adminsdk.json

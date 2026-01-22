@@ -7,6 +7,7 @@ import { generateOTP, getOTPExpiry, isOTPExpired, sendOTP } from '../utils/otp.s
 import { generateToken, generateRefreshToken } from '../utils/generateToken.js';
 import { processReferralSignup } from './referral.controller.js';
 import sendEmail from '../utils/sendEmail.js';
+import { sendAdminNotification } from '../services/firebase.service.js';
 
 /**
  * @desc    Register new user (Send OTP)
@@ -164,6 +165,17 @@ export const register = async (req, res) => {
     const userName = (fullName || name || '').trim();
     console.log('📝 Registration - Name received:', { fullName, name, userName });
 
+    // Handle FCM Token if provided during signup
+    const { fcmToken, platform } = req.body;
+    const fcmData = {};
+    if (fcmToken) {
+      if (platform === 'mobile') {
+        fcmData.fcmTokenMobile = fcmToken;
+      } else {
+        fcmData.fcmToken = fcmToken;
+      }
+    }
+
     const user = await User.create({
       email,
       phone: normalizedPhone,
@@ -173,7 +185,18 @@ export const register = async (req, res) => {
       isEmailVerified: false,
       isPhoneVerified: false,
       profileComplete: 0, // Will be updated during profile completion
+      ...fcmData // Save FCM token if available
     });
+
+    if (fcmToken) {
+      console.log(`✅ FCM Token saved during registration for ${normalizedPhone}:`, fcmToken.substring(0, 20) + '...');
+    } else {
+      console.error('\n❌❌❌ CRITICAL: NO FCM TOKEN RECEIVED FROM FRONTEND ❌❌❌');
+      console.error('👉 Check Frontend "requestForToken" logic');
+      console.error('👉 Check if Browser Permission is ALLOWED');
+      console.error('👉 Check if VAPID Key is correct in Frontend .env');
+      console.error('------------------------------------------------------\n');
+    }
 
     console.log('✅ User created with name:', user.name);
 
@@ -556,6 +579,22 @@ export const verifyOTP = async (req, res) => {
     }
     await user.save();
 
+    // Send Admin Notification for New Signup
+    if (isSignupVerification && isFirstVerification) {
+      const signupMethod = email ? 'Email' : 'Phone';
+      const identifier = email || normalizedPhone;
+
+      sendAdminNotification(
+        'New User Signup 👤',
+        `New user joined via ${signupMethod}: ${identifier}`,
+        {
+          type: 'new_user_signup',
+          userId: user._id.toString(),
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      ).catch(err => console.error('Failed to send admin signup notification:', err));
+    }
+
     // Process referral signup if:
     // 1. This is a signup verification (purpose: 'register')
     // 2. User was referred by someone
@@ -585,6 +624,19 @@ export const verifyOTP = async (req, res) => {
     };
 
     user.profileComplete = calculateProfileComplete(user);
+    user.profileComplete = calculateProfileComplete(user);
+
+    // Handle FCM Token update if provided during login/verification
+    const { fcmToken, platform } = req.body;
+    if (fcmToken) {
+      if (platform === 'mobile') {
+        user.fcmTokenMobile = fcmToken;
+      } else {
+        user.fcmToken = fcmToken;
+      }
+      console.log(`✅ FCM Token updated during Login/Verify for ${user.email || user.phone}:`, fcmToken.substring(0, 20) + '...');
+    }
+
     await user.save();
 
     res.status(200).json({
@@ -666,6 +718,20 @@ export const staffLogin = async (req, res) => {
     // Generate token
     const token = generateToken(staff._id);
     const refreshToken = generateRefreshToken(staff._id);
+
+    // Handle FCM Token update if provided during login
+    const { fcmToken, platform } = req.body;
+    if (fcmToken) {
+      if (platform === 'mobile') {
+        staff.fcmTokenMobile = fcmToken;
+      } else {
+        staff.fcmToken = fcmToken;
+      }
+      console.log(`✅✅✅ FCM TOKEN RECEIVED FOR STAFF: ${staff.name} (${fcmToken.substring(0, 15)}...) ✅✅✅`);
+      await staff.save();
+    } else {
+      console.log(`❌❌❌ NO FCM TOKEN RECEIVED FROM STAFF FRONTEND: ${staff.name} ❌❌❌`);
+    }
 
     res.status(200).json({
       success: true,
@@ -1021,8 +1087,8 @@ export const staffForgotPassword = async (req, res) => {
     await staff.save({ validateBeforeSave: false });
 
     // Create reset URL
-    // Use origin from request or fallback to localhost:5174 (Employee App Port)
-    const frontendUrl = req.headers.origin || 'http://localhost:5174';
+    // Use live URL as requested
+    const frontendUrl = 'https://driveoncar.co.in';
     const resetUrl = `${frontendUrl}/employee/reset-password/${resetToken}`;
 
     const message = `
@@ -1066,10 +1132,7 @@ export const staffForgotPassword = async (req, res) => {
               <strong>Note:</strong> For security reasons, this password reset link will expire in 10 minutes.
             </div>
 
-            <div class="link-secondary">
-              <p style="margin-bottom: 8px;">Button not working? Copy and paste this link into your browser:</p>
-              <a href="${resetUrl}" class="plain-link">${resetUrl}</a>
-            </div>
+
           </div>
           <div class="footer">
             <p>&copy; ${new Date().getFullYear()} DriveOn Systems. All rights reserved.</p>
@@ -1153,3 +1216,115 @@ export const staffResetPassword = async (req, res) => {
   }
 };
 
+
+/**
+ * @desc    Save Staff FCM Token
+ * @route   POST /api/auth/staff-fcm-token
+ * @access  Private (Staff)
+ */
+export const saveStaffFcmToken = async (req, res) => {
+  try {
+    const { fcmToken, platform = "web" } = req.body;
+    const staffId = req.user._id;
+
+    if (!fcmToken) {
+      return res.status(400).json({
+        success: false,
+        message: "FCM Token is required",
+      });
+    }
+
+    const updateData = {};
+    if (platform === "mobile") {
+      updateData.fcmTokenMobile = fcmToken;
+    } else {
+      updateData.fcmToken = fcmToken;
+    }
+
+    const staff = await Staff.findByIdAndUpdate(
+      staffId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!staff) {
+      return res.status(404).json({
+        success: false,
+        message: "Staff not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "FCM Token saved successfully",
+      data: {
+        id: staff._id,
+        fcmToken: staff.fcmToken,
+        fcmTokenMobile: staff.fcmTokenMobile,
+      },
+    });
+  } catch (error) {
+    console.error("Save Staff FCM Token Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error saving FCM token",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Save User FCM Token
+ * @route   POST /api/auth/user-fcm-token
+ * @access  Private (User)
+ */
+export const saveUserFcmToken = async (req, res) => {
+  try {
+    const { fcmToken, platform = "web" } = req.body;
+    const userId = req.user._id;
+
+    if (!fcmToken) {
+      return res.status(400).json({
+        success: false,
+        message: "FCM Token is required",
+      });
+    }
+
+    const updateData = {};
+    if (platform === "mobile") {
+      updateData.fcmTokenMobile = fcmToken;
+    } else {
+      updateData.fcmToken = fcmToken;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "FCM Token saved successfully",
+      data: {
+        id: user._id,
+        fcmToken: user.fcmToken,
+        fcmTokenMobile: user.fcmTokenMobile,
+      },
+    });
+  } catch (error) {
+    console.error("Save User FCM Token Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error saving FCM token",
+      error: error.message,
+    });
+  }
+};

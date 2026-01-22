@@ -22,6 +22,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
+import { onMessageListener } from "../../services/firebase";
+import toastUtils from '../../config/toast';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -30,6 +32,17 @@ const DashboardPage = () => {
 
   useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  // Listen for notifications
+  useEffect(() => {
+    onMessageListener()
+      .then((payload) => {
+        toastUtils.info(`🔔 CRM Update: ${payload.notification.title}`);
+        console.log("CRM Notification:", payload);
+        // fetchDashboardData(); 
+      })
+      .catch((err) => console.log("failed: ", err));
   }, []);
 
   const fetchDashboardData = async () => {
@@ -340,9 +353,9 @@ const DashboardPage = () => {
                 <div className="text-right">
                   <p className="text-[10px] text-gray-400 font-bold mb-1">Recently</p>
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${enq.status === 'New' ? 'bg-blue-50 text-blue-600' :
-                      enq.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
-                        enq.status === 'In Progress' ? 'bg-orange-50 text-orange-600' :
-                          'bg-gray-50 text-gray-600'
+                    enq.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
+                      enq.status === 'In Progress' ? 'bg-orange-50 text-orange-600' :
+                        'bg-gray-50 text-gray-600'
                     }`}>
                     {enq.status}
                   </span>

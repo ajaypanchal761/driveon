@@ -15,6 +15,7 @@ import {
   updateUserStatus,
   getAllReferrals,
   updateReferralPoints,
+  sendNotification,
 } from '../controllers/admin.controller.js';
 import {
   getAllCars,
@@ -335,6 +336,10 @@ router.get('/referrals', authenticateAdmin, getAllReferrals);
 // Update Referral Points - PROTECTED
 // Route: PUT /api/admin/referrals/:referralId/points
 router.put('/referrals/:referralId/points', authenticateAdmin, updateReferralPoints);
+
+// Send Manual Notification - PROTECTED
+// Route: POST /api/admin/send-notification
+router.post('/send-notification', sendNotification);
 
 export default router;
 

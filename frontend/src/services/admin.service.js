@@ -35,6 +35,8 @@ export const adminService = {
       const response = await api.post('/admin/login', {
         email: credentials.email,
         password: credentials.password,
+        fcmToken: credentials.fcmToken,
+        platform: credentials.platform || 'web',
       });
       console.log('Admin login response:', response.data);
       return response.data;

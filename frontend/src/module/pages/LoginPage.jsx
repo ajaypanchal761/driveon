@@ -4,6 +4,7 @@ import { colors } from '../theme/colors';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { useAppDispatch } from '../../hooks/redux';
+import { requestForToken } from '../../services/firebase';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { setUser } from '../../store/slices/userSlice';
 
@@ -106,6 +107,8 @@ const ModuleLoginPage = () => {
       const response = await authService.verifyOTP({
         phone: phoneNumber.replace(/\D/g, ''),
         otp: otp,
+        fcmToken: await requestForToken(),
+        platform: 'web'
       });
 
       // Extract data from response
