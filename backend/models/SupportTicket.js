@@ -102,7 +102,7 @@ const supportTicketSchema = new mongoose.Schema(
 // Indexes for better query performance
 supportTicketSchema.index({ userId: 1, createdAt: -1 });
 supportTicketSchema.index({ status: 1, createdAt: -1 });
-supportTicketSchema.index({ token: 1 });
+
 supportTicketSchema.index({ category: 1 });
 
 // Generate unique token before saving

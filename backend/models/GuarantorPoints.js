@@ -14,7 +14,7 @@ const guarantorPointsSchema = new mongoose.Schema(
       required: [true, 'Booking is required'],
       index: true,
     },
-    
+
     // Guarantor user who received points
     guarantor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -22,7 +22,7 @@ const guarantorPointsSchema = new mongoose.Schema(
       required: [true, 'Guarantor is required'],
       index: true,
     },
-    
+
     // Guarantor request reference
     guarantorRequest: {
       type: mongoose.Schema.Types.ObjectId,
@@ -30,21 +30,21 @@ const guarantorPointsSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    
+
     // Booking amount (at time of points allocation)
     bookingAmount: {
       type: Number,
       required: true,
       min: 0,
     },
-    
+
     // Total guarantor pool (10% of booking amount)
     totalPoolAmount: {
       type: Number,
       required: true,
       min: 0,
     },
-    
+
     // Number of guarantors at time of allocation
     totalGuarantors: {
       type: Number,
@@ -52,14 +52,14 @@ const guarantorPointsSchema = new mongoose.Schema(
       min: 1,
       max: 5,
     },
-    
+
     // Points allocated to this specific guarantor
     pointsAllocated: {
       type: Number,
       required: true,
       min: 0,
     },
-    
+
     // Points status
     status: {
       type: String,
@@ -67,7 +67,7 @@ const guarantorPointsSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
-    
+
     // Reversal details (if points were reversed)
     reversedAt: {
       type: Date,
@@ -76,7 +76,7 @@ const guarantorPointsSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    
+
     // Booking status at time of allocation
     bookingStatusAtAllocation: {
       type: String,
@@ -91,7 +91,7 @@ const guarantorPointsSchema = new mongoose.Schema(
 // Indexes for better query performance
 guarantorPointsSchema.index({ guarantor: 1, status: 1 });
 guarantorPointsSchema.index({ booking: 1, status: 1 });
-guarantorPointsSchema.index({ guarantorRequest: 1 });
+
 guarantorPointsSchema.index({ createdAt: -1 });
 
 // Prevent duplicate points for same booking and guarantor
