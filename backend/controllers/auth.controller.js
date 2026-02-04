@@ -1012,23 +1012,24 @@ export const refreshToken = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Refresh token error:', error);
-
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid refresh token',
-      });
-    }
-
     if (error.name === 'TokenExpiredError') {
+      console.warn('⚠️ Refresh token expired for a user (normal behavior after expiry)');
       return res.status(401).json({
         success: false,
         message: 'Refresh token expired. Please log in again.',
       });
     }
 
-    res.status(500).json({
+    if (error.name === 'JsonWebTokenError') {
+      console.warn('⚠️ Invalid refresh token attempt');
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token',
+      });
+    }
+
+    console.error('❌ Unexpected Refresh token error:', error);
+    return res.status(500).json({
       success: false,
       message: 'Server error during token refresh',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
