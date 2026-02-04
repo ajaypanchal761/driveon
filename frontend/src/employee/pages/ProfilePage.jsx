@@ -5,12 +5,14 @@ import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiD
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../store/slices/authSlice';
+import { useEmployee } from '../../context/EmployeeContext';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
 
 const ProfilePage = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const { unreadCount, fetchUnreadCount } = useEmployee();
 
     const handleLogout = async () => {
         await dispatch(logoutUser());
@@ -37,6 +39,10 @@ const ProfilePage = () => {
         rating: 0,
         badge: "Rookie"
     });
+
+    useEffect(() => {
+        // Unread count is now fetched automatically by EmployeeContext on user mount/change
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -110,7 +116,7 @@ const ProfilePage = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
                     <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
 
-                    <HeaderTopBar title="My Profile" />
+                    <HeaderTopBar title="My Profile" showBack={false} />
 
                     <div className="flex flex-col items-center mt-4 text-white">
                         <div className="relative">
@@ -175,8 +181,8 @@ const ProfilePage = () => {
                         label="Notifications"
                         color="text-amber-600"
                         bg="bg-amber-50"
-                        hasBadge
-                        badgeCount={3}
+                        hasBadge={unreadCount > 0}
+                        badgeCount={unreadCount}
                         onClick={() => navigate('/employee/notifications')}
                     />
                 </div>

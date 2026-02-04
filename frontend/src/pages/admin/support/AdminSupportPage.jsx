@@ -42,35 +42,35 @@ const AdminSupportPage = () => {
   const loadTickets = async () => {
     try {
       setLoading(true);
-      
+
       // Build filter params
       const params = {
         page: 1,
         limit: 100,
       };
-      
+
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
         console.log('AdminSupportPage - Status filter applied:', statusFilter);
       }
-      
+
       if (categoryFilter && categoryFilter !== 'all') {
         params.category = categoryFilter;
         console.log('AdminSupportPage - Category filter applied:', categoryFilter);
       }
-      
+
       if (searchQuery && searchQuery.trim()) {
         params.search = searchQuery.trim();
         console.log('AdminSupportPage - Search query applied:', searchQuery.trim());
       }
-      
+
       if (dateFilter && dateFilter !== 'all') {
         params.dateFilter = dateFilter;
         console.log('AdminSupportPage - Date filter applied:', dateFilter);
       }
-      
+
       console.log('AdminSupportPage - Loading tickets with all filters:', params);
-      
+
       const response = await supportService.getAllTickets(params);
 
       console.log('AdminSupportPage - Tickets response:', response);
@@ -124,13 +124,13 @@ const AdminSupportPage = () => {
     try {
       setLoading(true);
       const response = await supportService.updateTicketStatus(ticketId, newStatus);
-      
+
       if (response.success) {
         toastUtils.success(`Ticket status updated to ${newStatus.replace('_', ' ')}`);
-        
+
         // Update selectedStatus state
         setSelectedStatus(newStatus);
-        
+
         // Reload tickets and selected ticket
         await loadTickets();
         if (selectedTicket && selectedTicket.id === ticketId) {
@@ -170,7 +170,7 @@ const AdminSupportPage = () => {
         toastUtils.success('Response added successfully');
         setAdminMessage('');
         setSelectedStatus('');
-        
+
         // Reload ticket details and tickets list
         await loadTicketDetails(selectedTicket.id);
         await loadTickets();
@@ -359,11 +359,10 @@ const AdminSupportPage = () => {
                 <div
                   key={ticket.id}
                   onClick={() => loadTicketDetails(ticket.id)}
-                  className={`bg-white rounded-lg shadow-md border p-4 md:p-5 cursor-pointer hover:shadow-lg transition-all ${
-                    selectedTicket?.id === ticket.id
-                      ? 'ring-2'
-                      : 'border-gray-200'
-                  }`}
+                  className={`bg-white rounded-lg shadow-md border p-4 md:p-5 cursor-pointer hover:shadow-lg transition-all ${selectedTicket?.id === ticket.id
+                    ? 'ring-2'
+                    : 'border-gray-200'
+                    }`}
                   style={
                     selectedTicket?.id === ticket.id
                       ? { borderColor: colors.backgroundTertiary, ringColor: colors.backgroundTertiary }
@@ -393,7 +392,14 @@ const AdminSupportPage = () => {
                         {ticket.description}
                       </p>
                       <div className="text-xs text-gray-500">
-                        Created: {new Date(ticket.createdAt).toLocaleString()}
+                        Created: {new Date(ticket.createdAt).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
                       </div>
                     </div>
                     <svg
@@ -419,7 +425,7 @@ const AdminSupportPage = () => {
             setSelectedStatus('');
           }}>
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                 <h2 className="text-xl md:text-2xl font-bold" style={{ color: colors.textPrimary }}>
                   Ticket Details
                 </h2>
@@ -438,12 +444,20 @@ const AdminSupportPage = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Token */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Ticket Token</p>
-                  <p className="text-base font-mono font-bold" style={{ color: colors.backgroundTertiary }}>
-                    {selectedTicket.token}
-                  </p>
+                {/* Token and Subject */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Ticket Token</p>
+                    <p className="text-base font-mono font-bold" style={{ color: colors.backgroundTertiary }}>
+                      {selectedTicket.token}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Subject</p>
+                    <p className="text-base font-bold text-gray-800">
+                      {selectedTicket.subject}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Status Update */}
@@ -489,13 +503,27 @@ const AdminSupportPage = () => {
                     <div>
                       <span className="text-gray-600">Created:</span>{' '}
                       <span className="font-medium">
-                        {new Date(selectedTicket.createdAt).toLocaleString()}
+                        {new Date(selectedTicket.createdAt).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
                       </span>
                     </div>
                     <div>
                       <span className="text-gray-600">Last Updated:</span>{' '}
                       <span className="font-medium">
-                        {new Date(selectedTicket.updatedAt).toLocaleString()}
+                        {new Date(selectedTicket.updatedAt).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
                       </span>
                     </div>
                     <div>
@@ -527,7 +555,14 @@ const AdminSupportPage = () => {
                               {msg.senderName} ({msg.sender === 'admin' ? 'Admin' : 'User'})
                             </span>
                             <span className="text-xs text-gray-500">
-                              {new Date(msg.timestamp).toLocaleString()}
+                              {new Date(msg.timestamp).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              })}
                             </span>
                           </div>
                           <p className="text-sm text-gray-700">{msg.message}</p>

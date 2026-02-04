@@ -200,14 +200,10 @@ const ProfileDashboardPage = () => {
   const formatUserId = (userId) => {
     if (!userId) return '';
 
-    // Extract last 6 characters from ObjectId and convert to number
-    const lastChars = userId.slice(-6);
-    // Convert hex to decimal, then take modulo to get a number between 0-999
-    const num = parseInt(lastChars, 16) % 1000;
-    // Pad with zeros to make it 3 digits
-    const paddedNum = String(num).padStart(3, '0');
+    // Extract last 5 characters from MongoDB ObjectId
+    const lastChars = userId.toString().slice(-5);
 
-    return `USER${paddedNum}`;
+    return `user-${lastChars}`;
   };
 
   const formattedUserId = user?._id || user?.id ? formatUserId(user._id || user.id) : '';
@@ -295,7 +291,35 @@ const ProfileDashboardPage = () => {
                 <h1 className="text-lg md:text-2xl font-bold text-white mb-0.5 md:mb-1 truncate">{userName}</h1>
                 <p className="text-xs md:text-sm text-white/80 truncate">{userEmail}</p>
                 {formattedUserId && (
-                  <p className="text-xs md:text-sm text-white/70 font-mono mt-0.5 md:mt-1">{formattedUserId}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 md:mt-1">
+                    <p className="text-xs md:text-sm text-white/70 font-mono">{formattedUserId}</p>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(formattedUserId);
+                          toastUtils.success('User ID copied!');
+                        } catch (err) {
+                          toastUtils.error('Failed to copy');
+                        }
+                      }}
+                      className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                      title="Copy User ID"
+                    >
+                      <svg
+                        className="w-3 h-3 text-white/70 hover:text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

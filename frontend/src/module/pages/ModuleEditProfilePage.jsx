@@ -181,7 +181,7 @@ const ModuleEditProfilePage = () => {
         }));
 
         toastUtils.success('Profile updated successfully!');
-        navigate('/profile/settings');
+        navigate('/profile', { replace: true });
       } else {
         throw new Error(response.message || 'Failed to update profile');
       }
@@ -332,14 +332,14 @@ const ModuleEditProfilePage = () => {
               <input
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
+                readOnly
+                disabled
                 placeholder="Enter your phone number"
-                maxLength={10}
-                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 text-base transition-all"
+                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none text-base cursor-not-allowed opacity-60"
                 style={{
-                  borderColor: errors.phone ? colors.error : colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                  color: colors.textPrimary,
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary, // Keep background slightly different if needed, or consistent
+                  color: colors.textSecondary, // Use secondary text color to indicate disabled state
                 }}
               />
               {errors.phone && (
@@ -421,7 +421,7 @@ const ModuleEditProfilePage = () => {
           <div className="flex gap-3 md:gap-4">
             <button
               type="button"
-              onClick={() => navigate('/profile/settings')}
+              onClick={() => navigate(-1)}
               className="flex-1 px-4 py-3 rounded-xl font-semibold text-base border-2 transition-all"
               style={{
                 borderColor: colors.backgroundTertiary,

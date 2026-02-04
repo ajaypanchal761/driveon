@@ -4,6 +4,7 @@ import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { logoutUser } from '../../store/slices/authSlice';
 import { clearUser } from '../../store/slices/userSlice';
 import { theme } from '../../theme/theme.constants';
+import { setLanguage } from '../../store/slices/themeSlice';
 import toastUtils from '../../config/toast';
 
 /**
@@ -15,6 +16,7 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.user);
+  const { language } = useAppSelector((state) => state.theme);
 
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -22,7 +24,9 @@ const SettingsPage = () => {
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [locationTracking, setLocationTracking] = useState(true);
-  const [language, setLanguage] = useState('en');
+
+  // Language is now managed by Redux
+
   const [isSaving, setIsSaving] = useState(false);
 
   // Handle logout
@@ -64,17 +68,7 @@ const SettingsPage = () => {
         </svg>
       ),
       items: [
-        {
-          id: 'edit-profile',
-          label: 'Edit Profile',
-          description: 'Update your personal information',
-          action: () => navigate('/profile/complete'),
-          icon: (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          ),
-        },
+
         {
           id: 'change-password',
           label: 'Change Password',
@@ -176,7 +170,7 @@ const SettingsPage = () => {
           description: 'Select app language',
           value: language === 'en' ? 'English' : 'Hindi',
           action: () => {
-            setLanguage(language === 'en' ? 'hi' : 'en');
+            dispatch(setLanguage(language === 'en' ? 'hi' : 'en'));
             toastUtils.success(`Language changed to ${language === 'en' ? 'Hindi' : 'English'}`);
           },
           icon: (
@@ -280,16 +274,15 @@ const SettingsPage = () => {
                               onChange={(e) => item.onToggle(e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div 
+                            <div
                               className="w-11 h-6 md:w-12 md:h-6 rounded-full transition-all duration-300 relative"
                               style={{
                                 backgroundColor: item.toggle ? theme.colors.primary : '#d1d5db',
                               }}
                             >
-                              <div 
-                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 ${
-                                  item.toggle ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'
-                                }`}
+                              <div
+                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 ${item.toggle ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'
+                                  }`}
                                 style={{
                                   boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                                 }}
@@ -313,9 +306,9 @@ const SettingsPage = () => {
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <p 
-                                  className="text-sm md:text-base font-semibold transition-colors" 
-                                  style={{ 
+                                <p
+                                  className="text-sm md:text-base font-semibold transition-colors"
+                                  style={{
                                     color: theme.colors.textPrimary,
                                   }}
                                 >
@@ -333,11 +326,11 @@ const SettingsPage = () => {
                             </div>
                           </div>
                           <div className="flex-shrink-0 ml-2">
-                            <svg 
-                              className="w-5 h-5 md:w-5 md:h-5 transition-colors" 
+                            <svg
+                              className="w-5 h-5 md:w-5 md:h-5 transition-colors"
                               style={{ color: '#9ca3af' }}
-                              fill="none" 
-                              stroke="currentColor" 
+                              fill="none"
+                              stroke="currentColor"
                               viewBox="0 0 24 24"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

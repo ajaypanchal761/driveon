@@ -43,15 +43,8 @@ const getUserId = (user) => {
  */
 const formatUserId = (userId) => {
   if (!userId) return 'N/A';
-
-  // Extract last 6 characters from ObjectId and convert to number
-  const lastChars = userId.toString().slice(-6);
-  // Convert hex to decimal, then take modulo to get a number between 0-999
-  const num = parseInt(lastChars, 16) % 1000;
-  // Pad with zeros to make it 3 digits
-  const paddedNum = String(num).padStart(3, '0');
-
-  return `USER${paddedNum}`;
+  const idStr = userId.toString();
+  return `user-${idStr.slice(-5)}`;
 };
 
 /**

@@ -15,7 +15,7 @@ import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelec
 const CarListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get initial status from URL
   const getInitialStatus = () => {
     if (location.pathname.includes('/pending')) return 'pending';
@@ -30,7 +30,7 @@ const CarListPage = () => {
   const [selectedCar, setSelectedCar] = useState(null);
   const [showCarDetail, setShowCarDetail] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, active, inactive, pending, suspended
@@ -63,7 +63,7 @@ const CarListPage = () => {
             // Get primary image or first image
             const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
             const imageUrl = primaryImage?.url || null;
-            
+
             return {
               id: car._id || car.id,
               brand: car.brand,
@@ -73,9 +73,9 @@ const CarListPage = () => {
               pricePerDay: car.pricePerDay,
               status: car.status,
               availability: car.isAvailable ? 'available' : 'booked',
-              ownerId: car.owner?._id || car.owner?.id || car.owner,
-              ownerName: car.owner?.name || 'Unknown',
-              ownerEmail: car.owner?.email || '',
+              ownerId: car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner,
+              ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
+              ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
               location: car.location?.city || car.location || 'Unknown',
               images: car.images || [],
               imageUrl: imageUrl, // Add primary image URL for easy access
@@ -92,7 +92,7 @@ const CarListPage = () => {
               isPopular: car.isPopular,
             };
           });
-          
+
           setCars(formattedCars);
         } else {
           setCars([]);
@@ -152,33 +152,33 @@ const CarListPage = () => {
       });
 
       if (response.success && response.data) {
-          const formattedCars = response.data.cars.map((car) => {
-            // Get primary image or first image
-            const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
-            const imageUrl = primaryImage?.url || null;
-            
-            return {
-              id: car._id || car.id,
-              brand: car.brand,
-              model: car.model,
-              year: car.year,
-              carType: car.carType,
-              pricePerDay: car.pricePerDay,
-              status: car.status,
-              availability: car.isAvailable ? 'available' : 'booked',
-              ownerId: car.owner?._id || car.owner?.id || car.owner,
-              ownerName: car.owner?.name || 'Unknown',
-              ownerEmail: car.owner?.email || '',
-              location: car.location?.city || car.location || 'Unknown',
-              images: car.images || [],
-              imageUrl: imageUrl, // Add primary image URL for easy access
-              rating: car.averageRating || 0,
-              totalBookings: car.totalBookings || 0,
-              totalRevenue: car.totalRevenue || 0,
-              features: car.features || [],
-              registrationDate: car.createdAt || new Date().toISOString(),
-            };
-          });
+        const formattedCars = response.data.cars.map((car) => {
+          // Get primary image or first image
+          const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
+          const imageUrl = primaryImage?.url || null;
+
+          return {
+            id: car._id || car.id,
+            brand: car.brand,
+            model: car.model,
+            year: car.year,
+            carType: car.carType,
+            pricePerDay: car.pricePerDay,
+            status: car.status,
+            availability: car.isAvailable ? 'available' : 'booked',
+            ownerId: car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner,
+            ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
+            ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
+            location: car.location?.city || car.location || 'Unknown',
+            images: car.images || [],
+            imageUrl: imageUrl, // Add primary image URL for easy access
+            rating: car.averageRating || 0,
+            totalBookings: car.totalBookings || 0,
+            totalRevenue: car.totalRevenue || 0,
+            features: car.features || [],
+            registrationDate: car.createdAt || new Date().toISOString(),
+          };
+        });
         setCars(formattedCars);
       }
     } catch (error) {
@@ -358,22 +358,20 @@ const CarListPage = () => {
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    viewMode === 'grid'
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'grid'
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                   style={viewMode === 'grid' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   Grid
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    viewMode === 'list'
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'list'
                       ? 'text-white'
                       : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                   style={viewMode === 'list' ? { backgroundColor: colors.backgroundTertiary } : {}}
                 >
                   List
@@ -543,13 +541,13 @@ const CarListPage = () => {
                       }}
                     />
                   ) : null}
-                  <div 
+                  <div
                     className={`w-full h-full flex items-center justify-center ${car.imageUrl ? 'hidden' : ''}`}
                     style={{ display: car.imageUrl ? 'none' : 'flex' }}
                   >
-                  <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                    </svg>
                   </div>
                 </div>
 
@@ -559,7 +557,7 @@ const CarListPage = () => {
                     {car.brand} {car.model} ({car.year})
                   </h3>
                   <p className="text-xs text-gray-500 mb-2">{getCarTypeName(car.carType)} • {car.location}</p>
-                  
+
                   {/* Status Badges */}
                   <div className="flex flex-wrap gap-2 mb-2">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.status)}`}>
@@ -579,7 +577,7 @@ const CarListPage = () => {
                       <span className="text-gray-600">⭐ {car.rating}</span>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
                     <span>{car.totalBookings} bookings</span>
                     <span>₹{car.totalRevenue.toLocaleString()} revenue</span>
@@ -659,13 +657,13 @@ const CarListPage = () => {
                         }}
                       />
                     ) : null}
-                    <div 
+                    <div
                       className={`w-full h-full flex items-center justify-center ${car.imageUrl ? 'hidden' : ''}`}
                       style={{ display: car.imageUrl ? 'none' : 'flex' }}
                     >
-                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                      </svg>
                     </div>
                   </div>
 
@@ -848,11 +846,10 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${
-                  activeTab === tab
+                className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === tab
                     ? 'border-b-2 text-purple-600'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
                 style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -868,7 +865,7 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Car Images</h3>
                   {car.images && car.images.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {car.images.map((image, index) => (
                         <div key={index} className="relative w-full h-32 bg-gray-200 rounded-lg overflow-hidden group">
                           <img
@@ -882,18 +879,18 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
                             }}
                           />
                           <div className="hidden w-full h-full absolute inset-0 bg-gray-200 rounded-lg items-center justify-center">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
                           </div>
                           {image.isPrimary && (
                             <span className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded">
                               Primary
                             </span>
                           )}
-                      </div>
-                    ))}
-                  </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <div className="w-full h-32 bg-gray-200 rounded-lg flex items-center justify-center">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

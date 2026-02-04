@@ -34,7 +34,10 @@ const EmployeeHomePage = () => {
     accumulatedSeconds,
     attendanceStatus,
     attendanceDays,
-    formatTotalHours
+    formatTotalHours,
+    unreadCount,
+    fetchUnreadCount,
+    setUnreadCount
   } = useEmployee();
   const [time, setTime] = useState(new Date());
 
@@ -153,36 +156,20 @@ const EmployeeHomePage = () => {
     }
   };
 
-  // FCM Notification Setup
+  // FCM Notification Setup (Now handled globally in EmployeeContext)
   useEffect(() => {
-    if (user && (user._id || user.id)) {
-      // Request and Save Token
-      requestForToken().then(async (token) => {
-        if (token) {
-          try {
-            await api.post('/auth/staff-fcm-token', {
-              fcmToken: token,
-              platform: 'web'
-            });
-            console.log("FCM Token saved for staff");
-          } catch (error) {
-            console.error("Error saving FCM token:", error);
-          }
-        }
-      });
-
-      // Listen for foreground messages
-      onMessageListener()
-        .then((payload) => {
-          toastUtils.info(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
-          console.log("Foreground Notification:", payload);
-        })
-        .catch((err) => console.log("failed: ", err));
-    }
+    // Logic moved to context for global real-time updates
   }, [user]);
 
   const formatTime = (date) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const getGreeting = () => {
+    const hour = time.getHours();
+    if (hour < 12) return "Good Morning,";
+    if (hour < 17) return "Good Afternoon,";
+    return "Good Evening,";
   };
 
 
@@ -280,9 +267,9 @@ const EmployeeHomePage = () => {
 
   // Dummy Data with dynamic overrides
   const employeeData = {
-    name: user?.name || "", // Removed static "Employee"
-    role: user?.role || "",
-    shift: user?.department ? `${user.department} Dept` : "", // Removed default shift if no dept
+    name: user?.name || "Team Member",
+    role: user?.role || "Employee",
+    department: user?.department || "",
     todayHours: "06h 42m",
     status: "On Time",
     targets: {
@@ -326,7 +313,7 @@ const EmployeeHomePage = () => {
       className="min-h-screen bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100"
     >
 
-      <div className="sticky top-0 z-30">
+      <div className="relative z-30">
         {/* HEADER SECTION - Curved & Clean */}
         <motion.div
           variants={itemVariants}
@@ -334,13 +321,17 @@ const EmployeeHomePage = () => {
           style={{ background: GRADIENT_HEADER }}
         >
           <div className="px-6 relative z-10 flex justify-between items-start">
-            <div className="flex flex-col">
-              <span className="text-blue-100 text-sm font-medium mb-1 tracking-wide">Good Morning,</span>
+            <div className="flex flex-col text-left">
+              <span className="text-blue-100 text-sm font-medium mb-1 tracking-wide">{getGreeting()}</span>
               <h1 className="text-3xl font-bold tracking-tight">{employeeData.name}</h1>
-              <div className="flex items-center gap-2 mt-2 opacity-80 text-xs font-light">
-                <span className="bg-white/10 px-2 py-0.5 rounded-md">{employeeData.role}</span>
-                <span>•</span>
-                <span>{employeeData.shift}</span>
+              <div className="flex items-center gap-2 mt-2 opacity-90 text-xs font-medium">
+                <span className="bg-white/10 px-2 py-0.5 rounded-md backdrop-blur-sm border border-white/10">{employeeData.role}</span>
+                {employeeData.department && (
+                  <>
+                    <span className="opacity-50">•</span>
+                    <span className="bg-white/10 px-2 py-0.5 rounded-md backdrop-blur-sm border border-white/10">{employeeData.department}</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex gap-3">
@@ -350,7 +341,9 @@ const EmployeeHomePage = () => {
                 className="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all shadow-lg shadow-blue-900/20 relative"
               >
                 <FiBell className="text-xl" />
-                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1C205C]"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#1C205C]"></span>
+                )}
               </motion.button>
             </div>
           </div>
@@ -398,7 +391,7 @@ const EmployeeHomePage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleClockToggle}
                 className={`${clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
-                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2 h-fit`}
+                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 h-fit`}
               >
                 <FiClock />
                 {clockedIn ? 'Check Out' : 'Check In'}
@@ -433,7 +426,7 @@ const EmployeeHomePage = () => {
         {/* QUICK REQUESTS - Circular Icons (Ref Image 2) */}
         <motion.div variants={itemVariants}>
           <h3 className="text-gray-800 font-bold text-lg mb-4">Quick Overview</h3>
-          <div className="flex justify-between gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="grid grid-cols-3 gap-3">
             {employeeData.quickStats.map((stat) => (
               <motion.div
                 whileTap={{ scale: 0.95 }}
@@ -444,7 +437,7 @@ const EmployeeHomePage = () => {
                   if (stat.label === 'Closed') tab = 'Closed';
                   navigate('/employee/enquiries', { state: { activeTab: tab } });
                 }}
-                className="bg-white p-3 rounded-2xl w-28 flex-shrink-0 flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all"
+                className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
               >
                 <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
                   {stat.icon}

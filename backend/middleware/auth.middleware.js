@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Staff from '../models/Staff.js';
+import Admin from '../models/Admin.js';
 
 /**
  * Authentication Middleware
@@ -37,6 +38,14 @@ export const authenticate = async (req, res, next) => {
       const staff = await Staff.findById(decoded.id);
       if (staff) {
         user = staff;
+      }
+    }
+
+    // If still not found, check Admin collection (for CRM)
+    if (!user) {
+      const admin = await Admin.findById(decoded.id);
+      if (admin) {
+        user = admin;
       }
     }
 
@@ -97,7 +106,7 @@ export const authenticateStaff = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, message: 'No token provided' });
     }
-    
+
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 

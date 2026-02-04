@@ -35,7 +35,7 @@ const carSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
-    
+
     // Car Type & Category
     carType: {
       type: String,
@@ -59,7 +59,7 @@ const carSchema = new mongoose.Schema(
       min: [2, 'Seating capacity must be at least 2'],
       max: [10, 'Seating capacity cannot exceed 10'],
     },
-    
+
     // Pricing
     pricePerDay: {
       type: Number,
@@ -79,7 +79,7 @@ const carSchema = new mongoose.Schema(
       required: [true, 'Security deposit is required'],
       min: [0, 'Security deposit cannot be negative'],
     },
-    
+
     // Location & Availability
     location: {
       city: {
@@ -116,7 +116,7 @@ const carSchema = new mongoose.Schema(
     availableTo: {
       type: Date,
     },
-    
+
     // Owner Information
     owner: {
       type: mongoose.Schema.Types.ObjectId,
@@ -124,7 +124,22 @@ const carSchema = new mongoose.Schema(
       required: [true, 'Owner is required'],
       index: true,
     },
-    
+    ownerInfo: {
+      name: {
+        type: String,
+        trim: true,
+      },
+      email: {
+        type: String,
+        trim: true,
+      },
+      ownerId: {
+        type: String,
+        trim: true,
+        index: true,
+      }
+    },
+
     // Images
     images: [{
       url: {
@@ -139,7 +154,7 @@ const carSchema = new mongoose.Schema(
         default: false,
       },
     }],
-    
+
     // Features & Specifications
     features: [{
       type: String,
@@ -158,7 +173,7 @@ const carSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    
+
     // Status & Approval
     status: {
       type: String,
@@ -177,7 +192,7 @@ const carSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    
+
     // Ratings & Reviews
     averageRating: {
       type: Number,
@@ -200,7 +215,7 @@ const carSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Total revenue cannot be negative'],
     },
-    
+
     // Additional Information
     description: {
       type: String,
@@ -239,7 +254,7 @@ const carSchema = new mongoose.Schema(
         type: String,
       },
     },
-    
+
     // Flags
     isFeatured: {
       type: Boolean,
@@ -251,7 +266,7 @@ const carSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
-    
+
     // Metadata
     views: {
       type: Number,
@@ -277,30 +292,30 @@ carSchema.index({ isPopular: 1, status: 1 });
 carSchema.index({ createdAt: -1 });
 
 // Virtual for primary image
-carSchema.virtual('primaryImage').get(function() {
+carSchema.virtual('primaryImage').get(function () {
   const primaryImg = this.images.find(img => img.isPrimary);
   return primaryImg ? primaryImg.url : (this.images[0]?.url || null);
 });
 
 // Method to get formatted car name
-carSchema.methods.getFullName = function() {
+carSchema.methods.getFullName = function () {
   return `${this.brand} ${this.model}`;
 };
 
 // Method to check if car is available for booking
-carSchema.methods.isAvailableForBooking = function(startDate, endDate) {
+carSchema.methods.isAvailableForBooking = function (startDate, endDate) {
   if (!this.isAvailable || this.status !== 'active') {
     return false;
   }
-  
+
   if (this.availableFrom && startDate < this.availableFrom) {
     return false;
   }
-  
+
   if (this.availableTo && endDate > this.availableTo) {
     return false;
   }
-  
+
   return true;
 };
 

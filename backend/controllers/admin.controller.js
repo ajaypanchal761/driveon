@@ -11,15 +11,8 @@ import { sendPushNotification, sendPushToToken } from '../services/firebase.serv
  */
 const formatUserId = (userId) => {
   if (!userId) return '';
-
-  const idString = userId.toString();
-  const lastChars = idString.slice(-6);
-
-  // Convert hex to decimal, then take modulo to get a number between 0-999
-  const num = parseInt(lastChars, 16) % 1000;
-  const paddedNum = String(Number.isNaN(num) ? 0 : num).padStart(3, '0');
-
-  return `USER${paddedNum}`;
+  const idStr = userId.toString();
+  return `user-${idStr.slice(-5)}`;
 };
 
 /**
@@ -388,6 +381,18 @@ export const getAllUsers = async (req, res) => {
 
     // Search filter
     if (search && search !== '') {
+      // Handle special "user-XXXXX" search format
+      if (/^user-?[0-9a-fA-F]{1,5}$/i.test(search)) {
+        const match = search.match(/^user-?([0-9a-fA-F]+)$/i);
+        if (match) {
+          const suffix = match[1].toLowerCase();
+          // We'll use a regex that matches ObjectIds ending with this suffix
+          // Mongo ObjectIds are 24 chars, so we need 19 wildcard chars (or less) then the suffix
+          const idRegex = new RegExp(`.*${suffix}$`, 'i');
+          orConditions.push({ _id: { $regex: idRegex } });
+        }
+      }
+
       orConditions.push(
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
@@ -800,25 +805,25 @@ export const getUserById = async (req, res) => {
     const trimmedId = userId.trim();
     let user = null;
 
-    // 0. Handle "user-XXXX" format (e.g., "user-6555" or "user-a071")
-    // This format uses the last 4 hex characters of the MongoDB ObjectId
-    // Extract the 4-character suffix and search for users whose ObjectId ends with it
-    if (/^user-?[0-9a-fA-F]{1,4}$/i.test(trimmedId)) {
+    // 0. Handle "user-XXXX" or "user-XXXXX" format (e.g., "user-255f6")
+    // This format uses the last 5 hex characters of the MongoDB ObjectId
+    // Extract the 5-character suffix and search for users whose ObjectId ends with it
+    if (/^user-?[0-9a-fA-F]{1,5}$/i.test(trimmedId)) {
       try {
         const match = trimmedId.match(/^user-?([0-9a-fA-F]+)$/i);
         if (match) {
           const suffix = match[1].toLowerCase();
 
-          // If suffix is less than 4 characters, pad it (though typically it should be 4)
-          // If more than 4, take last 4
-          const searchSuffix = suffix.length > 4
-            ? suffix.slice(-4)
-            : suffix.padStart(4, '0');
+          // If suffix is less than 5 characters, pad it (though typically it should be 5)
+          // If more than 5, take last 5
+          const searchSuffix = suffix.length > 5
+            ? suffix.slice(-5)
+            : suffix.padStart(5, '0');
 
           console.log(`🔍 Searching for user with ObjectId ending in: ${searchSuffix} from input: ${trimmedId}`);
 
           // Search for users whose ObjectId ends with the extracted suffix
-          // MongoDB ObjectId is 24 hex characters, so we search by the last 4
+          // MongoDB ObjectId is 24 hex characters, so we search by the last 5
           const allUsers = await User.find().select('-password -__v');
           user = allUsers.find((u) => {
             const userId = u._id.toString().toLowerCase();

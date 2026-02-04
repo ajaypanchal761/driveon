@@ -922,9 +922,39 @@ export const getAttendance = async (req, res) => {
 export const markAttendance = async (req, res) => {
     try {
         const { staffId, date, status, inTime, outTime, workHours } = req.body;
-
         const searchDate = new Date(date || Date.now());
         searchDate.setHours(0, 0, 0, 0);
+        let calculatedWorkHours = workHours;
+
+        if (inTime && outTime) {
+            // Helper to parse time strings like "09:00 AM" or "14:30"
+            const parseToDate = (timeStr) => {
+                const [time, modifier] = timeStr.split(' ');
+                let [hours, minutes] = time.split(':');
+                if (hours === '12') hours = '00';
+                if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+                const d = new Date();
+                d.setHours(hours);
+                d.setMinutes(minutes);
+                d.setSeconds(0);
+                return d;
+            };
+
+            try {
+                const start = parseToDate(inTime);
+                const end = parseToDate(outTime);
+                // Handle cases where shift ends after midnight (if applicable)
+                if (end < start) end.setDate(end.getDate() + 1);
+
+                const diffMs = end - start;
+                const totalMins = Math.floor(diffMs / (1000 * 60));
+                const h = Math.floor(totalMins / 60);
+                const m = totalMins % 60;
+                calculatedWorkHours = `${h}h ${m}m`;
+            } catch (e) {
+                console.error("WorkHours calculation failed", e);
+            }
+        }
 
         let attendance = await Attendance.findOneAndUpdate(
             { staff: staffId, date: searchDate },
@@ -932,7 +962,7 @@ export const markAttendance = async (req, res) => {
                 status,
                 inTime,
                 outTime,
-                workHours
+                workHours: calculatedWorkHours
             },
             { upsert: true, new: true }
         );
@@ -2534,23 +2564,24 @@ export const getStaffPayroll = async (req, res) => {
         });
 
         for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(targetYear, targetMonth, day);
+            const dayOfWeek = date.getDay(); // 0 = Sunday
             const record = recordsMap[day];
+
+            if (dayOfWeek === 0) {
+                // Sunday is a Holiday - Count as Present
+                presentCount++;
+                continue;
+            }
 
             if (record) {
                 const durationMinutes = parseWorkHours(record.workHours);
                 let status = record.status;
 
-                // Dynamic Status Calculation based on user request rules
-                // "Working hours hamesha 9 hours fix rahenge"
-                // Logic suggestion:
-                // > 9 hours -> Overtime
-                // < 4.5 hours -> Half Day (Assumption based on standard practice)
-                // Else -> Present
-
-                // Only override status if duration is available. If manual status 'Absent', keep it.
+                // Dynamic Status & Overtime Calculation
                 if (status !== 'Absent' && durationMinutes > 0) {
                     if (durationMinutes > 540) { // > 9 hours
-                        status = 'Present'; // Count as Present
+                        // Overtime logic
                         const extraMinutes = durationMinutes - 540;
                         totalExtraMinutes += extraMinutes;
 
@@ -2558,6 +2589,7 @@ export const getStaffPayroll = async (req, res) => {
                         const perMinuteRate = (perDaySalary / 9) / 60;
                         extraWorkAmount += (extraMinutes * perMinuteRate);
 
+                        status = 'Present';
                     } else if (durationMinutes < 270) { // < 4.5 hours
                         status = 'Half Day';
                     } else {
@@ -2573,30 +2605,8 @@ export const getStaffPayroll = async (req, res) => {
                     absentCount++;
                 }
             } else {
-                // Key assumption: No record = Absent
-                // (Unless future date? But payroll usually viewed for past/current)
-                // For current month, future days are effectively "Absent" until worked, or ignored?
-                // User requirement: "Month ke Total Days" -> implies we assume full month calculation.
-                // If distinct logic needed for "Future days", user didn't specify.
-                // "Month change karte hi salary... auto-update".
-                // We will count them as absent to show potential deduction, OR
-                // maybe only count up to today?
-                // "Net Payable" usually implies "to date" or "projected".
-                // "Estimated Salary aur Net Salary Final calculated... hongi"
-                // I will count all non-records as Absent for the month view to show "If you don't show up, this is the deduction".
-                // Effectively "Projected Salary assuming absent for rest of month" vs "Earned so far".
-                // BUT "Base Salary - Absent" implies starting full and deducting.
-                // So treating future days as Absent reduces Net Pay.
-                // Is this desired?
-                // Maybe check if day > Today?
-                // User said "Estimated Salary same hogi jo Net Payable Salary hai".
-                // Usually Estimated = Projected (assuming Present for future).
-                // Net Payable = Earned (Absent for future).
-                // User wants them SAME.
-                // This implies strict calculation based on RECORDS.
-                // If I am on Day 1, and Day 2-31 are absent, my salary is 1/31 of Base.
-                // This is correct for "Net Payable".
-                // So I will count all missing records as Absent.
+                // Not a Sunday and no record = Absent
+                // (Only for past days or full month calculation)
                 absentCount++;
             }
         }

@@ -421,12 +421,19 @@ export const changePassword = async (req, res) => {
     }
 
     // Find user with password field
-    const user = await User.findById(req.user._id).select('+password');
+    let user = await User.findById(req.user._id).select('+password');
+    let isStaff = false;
+
+    // If not found in User, check/try Staff
+    if (!user) {
+      user = await Staff.findById(req.user._id).select('+password');
+      isStaff = true;
+    }
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: 'User/Staff not found',
       });
     }
 

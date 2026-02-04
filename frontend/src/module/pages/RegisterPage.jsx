@@ -28,6 +28,7 @@ const ModuleRegisterPage = () => {
   const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0); // Timer for OTP resend
 
   // Options for "How did you hear about DriveOn?"
   const heardAboutOptions = [
@@ -69,6 +70,17 @@ const ModuleRegisterPage = () => {
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [isDropdownOpen]);
+
+  // Handle OTP timer countdown
+  useEffect(() => {
+    if (!showOTP || timeLeft === 0) return;
+
+    const intervalId = setInterval(() => {
+      setTimeLeft((prevTime) => prevTime - 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [showOTP, timeLeft]);
 
   // Validate full name
   const validateFullName = (value) => {
@@ -169,6 +181,7 @@ const ModuleRegisterPage = () => {
 
       // Show OTP input field
       setShowOTP(true);
+      setTimeLeft(120); // Start 2 minute timer
       setError('');
     } catch (error) {
       console.error('Register Error:', error);
@@ -305,8 +318,10 @@ const ModuleRegisterPage = () => {
       console.log('Resend OTP Response:', response);
 
       toastUtils.success('OTP resent successfully! Please check your phone.');
+      toastUtils.success('OTP resent successfully! Please check your phone.');
       setOtp('');
       setError('');
+      setTimeLeft(120); // Reset timer
     } catch (error) {
       console.error('Resend OTP Error:', error);
       console.error('Error Response:', error.response);
@@ -753,7 +768,7 @@ const ModuleRegisterPage = () => {
                         style={{ accentColor: colors.backgroundTertiary }}
                       />
                       <span className="text-sm leading-relaxed" style={{ color: colors.backgroundTertiary }}>
-                        I agree to the terms and conditions and privacy policy. <span className="font-semibold" style={{ color: colors.error }}>*</span>
+                        I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>terms and conditions</Link> and <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>privacy policy</Link>. <span className="font-semibold" style={{ color: colors.error }}>*</span>
                       </span>
                     </label>
                     {error && error.includes('terms') && (
@@ -825,15 +840,21 @@ const ModuleRegisterPage = () => {
 
                   {/* Resend OTP */}
                   <div className="mb-4 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleResendOTP}
-                      disabled={isLoading}
-                      className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      Resend OTP?
-                    </button>
+                    {timeLeft > 0 ? (
+                      <span className="text-sm" style={{ color: colors.backgroundTertiary }}>
+                        Resend OTP in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOTP}
+                        disabled={isLoading}
+                        className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ color: colors.backgroundTertiary }}
+                      >
+                        Resend OTP?
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -1359,15 +1380,21 @@ const ModuleRegisterPage = () => {
 
                 {/* Resend OTP */}
                 <div className="mb-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={isLoading}
-                    className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ color: colors.backgroundTertiary }}
-                  >
-                    Resend OTP?
-                  </button>
+                  {timeLeft > 0 ? (
+                    <span className="text-sm" style={{ color: colors.backgroundTertiary }}>
+                      Resend OTP in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOTP}
+                      disabled={isLoading}
+                      className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ color: colors.backgroundTertiary }}
+                    >
+                      Resend OTP?
+                    </button>
+                  )}
                 </div>
               </>
             )}

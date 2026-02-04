@@ -99,14 +99,12 @@ const ModuleProfile1Page = () => {
       ? user.profilePhoto
       : null;
 
-  // Format user ID as "user-XXXX" where XXXX is last 4 characters of ObjectId
+  // Format user ID - Show last 5 characters in user-XXXXX format
   const getFormattedUserId = () => {
     const id = user?._id || user?.id;
     if (!id) return "N/A";
-    const idString = id.toString();
-    // Extract last 4 characters
-    const lastFour = idString.slice(-4);
-    return `user-${lastFour}`;
+    const idStr = id.toString();
+    return `user-${idStr.slice(-5)}`;
   };
   const formattedUserId = getFormattedUserId();
 
@@ -196,12 +194,7 @@ const ModuleProfile1Page = () => {
       description: "Get help and contact support.",
       path: "/profile/support",
     },
-    {
-      id: "terms",
-      title: "Terms & Conditions",
-      description: "Read how DriveOn works for users.",
-      path: "/terms",
-    },
+
   ];
 
   // Show loading state while initializing or fetching user
@@ -323,33 +316,6 @@ const ModuleProfile1Page = () => {
         >
           Profile
         </motion.h1>
-        <motion.button
-          onClick={() => navigate(-1)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white transition-all hover:opacity-90"
-          style={{
-            backgroundColor: primaryColor,
-            boxShadow: `0 2px 8px ${primaryColor}40`,
-          }}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </motion.button>
       </motion.div>
 
       {/* Main content - compact spacing for mobile, centered on desktop */}

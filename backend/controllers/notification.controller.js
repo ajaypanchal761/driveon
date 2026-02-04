@@ -9,10 +9,14 @@ import { sendStaffPushNotification, sendPushNotification } from '../services/fir
 export const getMyNotifications = async (req, res) => {
     try {
         const userId = req.user._id;
-        const userRole = req.user.role; // Assuming middleware populates this
+        const userRole = req.user.role?.toLowerCase();
 
-        let recipientModel = 'Staff'; // Default for employees
-        if (userRole === 'user') recipientModel = 'User';
+        let recipientModel = 'Staff';
+        if (userRole === 'user') {
+            recipientModel = 'User';
+        } else if (userRole === 'admin' || userRole === 'super_admin') {
+            recipientModel = 'Admin';
+        }
 
         // Or we can rely on how authenticate middleware sets req.user
         // If it's the User App, likely 'User'. If Employee App, likely 'Staff'.

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,26 +18,31 @@ const carFormSchema = z.object({
   year: z.number().min(1900).max(new Date().getFullYear() + 1),
   color: z.string().optional(),
   registrationNumber: z.string().min(1, 'Registration number is required'),
-  
+
   // Car Type & Category
   carType: z.enum(['sedan', 'suv', 'hatchback', 'luxury', 'sports', 'compact', 'muv', 'coupe']),
   fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'cng', 'petrol_cng']),
   transmission: z.enum(['manual', 'automatic', 'cvt']),
   seatingCapacity: z.number().min(2).max(10),
-  
+
   // Pricing
   pricePerDay: z.number().min(0, 'Price must be positive'),
   pricePerWeek: z.number().min(0).optional(),
   pricePerMonth: z.number().min(0).optional(),
   securityDeposit: z.number().min(0, 'Security deposit must be positive'),
-  
+
   // Location
   city: z.string().min(1, 'City is required'),
   state: z.string().optional(),
   address: z.string().optional(),
-  
+
   // Additional
   description: z.string().max(1000).optional(),
+  mileage: z.number().min(0).optional(),
+  engineCapacity: z.string().optional(),
+  ownerName: z.string().min(1, 'Owner name is required'),
+  ownerEmail: z.string().email('Invalid email address').min(1, 'Owner email is required'),
+  ownerId: z.string().min(1, 'Owner ID is required'),
   isAvailable: z.boolean().default(true),
 });
 
@@ -53,6 +58,7 @@ const AddCarPage = () => {
     handleSubmit,
     control,
     formState: { errors },
+    setValue,
   } = useForm({
     resolver: zodResolver(carFormSchema),
     defaultValues: {
@@ -63,6 +69,12 @@ const AddCarPage = () => {
       seatingCapacity: 5,
     },
   });
+
+  // Auto-generate Owner ID
+  useEffect(() => {
+    const generatedId = `OWNR-${Math.floor(100000 + Math.random() * 900000)}`;
+    setValue('ownerId', generatedId);
+  }, [setValue]);
 
   // Available features
   const availableFeatures = [
@@ -134,7 +146,7 @@ const AddCarPage = () => {
       if (data.pricePerWeek) formData.append('pricePerWeek', data.pricePerWeek);
       if (data.pricePerMonth) formData.append('pricePerMonth', data.pricePerMonth);
       formData.append('securityDeposit', data.securityDeposit || '');
-      
+
       // Add location fields (use both formats for compatibility)
       formData.append('location[city]', data.city || '');
       formData.append('city', data.city || ''); // Also send as flat field
@@ -146,9 +158,16 @@ const AddCarPage = () => {
         formData.append('location[address]', data.address);
         formData.append('address', data.address);
       }
-      
-      // Add optional fields
+
       if (data.description) formData.append('description', data.description);
+      if (data.mileage) formData.append('mileage', data.mileage);
+      if (data.engineCapacity) formData.append('engineCapacity', data.engineCapacity);
+
+      // Add owner info
+      formData.append('ownerName', data.ownerName || '');
+      formData.append('ownerEmail', data.ownerEmail || '');
+      formData.append('ownerId', data.ownerId || '');
+
       formData.append('isAvailable', data.isAvailable ? 'true' : 'false');
 
       // Add images
@@ -251,7 +270,42 @@ const AddCarPage = () => {
                   label="Registration Number *"
                   placeholder="e.g., MH01AB1234"
                   error={errors.registrationNumber?.message}
-                  {...register('registrationNumber')}
+                  {...register('registrationNumber', {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.toUpperCase();
+                    }
+                  })}
+                  className="uppercase"
+                />
+              </div>
+            </Card>
+
+            {/* Owner Information */}
+            <Card className="p-4 md:p-6">
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
+                Owner Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Owner Name *"
+                  placeholder="e.g., John Doe"
+                  error={errors.ownerName?.message}
+                  {...register('ownerName')}
+                />
+                <Input
+                  label="Owner Email *"
+                  placeholder="e.g., john@example.com"
+                  error={errors.ownerEmail?.message}
+                  {...register('ownerEmail')}
+                />
+                <Input
+                  label="Owner ID *"
+                  placeholder="Generated ID"
+                  error={errors.ownerId?.message}
+                  readOnly
+                  {...register('ownerId')}
+                  className="bg-gray-50"
+                  helperText="This ID is automatically generated"
                 />
               </div>
             </Card>
@@ -333,6 +387,19 @@ const AddCarPage = () => {
                   placeholder="e.g., 5"
                   error={errors.seatingCapacity?.message}
                   {...register('seatingCapacity', { valueAsNumber: true })}
+                />
+                <Input
+                  type="number"
+                  label="Mileage (km)"
+                  placeholder="e.g., 15000"
+                  error={errors.mileage?.message}
+                  {...register('mileage', { valueAsNumber: true })}
+                />
+                <Input
+                  label="Engine Capacity"
+                  placeholder="e.g., 1.2L"
+                  error={errors.engineCapacity?.message}
+                  {...register('engineCapacity')}
                 />
               </div>
             </Card>
@@ -468,7 +535,7 @@ const AddCarPage = () => {
                           <button
                             type="button"
                             onClick={() => setSelectedImages((prev) => prev.filter((_, i) => i !== index))}
-                            className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full"
+                            className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-all flex items-center justify-center z-10 border-2 border-white"
                             title="Remove image"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

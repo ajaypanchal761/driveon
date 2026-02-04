@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdKeyboardArrowDown, MdCheck } from 'react-icons/md';
 import { premiumColors } from '../../theme/colors';
 
-const ThemedDropdown = ({ 
-  options, 
-  value, 
-  onChange, 
-  placeholder = "Select...", 
+const ThemedDropdown = ({
+  options,
+  value,
+  onChange,
+  placeholder = "Select...",
   className = "",
   width = "w-full",
-  position = "down" 
+  position = "down",
+  onOpen
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -37,16 +38,16 @@ const ThemedDropdown = ({
   const getDisplayValue = () => {
     if (!value) return placeholder;
     if (!options || options.length === 0) return value;
-    
+
     if (typeof options[0] === 'string') {
-        // If options are strings
-        return value;
+      // If options are strings
+      return value;
     }
-    
+
     // If options are objects
     const found = options.find(opt => opt.value === value || opt === value);
     if (!found) return value;
-    
+
     return found.label || found.value;
   };
 
@@ -55,15 +56,20 @@ const ThemedDropdown = ({
       <motion.button
         whileTap={{ scale: 0.98 }}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen && onOpen) {
+            onOpen();
+          }
+          setIsOpen(!isOpen);
+        }}
         className={`
           w-full flex items-center justify-between px-4 py-2 bg-white 
           border border-gray-200 rounded-xl shadow-sm hover:border-gray-300
           transition-colors text-sm font-bold text-gray-700
           focus:outline-none focus:ring-2 focus:ring-opacity-50
         `}
-        style={{ 
-             borderColor: isOpen ? premiumColors.primary.DEFAULT : '' 
+        style={{
+          borderColor: isOpen ? premiumColors.primary.DEFAULT : ''
         }}
       >
         <span className="truncate">{getDisplayValue()}</span>
@@ -98,12 +104,12 @@ const ThemedDropdown = ({
                     onClick={() => handleSelect(optionValue)}
                     className={`
                       w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between
-                      ${isSelected 
-                        ? 'text-white' 
+                      ${isSelected
+                        ? 'text-white'
                         : 'text-gray-700 hover:bg-gray-50'}
                     `}
                     style={{
-                        backgroundColor: isSelected ? premiumColors.primary.DEFAULT : undefined
+                      backgroundColor: isSelected ? premiumColors.primary.DEFAULT : undefined
                     }}
                   >
                     <span className="font-medium">{optionLabel}</span>

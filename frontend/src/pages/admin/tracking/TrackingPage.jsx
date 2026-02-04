@@ -486,7 +486,7 @@ const TrackingPage = () => {
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   onKeyPress={handleUserKeyPress}
-                  placeholder="Enter User ID (e.g. USER001), Phone, Email, or Name"
+                  placeholder="Enter User ID (e.g. user-255f6), Phone, Email, or Name"
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                 />
                 <button
@@ -523,6 +523,9 @@ const TrackingPage = () => {
                     ✅ User Found: {userDetails.name || userDetails.email || 'N/A'}
                   </p>
                   <div className="text-xs text-green-700 space-y-1">
+                    <p>
+                      <strong>User ID:</strong> <span className="font-mono bg-green-100 px-1 rounded">user-{(userDetails._id?.toString() || userDetails.id?.toString() || '').slice(-5)}</span>
+                    </p>
                     <p>
                       <strong>Name:</strong> {userDetails.name || 'N/A'}
                     </p>
@@ -649,7 +652,7 @@ const TrackingPage = () => {
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <h3 className="font-semibold text-gray-900 mb-1">
-                                {loc.name || 'Unknown'}
+                                {loc.name || 'Unknown'} <span className="text-xs font-mono text-gray-500 ml-1">(user-{loc.userId?.slice(-5)})</span>
                               </h3>
                               <p className="text-sm text-gray-500 mb-2">
                                 {loc.userType === 'guarantor' ? '🛡️ Guarantor' : '👤 User'}
@@ -933,7 +936,7 @@ const LocationDetailModal = ({ location, onClose }) => {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700">User ID</label>
-                  <p className="text-sm text-gray-900 font-mono">{location.userId}</p>
+                  <p className="text-sm text-gray-900 font-mono">user-{location.userId?.slice(-5)}</p>
                 </div>
               </div>
             </div>

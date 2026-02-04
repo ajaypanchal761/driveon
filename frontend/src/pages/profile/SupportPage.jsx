@@ -15,18 +15,18 @@ import supportService from '../../services/support.service';
 const SupportPage = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.user);
-  
+
   const [tickets, setTickets] = useState([]);
   const [activeTab, setActiveTab] = useState('new'); // 'new' or 'history'
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Form state for new ticket
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('general');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
-  
+
   // Message state for existing tickets
   const [newMessage, setNewMessage] = useState('');
 
@@ -37,12 +37,12 @@ const SupportPage = () => {
       console.error('No ticket ID provided');
       return;
     }
-    
+
     try {
       console.log('Fetching ticket details from API for ticketId:', ticketId);
       const response = await supportService.getTicketById(ticketId);
       console.log('Ticket details response:', response);
-      
+
       if (response && response.success && response.data && response.data.ticket) {
         console.log('Setting selected ticket:', response.data.ticket);
         setSelectedTicket(response.data.ticket);
@@ -66,23 +66,23 @@ const SupportPage = () => {
   const loadTickets = useCallback(async (shouldUpdateSelectedTicket = false) => {
     console.log('loadTickets function called');
     const userId = user?.id || user?._id;
-    
+
     if (!userId) {
       console.log('No user ID available, cannot load tickets');
       return;
     }
-    
+
     try {
       console.log('Setting loading to true');
       setLoading(true);
       console.log('Calling supportService.getUserTickets()...');
       const response = await supportService.getUserTickets();
       console.log('Tickets API response received:', response);
-      
+
       if (response && response.success && response.data && response.data.tickets) {
         console.log('Tickets found:', response.data.tickets.length);
         setTickets(response.data.tickets);
-        
+
         // Only update selected ticket if explicitly requested (e.g., after adding a message)
         if (shouldUpdateSelectedTicket) {
           setSelectedTicket(prevTicket => {
@@ -111,18 +111,18 @@ const SupportPage = () => {
   useEffect(() => {
     const userId = user?.id || user?._id;
     console.log('SupportPage useEffect triggered, userId:', userId, 'user:', user);
-    
+
     if (userId) {
       console.log('User ID exists, loading tickets immediately...');
       // Load tickets immediately
       loadTickets();
-      
+
       // Auto-refresh tickets every 30 seconds to get status updates from admin
       const interval = setInterval(() => {
         console.log('Auto-refreshing tickets...');
         loadTickets(true); // Update selected ticket on auto-refresh
       }, 30000); // 30 seconds
-      
+
       return () => {
         console.log('Cleaning up interval');
         clearInterval(interval);
@@ -137,18 +137,18 @@ const SupportPage = () => {
           loadTickets();
         }
       }, 500); // Retry after 500ms
-      
+
       return () => clearTimeout(retryTimer);
     }
   }, [loadTickets]); // Only depend on loadTickets function
-  
+
   // Auto-refresh selected ticket details every 20 seconds if a ticket is selected
   useEffect(() => {
     if (selectedTicket && selectedTicket.id) {
       const interval = setInterval(() => {
         loadTicketDetails(selectedTicket.id);
       }, 20000); // 20 seconds
-      
+
       return () => clearInterval(interval);
     }
   }, [selectedTicket?.id, loadTicketDetails]);
@@ -156,7 +156,7 @@ const SupportPage = () => {
   // Create new support ticket
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-    
+
     if (!subject.trim() || !description.trim()) {
       toastUtils.error('Please fill in all required fields');
       return;
@@ -173,17 +173,17 @@ const SupportPage = () => {
 
       if (response.success && response.data?.ticket) {
         toastUtils.success(`Support ticket created! Token: ${response.data.ticket.token}`);
-        
+
         // Reset form
         setSubject('');
         setCategory('general');
         setDescription('');
         setPriority('medium');
-        
+
         // Reload tickets and switch to history
         await loadTickets();
         setActiveTab('history');
-        
+
         // Load and select the new ticket
         if (response.data.ticket.id) {
           await loadTicketDetails(response.data.ticket.id);
@@ -207,11 +207,11 @@ const SupportPage = () => {
     try {
       setLoading(true);
       const response = await supportService.addMessage(ticketId, newMessage.trim());
-      
+
       if (response.success) {
         toastUtils.success('Message sent successfully');
         setNewMessage('');
-        
+
         // Reload ticket details to get updated messages
         await loadTicketDetails(ticketId);
         // Reload tickets list and update selected ticket
@@ -317,11 +317,10 @@ const SupportPage = () => {
                 setActiveTab('new');
                 setSelectedTicket(null);
               }}
-              className={`px-4 py-3 md:py-4 text-sm md:text-base font-medium transition-colors border-b-2 ${
-                activeTab === 'new'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-4 py-3 md:py-4 text-sm md:text-base font-medium transition-colors border-b-2 ${activeTab === 'new'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
               style={activeTab === 'new' ? { borderBottomColor: theme.colors.primary, color: theme.colors.primary } : {}}
             >
               New Ticket
@@ -331,11 +330,10 @@ const SupportPage = () => {
                 setActiveTab('history');
                 setSelectedTicket(null);
               }}
-              className={`px-4 py-3 md:py-4 text-sm md:text-base font-medium transition-colors border-b-2 ${
-                activeTab === 'history'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-4 py-3 md:py-4 text-sm md:text-base font-medium transition-colors border-b-2 ${activeTab === 'history'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
               style={activeTab === 'history' ? { borderBottomColor: theme.colors.primary, color: theme.colors.primary } : {}}
             >
               Ticket History {tickets.length > 0 && `(${tickets.length})`}
@@ -352,7 +350,7 @@ const SupportPage = () => {
             <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6" style={{ color: theme.colors.textPrimary }}>
               Create New Support Ticket
             </h2>
-            
+
             <form onSubmit={handleCreateTicket} className="space-y-4 md:space-y-6">
               {/* Subject */}
               <div>
@@ -447,7 +445,7 @@ const SupportPage = () => {
                           {selectedTicket.status.replace('_', ' ').toUpperCase()}
                         </span>
                       </div>
-                      
+
                       {/* Token Section */}
                       <div className="bg-gray-50 rounded-lg p-3 md:p-4 mb-4 border border-gray-200">
                         <div className="flex items-center justify-between">
@@ -484,13 +482,27 @@ const SupportPage = () => {
                         <div>
                           <p className="text-xs md:text-sm text-gray-600 mb-1">Created Date</p>
                           <p className="text-sm md:text-base font-medium" style={{ color: theme.colors.textPrimary }}>
-                            {new Date(selectedTicket.createdAt).toLocaleString()}
+                            {new Date(selectedTicket.createdAt).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs md:text-sm text-gray-600 mb-1">Last Updated</p>
                           <p className="text-sm md:text-base font-medium" style={{ color: theme.colors.textPrimary }}>
-                            {new Date(selectedTicket.updatedAt).toLocaleString()}
+                            {new Date(selectedTicket.updatedAt).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
                           </p>
                         </div>
                       </div>
@@ -559,14 +571,104 @@ const SupportPage = () => {
                     <div>
                       <p className="text-xs md:text-sm text-gray-600 mb-1">Created At</p>
                       <p className="text-sm md:text-base font-medium" style={{ color: theme.colors.textPrimary }}>
-                        {new Date(selectedTicket.createdAt).toLocaleString()}
+                        {new Date(selectedTicket.createdAt).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs md:text-sm text-gray-600 mb-1">Last Updated</p>
                       <p className="text-sm md:text-base font-medium" style={{ color: theme.colors.textPrimary }}>
-                        {new Date(selectedTicket.updatedAt).toLocaleString()}
+                        {new Date(selectedTicket.updatedAt).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
                       </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Messages Section */}
+                <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-gray-200 p-4 md:p-6">
+                  <h3 className="text-base md:text-lg font-semibold mb-4" style={{ color: theme.colors.textPrimary }}>
+                    Conversation History
+                  </h3>
+
+                  {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
+                    <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2">
+                      {selectedTicket.messages.map((msg, index) => (
+                        <div
+                          key={index}
+                          className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                        >
+                          <div className={`max-w-[85%] md:max-w-[70%] rounded-lg p-3 md:p-4 ${msg.sender === 'user'
+                            ? 'bg-blue-50 border border-blue-100'
+                            : 'bg-gray-50 border border-gray-200'
+                            }`}>
+                            <div className="flex items-center justify-between gap-4 mb-1">
+                              <span className={`text-xs font-semibold ${msg.sender === 'user' ? 'text-blue-700' : 'text-gray-700'
+                                }`}>
+                                {msg.sender === 'user' ? 'You' : 'Support Team'}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(msg.timestamp).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-sm md:text-base text-gray-800 whitespace-pre-wrap">
+                              {msg.message}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-100 mb-6">
+                      User has not started a conversation yet.
+                    </div>
+                  )}
+
+                  {/* Add Message Form */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textSecondary }}>
+                      Reply to Ticket
+                    </label>
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 md:px-4 py-2.5 md:py-3 rounded-lg border text-sm md:text-base focus:outline-none transition-colors resize-none mb-3"
+                      style={{
+                        borderColor: theme.colors.borderDefault,
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                      onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
+                      placeholder="Type your message here..."
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => handleAddMessage(selectedTicket.id)}
+                        disabled={loading || !newMessage.trim()}
+                        className="px-6 py-2.5 rounded-lg font-semibold text-sm text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: theme.colors.primary }}
+                      >
+                        {loading ? 'Sending...' : 'Send Message'}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -606,7 +708,14 @@ const SupportPage = () => {
                           {ticket.description}
                         </p>
                         <div className="text-xs text-gray-500 mt-2">
-                          {new Date(ticket.updatedAt).toLocaleString()}
+                          {new Date(ticket.updatedAt).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
                         </div>
                       </div>
                       <svg

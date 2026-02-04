@@ -13,9 +13,9 @@ import api from '../../services/api';
  * Checks and restores authentication state on app mount/refresh
  * Verifies token validity and restores user session
  */
-const AuthInitializer = () => {
+const AuthInitializer = ({ children }) => {
   const dispatch = useAppDispatch();
-  const { isAuthenticated, token } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, token, isInitializing } = useAppSelector((state) => state.auth);
   const { user } = useAppSelector((state) => state.user);
 
   useEffect(() => {
@@ -67,10 +67,14 @@ const AuthInitializer = () => {
           if (profileResponse.success && profileResponse.data?.user) {
             const userData = profileResponse.data.user;
 
+            // Get the latest tokens (they might have been refreshed during the getProfile call)
+            const latestToken = isEmployeeApp ? localStorage.getItem('staffToken') : localStorage.getItem('authToken');
+            const latestRefreshToken = isEmployeeApp ? localStorage.getItem('staffRefreshToken') : localStorage.getItem('refreshToken');
+
             // Restore authentication state
             dispatch(loginSuccess({
-              token: storedToken,
-              refreshToken: storedRefreshToken,
+              token: latestToken || storedToken,
+              refreshToken: latestRefreshToken || storedRefreshToken,
               userRole: isEmployeeApp ? 'employee' : (userData.role || 'user'),
             }));
 
@@ -141,20 +145,29 @@ const AuthInitializer = () => {
                   console.log('✅ Authentication restored after refresh');
                 } else {
                   // Still failed (e.g., Staff trying to access User App) -> Logout
-                  dispatch(logout());
+                  // Only logout if it's a definitive auth failure, not a generic success:false
+                  if (profileResponse.message?.toLowerCase().includes('not found') ||
+                    profileResponse.message?.toLowerCase().includes('unauthorized')) {
+                    dispatch(logout());
+                  }
                   dispatch(authInitialized());
                 }
               } else {
-                dispatch(logout());
+                // Refresh returned no token
+                console.warn('⚠️ Refresh token call returned no token');
                 dispatch(authInitialized());
               }
             } catch (refreshError) {
-              console.error('Token refresh failed:', refreshError);
-              dispatch(logout());
+              console.error('❌ Token refresh failed:', refreshError);
+              // Only logout if refresh token is definitively invalid (401)
+              if (refreshError.response?.status === 401) {
+                dispatch(logout());
+              }
               dispatch(authInitialized());
             }
           } else {
-            dispatch(logout());
+            // No refresh token available
+            console.warn('⚠️ No refresh token found, but token exists. Setting authInitialized.');
             dispatch(authInitialized());
           }
         }
@@ -203,7 +216,19 @@ const AuthInitializer = () => {
     }
   }, [isAuthenticated, user]);
 
-  return null; // This component doesn't render anything
+  // Show global loading state while initializing auth
+  if (isInitializing) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-gray-200 rounded-full animate-spin border-t-blue-600 mb-4"></div>
+          <p className="text-gray-500 font-medium">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
 };
 
 export default AuthInitializer;

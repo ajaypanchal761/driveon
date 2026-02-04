@@ -45,7 +45,11 @@ api.interceptors.request.use(
         localStorage.getItem('authToken');
     } else {
       const isEmployeeApp = window.location.pathname.startsWith('/employee');
-      if (isEmployeeApp) {
+      const isAdminContext = window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/crm');
+
+      if (isAdminContext) {
+        token = localStorage.getItem('adminToken');
+      } else if (isEmployeeApp) {
         token = store.getState().auth.token || localStorage.getItem('staffToken');
       } else {
         token = store.getState().auth.token || localStorage.getItem('authToken');
@@ -322,17 +326,11 @@ api.interceptors.response.use(
           const newRefreshToken = response.data?.data?.refreshToken || response.data?.refreshToken;
 
           if (token) {
-            // Update Redux store
-            store.dispatch(refreshTokenSuccess({ token }));
-
-            // Also update refresh token if returned - in correct slot
-            if (newRefreshToken) {
-              if (isEmployeeApp) {
-                localStorage.setItem('staffRefreshToken', newRefreshToken);
-              } else {
-                localStorage.setItem('refreshToken', newRefreshToken);
-              }
-            }
+            // Update Redux store with both tokens
+            store.dispatch(refreshTokenSuccess({
+              token,
+              refreshToken: newRefreshToken
+            }));
 
             // Update authorization header
             originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -379,15 +377,17 @@ api.interceptors.response.use(
           return Promise.reject(refreshError);
         }
 
-        // User App Redirect
+        // User App Redirect - Only redirect if NOT on a public page
         const publicRoutes = ['/', '/login', '/register', '/search', '/faq', '/about', '/contact', '/privacy-policy', '/terms'];
-        // Relax strict check for public routes to ensure we don't trap users on protected pages
-        const isPublicRoute = publicRoutes.some(r => currentPath === r) ||
-          currentPath.startsWith('/car-details/');
+        const isPublicRoute = publicRoutes.some(r => currentPath === r) || currentPath.startsWith('/car-details/');
 
         if (!isPublicRoute && !currentPath.startsWith('/login') && !currentPath.startsWith('/register')) {
-          if (!window.location.pathname.startsWith('/login')) {
-            window.location.href = '/login';
+          // Extra safety: only redirect if we are very sure the session is dead
+          if (refreshError.response?.status === 401 || refreshError.message?.includes('No valid refresh token')) {
+            console.log('🚪 Redirecting to login due to definitive session expiry');
+            if (!window.location.pathname.startsWith('/login')) {
+              window.location.href = '/login';
+            }
           }
         }
         return Promise.reject(refreshError);

@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { FiBell, FiCheck, FiInfo, FiAlertCircle, FiClock, FiCheckCircle } from 'react-icons/fi';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
+import { useEmployee } from '../../context/EmployeeContext';
 
 const NotificationsPage = () => {
+  const { setUnreadCount } = useEmployee();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -20,6 +22,7 @@ const NotificationsPage = () => {
       const res = await notificationService.getNotifications();
       if (res.success) {
         setNotifications(res.data.notifications || []);
+        setUnreadCount(res.unreadCount || 0); // Update context
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -32,6 +35,7 @@ const NotificationsPage = () => {
     try {
       // Optimistic update
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0); // Clear context count
       const { notificationService } = await import('../../services/notification.service');
       await notificationService.markAllAsRead();
     } catch (error) {

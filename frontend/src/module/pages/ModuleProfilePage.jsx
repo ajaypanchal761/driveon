@@ -35,31 +35,31 @@ const ModuleProfilePage = () => {
       console.log('⚠️ User not authenticated, skipping profile fetch');
       return;
     }
-    
+
     const fetchUserProfile = async () => {
       try {
         console.log('📱 ===== Fetching User Profile =====');
         console.log('📱 Current user in Redux before fetch:', user);
-        
+
         const response = await userService.getProfile();
-        
+
         console.log('📱 Raw API response:', response);
         console.log('📱 Response type:', typeof response);
         console.log('📱 Response keys:', response ? Object.keys(response) : 'null');
         console.log('📱 Response.data:', response?.data);
         console.log('📱 Response.data?.user:', response?.data?.user);
         console.log('📱 Response.user:', response?.user);
-        
+
         // Extract user data from response - handle various response formats
         // Backend returns: { success: true, data: { user: {...} } }
         // userService.getProfile() returns response.data which is: { success: true, data: { user: {...} } }
         // So we need to access: response.data.user (not response.data.data.user)
         const userData = response?.data?.user || response?.user || response?.data;
-        
+
         console.log('📱 Extracted user data:', userData);
         console.log('📱 User data type:', typeof userData);
         console.log('📱 User data keys:', userData ? Object.keys(userData) : 'null');
-        
+
         if (userData) {
           // Ensure we have the essential fields - preserve all existing fields
           const normalizedUserData = {
@@ -68,18 +68,18 @@ const ModuleProfilePage = () => {
             phone: userData.phone || '',
             email: userData.email || '',
           };
-          
+
           console.log('📱 Normalized user data:', normalizedUserData);
           console.log('📱 Normalized name:', normalizedUserData.name);
           console.log('📱 Normalized phone:', normalizedUserData.phone);
           console.log('📱 Normalized email:', normalizedUserData.email);
-          
+
           // Always use setUser to ensure complete replacement
           console.log('📱 Dispatching setUser with normalized data');
           dispatch(setUser(normalizedUserData));
-          
+
           console.log('✅ User data set in Redux');
-          
+
           // Verify it was set
           setTimeout(() => {
             console.log('🔍 Verifying Redux state after setUser...');
@@ -273,7 +273,7 @@ const ModuleProfilePage = () => {
     console.log('👤 User email:', user?.email);
     console.log('👤 ============================');
   }, [user]);
-  
+
   // Get user data with proper fallbacks - ensure we always have values
   const userName = (user?.name || user?.fullName || '').trim() || 'User';
   const userPhone = (user?.phone || '').trim();
@@ -281,7 +281,7 @@ const ModuleProfilePage = () => {
   // Profile photo - check for valid URL (not empty string)
   const userPhoto = user?.profilePhoto && user.profilePhoto.trim() !== '' ? user.profilePhoto : null;
   const username = user?.username || `@${userName.toLowerCase().replace(/\s+/g, '')}`;
-  
+
   // Reset image error when user photo changes
   useEffect(() => {
     if (userPhoto) {
@@ -291,7 +291,7 @@ const ModuleProfilePage = () => {
       setHeaderImageError(false);
     }
   }, [userPhoto, user?.profilePhoto]);
-  
+
   // Format phone number for display (add +91 prefix if it's a 10-digit number)
   const formatPhoneNumber = (phone) => {
     if (!phone || phone === '' || phone.trim() === '') {
@@ -313,7 +313,7 @@ const ModuleProfilePage = () => {
     console.log('📞 Phone is invalid, returning N/A');
     return 'N/A';
   };
-  
+
   // Format phone number - use direct user.phone first, then fallback
   // Priority: user?.phone > userPhone > 'N/A'
   const displayPhone = (() => {
@@ -323,14 +323,14 @@ const ModuleProfilePage = () => {
     }
     return 'N/A';
   })();
-  
+
   console.log('📞 ===== Phone Number Display Debug =====');
   console.log('📞 User object:', user);
   console.log('📞 user?.phone:', user?.phone);
   console.log('📞 userPhone variable:', userPhone);
   console.log('📞 displayPhone:', displayPhone);
   console.log('📞 ======================================');
-  
+
   // Log computed values for debugging
   console.log('🔍 Computed values:', {
     userName,
@@ -427,7 +427,7 @@ const ModuleProfilePage = () => {
   const iconBgColor = colors.backgroundPrimary || colors.backgroundImage;
 
   return (
-    <div 
+    <div
       className="min-h-screen w-full relative pb-20 md:pb-0"
       style={{ backgroundColor: colors.backgroundSecondary, contain: 'layout style' }}
     >
@@ -533,35 +533,155 @@ const ModuleProfilePage = () => {
 
       {/* Web Container - Centered with max-width */}
       <div className="max-w-5xl mx-auto">
-      {/* Profile Section with Light Background - Like Third Image */}
-      <div 
+        {/* Profile Section with Light Background - Like Third Image */}
+        <div
           className="px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-8 lg:pt-10 xl:pt-12 pb-3 md:pb-4 lg:pb-5 xl:pb-6 rounded-b-3xl"
-        style={{ backgroundColor: profileSectionBg }}
-      >
-        {/* Profile Picture - Centered */}
-        <div className="flex flex-col items-center">
-          <div className="relative mb-3 md:mb-4" style={{ contain: 'layout' }}>
-            {userPhoto && !imageError ? (
-              <img
-                src={userPhoto}
-                alt={userName}
-                onError={() => {
-                  console.log('🖼️ Profile photo failed to load, showing default icon');
-                  setImageError(true);
+          style={{ backgroundColor: profileSectionBg }}
+        >
+          {/* Profile Picture - Centered */}
+          <div className="flex flex-col items-center">
+            <div className="relative mb-3 md:mb-4" style={{ contain: 'layout' }}>
+              {userPhoto && !imageError ? (
+                <img
+                  src={userPhoto}
+                  alt={userName}
+                  onError={() => {
+                    console.log('🖼️ Profile photo failed to load, showing default icon');
+                    setImageError(true);
+                  }}
+                  className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
+                  style={{ borderColor: profileSectionBg }}
+                  loading="eager"
+                  width="96"
+                  height="96"
+                />
+              ) : (
+                <div
+                  className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
+                  style={{ backgroundColor: iconBgColor }}
+                >
+                  <svg
+                    className="w-10 h-10 md:w-10 md:h-10 lg:w-12 lg:h-12 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    /> 
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            {/* User Name - Direct from user object with fallbacks */}
+            <h2 className="text-lg md:text-lg lg:text-xl font-bold text-black mb-1.5 md:mb-2 text-center w-full">
+              {user?.name || user?.fullName || userName || 'User'}
+            </h2>
+
+            {/* Phone Number Display - Direct from user object with formatting */}
+            <p className="text-xs md:text-xs lg:text-sm text-black mb-1 md:mb-1.5 text-center w-full">
+              {displayPhone}
+            </p>
+
+            {/* Email Display (if available) - Direct from user object */}
+            {(user?.email || (userEmail && userEmail !== 'N/A')) && (
+              <p className="text-xs md:text-xs lg:text-sm text-black mb-0 leading-tight text-center w-full">
+                {user?.email || userEmail}
+              </p>
+            )}
+
+            {/* User ID Display with Copy Button - Centered below email */}
+            {user?._id || user?.id ? (() => {
+              const userId = (user._id || user.id).toString();
+              // Format as user-XXXXX (last 5 characters of MongoDB ID)
+              const formattedUserId = `user-${userId.slice(-5)}`;
+
+              const handleCopyUserId = async () => {
+                try {
+                  await navigator.clipboard.writeText(formattedUserId);
+                  toastUtils.success('User ID copied to clipboard!');
+                } catch (err) {
+                  console.error('Failed to copy:', err);
+                  toastUtils.error('Failed to copy User ID');
+                }
+              };
+
+              return (
+                <div className="w-full flex justify-center mt-[-6.5px] pl-9 leading-tight">
+                  <div className="flex items-center gap- md:gap-2">
+                    <span className="text-xs md:text-xs lg:text-sm text-black font-mono">
+                      {formattedUserId}
+                    </span>
+                    <button
+                      onClick={handleCopyUserId}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                      title="Copy User ID"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5 text-gray-500 hover:text-gray-700"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })() : null}
+          </div>
+        </div>
+
+        {/* Menu Items Section - White Background with Card Design - Like First Image */}
+        <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-3 md:pt-4 lg:pt-5 xl:pt-6 pb-6 md:pb-6 lg:pb-8 xl:pb-10" style={{ backgroundColor: colors.backgroundSecondary }}>
+          {/* Menu Items List - Single column on mobile, 2 columns on web */}
+          <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 lg:gap-4 xl:gap-5 md:space-y-0">
+            {allMenuItems.map((item, index) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.onClick) {
+                    item.onClick();
+                  } else if (item.path) {
+                    navigate(item.path);
+                  }
                 }}
-                className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
-                style={{ borderColor: profileSectionBg }}
-                loading="eager"
-                width="96"
-                height="96"
-              />
-            ) : (
-              <div 
-                className="w-20 h-20 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-transform duration-300 hover:scale-105"
-                style={{ backgroundColor: iconBgColor }}
+                className={`w-full flex items-center justify-between py-4 md:py-3 lg:py-3.5 px-3 md:px-4 lg:px-5 bg-white rounded-xl shadow-sm hover:shadow-lg active:bg-gray-50 transition-all duration-300 md:hover:scale-[1.02] ${item.id === 'logout' ? 'text-red-600' : ''
+                  }`}
               >
+                <div className="flex items-center gap-3 md:gap-3 flex-1">
+                  {/* Icon with background circle */}
+                  <div
+                    className="p-2 md:p-2 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: iconBgColor }}
+                  >
+                    <svg
+                      className={`w-5 h-5 md:w-5 md:h-5 ${item.id === 'logout' ? 'text-red-600' : 'text-gray-700'}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {item.icon}
+                    </svg>
+                  </div>
+                  {/* Label */}
+                  <span className={`text-base md:text-sm lg:text-base font-medium flex-1 text-left ${item.id === 'logout' ? 'text-red-600' : 'text-black'}`}>
+                    {item.label}
+                  </span>
+                </div>
+                {/* Right Arrow */}
                 <svg
-                  className="w-10 h-10 md:w-10 md:h-10 lg:w-12 lg:h-12 text-gray-500"
+                  className={`w-5 h-5 md:w-5 md:h-5 flex-shrink-0 ${item.id === 'logout' ? 'text-red-600' : 'text-gray-400'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -570,133 +690,11 @@ const ModuleProfilePage = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </div>
-            )}
-          </div>
-          
-          {/* User Name - Direct from user object with fallbacks */}
-          <h2 className="text-lg md:text-lg lg:text-xl font-bold text-black mb-1.5 md:mb-2 text-center w-full">
-            {user?.name || user?.fullName || userName || 'User'}
-          </h2>
-          
-          {/* Phone Number Display - Direct from user object with formatting */}
-          <p className="text-xs md:text-xs lg:text-sm text-black mb-1 md:mb-1.5 text-center w-full">
-            {displayPhone}
-          </p>
-          
-          {/* Email Display (if available) - Direct from user object */}
-          {(user?.email || (userEmail && userEmail !== 'N/A')) && (
-            <p className="text-xs md:text-xs lg:text-sm text-black mb-0 leading-tight text-center w-full">
-              {user?.email || userEmail}
-            </p>
-          )}
-          
-          {/* User ID Display with Copy Button - Centered below email */}
-          {user?._id || user?.id ? (() => {
-            const userId = (user._id || user.id).toString();
-            // Extract last 4 characters from ObjectId (e.g., "693bd034e3e0a763f25a6555" -> "5620")
-            const lastFour = userId.slice(-4);
-            const formattedUserId = `user-${lastFour}`;
-            
-            const handleCopyUserId = async () => {
-              try {
-                await navigator.clipboard.writeText(formattedUserId);
-                toastUtils.success('User ID copied to clipboard!');
-              } catch (err) {
-                console.error('Failed to copy:', err);
-                toastUtils.error('Failed to copy User ID');
-              }
-            };
-            
-            return (
-              <div className="w-full flex justify-center mt-[-6.5px] pl-9 leading-tight">
-                <div className="flex items-center gap- md:gap-2">
-                  <span className="text-xs md:text-xs lg:text-sm text-black font-mono">
-                    {formattedUserId}
-                  </span>
-                  <button
-                    onClick={handleCopyUserId}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
-                    title="Copy User ID"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5 text-gray-500 hover:text-gray-700"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            );
-          })() : null}
-        </div>
-      </div>
-
-      {/* Menu Items Section - White Background with Card Design - Like First Image */}
-        <div className="px-4 md:px-6 lg:px-8 xl:px-12 pt-3 md:pt-4 lg:pt-5 xl:pt-6 pb-6 md:pb-6 lg:pb-8 xl:pb-10" style={{ backgroundColor: colors.backgroundSecondary }}>
-        {/* Menu Items List - Single column on mobile, 2 columns on web */}
-          <div className="space-y-2 md:grid md:grid-cols-2 md:gap-3 lg:gap-4 xl:gap-5 md:space-y-0">
-          {allMenuItems.map((item, index) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.onClick) {
-                  item.onClick();
-                } else if (item.path) {
-                  navigate(item.path);
-                }
-              }}
-                className={`w-full flex items-center justify-between py-4 md:py-3 lg:py-3.5 px-3 md:px-4 lg:px-5 bg-white rounded-xl shadow-sm hover:shadow-lg active:bg-gray-50 transition-all duration-300 md:hover:scale-[1.02] ${
-                item.id === 'logout' ? 'text-red-600' : ''
-              }`}
-            >
-                <div className="flex items-center gap-3 md:gap-3 flex-1">
-                {/* Icon with background circle */}
-                <div
-                    className="p-2 md:p-2 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: iconBgColor }}
-                >
-                  <svg
-                      className={`w-5 h-5 md:w-5 md:h-5 ${item.id === 'logout' ? 'text-red-600' : 'text-gray-700'}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    {item.icon}
-                  </svg>
-                </div>
-                {/* Label */}
-                  <span className={`text-base md:text-sm lg:text-base font-medium flex-1 text-left ${item.id === 'logout' ? 'text-red-600' : 'text-black'}`}>
-                  {item.label}
-                </span>
-              </div>
-              {/* Right Arrow */}
-              <svg
-                className={`w-5 h-5 md:w-5 md:h-5 flex-shrink-0 ${item.id === 'logout' ? 'text-red-600' : 'text-gray-400'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          ))}
+              </button>
+            ))}
           </div>
         </div>
       </div>

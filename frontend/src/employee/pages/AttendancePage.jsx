@@ -6,7 +6,7 @@ import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
 
 import { useEmployee } from '../../context/EmployeeContext';
-import { getAddressFromCoordinates, watchPosition, clearWatch } from '../../services/location.service';
+import { getAddressFromCoordinates, watchPosition, clearWatch, getCurrentPosition } from '../../services/location.service';
 
 const AttendancePage = () => {
   const navigate = useNavigate();
@@ -32,9 +32,17 @@ const AttendancePage = () => {
 
   // Live Location Tracking
   useEffect(() => {
-    let watchId;
+    let watchId = null;
     let lastLat = 0;
     let lastLng = 0;
+
+    // Check if location access is enabled in settings
+    const isLocationEnabled = localStorage.getItem('location_access_enabled') !== 'false';
+
+    if (!isLocationEnabled) {
+      setLocationAddress('Location access disabled in settings');
+      return;
+    }
 
     const handlePositionSuccess = async (position) => {
       const { latitude, longitude } = position.coords;
@@ -74,6 +82,25 @@ const AttendancePage = () => {
       if (watchId !== null) clearWatch(watchId);
     };
   }, []);
+
+  const fetchLocation = async () => {
+    // Check if location access is enabled in settings
+    const isLocationEnabled = localStorage.getItem('location_access_enabled') !== 'false';
+    if (!isLocationEnabled) {
+      setLocationAddress('Location access disabled in settings');
+      return;
+    }
+
+    try {
+      setLocationAddress('Updating location...');
+      const position = await getCurrentPosition();
+      const address = await getAddressFromCoordinates(position.coords.latitude, position.coords.longitude);
+      setLocationAddress(address || "Address Unavailable");
+    } catch (error) {
+      console.error("Error manual refreshing location:", error);
+      setLocationAddress('Location access denied');
+    }
+  };
 
   const onClockAction = () => {
     handleClockToggle();

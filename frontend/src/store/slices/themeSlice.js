@@ -7,6 +7,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   themePreference: localStorage.getItem('themePreference') || 'custom',
   systemTheme: 'light', // Detected system theme
+  language: localStorage.getItem('language') || 'en',
 };
 
 const themeSlice = createSlice({
@@ -20,10 +21,14 @@ const themeSlice = createSlice({
     setSystemTheme: (state, action) => {
       state.systemTheme = action.payload;
     },
+    setLanguage: (state, action) => {
+      state.language = action.payload;
+      localStorage.setItem('language', action.payload);
+    },
   },
 });
 
-export const { setThemePreference, setSystemTheme } = themeSlice.actions;
+export const { setThemePreference, setSystemTheme, setLanguage } = themeSlice.actions;
 
 export default themeSlice.reducer;
 

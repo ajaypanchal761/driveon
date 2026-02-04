@@ -12,6 +12,7 @@ import BottomNav from '../components/BottomNav';
 const TasksPage = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('Today');
+  const [isShowingAll, setIsShowingAll] = useState(false);
   const [currentDate] = useState(new Date());
 
   const { user } = useSelector(state => state.user);
@@ -101,6 +102,8 @@ const TasksPage = () => {
   };
 
   const getFilteredTasks = () => {
+    if (isShowingAll) return tasks;
+
     let filtered = tasks;
     if (filter === 'Today') {
       // Show Today's tasks AND Overdue tasks that are NOT completed
@@ -116,9 +119,35 @@ const TasksPage = () => {
   };
 
   const currentTasks = getFilteredTasks();
-  const completedCount = tasks.filter(t => t.status === 'Completed' && t.date === 'Today').length;
-  const totalToday = tasks.filter(t => t.date === 'Today').length;
-  const progress = totalToday > 0 ? (completedCount / totalToday) * 100 : 0;
+
+  // Dynamic stats for the header based on filter
+  const getDisplayStats = () => {
+    if (isShowingAll) {
+      return {
+        done: tasks.filter(t => t.status === 'Completed').length,
+        total: tasks.length
+      };
+    }
+
+    let relevant = [];
+    if (filter === 'Today') {
+      relevant = tasks.filter(t => t.date === 'Today' || t.date === 'Overdue');
+    } else if (filter === 'Tomorrow') {
+      relevant = tasks.filter(t => t.date === 'Tomorrow');
+    } else if (filter === 'Completed') {
+      relevant = tasks.filter(t => t.status === 'Completed');
+    }
+
+    return {
+      done: relevant.filter(t => t.status === 'Completed').length,
+      total: relevant.length
+    };
+  };
+
+  const { done: displayDone, total: displayTotal } = getDisplayStats();
+
+  // Today's specific stats for the badge
+  const totalTodayAndOverdue = tasks.filter(t => t.date === 'Today' || t.date === 'Overdue').length;
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] pb-24 font-sans selection:bg-blue-100 flex flex-col">
@@ -129,7 +158,7 @@ const TasksPage = () => {
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
 
-          <HeaderTopBar title="My Tasks" />
+          <HeaderTopBar title="My Tasks" showBack={false} />
 
           {/* Date Display */}
           <div className="mt-4 flex items-center justify-between text-white">
@@ -137,8 +166,8 @@ const TasksPage = () => {
               <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">{currentDate.toLocaleDateString('en-US', { weekday: 'long' })}</p>
               <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</h2>
             </div>
-            <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 text-center">
-              <span className="block text-2xl font-bold">{completedCount}/{totalToday}</span>
+            <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 text-center min-w-[80px]">
+              <span className="block text-2xl font-bold">{displayDone}/{displayTotal}</span>
               <span className="text-[10px] uppercase text-blue-200 font-bold">Done</span>
             </div>
           </div>
@@ -150,7 +179,10 @@ const TasksPage = () => {
             {['Today', 'Tomorrow', 'Completed'].map((f) => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => {
+                  setFilter(f);
+                  setIsShowingAll(false);
+                }}
                 className={`
                          flex-1 py-3 rounded-xl text-xs font-bold transition-all relative
                          ${filter === f
@@ -166,7 +198,7 @@ const TasksPage = () => {
                 )}
                 {f}
                 {/* Badge for counts if needed */}
-                {f === 'Today' && <span className="ml-1 text-[10px] bg-[#1C205C] text-white px-1.5 py-0.5 rounded-full">{totalToday}</span>}
+                {f === 'Today' && <span className="ml-1 text-[10px] bg-[#1C205C] text-white px-1.5 py-0.5 rounded-full">{totalTodayAndOverdue}</span>}
               </button>
             ))}
           </div>
@@ -179,7 +211,14 @@ const TasksPage = () => {
           <h3 className="text-[#1C205C] font-bold text-lg">
             {filter === 'Today' ? 'Assigned for Today' : filter}
           </h3>
-          <button className="text-xs font-bold text-blue-500">View All</button>
+          {!isShowingAll && tasks.length > currentTasks.length && (
+            <button
+              onClick={() => setIsShowingAll(true)}
+              className="text-xs font-bold text-blue-500 hover:text-blue-700 transition-colors"
+            >
+              View All
+            </button>
+          )}
         </div>
 
         <AnimatePresence mode="popLayout">

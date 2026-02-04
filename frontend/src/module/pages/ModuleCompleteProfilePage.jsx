@@ -7,6 +7,7 @@ import toastUtils from '../../config/toast';
 import ProfileHeader from '../components/layout/ProfileHeader';
 import BottomNavbar from '../components/layout/BottomNavbar';
 import { colors } from '../theme/colors';
+import { kycService } from '../../services/kyc.service';
 
 /**
  * ModuleCompleteProfilePage Component
@@ -33,6 +34,7 @@ const ModuleCompleteProfilePage = () => {
   const [isSavingStep1, setIsSavingStep1] = useState(false);
   const [isSavingStep2, setIsSavingStep2] = useState(false);
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const rcInputRef = useRef(null);
   const [rcDocument, setRcDocument] = useState(null);
   const [rcPreview, setRcPreview] = useState(user?.rcDocument || null);
@@ -54,6 +56,7 @@ const ModuleCompleteProfilePage = () => {
       age: user?.age ? String(user.age) : '',
       gender: user?.gender || '',
       address: user?.address || '',
+      panNumber: user?.panNumber || '',
     };
     console.log('📝 Initial formData state:', initialData);
     console.log('📝 User at initialization:', user);
@@ -154,6 +157,7 @@ const ModuleCompleteProfilePage = () => {
             age: normalizedUserData.age ? String(normalizedUserData.age) : '',
             gender: normalizedUserData.gender || '',
             address: normalizedUserData.address || '',
+            panNumber: normalizedUserData.panNumber || '',
           });
           console.log('✅ FormData updated immediately');
         } else {
@@ -226,6 +230,7 @@ const ModuleCompleteProfilePage = () => {
       age: user.age ? String(user.age) : '',
       gender: user.gender || '',
       address: user.address || '',
+      panNumber: user.panNumber || '',
     };
 
     console.log('📝 Updated form data:', updatedFormData);
@@ -299,6 +304,10 @@ const ModuleCompleteProfilePage = () => {
 
   // Handle input change
   const handleInputChange = (field, value) => {
+    // Auto-capitalize PAN number
+    if (field === 'panNumber') {
+      value = value.toUpperCase();
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error for this field
     if (errors[field]) {
@@ -541,9 +550,29 @@ const ModuleCompleteProfilePage = () => {
   };
 
   // Handle DigiLocker integration (placeholder)
-  const handleDigiLockerConnect = (documentType) => {
-    toastUtils.info(`${documentType} verification via DigiLocker will be available soon`);
-    // TODO: Implement DigiLocker OAuth2 integration
+  // Handle DigiLocker integration
+  const handleDigiLockerConnect = async (documentType) => {
+    try {
+      toastUtils.loading('Initiating DigiLocker connection...');
+      const response = await kycService.initiateDigiLockerAuth();
+      console.log('DigiLocker Auth Response:', response);
+
+      if (response && response.authUrl) {
+        // storage for post-redirect processing if needed
+        sessionStorage.setItem('kyc_document_type', documentType);
+
+        // Redirect user to DigiLocker authorization page
+        window.location.href = response.authUrl;
+      } else {
+        toastUtils.dismiss();
+        toastUtils.error('Failed to initiate DigiLocker. Invalid response.');
+      }
+    } catch (error) {
+      console.error('DigiLocker Auth Error:', error);
+      toastUtils.dismiss();
+      const errorMessage = error.response?.data?.message || 'Failed to connect to DigiLocker. Please try again.';
+      toastUtils.error(errorMessage);
+    }
   };
 
   // Show loading state while initializing or loading profile
@@ -798,18 +827,46 @@ const ModuleCompleteProfilePage = () => {
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
 
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-6 py-3 rounded-xl font-semibold text-sm"
-                  style={{
-                    backgroundColor: colors.backgroundPrimary,
-                    color: colors.textPrimary,
-                  }}
-                >
-                  {photoPreview ? 'Change Photo' : 'Upload Photo'}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2"
+                    style={{
+                      backgroundColor: colors.backgroundPrimary,
+                      color: colors.textPrimary,
+                    }}
+                  >
+                    <svg className="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Gallery
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2"
+                    style={{
+                      backgroundColor: colors.backgroundTertiary,
+                      color: colors.backgroundSecondary,
+                    }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Camera
+                  </button>
+                </div>
 
                 {isUploading && (
                   <p className="text-sm mt-2" style={{ color: colors.textSecondary }}>
@@ -829,6 +886,53 @@ const ModuleCompleteProfilePage = () => {
               <p className="text-sm mb-6" style={{ color: colors.textSecondary }}>
                 Verify your identity using DigiLocker. All documents are required for booking.
               </p>
+
+              {/* PAN Card - Manual Input */}
+              <div
+                className="p-4 rounded-xl border-2 mb-4"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="p-2 rounded-lg mt-1"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      style={{ color: colors.textPrimary }}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
+                      PAN Card Number
+                    </p>
+                    <input
+                      type="text"
+                      value={formData.panNumber || ''}
+                      onChange={(e) => handleInputChange('panNumber', e.target.value)}
+                      placeholder="Enter PAN Number (e.g., ABCDE1234F)"
+                      maxLength={10}
+                      className="w-full px-4 py-2 rounded-lg border focus:outline-none uppercase tracking-widest font-medium"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        backgroundColor: colors.backgroundPrimary,
+                        color: colors.textPrimary,
+                      }}
+                    />
+                    <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                      We'll verify this with the government database.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               {/* Aadhaar */}
               <div

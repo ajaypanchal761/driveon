@@ -18,28 +18,31 @@ const carFormSchema = z.object({
   year: z.number().min(1900).max(new Date().getFullYear() + 1),
   color: z.string().optional(),
   registrationNumber: z.string().min(1, 'Registration number is required'),
-  
+
   // Car Type & Category
   carType: z.enum(['sedan', 'suv', 'hatchback', 'luxury', 'sports', 'compact', 'muv', 'coupe']),
   fuelType: z.enum(['petrol', 'diesel', 'electric', 'hybrid', 'cng', 'petrol_cng']),
   transmission: z.enum(['manual', 'automatic', 'cvt']),
   seatingCapacity: z.number().min(2).max(10),
-  
+
   // Pricing
   pricePerDay: z.number().min(0, 'Price must be positive'),
   pricePerWeek: z.number().min(0).optional(),
   pricePerMonth: z.number().min(0).optional(),
   securityDeposit: z.number().min(0, 'Security deposit must be positive'),
-  
+
   // Location
   city: z.string().min(1, 'City is required'),
   state: z.string().optional(),
   address: z.string().optional(),
-  
+
   // Additional
   description: z.string().max(1000).optional(),
   mileage: z.number().min(0).optional(),
   engineCapacity: z.string().optional(),
+  ownerName: z.string().min(1, 'Owner name is required'),
+  ownerEmail: z.string().email('Invalid email address').min(1, 'Owner email is required'),
+  ownerId: z.string().min(1, 'Owner ID is required'),
   isAvailable: z.boolean().default(true),
 });
 
@@ -86,10 +89,10 @@ const EditCarPage = () => {
       try {
         setFetching(true);
         const response = await adminService.getCarById(carId);
-        
+
         if (response.success && response.data) {
           const car = response.data.car;
-          
+
           // Set form values
           reset({
             brand: car.brand,
@@ -111,15 +114,18 @@ const EditCarPage = () => {
             description: car.description || '',
             mileage: car.mileage || '',
             engineCapacity: car.engineCapacity || '',
+            ownerName: car.ownerInfo?.name || '',
+            ownerEmail: car.ownerInfo?.email || '',
+            ownerId: car.ownerInfo?.ownerId || `OWNR-${Math.floor(100000 + Math.random() * 900000)}`,
             isAvailable: car.isAvailable !== undefined ? car.isAvailable : true,
           });
 
           // Set existing images
           setExistingImages(car.images || []);
-          
+
           // Set existing features
           setSelectedFeatures(car.features || []);
-          
+
           // Set existing RC document
           if (car.rcDocument) {
             setExistingRcDocument(car.rcDocument);
@@ -209,7 +215,7 @@ const EditCarPage = () => {
       if (data.pricePerWeek) formData.append('pricePerWeek', data.pricePerWeek);
       if (data.pricePerMonth) formData.append('pricePerMonth', data.pricePerMonth);
       formData.append('securityDeposit', data.securityDeposit);
-      
+
       // Add location fields
       formData.append('location[city]', data.city || '');
       formData.append('city', data.city || '');
@@ -221,11 +227,16 @@ const EditCarPage = () => {
         formData.append('location[address]', data.address);
         formData.append('address', data.address);
       }
-      
-      // Add optional fields
+
       if (data.description) formData.append('description', data.description);
       if (data.mileage) formData.append('mileage', data.mileage);
       if (data.engineCapacity) formData.append('engineCapacity', data.engineCapacity);
+
+      // Add owner info
+      formData.append('ownerName', data.ownerName || '');
+      formData.append('ownerEmail', data.ownerEmail || '');
+      formData.append('ownerId', data.ownerId || '');
+
       formData.append('isAvailable', data.isAvailable ? 'true' : 'false');
 
       // Add existing image public IDs (images to keep)
@@ -335,7 +346,40 @@ const EditCarPage = () => {
                   label="Registration Number *"
                   placeholder="e.g., MH01AB1234"
                   error={errors.registrationNumber?.message}
-                  {...register('registrationNumber')}
+                  {...register('registrationNumber', {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.toUpperCase();
+                    }
+                  })}
+                  className="uppercase"
+                />
+              </div>
+            </Card>
+
+            {/* Owner Information */}
+            <Card className="p-4 md:p-6">
+              <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
+                Owner Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Owner Name *"
+                  placeholder="e.g., John Doe"
+                  error={errors.ownerName?.message}
+                  {...register('ownerName')}
+                />
+                <Input
+                  label="Owner Email *"
+                  placeholder="e.g., john@example.com"
+                  error={errors.ownerEmail?.message}
+                  {...register('ownerEmail')}
+                />
+                <Input
+                  label="Owner ID *"
+                  placeholder="Owner ID"
+                  error={errors.ownerId?.message}
+                  {...register('ownerId')}
+                  helperText="You can update the Owner ID if needed"
                 />
               </div>
             </Card>
@@ -526,7 +570,7 @@ const EditCarPage = () => {
               <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Car Images
               </h2>
-              
+
               {/* Existing Images */}
               {existingImages.length > 0 && (
                 <div className="mb-4">
@@ -542,7 +586,7 @@ const EditCarPage = () => {
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(index)}
-                          className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-10 border-2 border-white hover:bg-red-700"
                           title="Delete image"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,7 +634,7 @@ const EditCarPage = () => {
                           <button
                             type="button"
                             onClick={() => setNewImages((prev) => prev.filter((_, i) => i !== index))}
-                            className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full"
+                            className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full shadow-lg flex items-center justify-center z-10 border-2 border-white hover:bg-red-700 transition-all"
                             title="Remove image"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,7 +654,7 @@ const EditCarPage = () => {
               <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Documents
               </h2>
-              
+
               {/* Existing RC Document */}
               {existingRcDocument && !rcDocument && (
                 <div className="mb-4">
@@ -695,8 +739,8 @@ const EditCarPage = () => {
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

@@ -85,6 +85,7 @@ const EnquiriesListPage = () => {
       <div className="bg-[#1C205C] pt-12 pb-6 px-6 rounded-b-[30px] shadow-lg sticky top-0 z-50">
         <HeaderTopBar
           title="Enquiries"
+          showBack={false}
           rightAction={
             <div className="relative">
               <button

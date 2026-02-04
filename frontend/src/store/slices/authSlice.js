@@ -24,17 +24,53 @@ export const logoutUser = createAsyncThunk(
  * Auth Slice
  * Manages authentication state (tokens, user authentication status)
  */
+// Helper to determine initial auth state based on URL context
+const getInitialAuthState = () => {
+  if (typeof window === 'undefined') {
+    return {
+      token: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      userRole: null
+    };
+  }
+
+  const isEmployeePath = window.location.pathname.startsWith('/employee');
+  const staffToken = localStorage.getItem('staffToken');
+  const authToken = localStorage.getItem('authToken');
+  const staffRefreshToken = localStorage.getItem('staffRefreshToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+  const storedRole = localStorage.getItem('userRole');
+
+  // If on employee path, strictly use staff tokens
+  if (isEmployeePath) {
+    return {
+      token: staffToken || null,
+      refreshToken: staffRefreshToken || null,
+      isAuthenticated: !!staffToken,
+      userRole: storedRole || 'employee',
+    };
+  }
+
+  // Otherwise strictly use user tokens (Module/User App)
+  return {
+    token: authToken || null,
+    refreshToken: refreshToken || null,
+    isAuthenticated: !!authToken,
+    userRole: (storedRole !== 'employee') ? storedRole : null,
+  };
+};
+
+const initialAuth = getInitialAuthState();
+
 const initialState = {
-  token: localStorage.getItem('authToken') || localStorage.getItem('staffToken') || null,
-  refreshToken: localStorage.getItem('refreshToken') || localStorage.getItem('staffRefreshToken') || null,
-  // Don't set isAuthenticated to true initially - wait for AuthInitializer to verify token
-  // This prevents showing login form during token verification on page refresh
-  // Support both user and staff tokens for initial check
-  isAuthenticated: !!(localStorage.getItem('authToken') || localStorage.getItem('staffToken')),
+  token: initialAuth.token,
+  refreshToken: initialAuth.refreshToken,
+  isAuthenticated: initialAuth.isAuthenticated,
   isLoading: false,
-  isInitializing: true, // Track if auth is being initialized on app mount
+  isInitializing: true,
   error: null,
-  userRole: localStorage.getItem('userRole') || null,
+  userRole: initialAuth.userRole,
 };
 
 const authSlice = createSlice({
@@ -118,12 +154,21 @@ const authSlice = createSlice({
     // Token refresh
     refreshTokenSuccess: (state, action) => {
       state.token = action.payload.token;
+      if (action.payload.refreshToken) {
+        state.refreshToken = action.payload.refreshToken;
+      }
 
       const isEmployee = state.userRole === 'employee';
       if (isEmployee) {
         localStorage.setItem('staffToken', action.payload.token);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('staffRefreshToken', action.payload.refreshToken);
+        }
       } else {
         localStorage.setItem('authToken', action.payload.token);
+        if (action.payload.refreshToken) {
+          localStorage.setItem('refreshToken', action.payload.refreshToken);
+        }
       }
     },
 

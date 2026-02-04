@@ -17,7 +17,7 @@ const EmployeeLoginPage = () => {
     username: '',
     password: ''
   });
-  const [forgotEmail, setForgotEmail] = useState(''); // Added state for forgot password
+  const [forgotEmail, setForgotEmail] = useState('');
 
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,6 @@ const EmployeeLoginPage = () => {
       console.log("🔑 Attempting to fetch FCM Token for staff login...");
       let fcmToken = null;
       try {
-        // We await the token here. User might see a permission popup.
         fcmToken = await requestForToken();
         if (fcmToken) {
           console.log("✅ Staff FCM Token captured:", fcmToken.substring(0, 10) + "...");
@@ -115,7 +114,6 @@ const EmployeeLoginPage = () => {
             transition={{ delay: 0.2 }}
             className="inline-block"
           >
-            {/* DriveOn Logo Placeholder - Using Text for now */}
             <h1 className="text-4xl font-black text-[#1C205C] tracking-tighter italic">
               Drive<span className="text-blue-500">On</span>
             </h1>
@@ -141,7 +139,7 @@ const EmployeeLoginPage = () => {
                   <input
                     type="text"
                     required
-                    placeholder="User Name"
+                    placeholder="Email Address"
                     className="w-full pl-8 pr-4 py-3 bg-transparent border-b border-gray-200 focus:border-[#1C205C] outline-none transition-colors placeholder:text-gray-300 text-gray-700 font-medium"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
@@ -164,7 +162,7 @@ const EmployeeLoginPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-3 text-gray-400 hover:text-gray-600 focus:outline-none p-1"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1"
                   >
                     {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                   </button>

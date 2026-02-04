@@ -624,7 +624,6 @@ export const verifyOTP = async (req, res) => {
     };
 
     user.profileComplete = calculateProfileComplete(user);
-    user.profileComplete = calculateProfileComplete(user);
 
     // Handle FCM Token update if provided during login/verification
     const { fcmToken, platform } = req.body;
@@ -1002,12 +1001,14 @@ export const refreshToken = async (req, res) => {
 
     // Generate new access token
     const newToken = generateToken(user._id.toString());
+    const newRefreshToken = generateRefreshToken(user._id.toString());
 
     res.status(200).json({
       success: true,
       message: 'Token refreshed successfully',
       data: {
         token: newToken,
+        refreshToken: newRefreshToken,
       },
     });
   } catch (error) {

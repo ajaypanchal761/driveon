@@ -151,9 +151,12 @@ export const createCar = async (req, res) => {
       description,
       mileage,
       engineCapacity,
+      ownerName,
+      ownerEmail,
+      ownerId,
       isAvailable,
     } = req.body;
-    
+
     // Owner is not provided in form, so use admin ID as owner
     const owner = adminId;
 
@@ -164,7 +167,7 @@ export const createCar = async (req, res) => {
       address: req.body['location[address]'] || req.body.address || req.body['location.address'],
       coordinates: {},
     };
-    
+
     console.log('Parsed location:', location);
 
     // Parse coordinates if provided
@@ -183,8 +186,8 @@ export const createCar = async (req, res) => {
     let features = [];
     if (req.body.features) {
       try {
-        features = typeof req.body.features === 'string' 
-          ? JSON.parse(req.body.features) 
+        features = typeof req.body.features === 'string'
+          ? JSON.parse(req.body.features)
           : req.body.features;
       } catch (e) {
         // If not JSON, treat as comma-separated string
@@ -243,7 +246,7 @@ export const createCar = async (req, res) => {
       // Handle multiple images
       if (req.files.images) {
         const imageFiles = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-        
+
         // Validate minimum 2 images
         if (imageFiles.length < 2) {
           return res.status(400).json({
@@ -251,7 +254,7 @@ export const createCar = async (req, res) => {
             message: 'Minimum 2 images are required',
           });
         }
-        
+
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i];
           try {
@@ -260,7 +263,7 @@ export const createCar = async (req, res) => {
               width: 1200,
               height: 800,
             });
-            
+
             images.push({
               url: uploadResult.secure_url,
               publicId: uploadResult.public_id,
@@ -293,7 +296,7 @@ export const createCar = async (req, res) => {
         const uploadResult = await uploadImage(rcFile, {
           folder: 'driveon/cars/documents',
         });
-        
+
         rcDocument = {
           url: uploadResult.secure_url,
           publicId: uploadResult.public_id,
@@ -333,6 +336,11 @@ export const createCar = async (req, res) => {
       isAvailable: isAvailable !== undefined ? (isAvailable === 'true' || isAvailable === true) : true,
       status: 'pending', // New cars start as pending
       rcDocument,
+      ownerInfo: {
+        name: ownerName?.trim(),
+        email: ownerEmail?.trim(),
+        ownerId: ownerId?.trim(),
+      },
     };
 
     const car = await Car.create(carData);
@@ -347,7 +355,7 @@ export const createCar = async (req, res) => {
     });
   } catch (error) {
     console.error('Create car error:', error);
-    
+
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
@@ -439,6 +447,9 @@ export const updateCar = async (req, res) => {
       description,
       mileage,
       engineCapacity,
+      ownerName,
+      ownerEmail,
+      ownerId,
       isAvailable,
     } = req.body;
 
@@ -454,8 +465,8 @@ export const updateCar = async (req, res) => {
     let features = [];
     if (req.body.features) {
       try {
-        features = typeof req.body.features === 'string' 
-          ? JSON.parse(req.body.features) 
+        features = typeof req.body.features === 'string'
+          ? JSON.parse(req.body.features)
           : req.body.features;
       } catch (e) {
         features = req.body.features.split(',').map(f => f.trim()).filter(f => f);
@@ -473,7 +484,7 @@ export const updateCar = async (req, res) => {
 
     // Check if registration number is being changed and if it already exists
     if (registrationNumber && registrationNumber.toUpperCase() !== car.registrationNumber) {
-      const existingCar = await Car.findOne({ 
+      const existingCar = await Car.findOne({
         registrationNumber: registrationNumber.toUpperCase(),
         _id: { $ne: carId }
       });
@@ -486,10 +497,10 @@ export const updateCar = async (req, res) => {
     }
 
     // Handle image deletion: remove images not in existingImagePublicIds
-    const existingImagePublicIds = req.body.existingImagePublicIds 
-      ? (typeof req.body.existingImagePublicIds === 'string' 
-          ? JSON.parse(req.body.existingImagePublicIds) 
-          : req.body.existingImagePublicIds)
+    const existingImagePublicIds = req.body.existingImagePublicIds
+      ? (typeof req.body.existingImagePublicIds === 'string'
+        ? JSON.parse(req.body.existingImagePublicIds)
+        : req.body.existingImagePublicIds)
       : [];
 
     const imagesToKeep = [];
@@ -512,7 +523,7 @@ export const updateCar = async (req, res) => {
     // Handle new image uploads
     if (req.files && req.files.images) {
       const imageFiles = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-      
+
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
         try {
@@ -521,7 +532,7 @@ export const updateCar = async (req, res) => {
             width: 1200,
             height: 800,
           });
-          
+
           car.images.push({
             url: uploadResult.secure_url,
             publicId: uploadResult.public_id,
@@ -558,7 +569,7 @@ export const updateCar = async (req, res) => {
         const uploadResult = await uploadImage(rcFile, {
           folder: 'driveon/cars/documents',
         });
-        
+
         car.rcDocument = {
           url: uploadResult.secure_url,
           publicId: uploadResult.public_id,
@@ -596,6 +607,15 @@ export const updateCar = async (req, res) => {
     if (engineCapacity !== undefined) car.engineCapacity = engineCapacity?.trim();
     if (isAvailable !== undefined) car.isAvailable = isAvailable === 'true' || isAvailable === true;
 
+    // Update owner info
+    if (ownerName !== undefined || ownerEmail !== undefined || ownerId !== undefined) {
+      car.ownerInfo = {
+        name: ownerName !== undefined ? ownerName?.trim() : car.ownerInfo?.name,
+        email: ownerEmail !== undefined ? ownerEmail?.trim() : car.ownerInfo?.email,
+        ownerId: ownerId !== undefined ? ownerId?.trim() : car.ownerInfo?.ownerId,
+      };
+    }
+
     await car.save();
 
     // Populate owner data
@@ -608,7 +628,7 @@ export const updateCar = async (req, res) => {
     });
   } catch (error) {
     console.error('Update car error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -663,7 +683,7 @@ export const updateCarStatus = async (req, res) => {
 
     // Update car status
     car.status = status;
-    
+
     if (status === 'active') {
       car.approvedBy = adminId;
       car.approvedAt = new Date();

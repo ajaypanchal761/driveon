@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import razorpayService from '../../../services/razorpay.service';
 import { useNavigate } from 'react-router-dom';
@@ -136,6 +136,7 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
  */
 const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
   const [step, setStep] = useState(1);
+  const modalScrollRef = useRef(null);
   const [salaryMethod, setSalaryMethod] = useState('Monthly');
   const [formData, setFormData] = useState({
     name: '',
@@ -294,7 +295,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Step {step} of 3: {step === 1 ? 'Basic Details' : step === 2 ? 'Salary Config' : 'Final Review'}
+              Step {step} of 3: {step === 1 ? 'Basic Details' : step === 2 ? 'Salary Configuration' : 'Final Review'}
             </p>
           </div>
           <button
@@ -314,7 +315,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
+        <div ref={modalScrollRef} className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="col-span-1">
@@ -424,6 +425,11 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                   value={formData.employmentType}
                   onChange={(val) => setFormData({ ...formData, employmentType: val })}
                   placeholder="Select..."
+                  onOpen={() => {
+                    if (modalScrollRef.current) {
+                      modalScrollRef.current.scrollBy({ top: 150, behavior: 'smooth' });
+                    }
+                  }}
                 />
               </div>
             </motion.div>
@@ -672,7 +678,7 @@ export const StaffDirectoryPage = () => {
         setStaffList(response.data.data.staff.map(staff => ({
           ...staff,
           id: staff._id, // Map _id to id for frontend compatibility
-          joinDate: new Date(staff.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+          joinDate: new Date(staff.joiningDate || staff.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
         })));
       }
     } catch (error) {
@@ -948,14 +954,14 @@ const MOCK_ROLES_DATA = [
 ];
 
 const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [formData, setFormData] = useState({ role: '', description: '', access: 'Basic' });
+  const [formData, setFormData] = useState({ role: '', department: '', description: '', access: 'Basic' });
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setFormData(initialData);
       } else {
-        setFormData({ role: '', description: '', access: 'Basic' });
+        setFormData({ role: '', department: '', description: '', access: 'Basic' });
       }
     }
   }, [isOpen, initialData]);
@@ -986,6 +992,7 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             <h3 className="text-xl font-bold mb-4">{initialData ? 'Edit Role' : 'Add New Role'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input required placeholder="Role Name" className="w-full p-2 border rounded-xl" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
+              <input required placeholder="Department" className="w-full p-2 border rounded-xl" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })} />
               <textarea placeholder="Description" className="w-full p-2 border rounded-xl" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
               <ThemedDropdown
                 options={['Basic', 'Intermediate', 'Full Access']}
@@ -1181,6 +1188,7 @@ export const RolesPage = () => {
             ...role,
             id: role._id,
             role: role.roleName,
+            department: role.department,
             access: role.accessLevel,
             count: count
           };
@@ -1199,6 +1207,7 @@ export const RolesPage = () => {
       // Map frontend fields to backend fields
       const payload = {
         roleName: data.role,
+        department: data.department,
         description: data.description,
         accessLevel: data.access,
         category: 'Operations' // Default or add field if needed
@@ -1313,6 +1322,7 @@ export const RolesPage = () => {
               </div>
 
               <h3 className="text-lg font-bold text-gray-900 mb-1">{role.role}</h3>
+              {role.department && <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{role.department}</p>}
               <p className="text-sm text-gray-500 mb-4 h-10 line-clamp-2">{role.description}</p>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
@@ -1561,17 +1571,24 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Calendar Grid Data
+  // Calendar Grid Data - Enhanced with Weekday Alignment
   const daysInMonth = payroll?.daysInMonth || new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const calendarGrid = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = i + 1;
-    const date = new Date(selectedYear, selectedMonth, day);
-    const dayOfWeek = date.getDay(); // 0 = Sun
-    return {
-      day,
-      isWeekend: dayOfWeek === 0 // Sunday
-    };
-  });
+  const firstDayOfMonth = new Date(selectedYear, selectedMonth, 1).getDay(); // 0 = Sun
+
+  const calendarGrid = [];
+  // Add empty slots for correct weekday alignment
+  for (let i = 0; i < firstDayOfMonth; i++) {
+    calendarGrid.push({ day: null, isWeekend: false, isEmpty: true });
+  }
+  // Add actual days
+  for (let i = 1; i <= daysInMonth; i++) {
+    const date = new Date(selectedYear, selectedMonth, i);
+    calendarGrid.push({
+      day: i,
+      isWeekend: date.getDay() === 0, // Sunday
+      isEmpty: false
+    });
+  }
 
   return (
     <div
@@ -1659,12 +1676,13 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
                   </div>
                   <div className="grid grid-cols-7 gap-2">
                     {/* Note: Simplified grid, real daily status logic would require daily data map */}
-                    {calendarGrid.map((item) => (
+                    {calendarGrid.map((item, index) => (
                       <div
-                        key={item.day}
+                        key={index}
                         className={`
-                            aspect-square rounded-xl flex flex-col items-center justify-center border text-xs font-bold relative group cursor-pointer transition-all hover:scale-105
-                            ${item.isWeekend ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-white border-gray-100 text-gray-600'}
+                            aspect-square rounded-xl flex flex-col items-center justify-center border text-xs font-bold relative group transition-all
+                            ${item.isEmpty ? 'bg-transparent border-transparent cursor-default' :
+                            item.isWeekend ? 'bg-red-50 border-red-100 text-red-500' : 'bg-white border-gray-100 text-gray-600 hover:scale-105 cursor-pointer'}
                           `}
                       >
                         {item.day}
@@ -2106,28 +2124,12 @@ export const AttendancePage = () => {
                         >
                           Monthly View
                         </button>
-                        {item.inTime === '-' ? (
-                          <button
-                            onClick={() => handleMarkTime(item.id, 'in')}
-                            className="px-3 py-1 bg-green-50 text-green-700 border border-green-100 rounded-lg text-xs font-bold hover:bg-green-100"
-                          >
-                            Mark In
-                          </button>
-                        ) : item.outTime === '-' ? (
-                          <button
-                            onClick={() => handleMarkTime(item.id, 'out')}
-                            className="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded-lg text-xs font-bold hover:bg-red-100"
-                          >
-                            Mark Out
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleEditClick(item)}
-                            className="text-gray-400 hover:text-indigo-600 text-xs font-bold"
-                          >
-                            Edit
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleEditClick(item)}
+                          className="text-gray-600 hover:text-[#1C205C] text-xs font-bold bg-gray-50 hover:bg-gray-100 px-2.5 py-1.5 rounded-lg transition-colors border border-gray-200"
+                        >
+                          Edit
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -2692,14 +2694,7 @@ export const PerformancePage = () => {
 // const MOCK_TASKS_DATA = [...];
 
 const AddTaskModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
-  const [formData, setFormData] = useState({ title: '', assignedTo: '', priority: 'Medium' });
-
-  // Reset or set default staff when modal opens
-  useEffect(() => {
-    if (isOpen && staffList.length > 0 && !formData.assignedTo) {
-      setFormData(prev => ({ ...prev, assignedTo: staffList[0].id }));
-    }
-  }, [isOpen, staffList]);
+  const [formData, setFormData] = useState({ title: '', assignedTo: '', priority: '' });
 
   return (
     <AnimatePresence>
@@ -2731,20 +2726,25 @@ const AddTaskModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
                 options={staffList.map(staff => ({ value: staff.id, label: `${staff.name} (${staff.role})` }))}
                 value={formData.assignedTo}
                 onChange={(val) => setFormData({ ...formData, assignedTo: val })}
-                placeholder="Select Staff"
+                placeholder="Select Employee"
                 className="bg-white"
               />
               <ThemedDropdown
-                options={['Low', 'Medium', 'High', 'Critical']}
+                options={['Low', 'Medium', 'High', 'Critical'].map(p => ({ value: p, label: p }))}
                 value={formData.priority}
                 onChange={(val) => setFormData({ ...formData, priority: val })}
+                placeholder="Select Priority"
                 className="bg-white"
               />
               <button
                 onClick={() => {
+                  if (!formData.assignedTo || !formData.priority) {
+                    alert("Please select both Employee and Priority");
+                    return;
+                  }
                   onSubmit(formData);
                   onClose();
-                  setFormData({ title: '', assignedTo: staffList.length > 0 ? staffList[0].id : '', priority: 'Medium' });
+                  setFormData({ title: '', assignedTo: '', priority: '' });
                 }}
                 className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
               >
@@ -2764,6 +2764,9 @@ export const StaffTasksPage = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [assignedToFilter, setAssignedToFilter] = useState('Assigned To: All');
+  const [statusFilter, setStatusFilter] = useState('Status: Pending');
 
   useEffect(() => {
     fetchData();
@@ -2806,10 +2809,9 @@ export const StaffTasksPage = () => {
 
   const handleAddTask = async (data) => {
     try {
-      // Set due date to tomorrow same time by default since no date picker in UI
+      // Set due date to today by default
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 1);
-      dueDate.setHours(17, 0, 0, 0); // Default to 5 PM tomorrow
+      dueDate.setHours(23, 59, 59, 999); // Default to end of today
 
       const payload = {
         title: data.title,
@@ -2847,18 +2849,28 @@ export const StaffTasksPage = () => {
     }
   };
 
-  const [assignedToFilter, setAssignedToFilter] = useState('Assigned To: All');
-  const [statusFilter, setStatusFilter] = useState('Status: Pending');
-
   const getFilteredTasks = () => {
     let data = [...tasksList];
 
+    // Filter by Search Term
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      data = data.filter(item =>
+        item.title.toLowerCase().includes(lowerSearch) ||
+        item.assignedTo.toLowerCase().includes(lowerSearch)
+      );
+    }
+
     // Filter by Assigned To
     if (assignedToFilter !== 'Assigned To: All') {
-      if (assignedToFilter === 'Sales') {
-        data = data.filter(item => item.assignedTo.includes('Sales'));
-      } else if (assignedToFilter === 'Garage') {
-        data = data.filter(item => item.assignedTo.includes('Mechanic')); // Assuming Garage = Mechanic
+      const filterVal = assignedToFilter.toLowerCase();
+      if (filterVal === 'sales') {
+        data = data.filter(item => item.assignedTo.toLowerCase().includes('sales'));
+      } else if (filterVal === 'garage') {
+        data = data.filter(item => item.assignedTo.toLowerCase().includes('mechanic'));
+      } else {
+        // Individual staff name match
+        data = data.filter(item => item.assignedTo.includes(assignedToFilter));
       }
     }
 
@@ -2901,13 +2913,23 @@ export const StaffTasksPage = () => {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full md:w-80">
+          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search tasks or staff..."
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
         <div className="flex gap-3 w-full md:w-auto">
           <ThemedDropdown
-            options={['Assigned To: All', 'Sales', 'Garage']}
+            options={['Assigned To: All', 'Sales', 'Garage', ...staffList.map(s => s.name)]}
             value={assignedToFilter}
             onChange={(val) => setAssignedToFilter(val)}
             className="bg-white text-sm"
-            width="w-44"
+            width="w-52"
           />
           <ThemedDropdown
             options={['Status: Pending', 'Completed', 'All']}

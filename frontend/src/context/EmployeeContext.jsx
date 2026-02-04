@@ -1,4 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { requestForToken, onMessageListener } from '../services/firebase';
+import api from '../services/api';
+import toastUtils from '../config/toast';
 
 const EmployeeContext = createContext();
 
@@ -30,6 +34,57 @@ export const EmployeeProvider = ({ children }) => {
   });
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { user } = useSelector(state => state.user);
+
+  const fetchUnreadCount = async () => {
+    try {
+      if (!user) return;
+      // Dynamic import to avoid circular dependency or early loading issues
+      const { notificationService } = await import('../services/notification.service');
+      const res = await notificationService.getNotifications();
+      if (res.success) {
+        setUnreadCount(res.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
+  };
+
+  // Notification Sync & Listener
+  useEffect(() => {
+    if (user && (user._id || user.id)) {
+      fetchUnreadCount();
+
+      // Request and Save Token
+      requestForToken().then(async (token) => {
+        if (token) {
+          try {
+            await api.post('/auth/staff-fcm-token', {
+              fcmToken: token,
+              platform: 'web'
+            });
+            console.log("FCM Token saved for staff");
+          } catch (error) {
+            console.error("Error saving FCM token:", error);
+          }
+        }
+      });
+
+      // Listen for foreground messages
+      const unsubscribe = onMessageListener()
+        .then((payload) => {
+          toastUtils.info(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
+          console.log("Foreground Notification:", payload);
+          setUnreadCount(prev => prev + 1);
+        })
+        .catch((err) => console.log("failed: ", err));
+
+      return () => {
+        // Any cleanup if needed
+      };
+    }
+  }, [user]);
 
   // Sync with localStorage
   useEffect(() => {
@@ -111,6 +166,9 @@ export const EmployeeProvider = ({ children }) => {
       accumulatedSeconds,
       attendanceStatus,
       attendanceDays,
+      unreadCount,
+      setUnreadCount,
+      fetchUnreadCount,
       handleClockToggle,
       formatDuration,
       formatTotalHours

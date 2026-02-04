@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy, useState, useEffect } from "react";
 import AdminRoute from "../components/layout/AdminRoute";
+import EmployeeRoute from "../components/layout/EmployeeRoute";
 import AdminLayout from "../components/admin/layout/AdminLayout";
 import ModuleLayout from "../module/components/layout/ModuleLayout";
 import { useAdminAuth } from "../context/AdminContext";
@@ -667,44 +668,49 @@ const router = createBrowserRouter([
 
   // Employee Routes
   {
-    path: "/employee",
-    element: <EmployeeHomePage />,
-  },
-  {
-    path: "/employee/enquiries",
-    element: <EnquiriesListPage />,
-  },
-  {
-    path: "/employee/enquiries/:id",
-    element: <EnquiryDetailsPage />,
-  },
-  {
-    path: "/employee/attendance",
-    element: <AttendancePage />,
-  },
-  {
-    path: "/employee/tasks",
-    element: <TasksPage />,
-  },
-  {
-    path: "/employee/profile",
-    element: <ProfilePage />,
-  },
-  {
-    path: "/employee/directory",
-    element: <StaffDirectoryPage />,
-  },
-  {
-    path: "/employee/salary",
-    element: <SalaryPage />,
-  },
-  {
-    path: "/employee/privacy",
-    element: <PrivacySecurityPage />,
-  },
-  {
-    path: "/employee/notifications",
-    element: <NotificationsPage />,
+    element: <EmployeeRoute />,
+    children: [
+      {
+        path: "/employee",
+        element: <EmployeeHomePage />,
+      },
+      {
+        path: "/employee/enquiries",
+        element: <EnquiriesListPage />,
+      },
+      {
+        path: "/employee/enquiries/:id",
+        element: <EnquiryDetailsPage />,
+      },
+      {
+        path: "/employee/attendance",
+        element: <AttendancePage />,
+      },
+      {
+        path: "/employee/tasks",
+        element: <TasksPage />,
+      },
+      {
+        path: "/employee/profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "/employee/directory",
+        element: <StaffDirectoryPage />,
+      },
+      {
+        path: "/employee/salary",
+        element: <SalaryPage />,
+      },
+      {
+        path: "/employee/privacy",
+        element: <PrivacySecurityPage />,
+      },
+      {
+        path: "/employee/notifications",
+        element: <NotificationsPage />,
+      },
+    ],
   },
   {
     path: "/employee/login",
