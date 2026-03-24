@@ -76,6 +76,18 @@ const AdminSidebar = () => {
       path: '/admin/cars',
     },
     {
+      id: 'online-cars',
+      title: 'Online Cars',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17h10M6 17l-1 3m14-3l1 3M5 17V11a2 2 0 012-2h10a2 2 0 012 2v6M8 11h8m-6 6v2m4-2v2" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3a6 6 0 016 6" opacity="0.6" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5a4 4 0 014 4" opacity="0.6" />
+        </svg>
+      ),
+      path: '/admin/online-cars',
+    },
+    {
       id: 'fleet-outward',
       title: 'Fleet: Outward Cars',
       icon: (

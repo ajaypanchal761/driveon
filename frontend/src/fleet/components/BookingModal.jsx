@@ -129,7 +129,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       <div
-        className="relative w-full max-w-xl rounded-xl shadow-xl border"
+        className="relative w-full max-w-xl rounded-xl shadow-xl border flex flex-col max-h-[90vh] overflow-hidden"
         style={{
           backgroundColor: colors.backgroundSecondary,
           borderColor: colors.borderMedium,
@@ -160,7 +160,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium" style={{ color: colors.textPrimary }}>
