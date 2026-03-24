@@ -70,20 +70,6 @@ const ModuleSettingsPage = () => {
       ),
       items: [
         {
-          id: 'edit-profile',
-          label: 'Edit Profile',
-          description: 'Update your personal information',
-          action: () => navigate('/profile/edit'),
-          icon: (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          ),
-        },
-        {
           id: 'change-password',
           label: 'Change Password',
           description: 'Update your account password',
@@ -195,24 +181,6 @@ const ModuleSettingsPage = () => {
         />
       ),
       items: [
-        {
-          id: 'language',
-          label: 'Language',
-          description: 'Select app language',
-          value: language === 'en' ? 'English' : 'Hindi',
-          action: () => {
-            setLanguage(language === 'en' ? 'hi' : 'en');
-            toastUtils.success(`Language changed to ${language === 'en' ? 'Hindi' : 'English'}`);
-          },
-          icon: (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
-            />
-          ),
-        },
         {
           id: 'about',
           label: 'About',

@@ -582,120 +582,27 @@ const ModuleTestPage = () => {
           setCategories(carTypes);
         }
 
-        // Fetch top brands
-        const brandsResponse = await carService.getTopBrands({ limit: 10 });
-        if (brandsResponse.success && brandsResponse.data?.brands) {
-          const brandsData = brandsResponse.data.brands.map((brand, index) => {
-            const brandName = brand.name || brand.brand || brand || "";
-            const normalizedName = brandName.trim();
-            const lowerName = normalizedName.toLowerCase();
-            let brandLogo = null;
-            let displayName = normalizedName || "Brand";
-
-            // Hard-set Volvo to our asset to avoid dark/invalid API logos
-            if (lowerName.includes('volvo')) {
-              brandLogo = logo7;
-              displayName = 'Volvo';
-            }
-
-            // First, check if API returned a logo for this brand
-            if (!brandLogo && (brand.logo || brand.brandLogo || brand.image)) {
-              const apiLogo = brand.logo || brand.brandLogo || brand.image;
-              if (typeof apiLogo === "string" && apiLogo) {
-                brandLogo = apiLogo.startsWith("http")
-                  ? apiLogo
-                  : `${import.meta.env.VITE_API_BASE_URL || ""}${apiLogo}`;
-              }
-            }
-
-            // If no API logo, map specific brand/model names to correct logos
-            if (!brandLogo) {
-              // Indian brands/models
-              if (lowerName.includes('alto') || lowerName.includes('800')) {
-                brandLogo = logo2; // Maruti/Toyota logo for Alto
-                displayName = 'Maruti Suzuki';
-              } else if (lowerName.includes('xuv') || lowerName.includes('500')) {
-                brandLogo = logo9; // Mahindra logo for XUV
-                displayName = 'Mahindra';
-              } else if (lowerName.includes('swift') || lowerName.includes('dzire')) {
-                brandLogo = logo2; // Maruti logo for Swift/Dzire
-                displayName = 'Maruti Suzuki';
-              } else if (lowerName.includes('hyundai')) {
-                brandLogo = logo6; // Hyundai logo (different from KIA)
-                displayName = 'Hyundai';
-              } else if (lowerName.includes('kia')) {
-                brandLogo = logo1; // KIA logo
-                displayName = 'Kia';
-              } else if (lowerName.includes('toyota')) {
-                brandLogo = logo2; // Toyota logo
-                displayName = 'Toyota';
-              } else if (lowerName.includes('mahindra')) {
-                brandLogo = logo9; // Mahindra logo
-                displayName = 'Mahindra';
-              } else if (lowerName.includes('maruti')) {
-                brandLogo = logo2; // Maruti logo
-                displayName = 'Maruti Suzuki';
-              } else if (lowerName.includes('tata')) {
-                brandLogo = logo3; // Tata logo
-                displayName = 'Tata';
-              } else if (lowerName.includes('honda')) {
-                brandLogo = logo8; // Honda logo
-                displayName = 'Honda';
-              } else if (lowerName.includes('nissan')) {
-                brandLogo = logo11; // Nissan logo
-                displayName = 'Nissan';
-              } else if (lowerName.includes('ford')) {
-                brandLogo = logo4; // Ford logo
-                displayName = 'Ford';
-              } else if (lowerName.includes('chevrolet')) {
-                brandLogo = logo5; // Chevrolet logo
-                displayName = 'Chevrolet';
-              } else if (lowerName.includes('ferrari')) {
-                brandLogo = logo10; // Ferrari logo
-                displayName = 'Ferrari';
-              } else if (lowerName.includes('lamborghini')) {
-                brandLogo = logo5; // Lamborghini logo
-                displayName = 'Lamborghini';
-              } else if (lowerName.includes('bmw')) {
-                brandLogo = logo11; // BMW logo
-                displayName = 'BMW';
-              } else if (lowerName.includes('audi')) {
-                brandLogo = logo10; // Audi logo
-                displayName = 'Audi';
-              } else if (lowerName.includes('tesla')) {
-                brandLogo = logo4; // Tesla logo
-                displayName = 'Tesla';
-              } else {
-                // Try exact match from brandLogos map
-                brandLogo = brandLogos[normalizedName];
-
-                // Try case-insensitive match
-                if (!brandLogo) {
-                  const brandKey = Object.keys(brandLogos).find(
-                    key => key.toLowerCase() === normalizedName.toLowerCase()
-                  );
-                  if (brandKey) {
-                    brandLogo = brandLogos[brandKey];
-                    displayName = brandKey;
-                  }
-                }
-
-                // Use fallback brand logo if still not found
-                if (!brandLogo) {
-                  brandLogo = fallbackBrandLogos[index % fallbackBrandLogos.length];
-                }
-              }
-            }
-
-            return {
-              id: index + 1,
-              name: displayName,
-              logo: brandLogo,
-              count: brand.count || 0,
-            };
-          });
-          setBrands(brandsData);
-        }
+        // Set static premium fleet brands as requested
+        const premiumFleetData = [
+          { id: 1, name: "Toyota", logo: logo2 },
+          { id: 2, name: "Ferrari", logo: logo4 },
+          { id: 3, name: "Ford", logo: logo3 },
+          { id: 4, name: "Lamborghini", logo: logo5 },
+          { id: 5, name: "Kia", logo: logo1 },
+          { id: 6, name: "Skoda", logo: logo7 },
+          { id: 7, name: "Honda", logo: logo8 },
+          { id: 8, name: "Jaguar", logo: logo9 },
+          { id: 9, name: "Audi", logo: logo10 },
+          { id: 10, name: "Nissan", logo: logo11 },
+        ];
+        
+        // Add count property to match structure
+        const formattedBrands = premiumFleetData.map(brand => ({
+          ...brand,
+          count: '10+' // Placeholder count
+        }));
+        
+        setBrands(formattedBrands);
 
         // Fetch nearby cars (using user's coordinates if available)
         const nearbyParams = {
@@ -1435,7 +1342,7 @@ const ModuleTestPage = () => {
                         <img
                           src={brand.logo}
                           alt={brand.name}
-                          className="w-full h-full object-contain filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
+                          className="w-full h-full object-contain filter grayscale contrast-125 opacity-70 group-hover:grayscale-0 group-hover:contrast-100 group-hover:opacity-100 transition-all duration-300"
                         />
                       </div>
                       <span className="text-xs font-bold text-gray-500 group-hover:text-[#1C205C] transition-colors">

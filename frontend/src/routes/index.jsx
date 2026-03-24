@@ -125,6 +125,12 @@ const AdminProfilePage = lazy(() =>
 const AdminSupportPage = lazy(() =>
   import("../pages/admin/support/AdminSupportPage")
 );
+
+// Fleet Management (isolated admin module)
+const FleetLayout = lazy(() => import("../fleet/layout/FleetLayout"));
+const FleetOutwardCarsPage = lazy(() => import("../fleet/pages/OutwardCarsPage"));
+const FleetInwardCarsPage = lazy(() => import("../fleet/pages/InwardCarsPage"));
+const FleetBookingsPage = lazy(() => import("../fleet/pages/FleetBookingsPage"));
 const AdminLoginPage = lazy(() =>
   import("../pages/admin/AdminLoginPage")
 );
@@ -580,6 +586,28 @@ const router = createBrowserRouter([
           {
             path: "/admin/cars/pending",
             element: <CarListPage />,
+          },
+          {
+            path: "/admin/fleet",
+            element: <FleetLayout />,
+            children: [
+              {
+                index: true,
+                element: <Navigate to="/admin/fleet/outward" replace />,
+              },
+              {
+                path: "outward",
+                element: <FleetOutwardCarsPage />,
+              },
+              {
+                path: "inward",
+                element: <FleetInwardCarsPage />,
+              },
+              {
+                path: "bookings",
+                element: <FleetBookingsPage />,
+              },
+            ],
           },
           {
             path: "/admin/bookings",

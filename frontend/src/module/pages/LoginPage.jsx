@@ -23,6 +23,8 @@ const ModuleLoginPage = () => {
   const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+  const [timer, setTimer] = useState(60); // 60 seconds timer (1 minute)
+  const [canResend, setCanResend] = useState(false);
 
   // Get return URL from location state or default to module home
   const from = location.state?.from?.pathname || '/';
@@ -37,6 +39,23 @@ const ModuleLoginPage = () => {
       document.documentElement.style.overflow = '';
     };
   }, []);
+
+  // Timer countdown
+  useEffect(() => {
+    if (showOTP && timer > 0) {
+      const interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [showOTP, timer]);
 
   // Validate phone number
   const validatePhoneNumber = (value) => {
@@ -75,6 +94,8 @@ const ModuleLoginPage = () => {
         toastUtils.success('OTP sent successfully!');
         setShowOTP(true);
         setError('');
+        setTimer(60); // Reset timer to 60 seconds
+        setCanResend(false); // Disable resend button
       } else {
         setError(response.message || 'Failed to send OTP. Please try again.');
       }
@@ -163,6 +184,8 @@ const ModuleLoginPage = () => {
         toastUtils.success('OTP resent successfully!');
         setOtp('');
         setError('');
+        setTimer(60); // Reset timer to 60 seconds
+        setCanResend(false); // Disable resend button
       } else {
         setError(response.message || 'Failed to resend OTP. Please try again.');
         toastUtils.error(response.message || 'Failed to resend OTP. Please try again.');
@@ -421,15 +444,21 @@ const ModuleLoginPage = () => {
                   </span>
                 </label>
                 {showOTP && (
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={isLoading}
-                    className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ color: colors.backgroundTertiary }}
-                  >
-                    Resend OTP?
-                  </button>
+                  timer > 0 ? (
+                    <span className="text-sm" style={{ color: colors.backgroundTertiary }}>
+                      Resend in {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendOTP}
+                      disabled={isLoading}
+                      className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ color: colors.backgroundTertiary }}
+                    >
+                      Resend OTP?
+                    </button>
+                  )
                 )}
               </div>
 
@@ -693,15 +722,21 @@ const ModuleLoginPage = () => {
                 </span>
               </label>
               {showOTP && (
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  disabled={isLoading}
-                  className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ color: colors.backgroundTertiary }}
-                >
-                  Resend OTP?
-                </button>
+                timer > 0 ? (
+                  <span className="text-sm" style={{ color: colors.backgroundTertiary }}>
+                    Resend in {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={isLoading}
+                    className="text-sm font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ color: colors.backgroundTertiary }}
+                  >
+                    Resend OTP?
+                  </button>
+                )
               )}
             </div>
 

@@ -21,7 +21,7 @@ const VerifyOTPPage = () => {
 
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [timer, setTimer] = useState(60); // 60 seconds timer
+  const [timer, setTimer] = useState(60); // 60 seconds timer (1 minute)
   const [canResend, setCanResend] = useState(false);
 
   // Get email/phone and type from location state

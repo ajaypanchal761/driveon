@@ -12,6 +12,14 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', 'react-router-dom'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', '@reduxjs/toolkit', 'react-redux'],
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom', 
+      '@reduxjs/toolkit', 
+      'react-redux',
+      'firebase/app',
+      'firebase/messaging'
+    ],
   },
 })
