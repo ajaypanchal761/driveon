@@ -51,10 +51,12 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
         </div>
 
         {/* Car Details - Right Side */}
-        <div className="flex-1 flex flex-col justify-center px-4 md:px-6 lg:px-8 py-3 md:py-4 lg:py-5">
+        <div className="flex-1 min-w-0 flex flex-col justify-center px-4 md:px-6 lg:px-8 py-3 md:py-4 lg:py-5">
           {/* Car Name and Rating in same row */}
-          <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
-            <h3 className="text-base md:text-xl lg:text-2xl font-bold text-black line-clamp-1 flex-1">{car.name}</h3>
+          <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3 min-w-0">
+            <h3 className="text-base md:text-xl lg:text-2xl font-bold text-black truncate flex-1 min-w-0">
+              {car.name}
+            </h3>
             <div className="flex items-center gap-1 md:gap-1.5 flex-shrink-0">
               <span className="text-sm md:text-base lg:text-lg text-gray-600">{car.rating}</span>
               <svg 

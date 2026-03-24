@@ -1090,12 +1090,12 @@ const SearchPage = () => {
                           </h2>
                         </div>
 
-                        {/* Popular Cars - Horizontal scrollable on mobile, grid on desktop (wider cards) */}
-                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-4 lg:gap-6 overflow-x-auto md:overflow-x-visible scrollbar-hide -mx-0">
+                        {/* Popular Cars - Horizontal scrollable on mobile (1 card at a time), grid on desktop */}
+                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-0 md:gap-4 lg:gap-6 overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x snap-mandatory">
                           {filteredPopularCars.map((car, index) => (
                             <motion.div
                               key={car.id}
-                              className="min-w-[280px] md:min-w-0 flex-shrink-0"
+                              className="w-full md:w-full flex-shrink-0 snap-start px-2 md:px-0"
                               style={{ pointerEvents: 'auto' }}
                               initial={{ opacity: 0, x: 20 }}
                               animate={{ opacity: 1, x: 0 }}
