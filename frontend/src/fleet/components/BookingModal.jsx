@@ -23,6 +23,9 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
   const [licensePreview, setLicensePreview] = useState('');
   const [aadhaarFile, setAadhaarFile] = useState(null);
   const [aadhaarPreview, setAadhaarPreview] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending | paid
+  const [paymentMode, setPaymentMode] = useState('cash'); // cash | upi | card | bank_transfer
+  const [paidAmount, setPaidAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,6 +38,9 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     setLicensePreview('');
     setAadhaarFile(null);
     setAadhaarPreview('');
+    setPaymentStatus('pending');
+    setPaymentMode('cash');
+    setPaidAmount('');
     setSubmitting(false);
     setError('');
   }, [open, car?.id]);
@@ -45,6 +51,12 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     if (!car) return 0;
     return numberOfDays * Number(car.pricePerDay || 0);
   }, [car, numberOfDays]);
+
+  useEffect(() => {
+    if (paymentStatus !== 'paid') return;
+    if (paidAmount && Number(paidAmount) > 0) return;
+    setPaidAmount(String(totalPrice || 0));
+  }, [paidAmount, paymentStatus, totalPrice]);
 
   const hasOverlap = useMemo(() => {
     if (!fromDate || !toDate) return false;
@@ -106,6 +118,10 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     }
     setSubmitting(true);
     try {
+      const normalizedPaidAmount =
+        paymentStatus === 'paid'
+          ? Math.max(0, Math.min(totalPrice || 0, Number(paidAmount || totalPrice || 0)))
+          : 0;
       await onConfirm({
         customerName: customerName.trim(),
         fromDate,
@@ -113,6 +129,9 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
         licenseImage: licensePreview,
         aadhaarImage: aadhaarPreview || '',
         totalPrice,
+        paymentStatus,
+        paymentMode: paymentStatus === 'paid' ? paymentMode : '',
+        paidAmount: normalizedPaidAmount,
       });
       onClose();
     } catch (e) {
@@ -256,6 +275,70 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
               <span className="font-semibold" style={{ color: colors.textPrimary }}>
                 ₹{totalPrice || 0}
               </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium" style={{ color: colors.textPrimary }}>
+                Payment Status
+              </label>
+              <select
+                value={paymentStatus}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setPaymentStatus(next);
+                  if (next !== 'paid') setPaidAmount('');
+                }}
+                className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+                style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+              >
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium" style={{ color: colors.textPrimary }}>
+                Payment Mode
+              </label>
+              <select
+                value={paymentMode}
+                onChange={(e) => setPaymentMode(e.target.value)}
+                disabled={paymentStatus !== 'paid'}
+                className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundPrimary,
+                  opacity: paymentStatus !== 'paid' ? 0.6 : 1,
+                }}
+              >
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="card">Card</option>
+                <option value="bank_transfer">Bank Transfer</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium" style={{ color: colors.textPrimary }}>
+                Paid Amount
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={totalPrice || 0}
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value)}
+                disabled={paymentStatus !== 'paid'}
+                className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundPrimary,
+                  opacity: paymentStatus !== 'paid' ? 0.6 : 1,
+                }}
+                placeholder={String(totalPrice || 0)}
+              />
             </div>
           </div>
 
