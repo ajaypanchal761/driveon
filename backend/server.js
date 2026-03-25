@@ -100,6 +100,7 @@ import reviewRoutes from "./routes/review.routes.js";
 import referralRoutes from "./routes/referral.routes.js";
 import crmRoutes from "./routes/crm.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import fleetRoutes from "./routes/fleet.routes.js";
 
 // Socket.IO Configuration
 // const io = new Server(server, {
@@ -297,6 +298,7 @@ io.on("connection", (socket) => {
 app.use("/api/admin", adminRoutes);
 app.use("/api/crm", crmRoutes);
 app.use("/api/cars", carRoutes);
+app.use("/api/fleet", fleetRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/common", commonRoutes);

@@ -17,17 +17,11 @@ const InwardCarsPage = () => {
   const onConfirm = async (payload) => {
     if (!selectedCar) return;
     addBooking({
-      id: `fleet_booking_${Date.now()}`,
+      ...payload,
       carId: selectedCar.id,
       carName: selectedCar.name,
       carType: selectedCar.type,
-      customerName: payload.customerName,
-      licenseImage: payload.licenseImage,
-      aadhaarImage: payload.aadhaarImage || '',
-      fromDate: payload.fromDate,
-      toDate: payload.toDate,
-      totalPrice: payload.totalPrice,
-      createdAt: new Date().toISOString(),
+      carOwnerName: selectedCar.ownerName || 'DriveOn Admin',
     });
   };
 

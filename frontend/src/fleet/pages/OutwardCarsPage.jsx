@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import BookingModal from '../components/BookingModal';
 import CarCard from '../components/CarCard';
 import { useFleet } from '../context/FleetContext';
@@ -8,6 +8,7 @@ import Card from '../../components/common/Card';
 import { colors } from '../../module/theme/colors';
 import { Button } from '../../components/common';
 import AddOutwardCarModal from '../components/AddOutwardCarModal';
+import { crmService } from '../../services/crm.service';
 
 const OutwardCarsPage = () => {
   const { cars, getBookingsForCar, addBooking, addCar } = useFleet();
@@ -20,12 +21,27 @@ const OutwardCarsPage = () => {
     [cars]
   );
 
+  const [dbVendors, setDbVendors] = useState([]);
+
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const response = await crmService.getVendors();
+        if (response.success && response.data?.vendors) {
+          setDbVendors(response.data.vendors);
+        }
+      } catch (error) {
+        console.error("Failed to fetch vendors", error);
+      }
+    };
+    fetchVendors();
+  }, []);
+
   const ownerOptions = useMemo(() => {
-    const owners = outwardCars
-      .map((c) => c.ownerName)
-      .filter(Boolean);
-    return Array.from(new Set(owners)).sort((a, b) => String(a).localeCompare(String(b)));
-  }, [outwardCars]);
+    const fromCars = outwardCars.map((c) => c.ownerName).filter(Boolean);
+    const fromDb = dbVendors.map(v => v.name);
+    return Array.from(new Set([...fromCars, ...fromDb])).sort((a, b) => String(a).localeCompare(String(b)));
+  }, [outwardCars, dbVendors]);
 
   const visibleCars = useMemo(() => {
     if (ownerFilter === 'all') return outwardCars;
@@ -35,18 +51,11 @@ const OutwardCarsPage = () => {
   const onConfirm = async (payload) => {
     if (!selectedCar) return;
     addBooking({
-      id: `fleet_booking_${Date.now()}`,
+      ...payload,
       carId: selectedCar.id,
       carName: selectedCar.name,
       carType: selectedCar.type,
       carOwnerName: selectedCar.ownerName || '',
-      customerName: payload.customerName,
-      licenseImage: payload.licenseImage,
-      aadhaarImage: payload.aadhaarImage || '',
-      fromDate: payload.fromDate,
-      toDate: payload.toDate,
-      totalPrice: payload.totalPrice,
-      createdAt: new Date().toISOString(),
     });
   };
 
@@ -124,6 +133,7 @@ const OutwardCarsPage = () => {
         open={showAddCar}
         onClose={() => setShowAddCar(false)}
         onCreate={(car) => addCar(car)}
+        vendors={dbVendors}
       />
     </div>
   );

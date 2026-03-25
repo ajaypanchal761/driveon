@@ -62,7 +62,7 @@ export const getAllBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('user', 'name phone email')
-      .populate('car', 'brand model year registrationNumber')
+      .populate('car', 'brand model year registrationNumber fuelType transmission seatingCapacity location')
       .populate('guarantor', 'name phone email')
       .sort(sort)
       .skip(skip)

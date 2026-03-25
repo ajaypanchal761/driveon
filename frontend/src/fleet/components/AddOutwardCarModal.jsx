@@ -9,7 +9,7 @@ const isValidPhone = (value) => {
   return digits.length >= 8;
 };
 
-const AddOutwardCarModal = ({ open, onClose, onCreate }) => {
+const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
   const [ownerName, setOwnerName] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('');
   const [carName, setCarName] = useState('');
@@ -32,6 +32,16 @@ const AddOutwardCarModal = ({ open, onClose, onCreate }) => {
     setSubmitting(false);
     setError('');
   }, [open]);
+
+  // Auto-fill phone if vendor is selected
+  useEffect(() => {
+    if (ownerName && vendors.length > 0) {
+      const matchedVendor = vendors.find(v => v.name === ownerName);
+      if (matchedVendor && matchedVendor.phone) {
+        setOwnerPhone(matchedVendor.phone);
+      }
+    }
+  }, [ownerName, vendors]);
 
   const canSubmit = useMemo(() => {
     if (!ownerName.trim()) return false;
@@ -119,12 +129,18 @@ const AddOutwardCarModal = ({ open, onClose, onCreate }) => {
                 Owner Name <span style={{ color: colors.accentRed }}>*</span>
               </label>
               <input
+                list="vendor-list"
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
                 className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
                 placeholder="Enter owner name"
               />
+              <datalist id="vendor-list">
+                {vendors.map(v => (
+                  <option key={v._id} value={v.name}>{v.phone ? `(${v.phone})` : ''}</option>
+                ))}
+              </datalist>
             </div>
 
             <div>

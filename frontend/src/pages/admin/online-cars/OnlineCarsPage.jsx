@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { colors } from "../../../module/theme/colors";
 import Card from "../../../components/common/Card";
+import adminService from "../../../services/admin.service";
 
 const formatDateTime = (value) => {
   if (!value) return "N/A";
@@ -37,131 +38,83 @@ const getStatusMeta = (status) => {
   }
 };
 
-// Frontend-only mock data (online bookings only; fleet excluded)
-const MOCK_ONLINE_BOOKED_CARS = [
-  {
-    id: "OC-001",
-    isFleet: false,
-    car: {
-      id: "CAR-THAR-001",
-      name: "MAHINDRA N MAHINDRA THAR 4*2 2024",
-      numberPlate: "GJ01AB1234",
-      city: "Ahmedabad",
-      fuel: "Diesel",
-      transmission: "Manual",
-      seats: 5,
-    },
-    booking: {
-      bookingId: "BK745750AV6",
-      status: "running",
-      user: {
-        name: "Ajay Panchal",
-        email: "ajaypanchal@example.com",
-        phone: "+91 90000 00000",
-      },
-      tripStart: {
-        dateTime: "2026-03-11T18:38:00+05:30",
-        location: "Ahmedabad",
-      },
-      tripEnd: {
-        dateTime: "2026-03-12T10:30:00+05:30",
-        location: "Ahmedabad",
-      },
-      pricing: {
-        pricePerDay: 5000,
-        days: 1,
-        discount: 0,
-        extraCharges: 0,
-        totalAmount: 5000,
-      },
-      paymentStatus: "paid",
-    },
-  },
-  {
-    id: "OC-002",
-    isFleet: false,
-    car: {
-      id: "CAR-CRETA-002",
-      name: "HYUNDAI CRETA 2023",
-      numberPlate: "GJ27CD9876",
-      city: "Ahmedabad",
-      fuel: "Petrol",
-      transmission: "Automatic",
-      seats: 5,
-    },
-    booking: {
-      bookingId: "BK120045XZ1",
-      status: "booked",
-      user: {
-        name: "Riya Shah",
-        email: "riya.shah@example.com",
-        phone: "+91 91111 11111",
-      },
-      tripStart: {
-        dateTime: "2026-03-26T09:00:00+05:30",
-        location: "Ahmedabad",
-      },
-      tripEnd: {
-        dateTime: "2026-03-28T09:00:00+05:30",
-        location: "Ahmedabad",
-      },
-      pricing: {
-        pricePerDay: 3200,
-        days: 2,
-        discount: 200,
-        extraCharges: 0,
-        totalAmount: 6200,
-      },
-      paymentStatus: "pending",
-    },
-  },
-  {
-    id: "OC-003",
-    isFleet: false,
-    car: {
-      id: "CAR-SWIFT-003",
-      name: "MARUTI SWIFT 2022",
-      numberPlate: "GJ05EF4567",
-      city: "Ahmedabad",
-      fuel: "Petrol",
-      transmission: "Manual",
-      seats: 5,
-    },
-    booking: {
-      bookingId: "BK998877AA0",
-      status: "completed",
-      user: {
-        name: "Kunal Mehta",
-        email: "kunal.mehta@example.com",
-        phone: "+91 92222 22222",
-      },
-      tripStart: {
-        dateTime: "2026-03-05T10:00:00+05:30",
-        location: "Ahmedabad",
-      },
-      tripEnd: {
-        dateTime: "2026-03-06T10:00:00+05:30",
-        location: "Ahmedabad",
-      },
-      pricing: {
-        pricePerDay: 1800,
-        days: 1,
-        discount: 0,
-        extraCharges: 150,
-        totalAmount: 1950,
-      },
-      paymentStatus: "paid",
-    },
-  },
-];
-
 const OnlineCarsPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [bookingsData, setBookingsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        // Fetch all bookings
+        const response = await adminService.getAllBookings({ limit: 500 });
+        if (response.success) {
+          setBookingsData(response.data?.bookings || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch bookings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
 
   const onlineCars = useMemo(() => {
-    return (MOCK_ONLINE_BOOKED_CARS || []).filter((item) => !item.isFleet);
-  }, []);
+    return bookingsData.map((b) => {
+      let mappedStatus = "completed";
+      if (b.tripStatus === "in_progress" || b.status === "active") {
+        mappedStatus = "running";
+      } else if (b.status === "confirmed" && b.tripStatus === "not_started") {
+        mappedStatus = "booked";
+      } else if (b.status === "cancelled" || b.tripStatus === "cancelled") {
+        mappedStatus = "cancelled";
+      } else if (b.status === "pending") {
+        mappedStatus = "booked";
+      }
+
+      return {
+        id: b.bookingId || b._id,
+        isFleet: false,
+        car: {
+          id: b.car?._id || "N/A",
+          name: `${b.car?.brand || ""} ${b.car?.model || ""}`.trim() || "N/A",
+          numberPlate: b.car?.registrationNumber || "N/A",
+          city: b.car?.location?.city || "N/A",
+          fuel: b.car?.fuelType || "N/A",
+          transmission: b.car?.transmission || "N/A",
+          seats: b.car?.seatingCapacity || 5,
+        },
+        booking: {
+          bookingId: b.bookingId || b._id,
+          status: mappedStatus,
+          user: {
+            name: b.user?.name || "N/A",
+            email: b.user?.email || "N/A",
+            phone: b.user?.phone || "N/A",
+          },
+          tripStart: {
+            dateTime: b.tripStart?.date,
+            location: b.tripStart?.location || "N/A",
+          },
+          tripEnd: {
+            dateTime: b.tripEnd?.date,
+            location: b.tripEnd?.location || "N/A",
+          },
+          pricing: {
+            pricePerDay: (b.pricing?.basePrice || 0) / (b.totalDays || 1),
+            days: b.totalDays || 1,
+            discount: b.pricing?.discount || 0,
+            extraCharges: b.pricing?.addOnServicesTotal || 0,
+            totalAmount: b.pricing?.totalPrice || b.pricing?.finalPrice || 0,
+          },
+          paymentStatus: b.paymentStatus || "N/A",
+        },
+      };
+    });
+  }, [bookingsData]);
 
   const openDetails = (item) => {
     setSelectedItem(item);
@@ -215,7 +168,13 @@ const OnlineCarsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {onlineCars.map((item) => {
+              {loading ? (
+                <tr>
+                  <td className="px-4 py-10 text-center text-sm font-medium animate-pulse" colSpan={7} style={{ color: colors.primary }}>
+                    Fetching online cars...
+                  </td>
+                </tr>
+              ) : onlineCars.map((item) => {
                 const statusMeta = getStatusMeta(item?.booking?.status);
                 return (
                   <tr
@@ -295,7 +254,7 @@ const OnlineCarsPage = () => {
                 );
               })}
 
-              {onlineCars.length === 0 && (
+              {(!loading && onlineCars.length === 0) && (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm" colSpan={7} style={{ color: colors.textSecondary }}>
                     No online booked cars found.

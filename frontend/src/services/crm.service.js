@@ -31,6 +31,20 @@ export const crmService = {
             console.error('CRM recent enquiries error:', error);
             throw error;
         }
+    },
+
+    /**
+     * Get All Vendors
+     * @returns {Promise}
+     */
+    getVendors: async () => {
+        try {
+            const response = await api.get('/crm/vendors');
+            return response.data;
+        } catch (error) {
+            console.error('CRM vendors error:', error);
+            throw error;
+        }
     }
 };
 

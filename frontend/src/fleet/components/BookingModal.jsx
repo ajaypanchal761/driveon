@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { colors } from '../../module/theme/colors';
+import api from '../../services/api';
 import { Button } from '../../components/common';
 import {
   getNumberOfDaysInclusive,
@@ -51,12 +52,6 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     if (!car) return 0;
     return numberOfDays * Number(car.pricePerDay || 0);
   }, [car, numberOfDays]);
-
-  useEffect(() => {
-    if (paymentStatus !== 'paid') return;
-    if (paidAmount && Number(paidAmount) > 0) return;
-    setPaidAmount(String(totalPrice || 0));
-  }, [paidAmount, paymentStatus, totalPrice]);
 
   const hasOverlap = useMemo(() => {
     if (!fromDate || !toDate) return false;
@@ -110,33 +105,150 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     }
   };
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.id = 'razorpay-checkout-js';
+      script.async = true;
+      script.onload = () => {
+        console.log('✅ Razorpay script loaded');
+        resolve(true);
+      };
+      script.onerror = () => {
+        console.error('❌ Razorpay script load failed');
+        resolve(false);
+      };
+      document.head.appendChild(script);
+    });
+  };
+
   const handleConfirm = async () => {
     setError('');
-    if (!canSubmit) {
-      setError('Please fill all required fields with valid dates.');
+    
+    if (!customerName.trim()) {
+      setError('Please enter customer name');
       return;
     }
+    if (!fromDate || !toDate || !isValidDateRange(fromDate, toDate)) {
+      setError('Please select a valid date range');
+      return;
+    }
+    if (!licenseFile || !licensePreview) {
+      setError('Please upload a driving license image');
+      return;
+    }
+    if (hasOverlap) {
+      setError('Car is already booked for these dates');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const normalizedPaidAmount =
         paymentStatus === 'paid'
           ? Math.max(0, Math.min(totalPrice || 0, Number(paidAmount || totalPrice || 0)))
           : 0;
-      await onConfirm({
+          
+      const bookingPayload = {
+        id: `out_book_${Date.now()}`,
+        carId: car.id,
+        carName: car.name,
+        carType: car.type,
+        carOwnerName: car.ownerName || '',
         customerName: customerName.trim(),
-        fromDate,
-        toDate,
         licenseImage: licensePreview,
         aadhaarImage: aadhaarPreview || '',
+        fromDate,
+        toDate,
         totalPrice,
         paymentStatus,
-        paymentMode: paymentStatus === 'paid' ? paymentMode : '',
+        paymentMode: paymentStatus === 'paid' ? paymentMode : 'Cash',
         paidAmount: normalizedPaidAmount,
-      });
-      onClose();
+      };
+
+      // Check for Razorpay flow
+      if (paymentStatus === 'paid' && paymentMode === 'razorpay') {
+        const isScriptLoaded = await loadRazorpayScript();
+        if (!isScriptLoaded) {
+          throw new Error('Could not load Razorpay. Please check your internet connection.');
+        }
+
+        // 1. Create Order on Backend
+        const orderResponse = await api.post('/fleet/razorpay/create-order', {
+          amount: normalizedPaidAmount,
+        });
+
+        if (!orderResponse.data.success) {
+          throw new Error(orderResponse.data.message || 'Failed to initialize payment');
+        }
+
+        const order = orderResponse.data.data;
+
+        // 2. Open Razorpay Checkout
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw',
+          amount: order.amount,
+          currency: 'INR',
+          name: 'DriveOn Admin',
+          description: `Fleet Booking: ${car.name}`,
+          order_id: order.id,
+          handler: async function (response) {
+            try {
+              // 3. Verify Payment
+              const verifyRes = await api.post('/fleet/razorpay/verify', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+
+              if (verifyRes.data.success) {
+                // 4. Save Booking to DB
+                bookingPayload.paymentMode = 'Razorpay / Online';
+                bookingPayload.paymentStatus = 'paid';
+                bookingPayload.paidAmount = normalizedPaidAmount;
+                
+                await onConfirm(bookingPayload);
+                onClose();
+              } else {
+                setError('Payment verification failed. Please contact admin.');
+              }
+            } catch (err) {
+              console.error('Verify error:', err);
+              setError('Error verifying payment.');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          prefill: {
+            name: customerName,
+            contact: car.ownerPhone || '', 
+          },
+          theme: {
+            color: '#3B82F6',
+          },
+          modal: {
+            ondismiss: function() {
+              setSubmitting(false);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+
+      } else {
+        // Cash or Pending Flow (Direct Confirm)
+        await onConfirm(bookingPayload);
+        onClose();
+      }
     } catch (e) {
-      setError(e?.message || 'Failed to create booking');
-    } finally {
+      console.error('Booking Error:', e);
+      setError(e?.message || 'Something went wrong');
       setSubmitting(false);
     }
   };
@@ -288,7 +400,11 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
                 onChange={(e) => {
                   const next = e.target.value;
                   setPaymentStatus(next);
-                  if (next !== 'paid') setPaidAmount('');
+                  if (next === 'paid') {
+                    setPaidAmount(String(totalPrice || 0));
+                  } else {
+                    setPaidAmount('');
+                  }
                 }}
                 className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
@@ -314,9 +430,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
                 }}
               >
                 <option value="cash">Cash</option>
-                <option value="upi">UPI</option>
-                <option value="card">Card</option>
-                <option value="bank_transfer">Bank Transfer</option>
+                <option value="razorpay">Razorpay / Online</option>
               </select>
             </div>
 
