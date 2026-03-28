@@ -2766,7 +2766,7 @@ export const StaffTasksPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [assignedToFilter, setAssignedToFilter] = useState('Assigned To: All');
-  const [statusFilter, setStatusFilter] = useState('Status: Pending');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   useEffect(() => {
     fetchData();
@@ -2932,7 +2932,7 @@ export const StaffTasksPage = () => {
             width="w-52"
           />
           <ThemedDropdown
-            options={['Status: Pending', 'Completed', 'All']}
+            options={['All', 'Status: Pending', 'Completed']}
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
             className="bg-white text-sm"

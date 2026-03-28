@@ -128,6 +128,9 @@ const io = new Server(server, {
   },
 });
 
+// Store io instance in app to use in controllers
+app.set("socketio", io);
+
 // Socket.IO connection handling
 io.on("connection", (socket) => {
   console.log("🔌 Socket connected:", socket.id);

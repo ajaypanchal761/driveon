@@ -27,6 +27,7 @@ import City from '../models/City.js';
 import { uploadImage } from '../services/cloudinary.service.js';
 import razorpayService from '../services/razorpay.service.js';
 import { createNotification } from './notification.controller.js';
+import { sendAdminNotification } from '../services/firebase.service.js';
 
 /**
  * @desc    Get All Enquiries (with filters)
@@ -356,10 +357,35 @@ export const updateTask = async (req, res) => {
 
         const oldAssignedTo = task.assignedTo ? task.assignedTo.toString() : null;
 
+        const oldStatus = task.status;
+
         task = await CRMTask.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
         });
+
+        // Notify Admins on Task Completion
+        if (req.body.status === 'Done' && oldStatus !== 'Done') {
+            const title = 'Task Completed ✅';
+            const message = `A CRM task has been completed: ${task.title || 'Untitled'}`;
+            
+            // Push Notification
+            await sendAdminNotification(title, message, {
+                type: 'crm_task_completed',
+                taskId: task._id.toString()
+            });
+
+            // Socket.IO Real-time update
+            const io = req.app.get('socketio');
+            if (io) {
+                io.to('admins').emit('notification:new', {
+                    title,
+                    message,
+                    type: 'success',
+                    data: { taskId: task._id }
+                });
+            }
+        }
 
         if (req.body.assignedTo && req.body.assignedTo !== oldAssignedTo) {
             await createNotification({
@@ -1364,13 +1390,43 @@ export const createStaffWorkTask = async (req, res) => {
  */
 export const updateStaffWorkTask = async (req, res) => {
     try {
-        const task = await StaffWorkTask.findByIdAndUpdate(req.params.id, req.body, {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // Fetch old task to check status change
+        const oldTask = await StaffWorkTask.findById(id).populate('assignedTo', 'name');
+
+        const task = await StaffWorkTask.findByIdAndUpdate(id, req.body, {
             new: true,
             runValidators: true
         });
 
         if (!task) {
             return res.status(404).json({ success: false, message: 'Task not found' });
+        }
+
+        // Notify Admins on Staff Task Completion
+        if (status === 'Done' && oldTask && oldTask.status !== 'Done') {
+            const staffName = oldTask.assignedTo?.name || 'An employee';
+            const title = 'Employee Task Completed ✅';
+            const message = `${staffName} has completed the task: ${task.title}`;
+
+            // Push Notification (Background/Foreground)
+            await sendAdminNotification(title, message, {
+                type: 'staff_task_completed',
+                taskId: task._id.toString()
+            });
+
+            // Socket.IO (Real-time Foreground)
+            const io = req.app.get('socketio');
+            if (io) {
+                io.to('admins').emit('notification:new', {
+                    title,
+                    message,
+                    type: 'success',
+                    data: { taskId: task._id }
+                });
+            }
         }
 
         res.status(200).json({
