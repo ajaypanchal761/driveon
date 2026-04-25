@@ -14,11 +14,13 @@ import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelec
 // Calculate KYC status from user data
 const getKycStatus = (user) => {
   if (!user) return 'pending';
-  if (user.isPhoneVerified && user.isEmailVerified) {
-    return 'verified';
+  if (user.isKYCVerified) return 'verified';
+  if (user.kycDetails?.aadhaar?.isVerified || user.kycDetails?.pan?.isVerified || user.kycDetails?.dl?.isVerified) {
+    return 'pending'; // Partially verified
   }
   return 'pending';
 };
+
 
 // Helper function to safely get first character
 const getFirstChar = (str) => {
@@ -589,15 +591,45 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
             )}
 
             {activeTab === 'kyc' && (
-              <div>
-                <p className="text-sm text-gray-600">KYC Status: {capitalize(getKycStatus(user))}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Phone Verified: {user.isPhoneVerified ? 'Yes' : 'No'}
-                </p>
-                <p className="text-xs text-gray-500">Email Verified: {user.isEmailVerified ? 'Yes' : 'No'}</p>
-                <p className="text-xs text-gray-500 mt-1">KYC documents will be displayed here...</p>
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-gray-700">KYC Status: {capitalize(getKycStatus(user))}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Aadhaar */}
+                  <div className={`p-3 rounded-lg border ${user.kycDetails?.aadhaar?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <h4 className="text-xs font-bold mb-1">Aadhaar Card</h4>
+                    <p className="text-xs text-gray-900">No: {user.kycDetails?.aadhaar?.idNumber || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.aadhaar?.isVerified ? 'Verified' : 'Not Verified'}</p>
+                    {user.kycDetails?.aadhaar?.verifiedAt && <p className="text-[10px] text-gray-500">Date: {new Date(user.kycDetails.aadhaar.verifiedAt).toLocaleDateString()}</p>}
+                  </div>
+
+                  {/* PAN */}
+                  <div className={`p-3 rounded-lg border ${user.kycDetails?.pan?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <h4 className="text-xs font-bold mb-1">PAN Card</h4>
+                    <p className="text-xs text-gray-900">No: {user.kycDetails?.pan?.idNumber || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.pan?.isVerified ? 'Verified' : 'Not Verified'}</p>
+                    {user.kycDetails?.pan?.verifiedAt && <p className="text-[10px] text-gray-500">Date: {new Date(user.kycDetails.pan.verifiedAt).toLocaleDateString()}</p>}
+                  </div>
+
+                  {/* DL */}
+                  <div className={`p-3 rounded-lg border ${user.kycDetails?.dl?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <h4 className="text-xs font-bold mb-1">Driving License</h4>
+                    <p className="text-xs text-gray-900">No: {user.kycDetails?.dl?.idNumber || 'N/A'}</p>
+                    <p className="text-xs text-gray-900">DOB: {user.kycDetails?.dl?.dob || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.dl?.isVerified ? 'Verified' : 'Not Verified'}</p>
+                    {user.kycDetails?.dl?.verifiedAt && <p className="text-[10px] text-gray-500">Date: {new Date(user.kycDetails.dl.verifiedAt).toLocaleDateString()}</p>}
+                  </div>
+
+                  {/* Basic Verification */}
+                  <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
+                    <h4 className="text-xs font-bold mb-1">Basic Verification</h4>
+                    <p className="text-[10px] text-gray-700">Phone: {user.isPhoneVerified ? '✅ Verified' : '❌ Pending'}</p>
+                    <p className="text-[10px] text-gray-700">Email: {user.isEmailVerified ? '✅ Verified' : '❌ Pending'}</p>
+                  </div>
+                </div>
               </div>
             )}
+
 
             {activeTab === 'referrals' && (
               <div>

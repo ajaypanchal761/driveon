@@ -40,6 +40,21 @@ const ModuleCompleteProfilePage = () => {
   const [rcPreview, setRcPreview] = useState(user?.rcDocument || null);
   const [isUploadingRc, setIsUploadingRc] = useState(false);
 
+  // QuickEKYC States
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarOtp, setAadhaarOtp] = useState('');
+  const [aadhaarRequestId, setAadhaarRequestId] = useState('');
+  const [aadhaarStep, setAadhaarStep] = useState(1); // 1: Number, 2: OTP
+  const [isSendingAadhaarOtp, setIsSendingAadhaarOtp] = useState(false);
+  const [isVerifyingAadhaar, setIsVerifyingAadhaar] = useState(false);
+
+  const [panNumberInput, setPanNumberInput] = useState(user?.kycDetails?.pan?.idNumber || '');
+  const [isVerifyingPan, setIsVerifyingPan] = useState(false);
+
+  const [dlNumber, setDlNumber] = useState(user?.kycDetails?.dl?.idNumber || '');
+  const [dlDob, setDlDob] = useState(user?.kycDetails?.dl?.dob || '');
+  const [isVerifyingDl, setIsVerifyingDl] = useState(false);
+
   useEffect(() => {
     if (user?.rcDocument) {
       setRcPreview(user.rcDocument);
@@ -549,29 +564,107 @@ const ModuleCompleteProfilePage = () => {
     }
   };
 
-  // Handle DigiLocker integration (placeholder)
-  // Handle DigiLocker integration
-  const handleDigiLockerConnect = async (documentType) => {
+  // QuickEKYC Handlers
+  const handleSendAadhaarOtp = async () => {
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+      toastUtils.error('Please enter a valid 12-digit Aadhaar number');
+      return;
+    }
+
+    setIsSendingAadhaarOtp(true);
     try {
-      toastUtils.loading('Initiating DigiLocker connection...');
-      const response = await kycService.initiateDigiLockerAuth();
-      console.log('DigiLocker Auth Response:', response);
-
-      if (response && response.authUrl) {
-        // storage for post-redirect processing if needed
-        sessionStorage.setItem('kyc_document_type', documentType);
-
-        // Redirect user to DigiLocker authorization page
-        window.location.href = response.authUrl;
+      const response = await kycService.generateAadhaarOTP(aadhaarNumber);
+      if (response.success && (response.data?.requestId || response.data?.request_id)) {
+        setAadhaarRequestId(response.data.requestId || response.data.request_id);
+        setAadhaarStep(2);
+        toastUtils.success('OTP sent to your Aadhaar-linked mobile number');
       } else {
-        toastUtils.dismiss();
-        toastUtils.error('Failed to initiate DigiLocker. Invalid response.');
+        toastUtils.error(response.message || 'Failed to send OTP');
       }
     } catch (error) {
-      console.error('DigiLocker Auth Error:', error);
-      toastUtils.dismiss();
-      const errorMessage = error.response?.data?.message || 'Failed to connect to DigiLocker. Please try again.';
-      toastUtils.error(errorMessage);
+      console.error('Aadhaar OTP Error:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setIsSendingAadhaarOtp(false);
+    }
+  };
+
+  const handleVerifyAadhaarOtp = async () => {
+    if (!aadhaarOtp || aadhaarOtp.length !== 6) {
+      toastUtils.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setIsVerifyingAadhaar(true);
+    try {
+      const response = await kycService.verifyAadhaarOTP(aadhaarRequestId, aadhaarOtp);
+      if (response.success) {
+        toastUtils.success('Aadhaar verified successfully!');
+        // Refresh profile to get updated KYC status
+        const profileRes = await userService.getProfile();
+        if (profileRes?.data?.user) {
+          dispatch(updateUser(profileRes.data.user));
+        }
+      } else {
+        toastUtils.error(response.message || 'Verification failed');
+      }
+    } catch (error) {
+      console.error('Aadhaar Verify Error:', error);
+      toastUtils.error(error.response?.data?.message || 'Verification failed');
+    } finally {
+      setIsVerifyingAadhaar(false);
+    }
+  };
+
+  const handleVerifyPan = async () => {
+    if (!panNumberInput || panNumberInput.length !== 10) {
+      toastUtils.error('Please enter a valid 10-digit PAN number');
+      return;
+    }
+
+    setIsVerifyingPan(true);
+    try {
+      const response = await kycService.verifyPAN(panNumberInput.toUpperCase());
+      if (response.success) {
+        toastUtils.success('PAN verified successfully!');
+        const profileRes = await userService.getProfile();
+        if (profileRes?.data?.user) {
+          dispatch(updateUser(profileRes.data.user));
+        }
+      } else {
+        toastUtils.error(response.message || 'PAN verification failed');
+      }
+    } catch (error) {
+      console.error('PAN Verify Error:', error);
+      toastUtils.error(error.response?.data?.message || 'PAN verification failed');
+    } finally {
+      setIsVerifyingPan(false);
+    }
+  };
+
+  const handleVerifyDl = async () => {
+    if (!dlNumber || !dlDob) {
+      toastUtils.error('Please enter DL number and Date of Birth');
+      return;
+    }
+
+    setIsVerifyingDl(true);
+    try {
+      const response = await kycService.verifyDL(dlNumber, dlDob);
+      if (response.success) {
+        toastUtils.success('Driving License verified successfully!');
+        const profileRes = await userService.getProfile();
+        if (profileRes?.data?.user) {
+          dispatch(updateUser(profileRes.data.user));
+        }
+      } else {
+        toastUtils.error(response.message || 'DL verification failed');
+      }
+    } catch (error) {
+      console.error('DL Verify Error:', error);
+      toastUtils.error(error.response?.data?.message || 'DL verification failed');
+    } finally {
+      setIsVerifyingDl(false);
     }
   };
 
@@ -884,14 +977,14 @@ const ModuleCompleteProfilePage = () => {
                 KYC Documents
               </h2>
               <p className="text-sm mb-6" style={{ color: colors.textSecondary }}>
-                Verify your identity using DigiLocker. All documents are required for booking.
+                Verify your identity with official government databases. All documents are required for booking.
               </p>
 
-              {/* PAN Card - Manual Input */}
+              {/* Aadhaar Verification Card */}
               <div
                 className="p-4 rounded-xl border-2 mb-4"
                 style={{
-                  borderColor: colors.borderMedium,
+                  borderColor: user?.kycDetails?.aadhaar?.isVerified ? colors.success : colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
@@ -900,211 +993,196 @@ const ModuleCompleteProfilePage = () => {
                     className="p-2 rounded-lg mt-1"
                     style={{ backgroundColor: colors.backgroundPrimary }}
                   >
-                    <svg
-                      className="w-6 h-6"
-                      style={{ color: colors.textPrimary }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-6 h-6" style={{ color: colors.textPrimary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
+                        Aadhaar Verification
+                      </p>
+                      {user?.kycDetails?.aadhaar?.isVerified && (
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">VERIFIED</span>
+                      )}
+                    </div>
+
+                    {!user?.kycDetails?.aadhaar?.isVerified ? (
+                      <div className="space-y-3">
+                        {aadhaarStep === 1 ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={aadhaarNumber}
+                              onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                              placeholder="12-digit Aadhaar Number"
+                              className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
+                              style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                            />
+                            <button
+                              onClick={handleSendAadhaarOtp}
+                              disabled={isSendingAadhaarOtp || aadhaarNumber.length !== 12}
+                              className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
+                            >
+                              {isSendingAadhaarOtp ? '...' : 'Send OTP via QuickEKYC'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={aadhaarOtp}
+                                onChange={(e) => setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="6-digit OTP"
+                                className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
+                                style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                              />
+                              <button
+                                onClick={handleVerifyAadhaarOtp}
+                                disabled={isVerifyingAadhaar || aadhaarOtp.length !== 6}
+                                className="px-4 py-2 rounded-lg font-bold text-sm bg-green-600 text-white disabled:opacity-50"
+                              >
+                                {isVerifyingAadhaar ? '...' : 'Verify via QuickEKYC'}
+                              </button>
+                            </div>
+                            <button 
+                              onClick={() => setAadhaarStep(1)} 
+                              className="text-xs text-blue-600 font-semibold"
+                            >
+                              Change Number
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        {user.kycDetails.aadhaar.idNumber?.replace(/.(?=.{4})/g, '*')} verified successfully.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* PAN Verification Card */}
+              <div
+                className="p-4 rounded-xl border-2 mb-4"
+                style={{
+                  borderColor: user?.kycDetails?.pan?.isVerified ? colors.success : colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="p-2 rounded-lg mt-1"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <svg className="w-6 h-6" style={{ color: colors.textPrimary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                      PAN Card Number
-                    </p>
-                    <input
-                      type="text"
-                      value={formData.panNumber || ''}
-                      onChange={(e) => handleInputChange('panNumber', e.target.value)}
-                      placeholder="Enter PAN Number (e.g., ABCDE1234F)"
-                      maxLength={10}
-                      className="w-full px-4 py-2 rounded-lg border focus:outline-none uppercase tracking-widest font-medium"
-                      style={{
-                        borderColor: colors.borderMedium,
-                        backgroundColor: colors.backgroundPrimary,
-                        color: colors.textPrimary,
-                      }}
-                    />
-                    <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
-                      We'll verify this with the government database.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Aadhaar */}
-              <div
-                className="p-4 rounded-xl border-2 mb-4"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="p-2 rounded-lg"
-                      style={{ backgroundColor: colors.backgroundPrimary }}
-                    >
-                      <svg
-                        className="w-6 h-6"
-                        style={{ color: colors.textPrimary }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                      </svg>
-                    </div>
-                    <div>
+                    <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
-                        Aadhaar
+                        PAN Verification
                       </p>
-                      <p className="text-xs" style={{ color: colors.textSecondary }}>
-                        Verify via DigiLocker
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDigiLockerConnect('Aadhaar')}
-                    className="px-4 py-2 rounded-lg font-semibold text-sm"
-                    style={{
-                      backgroundColor: colors.backgroundTertiary,
-                      color: colors.backgroundSecondary,
-                    }}
-                  >
-                    Connect
-                  </button>
-                </div>
-              </div>
-
-              {/* RC Document (Optional) */}
-              <div
-                className="p-4 rounded-xl border-2 mb-4"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="p-2 rounded-lg"
-                      style={{ backgroundColor: colors.backgroundPrimary }}
-                    >
-                      {rcPreview ? (
-                        <div className="w-6 h-6 rounded overflow-hidden">
-                          <img src={rcPreview} alt="RC" className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <svg
-                          className="w-6 h-6"
-                          style={{ color: colors.textPrimary }}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                      {user?.kycDetails?.pan?.isVerified && (
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">VERIFIED</span>
                       )}
                     </div>
-                    <div>
-                      <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
-                        Vehicle RC (Optional)
+
+                    {!user?.kycDetails?.pan?.isVerified ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={panNumberInput}
+                          onChange={(e) => setPanNumberInput(e.target.value.toUpperCase())}
+                          placeholder="PAN Number (ABCDE1234F)"
+                          maxLength={10}
+                          className="flex-1 px-4 py-2 rounded-lg border focus:outline-none uppercase"
+                          style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                        />
+                        <button
+                          onClick={handleVerifyPan}
+                          disabled={isVerifyingPan || panNumberInput.length !== 10}
+                          className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
+                        >
+                          {isVerifyingPan ? '...' : 'Verify via QuickEKYC'}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        PAN Card {user.kycDetails.pan.idNumber} verified.
                       </p>
-                      <p className="text-xs" style={{ color: colors.textSecondary }}>
-                        {rcPreview ? 'Uploaded' : 'Upload Vehicle Registration'}
-                      </p>
-                    </div>
+                    )}
                   </div>
-
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={rcInputRef}
-                    onChange={handleRcChange}
-                    className="hidden"
-                  />
-
-                  {rcDocument && !user?.rcDocument ? (
-                    <button
-                      type="button"
-                      onClick={handleRcUpload}
-                      disabled={isUploadingRc}
-                      className="px-4 py-2 rounded-lg font-semibold text-sm"
-                      style={{
-                        backgroundColor: colors.backgroundTertiary,
-                        color: colors.backgroundSecondary,
-                        opacity: isUploadingRc ? 0.7 : 1,
-                      }}
-                    >
-                      {isUploadingRc ? '...' : 'Upload'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => rcInputRef.current?.click()}
-                      className="px-4 py-2 rounded-lg font-semibold text-sm"
-                      style={{
-                        backgroundColor: colors.backgroundTertiary,
-                        color: colors.backgroundSecondary,
-                      }}
-                    >
-                      {rcPreview ? 'Change' : 'Upload'}
-                    </button>
-                  )}
                 </div>
               </div>
 
-              {/* Driving License */}
+              {/* DL Verification Card */}
               <div
-                className="p-4 rounded-xl border-2"
+                className="p-4 rounded-xl border-2 mb-4"
                 style={{
-                  borderColor: colors.borderMedium,
+                  borderColor: user?.kycDetails?.dl?.isVerified ? colors.success : colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="p-2 rounded-lg"
-                      style={{ backgroundColor: colors.backgroundPrimary }}
-                    >
-                      <svg
-                        className="w-6 h-6"
-                        style={{ color: colors.textPrimary }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    </div>
-                    <div>
+                <div className="flex items-start gap-3">
+                  <div
+                    className="p-2 rounded-lg mt-1"
+                    style={{ backgroundColor: colors.backgroundPrimary }}
+                  >
+                    <svg className="w-6 h-6" style={{ color: colors.textPrimary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
                         Driving License
                       </p>
-                      <p className="text-xs" style={{ color: colors.textSecondary }}>
-                        Verify via DigiLocker
-                      </p>
+                      {user?.kycDetails?.dl?.isVerified && (
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">VERIFIED</span>
+                      )}
                     </div>
+
+                    {!user?.kycDetails?.dl?.isVerified ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={dlNumber}
+                          onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                          placeholder="DL Number (e.g. DL1420110012345)"
+                          className="w-full px-4 py-2 rounded-lg border focus:outline-none uppercase"
+                          style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            value={dlDob}
+                            onChange={(e) => setDlDob(e.target.value)}
+                            className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
+                            style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                          />
+                          <button
+                            onClick={handleVerifyDl}
+                            disabled={isVerifyingDl || !dlNumber || !dlDob}
+                            className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
+                          >
+                            {isVerifyingDl ? '...' : 'Verify via QuickEKYC'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        License {user.kycDetails.dl.idNumber} verified.
+                      </p>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDigiLockerConnect('Driving License')}
-                    className="px-4 py-2 rounded-lg font-semibold text-sm"
-                    style={{
-                      backgroundColor: colors.backgroundTertiary,
-                      color: colors.backgroundSecondary,
-                    }}
-                  >
-                    Connect
-                  </button>
                 </div>
               </div>
+
+              {/* Vehicle RC hidden as per user request */}
             </div>
           )}
         </div>

@@ -1,24 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { setKYCStatus } from '../../store/slices/userSlice';
+import { setKYCStatus, updateUser } from '../../store/slices/userSlice';
 import { theme } from '../../theme/theme.constants';
 import toastUtils from '../../config/toast';
+import kycService from '../../services/kyc.service';
 
 /**
  * KYCStatusPage Component
- * KYC verification page with DigiLocker integration
- * Based on document.txt - Aadhaar, PAN, Driving License via DigiLocker
+ * KYC verification page with QuickEKYC integration
+ * Aadhaar (OTP), PAN, Driving License
  */
 const KYCStatusPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { kycStatus } = useAppSelector((state) => state.user);
+  const { kycStatus, user } = useAppSelector((state) => state.user);
 
   // Local state for form data
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [panNumber, setPanNumber] = useState('');
-  const [drivingLicenseNumber, setDrivingLicenseNumber] = useState('');
+  const [dlNumber, setDlNumber] = useState('');
+  const [dlDob, setDlDob] = useState('');
+  
+  // OTP states for Aadhaar
+  const [aadhaarOtp, setAadhaarOtp] = useState('');
+  const [aadhaarRequestId, setAadhaarRequestId] = useState('');
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Document verification status
@@ -26,8 +34,8 @@ const KYCStatusPage = () => {
     {
       id: 'aadhaar',
       name: 'Aadhaar Card',
-      description: 'Verify your Aadhaar card via DigiLocker',
-      verified: kycStatus.aadhaar,
+      description: 'Verify your Aadhaar card via OTP',
+      verified: kycStatus.aadhaar || user?.kycDetails?.aadhaar?.verified,
       number: aadhaarNumber,
       setNumber: setAadhaarNumber,
       icon: (
@@ -39,8 +47,8 @@ const KYCStatusPage = () => {
     {
       id: 'pan',
       name: 'PAN Card',
-      description: 'Verify your PAN card via DigiLocker',
-      verified: kycStatus.pan,
+      description: 'Verify your PAN card details',
+      verified: kycStatus.pan || user?.kycDetails?.pan?.verified,
       number: panNumber,
       setNumber: setPanNumber,
       icon: (
@@ -52,10 +60,10 @@ const KYCStatusPage = () => {
     {
       id: 'drivingLicense',
       name: 'Driving License',
-      description: 'Verify your Driving License via DigiLocker',
-      verified: kycStatus.drivingLicense,
-      number: drivingLicenseNumber,
-      setNumber: setDrivingLicenseNumber,
+      description: 'Verify your Driving License details',
+      verified: kycStatus.drivingLicense || user?.kycDetails?.dl?.verified,
+      number: dlNumber,
+      setNumber: setDlNumber,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -64,23 +72,103 @@ const KYCStatusPage = () => {
     },
   ];
 
-  // Handle DigiLocker verification
-  const handleDigiLockerVerify = async (documentId) => {
+  // Handle Aadhaar OTP Generation
+  const handleGenerateAadhaarOtp = async () => {
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+      toastUtils.error('Please enter a valid 12-digit Aadhaar number');
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simulate DigiLocker OAuth2 redirect
-    // In production, this would redirect to DigiLocker OAuth2 endpoint
-    setTimeout(() => {
+    try {
+      const response = await kycService.generateAadhaarOTP(aadhaarNumber);
+      if (response.success) {
+        setAadhaarRequestId(response.data.requestId);
+        setIsOtpSent(true);
+        toastUtils.success('OTP sent to your Aadhaar-linked mobile number');
+      } else {
+        toastUtils.error(response.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      toastUtils.error(error.response?.data?.message || 'Error generating Aadhaar OTP');
+    } finally {
       setIsSubmitting(false);
-      
-      // Mock verification success
-      const updatedStatus = {
-        [documentId]: true,
-      };
-      
-      dispatch(setKYCStatus(updatedStatus));
-      toastUtils.success(`${documents.find(doc => doc.id === documentId)?.name} verified successfully!`);
-    }, 1500);
+    }
+  };
+
+  // Handle Aadhaar OTP Verification
+  const handleVerifyAadhaarOtp = async () => {
+    if (!aadhaarOtp || aadhaarOtp.length < 6) {
+      toastUtils.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await kycService.verifyAadhaarOTP(aadhaarRequestId, aadhaarOtp);
+      if (response.success) {
+        dispatch(setKYCStatus({ aadhaar: true }));
+        // Update user details in redux
+        if (user) {
+          const updatedUser = { ...user, kycDetails: { ...user.kycDetails, aadhaar: { ...user.kycDetails?.aadhaar, verified: true } } };
+          dispatch(updateUser(updatedUser));
+        }
+        setIsOtpSent(false);
+        toastUtils.success('Aadhaar verified successfully!');
+      } else {
+        toastUtils.error(response.message || 'Verification failed');
+      }
+    } catch (error) {
+      toastUtils.error(error.response?.data?.message || 'Error verifying Aadhaar OTP');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle PAN Verification
+  const handleVerifyPan = async () => {
+    if (!panNumber || panNumber.length !== 10) {
+      toastUtils.error('Please enter a valid 10-character PAN number');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await kycService.verifyPAN(panNumber);
+      if (response.success) {
+        dispatch(setKYCStatus({ pan: true }));
+        toastUtils.success('PAN verified successfully!');
+      } else {
+        toastUtils.error(response.message || 'PAN verification failed');
+      }
+    } catch (error) {
+      toastUtils.error(error.response?.data?.message || 'Error verifying PAN');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle DL Verification
+  const handleVerifyDl = async () => {
+    if (!dlNumber || !dlDob) {
+      toastUtils.error('DL number and Date of Birth are required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await kycService.verifyDL(dlNumber, dlDob);
+      if (response.success) {
+        dispatch(setKYCStatus({ drivingLicense: true }));
+        toastUtils.success('Driving License verified successfully!');
+      } else {
+        toastUtils.error(response.message || 'DL verification failed');
+      }
+    } catch (error) {
+      toastUtils.error(error.response?.data?.message || 'Error verifying Driving License');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Calculate overall KYC completion percentage
@@ -119,17 +207,16 @@ const KYCStatusPage = () => {
                 KYC Status
               </h2>
               <span className={`text-xs md:text-sm font-bold px-3 py-1.5 md:px-4 md:py-2 rounded-full ${
-                kycStatus.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                completionPercentage === 100 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
               }`}>
-                {kycStatus.verified ? 'Verified' : `${completionPercentage}% Complete`}
+                {completionPercentage === 100 ? 'Verified' : `${completionPercentage}% Complete`}
               </span>
             </div>
             
-            {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-2 md:h-3 mb-2 md:mb-3">
               <div
                 className={`h-2 md:h-3 rounded-full transition-all duration-300 ${
-                  kycStatus.verified ? 'bg-green-500' : 'bg-yellow-400'
+                  completionPercentage === 100 ? 'bg-green-500' : 'bg-yellow-400'
                 }`}
                 style={{ width: `${completionPercentage}%` }}
               ></div>
@@ -156,7 +243,6 @@ const KYCStatusPage = () => {
                 className="bg-white rounded-lg p-4 md:p-5 shadow-sm border hover:shadow-md transition-shadow"
                 style={{ borderColor: doc.verified ? theme.colors.success : theme.colors.borderLight }}
               >
-                {/* Document Header */}
                 <div className="flex items-start justify-between mb-3 md:mb-4">
                   <div className="flex items-center gap-3 flex-1">
                     <div
@@ -179,7 +265,6 @@ const KYCStatusPage = () => {
                     </div>
                   </div>
                   
-                  {/* Verification Badge */}
                   {doc.verified && (
                     <div className="flex-shrink-0">
                       <svg className="w-5 h-5 md:w-6 md:h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -189,67 +274,139 @@ const KYCStatusPage = () => {
                   )}
                 </div>
 
-                {/* Document Number Input (if not verified) */}
                 {!doc.verified && (
-                  <div className="space-y-2 md:space-y-3">
-                    <div>
-                      <label className="text-xs md:text-sm font-medium block mb-1.5 md:mb-2" style={{ color: theme.colors.textSecondary }}>
-                        {doc.id === 'aadhaar' ? 'Aadhaar Number' : doc.id === 'pan' ? 'PAN Number' : 'Driving License Number'}
-                      </label>
-                      <input
-                        type="text"
-                        value={doc.number}
-                        onChange={(e) => doc.setNumber(e.target.value)}
-                        placeholder={doc.id === 'aadhaar' ? 'Enter 12-digit Aadhaar' : doc.id === 'pan' ? 'Enter PAN (e.g., ABCDE1234F)' : 'Enter DL Number'}
-                        className="w-full px-3 py-2.5 md:py-3 rounded-lg bg-white border text-sm md:text-base focus:outline-none transition-colors"
-                        style={{
-                          borderColor: theme.colors.borderDefault,
-                          color: theme.colors.textPrimary,
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
-                        onBlur={(e) => e.target.style.borderColor = theme.colors.borderDefault}
-                        maxLength={doc.id === 'aadhaar' ? 12 : doc.id === 'pan' ? 10 : 20}
-                      />
-                    </div>
-                    
-                    {/* DigiLocker Verify Button */}
-                    <button
-                      onClick={() => handleDigiLockerVerify(doc.id)}
-                      disabled={isSubmitting}
-                      className="w-full py-2.5 md:py-3 rounded-lg font-semibold text-sm md:text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
-                      style={{
-                        backgroundColor: theme.colors.primary,
-                        color: theme.colors.white,
-                      }}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4 md:h-5 md:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          <span>Verifying...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          </svg>
-                          <span>Verify via DigiLocker</span>
-                        </>
-                      )}
-                    </button>
+                  <div className="space-y-3">
+                    {/* Aadhaar Flow */}
+                    {doc.id === 'aadhaar' && (
+                      <>
+                        <div>
+                          <label className="text-xs md:text-sm font-medium block mb-1.5" style={{ color: theme.colors.textSecondary }}>
+                            Aadhaar Number
+                          </label>
+                          <input
+                            type="text"
+                            value={aadhaarNumber}
+                            onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                            placeholder="Enter 12-digit Aadhaar"
+                            disabled={isOtpSent || isSubmitting}
+                            className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm md:text-base focus:outline-none"
+                            style={{ borderColor: theme.colors.borderDefault }}
+                          />
+                        </div>
+                        {isOtpSent && (
+                          <div>
+                            <label className="text-xs md:text-sm font-medium block mb-1.5" style={{ color: theme.colors.textSecondary }}>
+                              Enter OTP
+                            </label>
+                            <input
+                              type="text"
+                              value={aadhaarOtp}
+                              onChange={(e) => setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                              placeholder="6-digit OTP"
+                              disabled={isSubmitting}
+                              className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm md:text-base focus:outline-none border-blue-400"
+                            />
+                          </div>
+                        )}
+                        <button
+                          onClick={isOtpSent ? handleVerifyAadhaarOtp : handleGenerateAadhaarOtp}
+                          disabled={isSubmitting}
+                          className="w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 hover:opacity-90"
+                          style={{ backgroundColor: theme.colors.primary, color: theme.colors.white }}
+                        >
+                          {isSubmitting ? 'Processing...' : isOtpSent ? 'Verify OTP' : 'Send OTP'}
+                        </button>
+                        {isOtpSent && (
+                          <button 
+                            onClick={() => setIsOtpSent(false)} 
+                            className="w-full text-xs text-blue-600 hover:underline"
+                          >
+                            Change Number
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {/* PAN Flow */}
+                    {doc.id === 'pan' && (
+                      <>
+                        <div>
+                          <label className="text-xs md:text-sm font-medium block mb-1.5" style={{ color: theme.colors.textSecondary }}>
+                            PAN Number
+                          </label>
+                          <input
+                            type="text"
+                            value={panNumber}
+                            onChange={(e) => setPanNumber(e.target.value.toUpperCase().slice(0, 10))}
+                            placeholder="Enter 10-char PAN"
+                            disabled={isSubmitting}
+                            className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm md:text-base focus:outline-none"
+                            style={{ borderColor: theme.colors.borderDefault }}
+                          />
+                        </div>
+                        <button
+                          onClick={handleVerifyPan}
+                          disabled={isSubmitting}
+                          className="w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 hover:opacity-90"
+                          style={{ backgroundColor: theme.colors.primary, color: theme.colors.white }}
+                        >
+                          {isSubmitting ? 'Verifying...' : 'Verify PAN'}
+                        </button>
+                      </>
+                    )}
+
+                    {/* DL Flow */}
+                    {doc.id === 'drivingLicense' && (
+                      <>
+                        <div className="grid grid-cols-1 gap-2">
+                          <div>
+                            <label className="text-xs md:text-sm font-medium block mb-1.5" style={{ color: theme.colors.textSecondary }}>
+                              DL Number
+                            </label>
+                            <input
+                              type="text"
+                              value={dlNumber}
+                              onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                              placeholder="Enter DL Number"
+                              disabled={isSubmitting}
+                              className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm md:text-base focus:outline-none"
+                              style={{ borderColor: theme.colors.borderDefault }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs md:text-sm font-medium block mb-1.5" style={{ color: theme.colors.textSecondary }}>
+                              Date of Birth
+                            </label>
+                            <input
+                              type="date"
+                              value={dlDob}
+                              onChange={(e) => setDlDob(e.target.value)}
+                              disabled={isSubmitting}
+                              className="w-full px-3 py-2.5 rounded-lg bg-white border text-sm md:text-base focus:outline-none"
+                              style={{ borderColor: theme.colors.borderDefault }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleVerifyDl}
+                          disabled={isSubmitting}
+                          className="w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 hover:opacity-90"
+                          style={{ backgroundColor: theme.colors.primary, color: theme.colors.white }}
+                        >
+                          {isSubmitting ? 'Verifying...' : 'Verify DL'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
 
-                {/* Verified Status */}
                 {doc.verified && (
                   <div className="flex items-center gap-2 p-2 md:p-3 rounded-lg bg-green-50">
                     <svg className="w-4 h-4 md:w-5 md:h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <p className="text-xs md:text-sm font-medium text-green-700">
-                      Verified via DigiLocker
+                      Verified Successfully
                     </p>
                   </div>
                 )}
@@ -262,17 +419,17 @@ const KYCStatusPage = () => {
       {/* Info Card */}
       <div className="px-4 pb-4 md:pb-6">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-purple-50 rounded-lg p-3 md:p-5 border" style={{ borderColor: `${theme.colors.primary}30` }}>
+          <div className="bg-blue-50 rounded-lg p-3 md:p-5 border" style={{ borderColor: `${theme.colors.primary}30` }}>
             <div className="flex items-start gap-2 md:gap-3">
               <svg className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5 md:mt-1" style={{ color: theme.colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
                 <h4 className="text-xs md:text-base font-semibold mb-1 md:mb-2" style={{ color: theme.colors.primary }}>
-                  About DigiLocker Verification
+                  Quick & Secure KYC
                 </h4>
                 <p className="text-xs md:text-sm leading-relaxed" style={{ color: theme.colors.textSecondary }}>
-                  DigiLocker is a secure platform by the Government of India. Your documents are verified directly from government databases, ensuring authenticity and security. No physical documents are required.
+                  We use secure government-authorized APIs to verify your identity. Aadhaar verification requires an OTP sent to your linked mobile number. PAN and Driving License are verified instantly.
                 </p>
               </div>
             </div>

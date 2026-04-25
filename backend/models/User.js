@@ -135,6 +135,30 @@ const userSchema = new mongoose.Schema(
     fcmTokenMobile: {
       type: String,
       default: null
+    },
+    // KYC Verification Details
+    kycDetails: {
+      aadhaar: {
+        number: String,
+        verified: { type: Boolean, default: false },
+        requestId: String, // For OTP verification
+        verifiedAt: Date
+      },
+      pan: {
+        number: String,
+        verified: { type: Boolean, default: false },
+        verifiedAt: Date
+      },
+      dl: {
+        number: String,
+        dob: String,
+        verified: { type: Boolean, default: false },
+        verifiedAt: Date
+      }
+    },
+    isKYCVerified: {
+      type: Boolean,
+      default: false
     }
   },
   {

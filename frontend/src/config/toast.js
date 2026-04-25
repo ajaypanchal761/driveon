@@ -99,7 +99,15 @@ export const toastUtils = {
   promise: (promise, messages) => {
     return toast.promise(promise, messages, toastConfig);
   },
+
+  /**
+   * Dismiss toast
+   */
+  dismiss: (toastId) => {
+    return toast.dismiss(toastId);
+  },
 };
+
 
 export default toastUtils;
 

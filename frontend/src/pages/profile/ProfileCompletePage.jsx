@@ -9,6 +9,8 @@ import { Input, Button, LoadingSpinner } from '../../components/common';
 import { userService } from '../../services';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
+import kycService from '../../services/kyc.service';
+
 
 /**
  * Profile Completion Schema
@@ -53,6 +55,17 @@ const ProfileCompletePage = () => {
   const [rcDocument, setRcDocument] = useState(null);
   const [rcPreview, setRcPreview] = useState(user?.rcDocument || null);
   const [isUploadingRc, setIsUploadingRc] = useState(false);
+
+  // KYC States
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [panNumber, setPanNumber] = useState('');
+  const [dlNumber, setDlNumber] = useState('');
+  const [dlDob, setDlDob] = useState('');
+  const [aadhaarOtp, setAadhaarOtp] = useState('');
+  const [aadhaarRequestId, setAadhaarRequestId] = useState('');
+  const [isAadhaarOtpSent, setIsAadhaarOtpSent] = useState(false);
+  const [isKycSubmitting, setIsKycSubmitting] = useState(false);
+
 
   useEffect(() => {
     if (user?.rcDocument) {
@@ -740,123 +753,207 @@ const ProfileCompletePage = () => {
                 Verify your identity using DigiLocker. All documents are required for booking.
               </p>
 
-              <div className="md:grid md:grid-cols-3 md:gap-4">
                 {/* Aadhaar */}
                 <div className="mb-3 md:mb-0 p-4 md:p-5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex flex-col md:flex-col md:items-start md:justify-between gap-3">
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg
-                          className="w-6 h-6 md:w-7 md:h-7 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
-                          />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                         </svg>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm md:text-base font-medium text-gray-900">Aadhaar Card</p>
-                        <p className="text-xs md:text-sm text-gray-500">Verify via DigiLocker</p>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Aadhaar Card</p>
+                        <p className="text-xs text-gray-500">{user?.kycDetails?.aadhaar?.verified ? 'Verified' : 'Verify via OTP'}</p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDigiLockerKYC('aadhaar')}
-                      className="px-4 py-2 md:px-5 md:py-2.5 bg-blue-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-blue-600 transition-colors w-full"
-                    >
-                      Verify
-                    </button>
-                  </div>
-                </div>
 
-                {/* Vehicle RC (Optional) */}
-                <div className="mb-3 md:mb-0 p-4 md:p-5 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="flex flex-col md:flex-col md:items-start md:justify-between gap-3">
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="w-12 h-12 md:w-14 md:h-14 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                        {rcPreview ? (
-                          <img src={rcPreview} alt="RC Preview" className="w-full h-full object-cover rounded-lg" />
-                        ) : (
-                          <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
+                    {!user?.kycDetails?.aadhaar?.verified && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="Aadhaar Number"
+                          value={aadhaarNumber}
+                          onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                          disabled={isAadhaarOtpSent || isKycSubmitting}
+                          className="w-full px-3 py-2 text-xs border rounded focus:outline-none"
+                        />
+                        {isAadhaarOtpSent && (
+                          <input
+                            type="text"
+                            placeholder="6-digit OTP"
+                            value={aadhaarOtp}
+                            onChange={(e) => setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            disabled={isKycSubmitting}
+                            className="w-full px-3 py-2 text-xs border border-blue-400 rounded focus:outline-none"
+                          />
                         )}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (isAadhaarOtpSent) {
+                              setIsKycSubmitting(true);
+                              try {
+                                const res = await kycService.verifyAadhaarOTP(aadhaarRequestId, aadhaarOtp);
+                                if (res.success) {
+                                  toastUtils.success('Aadhaar verified!');
+                                  setIsAadhaarOtpSent(false);
+                                  // Refresh profile to get updated kyc status
+                                  const profileRes = await userService.getProfile();
+                                  dispatch(updateUser(profileRes.data?.user || profileRes.data?.data?.user));
+                                }
+                              } catch (err) { toastUtils.error(err.response?.data?.message || 'Verification failed'); }
+                              finally { setIsKycSubmitting(false); }
+                            } else {
+                              if (aadhaarNumber.length !== 12) return toastUtils.error('Enter 12-digit Aadhaar');
+                              setIsKycSubmitting(true);
+                              try {
+                                const res = await kycService.generateAadhaarOTP(aadhaarNumber);
+                                if (res.success) {
+                                  setAadhaarRequestId(res.data.requestId);
+                                  setIsAadhaarOtpSent(true);
+                                  toastUtils.success('OTP Sent');
+                                }
+                              } catch (err) { toastUtils.error(err.response?.data?.message || 'Failed to send OTP'); }
+                              finally { setIsKycSubmitting(false); }
+                            }
+                          }}
+                          disabled={isKycSubmitting}
+                          className="w-full py-2 bg-blue-500 text-white text-xs font-bold rounded hover:bg-blue-600"
+                        >
+                          {isKycSubmitting ? '...' : isAadhaarOtpSent ? 'Verify via QuickEKYC' : 'Send OTP via QuickEKYC'}
+                        </button>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm md:text-base font-medium text-gray-900">Vehicle RC (Optional)</p>
-                        <p className="text-xs md:text-sm text-gray-500">{rcPreview ? 'RC Uploaded' : 'Upload Vehicle Registration'}</p>
+                    )}
+                    {user?.kycDetails?.aadhaar?.verified && (
+                      <div className="flex items-center gap-1 text-green-600 text-xs font-bold">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                        Verified
                       </div>
-                    </div>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      ref={rcInputRef}
-                      onChange={handleRcChange}
-                      className="hidden"
-                    />
-
-                    {rcDocument && !user?.rcDocument ? (
-                      <button
-                        type="button"
-                        onClick={handleRcUpload}
-                        disabled={isUploadingRc}
-                        className="px-4 py-2 md:px-5 md:py-2.5 bg-purple-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-purple-600 transition-colors w-full flex items-center justify-center"
-                      >
-                        {isUploadingRc ? <LoadingSpinner size="sm" color="white" /> : 'Upload'}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => rcInputRef.current?.click()}
-                        className="px-4 py-2 md:px-5 md:py-2.5 bg-purple-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-purple-600 transition-colors w-full"
-                      >
-                        {rcPreview ? 'Change' : 'Upload'}
-                      </button>
                     )}
                   </div>
                 </div>
 
                 {/* Driving License */}
                 <div className="mb-3 md:mb-0 p-4 md:p-5 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex flex-col md:flex-col md:items-start md:justify-between gap-3">
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="w-12 h-12 md:w-14 md:h-14 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg
-                          className="w-6 h-6 md:w-7 md:h-7 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                          />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm md:text-base font-medium text-gray-900">Driving License</p>
-                        <p className="text-xs md:text-sm text-gray-500">Verify via DigiLocker</p>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Driving License</p>
+                        <p className="text-xs text-gray-500">{user?.kycDetails?.dl?.verified ? 'Verified' : 'Verify instantly'}</p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDigiLockerKYC('drivingLicense')}
-                      className="px-4 py-2 md:px-5 md:py-2.5 bg-green-500 text-white text-sm md:text-base font-medium rounded-lg hover:bg-green-600 transition-colors w-full"
-                    >
-                      Verify
-                    </button>
+
+                    {!user?.kycDetails?.dl?.verified && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="DL Number"
+                          value={dlNumber}
+                          onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                          disabled={isKycSubmitting}
+                          className="w-full px-3 py-2 text-xs border rounded focus:outline-none"
+                        />
+                        <input
+                          type="date"
+                          value={dlDob}
+                          onChange={(e) => setDlDob(e.target.value)}
+                          disabled={isKycSubmitting}
+                          className="w-full px-3 py-2 text-xs border rounded focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!dlNumber || !dlDob) return toastUtils.error('Enter DL Number & DOB');
+                            setIsKycSubmitting(true);
+                            try {
+                              const res = await kycService.verifyDL(dlNumber, dlDob);
+                              if (res.success) {
+                                toastUtils.success('DL verified!');
+                                const profileRes = await userService.getProfile();
+                                dispatch(updateUser(profileRes.data?.user || profileRes.data?.data?.user));
+                              }
+                            } catch (err) { toastUtils.error(err.response?.data?.message || 'DL Verification failed'); }
+                            finally { setIsKycSubmitting(false); }
+                          }}
+                          disabled={isKycSubmitting}
+                          className="w-full py-2 bg-green-500 text-white text-xs font-bold rounded hover:bg-green-600"
+                        >
+                          {isKycSubmitting ? '...' : 'Verify via QuickEKYC'}
+                        </button>
+                      </div>
+                    )}
+                    {user?.kycDetails?.dl?.verified && (
+                      <div className="flex items-center gap-1 text-green-600 text-xs font-bold">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                        Verified
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+
+                {/* PAN Card */}
+                <div className="mb-3 md:mb-0 p-4 md:p-5 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">PAN Card</p>
+                        <p className="text-xs text-gray-500">{user?.kycDetails?.pan?.verified ? 'Verified' : 'Verify instantly'}</p>
+                      </div>
+                    </div>
+
+                    {!user?.kycDetails?.pan?.verified && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="PAN Number"
+                          value={panNumber}
+                          onChange={(e) => setPanNumber(e.target.value.toUpperCase().slice(0, 10))}
+                          disabled={isKycSubmitting}
+                          className="w-full px-3 py-2 text-xs border rounded focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (panNumber.length !== 10) return toastUtils.error('Enter 10-char PAN');
+                            setIsKycSubmitting(true);
+                            try {
+                              const res = await kycService.verifyPAN(panNumber);
+                              if (res.success) {
+                                toastUtils.success('PAN verified!');
+                                const profileRes = await userService.getProfile();
+                                dispatch(updateUser(profileRes.data?.user || profileRes.data?.data?.user));
+                              }
+                            } catch (err) { toastUtils.error(err.response?.data?.message || 'PAN Verification failed'); }
+                            finally { setIsKycSubmitting(false); }
+                          }}
+                          disabled={isKycSubmitting}
+                          className="w-full py-2 bg-orange-500 text-white text-xs font-bold rounded hover:bg-orange-600"
+                        >
+                          {isKycSubmitting ? '...' : 'Verify via QuickEKYC'}
+                        </button>
+                      </div>
+                    )}
+                    {user?.kycDetails?.pan?.verified && (
+                      <div className="flex items-center gap-1 text-green-600 text-xs font-bold">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                        Verified
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Vehicle RC hidden as per user request */}
             </div>
 
             {/* Buttons */}

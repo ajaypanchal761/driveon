@@ -128,6 +128,25 @@ export const getProfile = async (req, res) => {
           profileComplete: user.profileComplete,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
+          kycDetails: {
+            aadhaar: {
+              idNumber: user.kycDetails?.aadhaar?.number || '',
+              isVerified: user.kycDetails?.aadhaar?.verified || false,
+              verifiedAt: user.kycDetails?.aadhaar?.verifiedAt || null,
+            },
+            pan: {
+              idNumber: user.kycDetails?.pan?.number || '',
+              isVerified: user.kycDetails?.pan?.verified || false,
+              verifiedAt: user.kycDetails?.pan?.verifiedAt || null,
+            },
+            dl: {
+              idNumber: user.kycDetails?.dl?.number || '',
+              dob: user.kycDetails?.dl?.dob || '',
+              isVerified: user.kycDetails?.dl?.verified || false,
+              verifiedAt: user.kycDetails?.dl?.verifiedAt || null,
+            }
+          },
+          isKYCVerified: user.isKYCVerified || false,
         },
       },
     });
@@ -226,6 +245,25 @@ export const updateProfile = async (req, res) => {
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
           referralCode: user.referralCode,
+          kycDetails: {
+            aadhaar: {
+              idNumber: user.kycDetails?.aadhaar?.number || '',
+              isVerified: user.kycDetails?.aadhaar?.verified || false,
+              verifiedAt: user.kycDetails?.aadhaar?.verifiedAt || null,
+            },
+            pan: {
+              idNumber: user.kycDetails?.pan?.number || '',
+              isVerified: user.kycDetails?.pan?.verified || false,
+              verifiedAt: user.kycDetails?.pan?.verifiedAt || null,
+            },
+            dl: {
+              idNumber: user.kycDetails?.dl?.number || '',
+              dob: user.kycDetails?.dl?.dob || '',
+              isVerified: user.kycDetails?.dl?.verified || false,
+              verifiedAt: user.kycDetails?.dl?.verifiedAt || null,
+            }
+          },
+          isKYCVerified: user.isKYCVerified || false,
         },
       },
     });
@@ -380,12 +418,13 @@ export const getKYCStatus = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        aadhaarVerified: false,
-        panVerified: false,
-        drivingLicenseVerified: false,
-        kycVerified: false,
+        aadhaarVerified: user.kycDetails?.aadhaar?.verified || false,
+        panVerified: user.kycDetails?.pan?.verified || false,
+        drivingLicenseVerified: user.kycDetails?.dl?.verified || false,
+        kycVerified: user.isKYCVerified || false,
       },
     });
+
   } catch (error) {
     console.error('Get KYC status error:', error);
     res.status(500).json({

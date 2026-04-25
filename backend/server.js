@@ -101,6 +101,8 @@ import referralRoutes from "./routes/referral.routes.js";
 import crmRoutes from "./routes/crm.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import fleetRoutes from "./routes/fleet.routes.js";
+import kycRoutes from "./routes/kyc.routes.js";
+
 
 // Socket.IO Configuration
 // const io = new Server(server, {
@@ -312,6 +314,8 @@ app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api", locationRoutes);
 app.use("/api", referralRoutes);
+app.use("/api/kyc", kycRoutes);
+
 
 // Basic route
 app.get("/", (req, res) => {
