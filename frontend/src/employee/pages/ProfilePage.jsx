@@ -219,9 +219,9 @@ const ProfilePage = () => {
 
                 <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="w-full text-red-500 font-bold py-2 mt-2 flex items-center justify-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
+                    className="w-full bg-red-50 text-red-600 font-bold py-4 rounded-2xl mt-2 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
                 >
-                    Delete account
+                    <FiAlertTriangle /> Delete account
                 </button>
 
                 <p className="text-center text-xs text-gray-300 font-medium mt-4 mb-2">v1.2.0 • Employee App</p>
