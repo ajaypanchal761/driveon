@@ -703,6 +703,14 @@ export const staffLogin = async (req, res) => {
       });
     }
 
+    // Check if account is deleted
+    if (staff.isDeleted) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is deactivated. Please contact support.',
+      });
+    }
+
     // Check if password matches
     // Assuming matchPassword method exists on Staff model
     const isMatch = await staff.matchPassword(password);
@@ -1327,6 +1335,41 @@ export const saveUserFcmToken = async (req, res) => {
       success: false,
       message: "Server error saving FCM token",
       error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Soft delete staff account
+ * @route   DELETE /api/auth/staff-profile
+ * @access  Private (Staff)
+ */
+export const deleteStaffAccount = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    const staff = await Staff.findById(staffId);
+
+    if (!staff) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff not found',
+      });
+    }
+
+    // Soft delete
+    staff.isDeleted = true;
+    staff.status = 'Inactive';
+    await staff.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee account deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete staff account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting employee account',
     });
   }
 };

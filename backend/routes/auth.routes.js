@@ -12,6 +12,7 @@ import {
   staffResetPassword,
   saveStaffFcmToken,
   saveUserFcmToken,
+  deleteStaffAccount,
 } from '../controllers/auth.controller.js';
 import { authenticate, authenticateStaff } from '../middleware/auth.middleware.js';
 
@@ -32,6 +33,7 @@ router.post('/auth/logout', authenticate, logout);
 router.get('/auth/staff-profile', authenticateStaff, getStaffProfile);
 router.post('/auth/staff-fcm-token', authenticateStaff, saveStaffFcmToken);
 router.post('/auth/user-fcm-token', authenticate, saveUserFcmToken);
+router.delete('/auth/staff-profile', authenticateStaff, deleteStaffAccount);
 
 export default router;
 

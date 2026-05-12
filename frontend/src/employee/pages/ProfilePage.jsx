@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { motion } from 'framer-motion';
-import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
+import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import { logoutUser } from '../../store/slices/authSlice';
 import { useEmployee } from '../../context/EmployeeContext';
 import HeaderTopBar from '../components/HeaderTopBar';
@@ -17,6 +19,27 @@ const ProfilePage = () => {
     const handleLogout = async () => {
         await dispatch(logoutUser());
         navigate('/employee/login');
+    };
+
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteAccount = async () => {
+        setIsDeleting(true);
+        try {
+            const response = await api.delete('/auth/staff-profile');
+            if (response.data.success) {
+                toast.success('Account deleted successfully');
+                await dispatch(logoutUser());
+                navigate('/employee/login');
+            }
+        } catch (error) {
+            console.error('Delete account error:', error);
+            toast.error(error.response?.data?.message || 'Failed to delete account');
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+        }
     };
 
     const { user: userData } = useSelector(state => state.user);
@@ -194,10 +217,69 @@ const ProfilePage = () => {
                     <FiLogOut /> Logout
                 </button>
 
+                <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="w-full text-red-500 font-bold py-2 mt-2 flex items-center justify-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
+                >
+                    Delete account
+                </button>
+
                 <p className="text-center text-xs text-gray-300 font-medium mt-4 mb-2">v1.2.0 • Employee App</p>
             </div>
 
             <BottomNav />
+
+            {/* Premium Delete Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !isDeleting && setShowDeleteModal(false)}
+                            className="absolute inset-0 bg-[#1C205C]/40 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl relative z-10"
+                        >
+                            <div className="p-8 text-center">
+                                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <FiAlertTriangle className="text-red-500" size={36} />
+                                </div>
+                                <h3 className="text-2xl font-black text-[#1C205C] mb-3">Delete Account?</h3>
+                                <p className="text-gray-500 text-sm leading-relaxed mb-8">
+                                    Are you sure you want to delete your account? This action is permanent and your profile will be deactivated.
+                                </p>
+
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={handleDeleteAccount}
+                                        disabled={isDeleting}
+                                        className="w-full bg-red-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isDeleting ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            "Yes, Delete Account"
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDeleteModal(false)}
+                                        disabled={isDeleting}
+                                        className="w-full bg-gray-50 text-gray-500 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

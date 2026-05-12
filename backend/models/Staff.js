@@ -43,6 +43,10 @@ const staffSchema = new mongoose.Schema(
             enum: ['Active', 'On Duty', 'Leave'],
             default: 'Active',
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
         joinDate: {
             type: Date,
             default: Date.now,
