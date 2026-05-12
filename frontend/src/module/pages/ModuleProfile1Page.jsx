@@ -28,6 +28,8 @@ const ModuleProfile1Page = () => {
 
   // loading state
   const [isFetchingLocal, setIsFetchingLocal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Calculate profile completion percentage
   const profileCompletePercentage = user?.profileComplete ?? 0;
@@ -87,6 +89,28 @@ const ModuleProfile1Page = () => {
       dispatch(clearUser());
       toastUtils.success("Logged out successfully");
       window.location.href = "/login";
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeleting(true);
+      const response = await userService.deleteAccount();
+      if (response.success) {
+        toastUtils.success("Account deleted successfully");
+        // Reuse logout logic
+        await dispatch(logoutUser()).unwrap();
+        dispatch(clearUser());
+        window.location.href = "/login";
+      } else {
+        toastUtils.error(response.message || "Failed to delete account");
+      }
+    } catch (error) {
+      console.error("Delete account error:", error);
+      toastUtils.error(error.response?.data?.message || "Failed to delete account");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -428,18 +452,34 @@ const ModuleProfile1Page = () => {
               </div>
             </div>
 
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-medium border transition-all hover:opacity-90 flex-shrink-0"
-              style={{
-                borderColor: colors.error || "#F44336",
-                color: colors.error || "#F44336",
-                backgroundColor: "transparent",
-              }}
-            >
-              {isAuthenticated ? "Logout" : "Login"}
-            </button>
+            {/* Logout & Delete Buttons */}
+            <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+              <button
+                onClick={handleLogout}
+                className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-red-50 flex-shrink-0"
+                style={{
+                  borderColor: colors.error || "#F44336",
+                  color: colors.error || "#F44336",
+                  backgroundColor: "transparent",
+                }}
+              >
+                {isAuthenticated ? "Logout" : "Login"}
+              </button>
+              
+              {isAuthenticated && (
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-gray-50 flex-shrink-0"
+                  style={{
+                    borderColor: "#D1D5DB",
+                    color: "#6B7280",
+                    backgroundColor: "transparent",
+                  }}
+                >
+                  Delete account
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Status Tags */}
@@ -627,6 +667,58 @@ const ModuleProfile1Page = () => {
       <div className="md:hidden">
         <BottomNavbar />
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => !isDeleting && setShowDeleteModal(false)}
+          />
+          <motion.div 
+            className="bg-white rounded-3xl p-6 w-full max-w-sm relative z-10 shadow-2xl"
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Account?</h3>
+              <p className="text-gray-500 text-sm mb-6">
+                Are you sure you want to delete your account? This action is irreversible and you will lose all your data.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                  className="py-3 px-4 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  className="py-3 px-4 rounded-2xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors shadow-lg shadow-red-200 disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isDeleting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    "Delete"
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

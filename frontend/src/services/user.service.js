@@ -392,6 +392,21 @@ export const userService = {
       throw error;
     }
   },
+  /**
+   * Delete user account (Soft delete)
+   * @returns {Promise}
+   */
+  deleteAccount: async () => {
+    try {
+      const api = (await import('./api')).default;
+      const { API_ENDPOINTS } = await import('../constants');
+      const response = await api.delete(API_ENDPOINTS.USER.PROFILE || '/user/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Delete account error:', error);
+      throw error;
+    }
+  },
 };
 
 export default userService;

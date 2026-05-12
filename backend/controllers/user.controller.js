@@ -690,3 +690,40 @@ export const uploadRcDocument = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Soft delete user account
+ * @route   DELETE /api/user/profile
+ * @access  Private
+ */
+export const deleteAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Soft delete
+    user.isDeleted = true;
+    user.isActive = false;
+    user.accountStatus = 'suspended'; // Using suspended as deleted isn't in enum but we can add it or just use isActive/isDeleted
+    
+    // Actually, let's just use isDeleted as the main flag.
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting account',
+    });
+  }
+};
