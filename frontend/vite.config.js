@@ -22,4 +22,9 @@ export default defineConfig({
       'firebase/messaging'
     ],
   },
+  build: {
+    target: ['es2015', 'edge88', 'firefox78', 'chrome87', 'safari13'],
+    cssTarget: ['es2015', 'safari13'],
+    chunkSizeWarningLimit: 1500,
+  },
 })

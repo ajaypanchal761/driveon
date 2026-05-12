@@ -72,6 +72,8 @@ const PrivacySecurityPage = lazy(() => import("../employee/pages/PrivacySecurity
 const NotificationsPage = lazy(() => import("../employee/pages/NotificationsPage"));
 const EmployeeLoginPage = lazy(() => import("../employee/pages/EmployeeLoginPage"));
 const EmployeeResetPasswordPage = lazy(() => import("../employee/pages/EmployeeResetPasswordPage"));
+const EmployeePrivacyPolicyPage = lazy(() => import("../employee/pages/EmployeePrivacyPolicyPage"));
+const EmployeeSupportPage = lazy(() => import("../employee/pages/EmployeeSupportPage"));
 
 
 
@@ -755,7 +757,14 @@ const router = createBrowserRouter([
     path: "/employee/reset-password/:token",
     element: <EmployeeResetPasswordPage />,
   },
-
+  {
+    path: "/employee/privacy-policy",
+    element: <EmployeePrivacyPolicyPage />,
+  },
+  {
+    path: "/employee/support",
+    element: <EmployeeSupportPage />,
+  },
   // 404 Page
   {
     path: "*",

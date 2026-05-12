@@ -4,10 +4,12 @@ import { createSlice } from '@reduxjs/toolkit';
  * Theme Slice
  * Manages theme preferences (can be used alongside Theme Context)
  */
+const safeGetItem = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+
 const initialState = {
-  themePreference: localStorage.getItem('themePreference') || 'custom',
+  themePreference: safeGetItem('themePreference') || 'custom',
   systemTheme: 'light', // Detected system theme
-  language: localStorage.getItem('language') || 'en',
+  language: safeGetItem('language') || 'en',
 };
 
 const themeSlice = createSlice({

@@ -4,9 +4,11 @@ import { createSlice } from '@reduxjs/toolkit';
  * User Slice
  * Manages user profile data, KYC status, profile completion
  */
+const safeGetItem = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+
 const initialState = {
   user: null,
-  profileComplete: localStorage.getItem('profileComplete') === 'true' || false,
+  profileComplete: safeGetItem('profileComplete') === 'true' || false,
   kycStatus: {
     aadhaar: false,
     pan: false,

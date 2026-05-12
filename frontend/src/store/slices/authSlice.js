@@ -25,6 +25,10 @@ export const logoutUser = createAsyncThunk(
  * Manages authentication state (tokens, user authentication status)
  */
 // Helper to determine initial auth state based on URL context
+const safeGetItem = (key) => {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+};
+
 const getInitialAuthState = () => {
   if (typeof window === 'undefined') {
     return {
@@ -36,11 +40,11 @@ const getInitialAuthState = () => {
   }
 
   const isEmployeePath = window.location.pathname.startsWith('/employee');
-  const staffToken = localStorage.getItem('staffToken');
-  const authToken = localStorage.getItem('authToken');
-  const staffRefreshToken = localStorage.getItem('staffRefreshToken');
-  const refreshToken = localStorage.getItem('refreshToken');
-  const storedRole = localStorage.getItem('userRole');
+  const staffToken = safeGetItem('staffToken');
+  const authToken = safeGetItem('authToken');
+  const staffRefreshToken = safeGetItem('staffRefreshToken');
+  const refreshToken = safeGetItem('refreshToken');
+  const storedRole = safeGetItem('userRole');
 
   // If on employee path, strictly use staff tokens
   if (isEmployeePath) {

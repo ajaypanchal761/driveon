@@ -12,6 +12,12 @@ import { EmployeeProvider } from './context/EmployeeContext';
 import './App.css';
 
 /**
+ * Detect iOS device (iPhone, iPad, iPod)
+ * Used to disable problematic animations that cause blank screens in iOS WebViews
+ */
+const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+/**
  * Main App Component
  * Wraps the app with Redux Provider, React Query Provider, Admin Provider, Employee Provider, Router, and Toaster
  */
@@ -23,7 +29,10 @@ function App() {
           <EmployeeProvider>
             <AuthInitializer>
               <React.Suspense fallback={
-                <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F7FA]">
+                <div
+                  className="min-h-screen flex flex-col items-center justify-center bg-[#F5F7FA]"
+                  style={{ minHeight: '100dvh' }}
+                >
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#1C205C] mb-4"></div>
                   <p className="text-[#1C205C] font-medium">Loading...</p>
                 </div>
@@ -40,3 +49,4 @@ function App() {
 }
 
 export default App;
+
