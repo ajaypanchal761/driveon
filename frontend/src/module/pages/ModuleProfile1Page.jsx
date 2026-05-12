@@ -469,10 +469,10 @@ const ModuleProfile1Page = () => {
               {isAuthenticated && (
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-gray-50 flex-shrink-0"
+                  className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-red-50 flex-shrink-0"
                   style={{
-                    borderColor: "#D1D5DB",
-                    color: "#6B7280",
+                    borderColor: colors.error || "#F44336",
+                    color: colors.error || "#F44336",
                     backgroundColor: "transparent",
                   }}
                 >

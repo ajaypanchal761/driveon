@@ -62,10 +62,14 @@ api.interceptors.request.use(
       '/auth/send-login-otp',
       '/auth/verify-otp',
       '/auth/resend-otp',
+      '/auth/login',
+      '/auth/staff-login',
+      '/auth/staff-forgot-password',
+      '/auth/staff-reset-password',
       '/auth/refresh-token',
       '/admin/signup',
       '/admin/login',
-      '/admin/refresh-token', // Also include refresh token
+      '/admin/refresh-token',
     ];
 
     // Check if this is a public route
@@ -175,19 +179,26 @@ api.interceptors.response.use(
       // Check if this is an admin or crm route
       const isAdminRoute = originalRequest.url?.includes('/admin/') || originalRequest.url?.includes('/crm/');
 
-      // List of public admin routes that don't require token refresh
-      const publicAdminRoutes = [
-        '/admin/login',
+      const publicRoutes = [
+        '/auth/register',
+        '/auth/send-login-otp',
+        '/auth/verify-otp',
+        '/auth/resend-otp',
+        '/auth/login',
+        '/auth/staff-login',
+        '/auth/staff-forgot-password',
+        '/auth/staff-reset-password',
+        '/auth/refresh-token',
         '/admin/signup',
+        '/admin/login',
         '/admin/refresh-token',
       ];
 
-      const isPublicAdminRoute = publicAdminRoutes.some(route => originalRequest.url?.includes(route));
+      const isPublicRoute = publicRoutes.some(route => originalRequest.url?.includes(route));
 
-      // For public admin routes (login, signup), don't try to refresh - just reject the error
+      // For public routes (login, signup), don't try to refresh - just reject the error
       // These routes can return 401 for invalid credentials, not token issues
-      // Don't log confusing messages for these routes
-      if (isPublicAdminRoute) {
+      if (isPublicRoute) {
         // For public routes, preserve the original error but don't try to refresh token
         // The error might be a legitimate backend error (like validation failure)
         // Create a clean error object without token-related messages
