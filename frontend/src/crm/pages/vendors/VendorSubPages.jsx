@@ -2,31 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import {
-    MdPerson,
     MdStore,
-    MdStar,
     MdPhone,
     MdEmail,
     MdDirectionsCar,
-    MdAttachMoney,
     MdVerified,
-    MdWarning,
-    MdHistory,
-    MdTrendingUp,
     MdBarChart,
-    MdPieChart,
-    MdFilterList,
     MdMoreVert,
-    MdCheckCircle,
     MdSearch,
-    MdDownload,
     MdClose,
-    MdAdd,
-    MdBuild,
     MdEdit,
     MdDelete,
-    MdAccountBalanceWallet,
-    MdTrendingDown,
     MdReceipt,
     MdPayments
 } from 'react-icons/md';
@@ -222,9 +208,9 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
     const { summary, cars = [], transactions = [] } = ledgerData || {};
 
     const tabs = [
-        { id: 'profitability', label: 'गाड़ी का हिसाब', icon: '📊' },
-        { id: 'ledger', label: 'लेन-देन', icon: '📋' },
-        { id: 'payment', label: 'नया पेमेंट', icon: '💸' }
+        { id: 'profitability', label: 'Car Profitability', icon: '📊' },
+        { id: 'ledger', label: 'Transactions', icon: '📋' },
+        { id: 'payment', label: 'New Payment', icon: '💸' }
     ];
 
     return (
@@ -319,7 +305,7 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                             Original purchase amount hidden
                                         </p>
                                         <p className="text-xs text-amber-700 mt-1">
-                                            Yahan sirf gaadi ka trip count, customer revenue, vendor due aur net profit dikhaya ja raha hai.
+                                            Only trip count, customer revenue, vendor due and net profit are shown here for each car.
                                         </p>
                                     </div>
                                     {cars.length === 0 ? (
@@ -564,7 +550,7 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                     <div className="bg-gradient-to-br from-[#212c40]/5 to-[#212c40]/0 rounded-2xl border border-[#212c40]/10 p-5 mb-6">
                                         <p className="text-sm text-[#212c40] font-bold flex items-center gap-2">
                                             <MdPayments size={18} />
-                                            नया पेमेंट रिकॉर्ड करें
+                                            Record New Payment
                                         </p>
                                         <p className="text-xs text-gray-400 mt-1">
                                             Record a payment made to <span className="font-semibold text-gray-600">{vendor?.name}</span> and it will appear in the ledger automatically.
@@ -652,7 +638,7 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                                 ))}
                                             </select>
                                             <p className="mt-1 text-xs text-gray-500">
-                                                Swift jaisi specific gaadi ka payment alag track karna ho to yahan car select karein.
+                                                Select a specific car to track its payment separately from the general vendor account.
                                             </p>
                                         </div>
 
