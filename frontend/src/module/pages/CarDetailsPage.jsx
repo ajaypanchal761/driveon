@@ -1899,9 +1899,25 @@ const CarDetailsPage = () => {
             setShowBookingConfirmationModal(true);
           }, 500); // 500ms delay to ensure Razorpay modal is closed
         },
-        onError: (error) => {
+        onError: async (error) => {
           console.error("Payment error:", error);
           setIsProcessing(false);
+
+          if (bookingId) {
+            console.log('🔄 Payment cancelled or failed. Cancelling backend booking:', bookingId);
+            try {
+              await bookingService.updateBookingStatus(bookingId.toString(), {
+                status: 'cancelled',
+                cancellationReason: error?.message === 'PAYMENT_CANCELLED'
+                  ? 'Payment cancelled by user'
+                  : `Payment failed: ${error?.message || 'Unknown error'}`
+              });
+              console.log('✅ Unpaid booking cancelled successfully');
+            } catch (cancelError) {
+              console.error('❌ Failed to cancel unpaid booking:', cancelError);
+            }
+          }
+
           if (error?.message === "PAYMENT_CANCELLED") return;
           alert(error?.message || "Payment failed. Please try again.");
         },

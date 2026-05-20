@@ -404,7 +404,7 @@ class RazorpayService {
           enabled: true,
           max_count: 3
         },
-        timeout: 30
+        timeout: 90
       };
 
       // Open Razorpay checkout

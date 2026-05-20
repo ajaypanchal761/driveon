@@ -230,8 +230,25 @@ const BookingPaymentPage = () => {
             replace: true, // Replace current history entry
           });
         },
-        onError: (error) => {
+        onError: async (error) => {
           setIsProcessing(false);
+
+          // Cancel the booking in the backend if payment was cancelled or failed
+          const targetBookingId = booking?._id || bookingId;
+          if (targetBookingId) {
+            console.log('🔄 Payment cancelled or failed. Cancelling backend booking:', targetBookingId);
+            try {
+              await bookingService.updateBookingStatus(targetBookingId.toString(), {
+                status: 'cancelled',
+                cancellationReason: error?.message === 'PAYMENT_CANCELLED'
+                  ? 'Payment cancelled by user'
+                  : `Payment failed: ${error?.message || 'Unknown error'}`
+              });
+              console.log('✅ Unpaid booking cancelled successfully');
+            } catch (cancelError) {
+              console.error('❌ Failed to cancel unpaid booking:', cancelError);
+            }
+          }
 
           // Handle payment cancellation silently (user intentionally closed the modal)
           if (error.message === 'PAYMENT_CANCELLED') {
