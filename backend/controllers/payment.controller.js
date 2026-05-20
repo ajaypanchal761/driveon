@@ -828,7 +828,7 @@ export const razorpayCallback = async (req, res) => {
     let razorpay_signature = src.razorpay_signature || src.signature;
 
     // Build frontend callback URL
-    const frontendBase = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://driveon.com' : 'http://localhost:5173');
+    const frontendBase = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://www.driveoncar.co.in' : 'http://localhost:5173');
 
     let redirectPath = '/booking/payment-callback';
     if (source === 'crm_salary') {
@@ -857,7 +857,7 @@ export const razorpayCallback = async (req, res) => {
     return res.redirect(302, url.toString());
   } catch (err) {
     console.error('❌ Error in Razorpay callback handler:', err);
-    const frontendBase = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://driveon.com' : 'http://localhost:5173');
+    const frontendBase = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://www.driveoncar.co.in' : 'http://localhost:5173');
     const fallbackUrl = `${frontendBase}/booking/payment-callback`;
     res.status(200).send(`<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; URL='${fallbackUrl}'" /></head><body>Redirecting...</body></html>`);
   }
