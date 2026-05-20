@@ -2002,9 +2002,61 @@ export const onboardVendor = async (req, res) => {
 
 export const getVendorDirectory = async (req, res) => {
     try {
-        const vendors = await Vendor.find().sort({ createdAt: -1 });
-        res.json({ success: true, count: vendors.length, data: { vendors } });
+        const vendors = await Vendor.find().sort({ createdAt: -1 }).lean();
+        
+        // Find associated cars for each vendor
+        const vendorsWithCars = await Promise.all(vendors.map(async (vendor) => {
+            // Find in OutwardCar
+            const outwardCars = await mongoose.model('OutwardCar').find({
+                $or: [
+                    { vendorId: vendor._id },
+                    { ownerName: { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } }
+                ]
+            }).lean();
+
+            // Find in Car
+            const standardCars = await mongoose.model('Car').find({
+                $or: [
+                    { 'ownerInfo.ownerId': vendor._id.toString() },
+                    { 'ownerInfo.name': { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } },
+                    { 'ownerInfo.email': vendor.email }
+                ]
+            }).lean();
+
+            // Format associated cars list
+            const associatedCars = [
+                ...outwardCars.map(car => ({
+                    id: car._id,
+                    brand: car.brand,
+                    model: car.model,
+                    registrationNumber: car.registrationNumber || 'Outward',
+                    pricePerMonth: car.pricePerDay ? car.pricePerDay * 30 : null,
+                    pricePerDay: car.pricePerDay,
+                    type: 'Outward',
+                    image: null
+                })),
+                ...standardCars.map(car => ({
+                    id: car._id,
+                    brand: car.brand,
+                    model: car.model,
+                    registrationNumber: car.registrationNumber,
+                    pricePerMonth: car.pricePerMonth || (car.pricePerDay ? car.pricePerDay * 30 : null),
+                    pricePerDay: car.pricePerDay,
+                    type: 'Inward',
+                    image: car.images && car.images.length > 0 ? (car.images.find(img => img.isPrimary)?.url || car.images[0].url) : null
+                }))
+            ];
+
+            return {
+                ...vendor,
+                associatedCars,
+                activeCarsCount: associatedCars.length
+            };
+        }));
+
+        res.json({ success: true, count: vendorsWithCars.length, data: { vendors: vendorsWithCars } });
     } catch (error) {
+        console.error('Error fetching vendor directory:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

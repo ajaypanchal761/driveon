@@ -70,6 +70,7 @@ const StatusBadge = ({ status }) => {
 
 const VendorCard = ({ vendor, onEdit, onDelete }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showCars, setShowCars] = useState(false);
 
     return (
         <motion.div
@@ -121,6 +122,80 @@ const VendorCard = ({ vendor, onEdit, onDelete }) => {
                     <MdEmail className="text-[#212c40]/40 break-all" /> {vendor.email}
                 </div>
             </div>
+
+            {/* Associated Cars Accordion Toggle */}
+            {vendor.associatedCars && vendor.associatedCars.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                    <button
+                        onClick={() => setShowCars(!showCars)}
+                        className="w-full py-2 px-3 bg-gray-50 hover:bg-gray-100 text-[#212c40] hover:text-[#1a2333] rounded-xl text-xs font-bold flex items-center justify-between transition-all active:scale-[0.98]"
+                    >
+                        <span className="flex items-center gap-1.5">
+                            <MdDirectionsCar size={16} className="text-[#212c40]" />
+                            {showCars ? 'Hide Associated Cars' : `View Associated Cars (${vendor.associatedCars.length})`}
+                        </span>
+                        <motion.span
+                            animate={{ rotate: showCars ? 180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            ▼
+                        </motion.span>
+                    </button>
+
+                    {/* Animated Collapsible List */}
+                    {showCars && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200"
+                        >
+                            {vendor.associatedCars.map((car) => (
+                                <motion.div
+                                    key={car.id}
+                                    whileHover={{ x: 2 }}
+                                    className="flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-all text-xs"
+                                >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        {car.image ? (
+                                            <img
+                                                src={car.image}
+                                                alt={`${car.brand} ${car.model}`}
+                                                className="w-8 h-8 rounded-lg object-cover border border-gray-200"
+                                            />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200 text-[#212c40]/60 font-bold shrink-0">
+                                                🚗
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <p className="font-bold text-gray-800 truncate">{car.brand} {car.model}</p>
+                                                <span className={`px-1 rounded-[4px] text-[9px] font-bold border uppercase shrink-0 ${
+                                                    car.type === 'Inward' 
+                                                        ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                                                        : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                }`}>
+                                                    {car.type}
+                                                </span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded bg-gray-200/60 text-gray-600 font-mono text-[10px] uppercase font-semibold">
+                                                {car.registrationNumber}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="font-extrabold text-emerald-600 font-mono">
+                                            ₹{car.pricePerMonth ? car.pricePerMonth.toLocaleString('en-IN') : '0'}
+                                        </p>
+                                        <p className="text-[9px] text-gray-400 font-medium font-mono">per month</p>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </motion.div>
+                    )}
+                </div>
+            )}
         </motion.div>
     );
 };
