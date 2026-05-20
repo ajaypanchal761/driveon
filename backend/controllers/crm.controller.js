@@ -2886,3 +2886,330 @@ export const verifySalaryPayment = async (req, res) => {
         res.status(500).json({ success: false, message: 'Payment verification failed' });
     }
 };
+
+/**
+ * @desc    Get Vendor Ledger - Car Profitability + Payment History
+ * @route   GET /api/crm/vendors/:id/ledger
+ * @access  Admin
+ */
+export const getVendorLedger = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const vendor = await Vendor.findById(id).lean();
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Step 1: Find associated cars (Inward + Outward)
+        const [outwardCars, standardCars] = await Promise.all([
+            mongoose.model('OutwardCar').find({
+                $or: [
+                    { vendorId: vendor._id },
+                    { ownerName: { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } }
+                ]
+            }).lean(),
+            mongoose.model('Car').find({
+                $or: [
+                    { 'ownerInfo.ownerId': vendor._id.toString() },
+                    { 'ownerInfo.name': { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } },
+                    { 'ownerInfo.email': vendor.email }
+                ]
+            }).lean()
+        ]);
+
+        // Step 2: For each car, aggregate bookings (trips + revenue)
+        const buildStandardCarStats = async (carId, vendorCost, carMeta) => {
+            const bookingStats = await Booking.aggregate([
+                {
+                    $match: {
+                        car: new mongoose.Types.ObjectId(carId),
+                        status: { $in: ['completed', 'active', 'confirmed'] }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        tripsCount: { $sum: 1 },
+                        totalRevenue: {
+                            $sum: {
+                                $ifNull: ['$pricing.finalPrice', '$pricing.totalPrice']
+                            }
+                        }
+                    }
+                }
+            ]);
+
+            const tripsCount = bookingStats[0]?.tripsCount || 0;
+            const totalRevenue = bookingStats[0]?.totalRevenue || 0;
+            const totalVendorCost = vendorCost || 0;
+            const carPayments = await VendorTransaction.find({
+                vendor: id,
+                type: 'Payout',
+                status: 'Completed',
+                relatedCarType: 'Inward',
+                relatedCarId: String(carId)
+            }).sort({ date: -1 }).lean();
+            const totalPaidForCar = carPayments.reduce((sum, txn) => sum + (txn.amount || 0), 0);
+
+            return {
+                tripsCount,
+                totalRevenue,
+                totalVendorCost,
+                totalPaidForCar,
+                remainingVendorDue: Math.max(totalVendorCost - totalPaidForCar, 0),
+                excessPaidForCar: Math.max(totalPaidForCar - totalVendorCost, 0),
+                paymentCount: carPayments.length,
+                netProfit: totalRevenue - totalVendorCost,
+                settlementConfigured: Boolean(carMeta?.vendorSettlement?.agreedAmount)
+            };
+        };
+
+        const buildOutwardCarStats = async (outwardCar, vendorCost) => {
+            const outwardBookingStats = await mongoose.model('OutwardBooking').aggregate([
+                {
+                    $match: {
+                        carId: outwardCar.originalOutputId
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        tripsCount: { $sum: 1 },
+                        totalRevenue: { $sum: { $ifNull: ['$totalPrice', 0] } }
+                    }
+                }
+            ]);
+
+            const tripsCount = outwardBookingStats[0]?.tripsCount || 0;
+            const totalRevenue = outwardBookingStats[0]?.totalRevenue || 0;
+            const totalVendorCost = vendorCost || 0;
+            const carPayments = await VendorTransaction.find({
+                vendor: id,
+                type: 'Payout',
+                status: 'Completed',
+                relatedCarType: 'Outward',
+                relatedCarId: String(outwardCar._id)
+            }).sort({ date: -1 }).lean();
+            const totalPaidForCar = carPayments.reduce((sum, txn) => sum + (txn.amount || 0), 0);
+
+            return {
+                tripsCount,
+                totalRevenue,
+                totalVendorCost,
+                totalPaidForCar,
+                remainingVendorDue: Math.max(totalVendorCost - totalPaidForCar, 0),
+                excessPaidForCar: Math.max(totalPaidForCar - totalVendorCost, 0),
+                paymentCount: carPayments.length,
+                netProfit: totalRevenue - totalVendorCost,
+                settlementConfigured: Boolean(outwardCar?.vendorSettlement?.agreedAmount)
+            };
+        };
+
+        // Step 3: Build full car profitability list
+        const carsWithStats = await Promise.all([
+            ...outwardCars.map(async (car) => {
+                const vendorCost = car.vendorSettlement?.agreedAmount || (car.pricePerDay ? car.pricePerDay * 30 : 0);
+                const stats = await buildOutwardCarStats(car, vendorCost);
+                return {
+                    id: car._id,
+                    brand: car.brand,
+                    model: car.model,
+                    registrationNumber: car.registrationNumber || 'N/A',
+                    type: 'Outward',
+                    vendorCost,
+                    agreedAmountConfigured: Boolean(car.vendorSettlement?.agreedAmount),
+                    settlementNotes: car.vendorSettlement?.notes || '',
+                    image: null,
+                    ...stats
+                };
+            }),
+            ...standardCars.map(async (car) => {
+                const vendorCost = car.vendorSettlement?.agreedAmount || car.pricePerMonth || (car.pricePerDay ? car.pricePerDay * 30 : 0);
+                const stats = await buildStandardCarStats(car._id, vendorCost, car);
+                return {
+                    id: car._id,
+                    brand: car.brand,
+                    model: car.model,
+                    registrationNumber: car.registrationNumber || 'N/A',
+                    type: 'Inward',
+                    vendorCost,
+                    agreedAmountConfigured: Boolean(car.vendorSettlement?.agreedAmount),
+                    settlementNotes: car.vendorSettlement?.notes || '',
+                    image: car.images && car.images.length > 0
+                        ? (car.images.find(img => img.isPrimary)?.url || car.images[0].url)
+                        : null,
+                    ...stats
+                };
+            })
+        ]);
+
+        // Step 4: Fetch Payment Ledger (VendorTransactions)
+        const transactions = await VendorTransaction.find({ vendor: id })
+            .sort({ date: -1 })
+            .lean();
+
+        // Step 5: Compute summary
+        const totalPaid = transactions
+            .filter(t => t.type === 'Payout' && t.status === 'Completed')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const paymentMethodBreakdown = transactions
+            .filter(t => t.type === 'Payout' && t.status === 'Completed')
+            .reduce((acc, txn) => {
+                const remarks = txn.remarks || '';
+                const match = remarks.match(/^\[(\w+)\]/);
+                const method = match?.[1] === 'Online' ? 'Online' : 'Cash';
+
+                if (!acc[method]) {
+                    acc[method] = { amount: 0, count: 0 };
+                }
+
+                acc[method].amount += txn.amount || 0;
+                acc[method].count += 1;
+                return acc;
+            }, { Cash: { amount: 0, count: 0 }, Online: { amount: 0, count: 0 } });
+
+        const totalRevenue = carsWithStats.reduce((sum, c) => sum + c.totalRevenue, 0);
+        const totalVendorCost = carsWithStats.reduce((sum, c) => sum + c.totalVendorCost, 0);
+        const outstandingBalance = Math.max(totalVendorCost - totalPaid, 0);
+        const excessPaid = Math.max(totalPaid - totalVendorCost, 0);
+        const totalCarWisePaid = carsWithStats.reduce((sum, c) => sum + (c.totalPaidForCar || 0), 0);
+
+        res.json({
+            success: true,
+            data: {
+                vendor: { id: vendor._id, name: vendor.name, type: vendor.type, profileImage: vendor.profileImage },
+                cars: carsWithStats,
+                transactions,
+                summary: {
+                    totalCars: carsWithStats.length,
+                    totalTrips: carsWithStats.reduce((sum, c) => sum + c.tripsCount, 0),
+                    totalRevenue,
+                    totalVendorCost,
+                    totalPaid,
+                    outstandingBalance,
+                    excessPaid,
+                    paymentMethodBreakdown,
+                    totalPaymentsRecorded: transactions.length,
+                    totalCarWisePaid,
+                    netProfit: totalRevenue - totalVendorCost
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Get Vendor Ledger Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching vendor ledger' });
+    }
+};
+
+/**
+ * @desc    Update hidden agreed amount for a vendor car
+ * @route   PATCH /api/crm/vendors/:vendorId/cars/:carType/:carId/settlement
+ * @access  Admin
+ */
+export const updateVendorCarSettlement = async (req, res) => {
+    try {
+        const { vendorId, carType, carId } = req.params;
+        const { agreedAmount, notes } = req.body;
+
+        const vendor = await Vendor.findById(vendorId);
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        if (agreedAmount === undefined || Number(agreedAmount) < 0) {
+            return res.status(400).json({ success: false, message: 'Valid agreed amount is required' });
+        }
+
+        const normalizedType = String(carType || '').toLowerCase();
+        const Model = normalizedType === 'outward' ? mongoose.model('OutwardCar') : mongoose.model('Car');
+        const car = await Model.findById(carId);
+
+        if (!car) {
+            return res.status(404).json({ success: false, message: 'Car not found' });
+        }
+
+        car.vendorSettlement = {
+            agreedAmount: Number(agreedAmount),
+            notes: notes?.trim() || '',
+            updatedAt: new Date()
+        };
+
+        await car.save();
+
+        await VendorHistory.create({
+            vendor: vendorId,
+            action: 'Settlement Updated',
+            detail: `Hidden agreed amount updated for ${car.brand} ${car.model}`,
+            status: 'Completed'
+        });
+
+        res.json({
+            success: true,
+            data: {
+                carId: car._id,
+                carType: normalizedType === 'outward' ? 'Outward' : 'Inward',
+                vendorSettlement: car.vendorSettlement
+            }
+        });
+    } catch (error) {
+        console.error('Update Vendor Car Settlement Error:', error);
+        res.status(500).json({ success: false, message: 'Server error updating vendor settlement' });
+    }
+};
+
+/**
+ * @desc    Record a new Vendor Payout Payment
+ * @route   POST /api/crm/vendors/:id/payments
+ * @access  Admin
+ */
+export const recordVendorPayment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount, paymentMethod, referenceId, remarks, relatedCarId, relatedCarType, relatedCarLabel } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ success: false, message: 'Valid amount is required' });
+        }
+
+        const vendor = await Vendor.findById(id);
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+
+        // Auto-generate referenceId if not provided
+        const refId = referenceId?.trim() || `VPY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+        // Store payment method in remarks for historical tracking
+        const fullRemarks = `[${paymentMethod || 'Cash'}] ${remarks || ''}`.trim();
+
+        const transaction = await VendorTransaction.create({
+            vendor: id,
+            amount: parseFloat(amount),
+            type: 'Payout',
+            status: 'Completed',
+            referenceId: refId,
+            remarks: fullRemarks,
+            relatedCarId: relatedCarId ? String(relatedCarId) : undefined,
+            relatedCarType: relatedCarId ? (relatedCarType || 'General') : 'General',
+            relatedCarLabel: relatedCarLabel?.trim() || undefined
+        });
+
+        // Also log vendor history
+        await VendorHistory.create({
+            vendor: id,
+            action: 'Payout',
+            detail: `Payment of ₹${amount} via ${paymentMethod || 'Cash'}. Ref: ${refId}`,
+            status: 'Completed'
+        });
+
+        res.status(201).json({ success: true, data: { transaction } });
+    } catch (error) {
+        console.error('Record Vendor Payment Error:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({ success: false, message: 'A transaction with this Reference ID already exists. Please use a unique ID.' });
+        }
+        res.status(500).json({ success: false, message: 'Server error recording payment' });
+    }
+};

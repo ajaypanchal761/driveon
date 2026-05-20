@@ -62,6 +62,9 @@ import {
     getVendorSettlements,
     getVendorHistory,
     getFleetUtilization,
+    getVendorLedger,
+    updateVendorCarSettlement,
+    recordVendorPayment,
     getIncomeOverview,
     getExpenseTracking,
     getPendingPayments,
@@ -235,13 +238,18 @@ router.route('/vendors')
     .post(handleFileUpload('profileImage'), onboardVendor)
     .get(getVendorDirectory);
 
+// Vendor Ledger & Payment routes MUST come before /:id to avoid conflicts
+router.get('/vendors/settlements', getVendorSettlements);
+router.get('/vendors/history', getVendorHistory);
+router.get('/vendors/utilization', getFleetUtilization);
+
 router.route('/vendors/:id')
     .put(handleFileUpload('profileImage'), updateVendor)
     .delete(deleteVendor);
 
-router.get('/vendors/settlements', getVendorSettlements);
-router.get('/vendors/history', getVendorHistory);
-router.get('/vendors/utilization', getFleetUtilization);
+router.get('/vendors/:id/ledger', getVendorLedger);
+router.patch('/vendors/:vendorId/cars/:carType/:carId/settlement', updateVendorCarSettlement);
+router.post('/vendors/:id/payments', recordVendorPayment);
 
 // Financial Routes
 router.get('/finance/income-overview', getIncomeOverview);

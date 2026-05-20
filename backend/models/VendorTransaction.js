@@ -32,6 +32,19 @@ const vendorTransactionSchema = new mongoose.Schema(
         },
         remarks: {
             type: String,
+        },
+        relatedCarType: {
+            type: String,
+            enum: ['Inward', 'Outward', 'General'],
+            default: 'General',
+        },
+        relatedCarId: {
+            type: String,
+            trim: true,
+        },
+        relatedCarLabel: {
+            type: String,
+            trim: true,
         }
     },
     {

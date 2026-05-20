@@ -49,6 +49,20 @@ const outwardCarSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',
       default: null,
+    },
+    vendorSettlement: {
+      agreedAmount: {
+        type: Number,
+        min: [0, 'Agreed amount cannot be negative'],
+        default: 0,
+      },
+      notes: {
+        type: String,
+        trim: true,
+      },
+      updatedAt: {
+        type: Date,
+      },
     }
   },
   {

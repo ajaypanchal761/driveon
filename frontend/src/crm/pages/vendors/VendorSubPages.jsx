@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -24,15 +24,18 @@ import {
     MdAdd,
     MdBuild,
     MdEdit,
-    MdDelete
+    MdDelete,
+    MdAccountBalanceWallet,
+    MdTrendingDown,
+    MdReceipt,
+    MdPayments
 } from 'react-icons/md';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import api from '../../../services/api';
 
 // --- Shared Components ---
 
-// Reusing SimpleModal pattern
 const SimpleModal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
     return (
@@ -68,7 +71,645 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const VendorCard = ({ vendor, onEdit, onDelete }) => {
+// Parse payment method from remarks: "[Cash] note..." or "[Online] note..."
+const parsePaymentMethod = (remarks) => {
+    if (!remarks) return { method: 'Cash', note: '' };
+    const match = remarks.match(/^\[(\w+)\]\s*(.*)/s);
+    if (match) return { method: match[1], note: match[2].trim() };
+    return { method: 'Cash', note: remarks };
+};
+
+const PaymentMethodBadge = ({ method }) => {
+    if (method === 'Online') {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                💳 Online
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            💵 Cash
+        </span>
+    );
+};
+
+// ─── VENDOR LEDGER MODAL ──────────────────────────────────────────────────────
+const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
+    const [activeTab, setActiveTab] = useState('profitability');
+    const [ledgerData, setLedgerData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [settlementForms, setSettlementForms] = useState({});
+    const [savingSettlementKey, setSavingSettlementKey] = useState('');
+    const [paymentForm, setPaymentForm] = useState({
+        amount: '',
+        paymentMethod: 'Cash',
+        referenceId: '',
+        remarks: '',
+        relatedCarId: '',
+        relatedCarType: '',
+        relatedCarLabel: ''
+    });
+    const [submitting, setSubmitting] = useState(false);
+
+    const fetchLedger = useCallback(async () => {
+        if (!vendor?._id) return;
+        setLoading(true);
+        try {
+            const res = await api.get(`/crm/vendors/${vendor._id}/ledger`);
+            if (res.data.success) {
+                setLedgerData(res.data.data);
+                const nextForms = {};
+                (res.data.data?.cars || []).forEach((car) => {
+                    nextForms[`${car.type}-${car.id}`] = {
+                        agreedAmount: car.totalVendorCost || '',
+                        notes: car.settlementNotes || ''
+                    };
+                });
+                setSettlementForms(nextForms);
+            }
+        } catch (err) {
+            console.error('Ledger fetch error', err);
+            toast.error('Failed to load ledger data');
+        } finally {
+            setLoading(false);
+        }
+    }, [vendor?._id]);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchLedger();
+            setActiveTab('profitability');
+        }
+    }, [isOpen, fetchLedger]);
+
+    const handleRecordPayment = async () => {
+        if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const res = await api.post(`/crm/vendors/${vendor._id}/payments`, paymentForm);
+            if (res.data.success) {
+                toast.success('✅ Payment recorded successfully!');
+                setPaymentForm({
+                    amount: '',
+                    paymentMethod: 'Cash',
+                    referenceId: '',
+                    remarks: '',
+                    relatedCarId: '',
+                    relatedCarType: '',
+                    relatedCarLabel: ''
+                });
+                await fetchLedger();
+                setActiveTab('ledger');
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to record payment';
+            toast.error(msg);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleSettlementChange = (car, field, value) => {
+        const key = `${car.type}-${car.id}`;
+        setSettlementForms((prev) => ({
+            ...prev,
+            [key]: {
+                agreedAmount: prev[key]?.agreedAmount ?? car.totalVendorCost ?? '',
+                notes: prev[key]?.notes ?? car.settlementNotes ?? '',
+                [field]: value
+            }
+        }));
+    };
+
+    const handleSaveSettlement = async (car) => {
+        const key = `${car.type}-${car.id}`;
+        const form = settlementForms[key] || {};
+        const agreedAmount = Number(form.agreedAmount);
+
+        if (!Number.isFinite(agreedAmount) || agreedAmount < 0) {
+            toast.error('Please enter a valid hidden amount');
+            return;
+        }
+
+        setSavingSettlementKey(key);
+        try {
+            const res = await api.patch(
+                `/crm/vendors/${vendor._id}/cars/${car.type.toLowerCase()}/${car.id}/settlement`,
+                {
+                    agreedAmount,
+                    notes: form.notes || ''
+                }
+            );
+
+            if (res.data.success) {
+                toast.success('Hidden amount updated');
+                await fetchLedger();
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to update hidden amount');
+        } finally {
+            setSavingSettlementKey('');
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const fmt = (n) => '₹' + (n || 0).toLocaleString('en-IN');
+    const { summary, cars = [], transactions = [] } = ledgerData || {};
+
+    const tabs = [
+        { id: 'profitability', label: 'गाड़ी का हिसाब', icon: '📊' },
+        { id: 'ledger', label: 'लेन-देन', icon: '📋' },
+        { id: 'payment', label: 'नया पेमेंट', icon: '💸' }
+    ];
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+            >
+                {/* Header */}
+                <div className="bg-gradient-to-br from-[#1a2240] via-[#212c40] to-[#2d3a55] p-6 text-white flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 overflow-hidden">
+                                <img
+                                    src={vendor?.profileImage || 'https://via.placeholder.com/150'}
+                                    alt={vendor?.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-extrabold">{vendor?.name}</h2>
+                                <p className="text-white/60 text-sm font-medium">📊 Vendor Ledger & Profitability</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <MdClose size={22} />
+                        </button>
+                    </div>
+
+                    {/* Summary Stats */}
+                    {summary && (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+                            {[
+                                { label: 'Total Trips', value: summary.totalTrips, color: 'from-blue-400/20 to-blue-500/10' },
+                                { label: 'Revenue', value: fmt(summary.totalRevenue), color: 'from-emerald-400/20 to-emerald-500/10' },
+                                { label: 'Total Paid', value: fmt(summary.totalPaid), color: 'from-violet-400/20 to-violet-500/10' },
+                                { label: 'Net Profit', value: fmt(summary.netProfit), color: summary.netProfit >= 0 ? 'from-amber-400/20 to-orange-500/10' : 'from-red-400/20 to-red-500/10' }
+                            ].map((s, i) => (
+                                <div key={i} className={`bg-gradient-to-br ${s.color} backdrop-blur-sm rounded-xl p-3 border border-white/10 text-center`}>
+                                    <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider mb-1">{s.label}</p>
+                                    <p className="text-white font-extrabold text-base">{s.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Tab Navigation */}
+                <div className="flex bg-gray-50 border-b border-gray-100 px-6 flex-shrink-0">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 py-4 px-4 text-sm font-bold border-b-2 transition-all ${
+                                activeTab === tab.id
+                                    ? 'border-[#212c40] text-[#212c40]'
+                                    : 'border-transparent text-gray-400 hover:text-gray-700'
+                            }`}
+                        >
+                            <span>{tab.icon}</span>
+                            <span className="hidden sm:block">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-3">
+                            <div className="w-10 h-10 rounded-full border-4 border-[#212c40]/20 border-t-[#212c40] animate-spin" />
+                            <p className="text-gray-400 text-sm font-medium">Loading ledger data...</p>
+                        </div>
+                    ) : (
+                        <AnimatePresence mode="wait">
+                            {/* ── TAB 1: Car Profitability ── */}
+                            {activeTab === 'profitability' && (
+                                <motion.div
+                                    key="profitability"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 10 }}
+                                    className="p-6 space-y-4"
+                                >
+                                    <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+                                        <p className="text-sm font-semibold text-amber-900">
+                                            Original purchase amount hidden
+                                        </p>
+                                        <p className="text-xs text-amber-700 mt-1">
+                                            Yahan sirf gaadi ka trip count, customer revenue, vendor due aur net profit dikhaya ja raha hai.
+                                        </p>
+                                    </div>
+                                    {cars.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-400">
+                                            <MdDirectionsCar size={40} className="mx-auto mb-3 opacity-30" />
+                                            <p className="font-medium">No cars associated with this vendor</p>
+                                        </div>
+                                    ) : (
+                                        cars.map((car, i) => {
+                                            const isProfit = car.netProfit >= 0;
+                                            return (
+                                                <motion.div
+                                                    key={car.id}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: i * 0.05 }}
+                                                    className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden"
+                                                >
+                                                    <div className="flex items-center gap-4 p-4">
+                                                        {car.image ? (
+                                                            <img src={car.image} alt={`${car.brand} ${car.model}`} className="w-14 h-14 rounded-xl object-cover border border-gray-200 shrink-0" />
+                                                        ) : (
+                                                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#212c40]/10 to-[#212c40]/5 flex items-center justify-center text-2xl shrink-0 border border-gray-200">🚗</div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h4 className="font-extrabold text-gray-900">{car.brand} {car.model}</h4>
+                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                                                                    car.type === 'Inward'
+                                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                                        : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                                }`}>{car.type}</span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-400 font-mono mt-0.5">{car.registrationNumber}</p>
+                                                        </div>
+                                                        <div className={`text-right px-3 py-1.5 rounded-xl ${isProfit ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                                                            <p className={`text-xs font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>Net Profit</p>
+                                                            <p className={`font-extrabold text-base ${isProfit ? 'text-emerald-700' : 'text-red-700'}`}>
+                                                                {isProfit ? '+' : ''}{fmt(car.netProfit)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {/* Stats Row */}
+                                                    <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
+                                                        <div className="p-3 text-center">
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Trips</p>
+                                                            <p className="text-lg font-extrabold text-[#212c40]">{car.tripsCount}</p>
+                                                        </div>
+                                                        <div className="p-3 text-center">
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Customer Revenue</p>
+                                                            <p className="text-base font-extrabold text-emerald-600">{fmt(car.totalRevenue)}</p>
+                                                        </div>
+                                                        <div className="p-3 text-center">
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Vendor Due</p>
+                                                            <p className="text-base font-extrabold text-gray-600">{fmt(car.totalVendorCost)}</p>
+                                                        </div>
+                                                        <div className="p-3 text-center">
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Paid / Pending</p>
+                                                            <p className="text-sm font-extrabold text-blue-700">{fmt(car.totalPaidForCar)}</p>
+                                                            <p className="text-xs text-red-500">{fmt(car.remainingVendorDue)} left</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="border-t border-gray-100 bg-white/70 p-4">
+                                                        <div className="grid gap-3 sm:grid-cols-[1.2fr_1.5fr_auto]">
+                                                            <div>
+                                                                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                                                                    Hidden Agreed Amount
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={settlementForms[`${car.type}-${car.id}`]?.agreedAmount ?? ''}
+                                                                    onChange={(e) => handleSettlementChange(car, 'agreedAmount', e.target.value)}
+                                                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#212c40]/20"
+                                                                    placeholder="e.g. 250000"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                                                                    Internal Note
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={settlementForms[`${car.type}-${car.id}`]?.notes ?? ''}
+                                                                    onChange={(e) => handleSettlementChange(car, 'notes', e.target.value)}
+                                                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#212c40]/20"
+                                                                    placeholder="Only for internal tracking"
+                                                                />
+                                                            </div>
+                                                            <div className="flex items-end">
+                                                                <button
+                                                                    onClick={() => handleSaveSettlement(car)}
+                                                                    disabled={savingSettlementKey === `${car.type}-${car.id}`}
+                                                                    className="w-full rounded-xl bg-[#212c40] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#2d3a55] disabled:opacity-60"
+                                                                >
+                                                                    {savingSettlementKey === `${car.type}-${car.id}` ? 'Saving...' : 'Save'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            );
+                                        })
+                                    )}
+                                </motion.div>
+                            )}
+
+                            {/* ── TAB 2: Payment Ledger ── */}
+                            {activeTab === 'ledger' && (
+                                <motion.div
+                                    key="ledger"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 10 }}
+                                    className="p-6 space-y-4"
+                                >
+                                    {/* Outstanding Balance Card */}
+                                    {summary && (
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className={`rounded-2xl p-4 flex items-center gap-4 ${
+                                            summary.outstandingBalance > 0
+                                                ? 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-100'
+                                                : 'bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-100'
+                                        }`}>
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
+                                                summary.outstandingBalance > 0 ? 'bg-red-100' : 'bg-emerald-100'
+                                            }`}>
+                                                {summary.outstandingBalance > 0 ? '⚠️' : '✅'}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`text-xs font-semibold uppercase tracking-wide ${summary.outstandingBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                    {summary.outstandingBalance > 0 ? 'Remaining Vendor Payment' : 'Vendor Fully Settled'}
+                                                </p>
+                                                <p className={`text-2xl font-extrabold ${summary.outstandingBalance > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                                                    {fmt(summary.outstandingBalance)}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-gray-400">Total Due</p>
+                                                <p className="font-bold text-gray-700">{fmt(summary.totalVendorCost)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Cash Paid</p>
+                                                    <p className="text-lg font-extrabold text-emerald-700">
+                                                        {fmt(summary.paymentMethodBreakdown?.Cash?.amount)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {summary.paymentMethodBreakdown?.Cash?.count || 0} payments
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Online Paid</p>
+                                                    <p className="text-lg font-extrabold text-blue-700">
+                                                        {fmt(summary.paymentMethodBreakdown?.Online?.amount)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {summary.paymentMethodBreakdown?.Online?.count || 0} payments
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {summary.excessPaid > 0 && (
+                                                <p className="mt-3 text-xs font-semibold text-violet-700">
+                                                    Extra paid: {fmt(summary.excessPaid)}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    )}
+
+                                    {/* Transactions List */}
+                                    {transactions.length === 0 ? (
+                                        <div className="text-center py-12 text-gray-400">
+                                            <MdReceipt size={40} className="mx-auto mb-3 opacity-30" />
+                                            <p className="font-medium">No transactions recorded yet</p>
+                                            <button
+                                                onClick={() => setActiveTab('payment')}
+                                                className="mt-3 text-sm text-[#212c40] font-bold underline underline-offset-2"
+                                            >
+                                                Record first payment →
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {transactions.map((txn, i) => {
+                                                const { method, note } = parsePaymentMethod(txn.remarks);
+                                                return (
+                                                    <motion.div
+                                                        key={txn._id}
+                                                        initial={{ opacity: 0, y: 8 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: i * 0.04 }}
+                                                        className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all"
+                                                    >
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
+                                                            txn.type === 'Payout' ? 'bg-red-50' : 'bg-emerald-50'
+                                                        }`}>
+                                                            {txn.type === 'Payout' ? '💸' : '💰'}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="font-bold text-gray-800 text-sm">{txn.type}</span>
+                                                                <PaymentMethodBadge method={method} />
+                                                                {txn.relatedCarLabel && (
+                                                                    <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-bold text-gray-700">
+                                                                        {txn.relatedCarLabel}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                                                                <span className="font-mono">{txn.referenceId}</span>
+                                                                {note && <span>• {note}</span>}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className={`font-extrabold text-base ${txn.type === 'Payout' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                                {txn.type === 'Payout' ? '-' : '+'}{fmt(txn.amount)}
+                                                            </p>
+                                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                                {new Date(txn.date || txn.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                            </p>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+
+                            {/* ── TAB 3: Record New Payment ── */}
+                            {activeTab === 'payment' && (
+                                <motion.div
+                                    key="payment"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 10 }}
+                                    className="p-6"
+                                >
+                                    <div className="bg-gradient-to-br from-[#212c40]/5 to-[#212c40]/0 rounded-2xl border border-[#212c40]/10 p-5 mb-6">
+                                        <p className="text-sm text-[#212c40] font-bold flex items-center gap-2">
+                                            <MdPayments size={18} />
+                                            नया पेमेंट रिकॉर्ड करें
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Record a payment made to <span className="font-semibold text-gray-600">{vendor?.name}</span> and it will appear in the ledger automatically.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {/* Amount */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                                Amount (₹) <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">₹</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="e.g. 25000"
+                                                    value={paymentForm.amount}
+                                                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                                    className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] font-bold text-lg transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Payment Method */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Payment Method</label>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {['Cash', 'Online'].map(method => (
+                                                    <button
+                                                        key={method}
+                                                        onClick={() => setPaymentForm({ ...paymentForm, paymentMethod: method })}
+                                                        className={`py-3 rounded-xl font-bold text-sm border-2 transition-all flex items-center justify-center gap-2 ${
+                                                            paymentForm.paymentMethod === method
+                                                                ? method === 'Cash'
+                                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                                                    : 'border-blue-500 bg-blue-50 text-blue-700'
+                                                                : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                                                        }`}
+                                                    >
+                                                        <span>{method === 'Cash' ? '💵' : '💳'}</span>
+                                                        {method}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                                Select Car
+                                            </label>
+                                            <select
+                                                value={paymentForm.relatedCarId ? `${paymentForm.relatedCarType}::${paymentForm.relatedCarId}` : ''}
+                                                onChange={(e) => {
+                                                    const selected = e.target.value;
+                                                    if (!selected) {
+                                                        setPaymentForm({
+                                                            ...paymentForm,
+                                                            relatedCarId: '',
+                                                            relatedCarType: '',
+                                                            relatedCarLabel: ''
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    const [selectedType, selectedId] = selected.split('::');
+                                                    const selectedCar = cars.find(
+                                                        (car) => String(car.id) === selectedId && car.type === selectedType
+                                                    );
+
+                                                    setPaymentForm({
+                                                        ...paymentForm,
+                                                        relatedCarId: selectedId,
+                                                        relatedCarType: selectedType,
+                                                        relatedCarLabel: selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : ''
+                                                    });
+                                                }}
+                                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40]"
+                                            >
+                                                <option value="">General vendor payment</option>
+                                                {cars.map((car) => (
+                                                    <option key={`${car.type}-${car.id}`} value={`${car.type}::${car.id}`}>
+                                                        {car.brand} {car.model} ({car.type})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                Swift jaisi specific gaadi ka payment alag track karna ho to yahan car select karein.
+                                            </p>
+                                        </div>
+
+                                        {/* Reference ID */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                                Transaction / Reference ID
+                                                <span className="text-xs font-normal text-gray-400 ml-1">(optional – auto-generated if blank)</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. UPI-REF-123456"
+                                                value={paymentForm.referenceId}
+                                                onChange={(e) => setPaymentForm({ ...paymentForm, referenceId: e.target.value })}
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] font-mono text-sm transition-all"
+                                            />
+                                        </div>
+
+                                        {/* Remarks / Notes */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">Remarks / Notes</label>
+                                            <textarea
+                                                placeholder="e.g. Monthly lease payment for May 2025"
+                                                value={paymentForm.remarks}
+                                                onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                                                rows={3}
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] text-sm resize-none transition-all"
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={handleRecordPayment}
+                                            disabled={submitting}
+                                            className="w-full py-3.5 bg-gradient-to-r from-[#212c40] to-[#2d3a55] text-white rounded-xl font-extrabold text-base hover:from-[#1a2233] hover:to-[#212c40] transition-all shadow-lg shadow-[#212c40]/20 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {submitting ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Recording...
+                                                </>
+                                            ) : (
+                                                <>💸 Record Payment</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+// ─── VENDOR CARD ──────────────────────────────────────────────────────────────
+const VendorCard = ({ vendor, onEdit, onDelete, onViewLedger }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showCars, setShowCars] = useState(false);
 
@@ -114,7 +755,7 @@ const VendorCard = ({ vendor, onEdit, onDelete }) => {
                 </div>
             </div>
 
-            <div className="space-y-2.5 text-sm text-gray-600 mb-2">
+            <div className="space-y-2.5 text-sm text-gray-600 mb-3">
                 <div className="flex items-center gap-2">
                     <MdPhone className="text-[#212c40]/40" /> {vendor.phone}
                 </div>
@@ -123,9 +764,17 @@ const VendorCard = ({ vendor, onEdit, onDelete }) => {
                 </div>
             </div>
 
+            {/* 📊 View Ledger & Profit Button */}
+            <button
+                onClick={() => onViewLedger(vendor)}
+                className="w-full py-2.5 px-4 mt-1 mb-2 rounded-xl bg-gradient-to-r from-[#212c40]/90 to-[#2d3a55] text-white font-bold text-xs hover:from-[#1a2233] hover:to-[#212c40] transition-all shadow-md shadow-[#212c40]/15 active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+                <MdBarChart size={15} /> 📊 View Ledger & Profit
+            </button>
+
             {/* Associated Cars Accordion Toggle */}
             {vendor.associatedCars && vendor.associatedCars.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="mt-2 pt-3 border-t border-gray-100">
                     <button
                         onClick={() => setShowCars(!showCars)}
                         className="w-full py-2 px-3 bg-gray-50 hover:bg-gray-100 text-[#212c40] hover:text-[#1a2333] rounded-xl text-xs font-bold flex items-center justify-between transition-all active:scale-[0.98]"
@@ -142,7 +791,6 @@ const VendorCard = ({ vendor, onEdit, onDelete }) => {
                         </motion.span>
                     </button>
 
-                    {/* Animated Collapsible List */}
                     {showCars && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
@@ -172,16 +820,18 @@ const VendorCard = ({ vendor, onEdit, onDelete }) => {
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <p className="font-bold text-gray-800 truncate">{car.brand} {car.model}</p>
                                                 <span className={`px-1 rounded-[4px] text-[9px] font-bold border uppercase shrink-0 ${
-                                                    car.type === 'Inward' 
-                                                        ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                                                    car.type === 'Inward'
+                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
                                                         : 'bg-purple-50 text-purple-600 border-purple-100'
                                                 }`}>
                                                     {car.type}
                                                 </span>
                                             </div>
-                                            <span className="px-1.5 py-0.5 rounded bg-gray-200/60 text-gray-600 font-mono text-[10px] uppercase font-semibold">
-                                                {car.registrationNumber}
-                                            </span>
+                                            {car.registrationNumber && car.registrationNumber.toLowerCase() !== 'outward' && (
+                                                <span className="px-1.5 py-0.5 rounded bg-gray-200/60 text-gray-600 font-mono text-[10px] uppercase font-semibold">
+                                                    {car.registrationNumber}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0">
@@ -226,21 +876,11 @@ const PaymentRow = ({ payment }) => (
 
 // --- Mock Data ---
 
-// MOCK_VENDORS removed in favor of API data
-
-const MOCK_PAYMENTS = [
-    { id: 101, date: "26 Dec 2025", vendor: "Rajesh Motors", refId: "TXN-882199", amount: 25000, type: "Payout", status: "Completed", verified: true },
-    { id: 102, date: "24 Dec 2025", vendor: "City Cabs Inc", refId: "TXN-882190", amount: 12000, type: "Commission", status: "Completed", verified: true },
-    { id: 103, date: "20 Dec 2025", vendor: "Elite Wheels", refId: "TXN-882155", amount: 150000, type: "Payout", status: "Processing", verified: true },
-];
-
 const MOCK_HISTORY_LOGS = [
     { id: 1, date: "20 Dec 2025", vendor: "Elite Wheels", action: "Partnered", detail: "Joined as Premium Partner", status: "Verified" },
     { id: 2, date: "15 Dec 2025", vendor: "City Cabs Inc", action: "Fleet Update", detail: "Added 5 new vehicles", status: "Active" },
     { id: 3, date: "10 Dec 2025", vendor: "Rajesh Motors", action: "Payout", detail: "Monthly settlement processed", status: "Completed" },
 ];
-
-
 
 
 // --- Pages ---
@@ -256,6 +896,10 @@ export const AllVendorsPage = () => {
 
     const [errors, setErrors] = useState({});
 
+    // Ledger Modal State
+    const [ledgerVendor, setLedgerVendor] = useState(null);
+    const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+
     useEffect(() => {
         fetchVendors();
     }, []);
@@ -268,7 +912,6 @@ export const AllVendorsPage = () => {
             }
         } catch (error) {
             console.error('Error fetching vendors:', error);
-            // toast.error('Failed to load vendors');
         } finally {
             setLoading(false);
         }
@@ -339,7 +982,7 @@ export const AllVendorsPage = () => {
             type: vendor.type,
             phone: vendor.phone,
             email: vendor.email,
-            profileImage: null, // Keep null unless changed
+            profileImage: null,
             preview: vendor.profileImage || 'https://via.placeholder.com/150'
         });
         setIsAddModalOpen(true);
@@ -355,6 +998,11 @@ export const AllVendorsPage = () => {
             console.error('Delete vendor error:', error);
             toast.error('Failed to delete vendor');
         }
+    };
+
+    const handleViewLedger = (vendor) => {
+        setLedgerVendor(vendor);
+        setIsLedgerOpen(true);
     };
 
     return (
@@ -400,17 +1048,34 @@ export const AllVendorsPage = () => {
                     <div className="col-span-full text-center py-10">Loading vendors...</div>
                 ) : (
                     filteredVendors.map(vendor => (
-                        <VendorCard key={vendor._id || vendor.id} vendor={vendor} onEdit={handleEditVendor} onDelete={handleDeleteVendor} />
+                        <VendorCard
+                            key={vendor._id || vendor.id}
+                            vendor={vendor}
+                            onEdit={handleEditVendor}
+                            onDelete={handleDeleteVendor}
+                            onViewLedger={handleViewLedger}
+                        />
                     ))
                 )}
             </div>
 
-            {filteredVendors.length === 0 && (
+            {filteredVendors.length === 0 && !loading && (
                 <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
                     <h3 className="text-lg font-bold text-gray-800">No vendors found</h3>
                     <p className="text-gray-500">Try searching for something else.</p>
                 </div>
             )}
+
+            {/* Vendor Ledger Modal */}
+            <AnimatePresence>
+                {isLedgerOpen && (
+                    <VendorLedgerModal
+                        vendor={ledgerVendor}
+                        isOpen={isLedgerOpen}
+                        onClose={() => { setIsLedgerOpen(false); setLedgerVendor(null); }}
+                    />
+                )}
+            </AnimatePresence>
 
             <SimpleModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={editingVendor ? "Edit Vendor" : "Add New Vendor"}>
                 <div className="space-y-4">
@@ -538,5 +1203,3 @@ export const VendorHistoryPage = () => {
         </div>
     );
 }
-
-

@@ -139,6 +139,20 @@ const carSchema = new mongoose.Schema(
         index: true,
       }
     },
+    vendorSettlement: {
+      agreedAmount: {
+        type: Number,
+        min: [0, 'Agreed amount cannot be negative'],
+        default: 0,
+      },
+      notes: {
+        type: String,
+        trim: true,
+      },
+      updatedAt: {
+        type: Date,
+      },
+    },
 
     // Images
     images: [{
