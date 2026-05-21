@@ -45,7 +45,7 @@ With Dynamic Pricing, you get fair and transparent pricing that adjusts based on
 
 Live GPS Tracking provides real-time location updates every 10 seconds during active trips. This enhanced safety feature gives both renters and car owners peace of mind, with location data stored for 6 months for dispute resolution purposes.
 
-We offer Flexible Payment Options to suit your needs. Choose between full payment or 35% advance payment, with secure processing through Razorpay and Stripe. Remaining amounts are automatically debited, and we handle security deposit management seamlessly.
+We offer Flexible Payment Options to suit your needs. Choose between full payment or 20% advance payment, with secure processing through Razorpay and Stripe. Remaining amounts are automatically debited, and we handle security deposit management seamlessly.
 
 Our Guarantor System adds an extra layer of security. The guarantor verification process ensures that all guarantors complete KYC verification, providing enhanced trust and security for car owners.
 
@@ -60,7 +60,7 @@ Getting started with DriveOn is simple. First, register with your email and phon
 
 Once verified, add a guarantor who must also complete registration and KYC verification. Then browse and filter our extensive car collection based on your preferences - brand, model, price, location, and more. Select your preferred car and view detailed information including photos, features, and reviews.
 
-When you're ready, book your car by selecting your preferred dates and choosing a payment option - either full payment or 35% advance payment. Complete the secure payment process, and you're all set. When your trip starts, GPS tracking is automatically enabled for your safety. At the end of your trip, simply complete the booking, and you can submit reviews to help other users.
+When you're ready, book your car by selecting your preferred dates and choosing a payment option - either full payment or 20% advance payment. Complete the secure payment process, and you're all set. When your trip starts, GPS tracking is automatically enabled for your safety. At the end of your trip, simply complete the booking, and you can submit reviews to help other users.
 
 For Car Owners:
 

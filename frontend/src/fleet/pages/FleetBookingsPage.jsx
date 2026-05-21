@@ -56,6 +56,9 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
   const paymentStatusLabel =
     paymentStatus === 'paid' ? 'Paid' : 'Pending';
 
+  const discount = Number(booking.discount || 0);
+  const basePrice = totalPrice + discount;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -76,7 +79,7 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
                 Booking Details
               </h2>
               <p className="hidden" style={{ color: colors.textSecondary }}>
-                {booking.carName} â€¢ {booking.customerName}
+                {booking.carName} &bull; {booking.customerName}
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
                 {booking.carName} {DOT} {booking.customerName}
@@ -112,6 +115,26 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
                 >
                   Total: {formatCurrency(totalPrice)}
                 </span>
+                {booking.licenseVerified ? (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                    ✓ DL Verified
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                    DL Not Verified
+                  </span>
+                )}
+                {booking.aadhaarNumber ? (
+                  booking.aadhaarVerified ? (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                      ✓ Aadhaar Verified
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                      Aadhaar Unverified
+                    </span>
+                  )
+                ) : null}
               </div>
             </div>
             <button
@@ -128,7 +151,7 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
         </div>
 
         <div className="p-5 space-y-4 flex-1 min-h-0 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-4" padding={false}>
               <p className="text-sm" style={{ color: colors.textSecondary }}>
                 Booking ID:{' '}
@@ -153,13 +176,13 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
               <p className="hidden" style={{ color: colors.textSecondary }}>
                 Dates:{' '}
                 <span style={{ color: colors.textPrimary }}>
-                  {booking.fromDate} â†’ {booking.toDate}
+                  {booking.fromDate} &rarr; {booking.toDate}
                 </span>
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
                 Dates:{' '}
                 <span style={{ color: colors.textPrimary }}>
-                  {booking.fromDate} {ARROW} {booking.toDate}
+                  {booking.fromDate} {booking.startTime ? `(${booking.startTime})` : ''} {ARROW} {booking.toDate} {booking.endTime ? `(${booking.endTime})` : ''}
                 </span>
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
@@ -171,7 +194,7 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
                 </p>
               ) : null}
               <p className="hidden" style={{ color: colors.textSecondary }}>
-                Total: <span style={{ color: colors.textPrimary }}>â‚¹{booking.totalPrice}</span>
+                Total: <span style={{ color: colors.textPrimary }}>&nbsp;{booking.totalPrice}</span>
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
                 Total: <span style={{ color: colors.textPrimary }}>{formatCurrency(totalPrice)}</span>
@@ -188,25 +211,62 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
                 <span style={{ color: colors.textPrimary }}>{paymentMode || '-'}</span>
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                Total: <span style={{ color: colors.textPrimary }}>{formatCurrency(totalPrice)}</span>
+                Base Price: <span style={{ color: colors.textPrimary }}>{formatCurrency(basePrice)}</span>
+              </p>
+              {discount > 0 ? (
+                <p className="text-sm mt-1 text-green-400 font-medium">
+                  Discount: <span>-{formatCurrency(discount)}</span>
+                </p>
+              ) : null}
+              <p className="text-sm mt-1 font-bold" style={{ color: colors.textPrimary }}>
+                Final Price: <span className="text-blue-400">{formatCurrency(totalPrice)}</span>
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                Paid: <span style={{ color: colors.textPrimary }}>{formatCurrency(safePaidAmount)}</span>
+                Paid Amount: <span style={{ color: colors.textPrimary }}>{formatCurrency(safePaidAmount)}</span>
               </p>
               <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                Due: <span style={{ color: colors.textPrimary }}>{formatCurrency(dueAmount)}</span>
+                Due Amount: <span style={{ color: colors.textPrimary }}>{formatCurrency(dueAmount)}</span>
               </p>
-              <p className="hidden" style={{ color: colors.textSecondary }}>
-                Paid Amount: <span style={{ color: colors.textPrimary }}>â‚¹{paidAmount}</span>
+            </Card>
+
+            <Card className="p-4 flex flex-col items-center justify-center text-center" padding={false}>
+              <p className="text-sm font-semibold mb-3" style={{ color: colors.textPrimary }}>
+                Customer Photo
               </p>
+              {booking.customerImage ? (
+                <img
+                  src={booking.customerImage}
+                  alt="Customer"
+                  className="h-28 w-28 object-cover rounded-full border-2"
+                  style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                />
+              ) : (
+                <div
+                  className="h-28 w-28 rounded-full border-2 flex items-center justify-center text-sm"
+                  style={{ borderColor: colors.borderMedium, color: colors.textSecondary }}
+                >
+                  No Photo
+                </div>
+              )}
             </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                Driving License
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                  Driving License {booking.licenseNumber ? `(${booking.licenseNumber})` : ''}
+                </p>
+                {booking.licenseVerified ? (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                    ✓ Verified
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                    Not Verified
+                  </span>
+                )}
+              </div>
               {booking.licenseImage ? (
                 <img
                   src={booking.licenseImage}
@@ -225,9 +285,26 @@ const BookingDetailsModal = ({ open, booking, onClose }) => {
             </div>
 
             <div>
-              <p className="text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
-                Aadhaar
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                  Aadhaar {booking.aadhaarNumber ? `(XXXX-XXXX-${booking.aadhaarNumber.slice(-4)})` : ''}
+                </p>
+                {booking.aadhaarNumber ? (
+                  booking.aadhaarVerified ? (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                      ✓ Verified
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                      Unverified
+                    </span>
+                  )
+                ) : (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                    Not provided
+                  </span>
+                )}
+              </div>
               {booking.aadhaarImage ? (
                 <img
                   src={booking.aadhaarImage}
@@ -304,24 +381,61 @@ const FleetBookingsPage = () => {
                   <h3 className="text-lg font-bold" style={{ color: colors.textPrimary }}>
                     {b.carName}
                   </h3>
-                  <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                    Customer: <span className="font-medium">{b.customerName}</span>
-                  </p>
+                  <div className="flex items-center gap-3 mt-2">
+                    {b.customerImage ? (
+                      <img
+                        src={b.customerImage}
+                        alt={b.customerName}
+                        className="h-10 w-10 rounded-full object-cover border"
+                        style={{ borderColor: colors.borderMedium }}
+                      />
+                    ) : (
+                      <div
+                        className="h-10 w-10 rounded-full border flex items-center justify-center text-[10px] font-bold bg-gray-100"
+                        style={{ borderColor: colors.borderMedium, color: colors.textSecondary }}
+                      >
+                        N/A
+                      </div>
+                    )}
+                    <p className="text-sm" style={{ color: colors.textSecondary }}>
+                      Customer: <span className="font-medium" style={{ color: colors.textPrimary }}>{b.customerName}</span>
+                    </p>
+                  </div>
                   <p className="hidden" style={{ color: colors.textSecondary }}>
                     Dates: {b.fromDate} → {b.toDate}
                   </p>
-                  <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                    Dates: {b.fromDate} {ARROW} {b.toDate}
+                  <p className="text-sm mt-2" style={{ color: colors.textSecondary }}>
+                    Dates: {b.fromDate} {b.startTime ? `(${b.startTime})` : ''} {ARROW} {b.toDate} {b.endTime ? `(${b.endTime})` : ''}
                   </p>
-                  <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                    Type: <span className="font-medium">{b.carType}</span>
-                  </p>
-                  <p className="hidden" style={{ color: colors.textSecondary }}>
-                    Total: <span className="font-semibold">₹{b.totalPrice}</span>
-                  </p>
-                  <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                    Total: <span className="font-semibold">{formatCurrency(b.totalPrice)}</span>
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full border" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary, color: colors.textPrimary }}>
+                      Type: {b.carType}
+                    </span>
+                    {b.licenseVerified ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                        ✓ DL Verified
+                      </span>
+                    ) : null}
+                    {b.aadhaarVerified ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                        ✓ Aadhaar Verified
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-sm mt-2 flex items-center gap-2" style={{ color: colors.textSecondary }}>
+                    <span>Total Price:</span>
+                    {Number(b.discount || 0) > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="line-through text-xs text-gray-500">{formatCurrency(Number(b.totalPrice || 0) + Number(b.discount || 0))}</span>
+                        <span className="font-bold text-blue-400">{formatCurrency(b.totalPrice)}</span>
+                        <span className="text-[10px] font-semibold bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded border border-green-500/20">
+                          ₹{b.discount} Off
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="font-bold text-gray-200">{formatCurrency(b.totalPrice)}</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="w-full md:w-64">

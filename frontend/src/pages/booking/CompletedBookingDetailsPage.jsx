@@ -345,7 +345,7 @@ const CompletedBookingDetailsPage = () => {
                     : 'bg-blue-100 text-blue-800'
                     }`}
                 >
-                  {booking.paymentType === 'full' ? 'Full Payment' : '35% Advance Payment'}
+                  {booking.paymentType === 'full' ? 'Full Payment' : '20% Advance Payment'}
                 </span>
               </div>
               <div>

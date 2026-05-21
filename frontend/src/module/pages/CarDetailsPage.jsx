@@ -1515,7 +1515,7 @@ const CarDetailsPage = () => {
     const finalPrice = finalPriceBeforeRound;
 
     // Payment options - Round to avoid decimals
-    const advancePayment = finalPriceBeforeRound * 0.35;
+    const advancePayment = finalPriceBeforeRound * 0.20;
     const remainingPayment = finalPrice - advancePayment;
 
     return {
@@ -2505,8 +2505,8 @@ const CarDetailsPage = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-sm mb-0.5" style={{ color: colors.textPrimary }}>35% Advance Payment</div>
-                      <div className="text-xs" style={{ color: colors.textSecondary }}>Pay 35% now, rest later</div>
+                      <div className="font-bold text-sm mb-0.5" style={{ color: colors.textPrimary }}>20% Advance Payment</div>
+                      <div className="text-xs" style={{ color: colors.textSecondary }}>Pay 20% now, rest later</div>
                     </div>
                     <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center" style={{
                       borderColor: paymentOption === 'advance' ? colors.backgroundTertiary : colors.borderCheckbox
@@ -2590,7 +2590,7 @@ const CarDetailsPage = () => {
                     {paymentOption === 'advance' && finalPriceDetails.totalDays > 0 && (
                       <div className="mt-2 pt-2 border-t" style={{ borderColor: colors.borderMedium }}>
                         <div className="flex justify-between mb-0.5 text-xs" style={{ color: colors.textSecondary }}>
-                          <span>Advance Payment (35%)</span>
+                          <span>Advance Payment (20%)</span>
                           <span className="font-semibold">Rs. {formatDecimal(finalPriceDetails.advancePayment)}</span>
                         </div>
                         <div className="flex justify-between text-xs" style={{ color: colors.textSecondary }}>

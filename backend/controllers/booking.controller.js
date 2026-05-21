@@ -305,8 +305,8 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    // Calculate advance payment (35% for advance option)
-    const advancePayment = paymentOption === 'advance' ? (totalPrice * 0.35) : 0;
+    // Calculate advance payment (20% for advance option)
+    const advancePayment = paymentOption === 'advance' ? (totalPrice * 0.20) : 0;
     const remainingPayment = totalPrice - advancePayment;
     const finalPrice = paymentOption === 'full' ? totalPrice : advancePayment;
 

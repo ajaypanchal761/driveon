@@ -444,7 +444,7 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                   Payment Option
                 </p>
                 <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                  {booking.paymentOption === 'advance' ? '35% Advance' : 'Full Payment'}
+                  {booking.paymentOption === 'advance' ? '20% Advance' : 'Full Payment'}
                 </p>
               </div>
               <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>

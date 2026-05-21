@@ -38,7 +38,10 @@ export const uploadImage = async (file, options = {}) => {
     // Handle different file types
     let uploadResult;
 
-    if (file.buffer) {
+    if (typeof file === 'string') {
+      // If file is a base64 data URI or URL
+      uploadResult = await cloudinary.uploader.upload(file, uploadOptions);
+    } else if (file.buffer) {
       // If file has buffer (from express-fileupload)
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -81,7 +84,7 @@ export const uploadImage = async (file, options = {}) => {
         bufferStream.pipe(uploadStream);
       });
     } else {
-      throw new Error('Invalid file format. Expected buffer, path, or Buffer.');
+      throw new Error('Invalid file format. Expected string, buffer, path, or Buffer.');
     }
 
     return uploadResult;

@@ -45,7 +45,7 @@ const FAQPage = () => {
             },
             {
               question: "What payment options are available?",
-              answer: "We offer flexible payment options to suit your needs. You can choose between Full Payment or 35% Advance Payment. Payments are processed securely through Razorpay and Stripe. If you choose the 35% advance option, the remaining amount is automatically debited. We also handle security deposit management seamlessly."
+              answer: "We offer flexible payment options to suit your needs. You can choose between Full Payment or 20% Advance Payment. Payments are processed securely through Razorpay and Stripe. If you choose the 20% advance option, the remaining amount is automatically debited. We also handle security deposit management seamlessly."
             },
             {
               question: "Is live GPS tracking mandatory?",
@@ -61,7 +61,7 @@ const FAQPage = () => {
             },
             {
               question: "How do I book a car?",
-              answer: "First, ensure your profile is 100% complete and your guarantor is verified. Then browse and filter our car collection based on your preferences (brand, model, price, location, etc.). Select your preferred car and view detailed information. Choose your pickup and drop-off dates and times. The system will calculate the dynamic price. Select your payment option (Full or 35% advance) and complete the secure payment. Once payment is confirmed, your booking is complete. GPS tracking will automatically start when your trip begins."
+              answer: "First, ensure your profile is 100% complete and your guarantor is verified. Then browse and filter our car collection based on your preferences (brand, model, price, location, etc.). Select your preferred car and view detailed information. Choose your pickup and drop-off dates and times. The system will calculate the dynamic price. Select your payment option (Full or 20% advance) and complete the secure payment. Once payment is confirmed, your booking is complete. GPS tracking will automatically start when your trip begins."
             }
           ]);
         }

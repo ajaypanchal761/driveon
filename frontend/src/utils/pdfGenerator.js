@@ -497,7 +497,7 @@ export const generateBookingPDF = (bookingData) => {
     }
   }
 
-  yPosition += addKeyValue('Payment Option', bookingData.paymentOption === 'advance' ? '35% Advance' : bookingData.paymentOption || 'N/A', margin + 2, yPosition, contentWidth - 4);
+  yPosition += addKeyValue('Payment Option', bookingData.paymentOption === 'advance' ? '20% Advance' : bookingData.paymentOption || 'N/A', margin + 2, yPosition, contentWidth - 4);
   yPosition = pricingBoxY + pricingBoxHeight + 5; // Add extra padding after box
 
   yPosition += sectionSpacing;

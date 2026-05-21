@@ -105,7 +105,7 @@ export const BOOKING_STATUS = {
 // Payment Types
 export const PAYMENT_TYPES = {
   FULL: 'full',
-  PARTIAL: 'partial', // 35% advance
+  PARTIAL: 'partial', // 20% advance
 };
 
 // Mobile Breakpoints (for JavaScript use)

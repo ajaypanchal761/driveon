@@ -25,6 +25,9 @@ const outwardBookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    customerImage: {
+      type: String,
+    },
     licenseImage: {
       type: String,
     },
@@ -35,9 +38,15 @@ const outwardBookingSchema = new mongoose.Schema(
       type: String, // ISO date string
       required: true,
     },
+    startTime: {
+      type: String, // start time
+    },
     toDate: {
       type: String, // ISO date string
       required: true,
+    },
+    endTime: {
+      type: String, // end time
     },
     totalPrice: {
       type: Number,
@@ -54,6 +63,24 @@ const outwardBookingSchema = new mongoose.Schema(
     paidAmount: {
       type: Number,
       default: 0,
+    },
+    discount: {
+      type: Number,
+      default: 0,
+    },
+    aadhaarNumber: {
+      type: String,
+    },
+    aadhaarVerified: {
+      type: Boolean,
+      default: false,
+    },
+    licenseNumber: {
+      type: String,
+    },
+    licenseVerified: {
+      type: Boolean,
+      default: false,
     }
   },
   {

@@ -1912,7 +1912,7 @@ const HomePage = () => {
                   ),
                   title: "Flexible Payment",
                   description:
-                    "Pay full or 35% advance - choose what works for you",
+                    "Pay full or 20% advance - choose what works for you",
                 },
                 {
                   icon: (

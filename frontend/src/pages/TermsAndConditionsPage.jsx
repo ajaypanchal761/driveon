@@ -83,13 +83,13 @@ These Terms apply to all users of the Platform, including renters, car owners, g
 - Verified KYC
 - Verified Guarantor
 - Valid driving license
-- Payment (Full or 35% advance)
+- Payment (Full or 20% advance)
 
 5.2 Booking Process:
 - Select car from available listings
 - Choose pickup and drop-off date & time
 - Review dynamic pricing (based on date, time, duration, demand)
-- Select payment option (Full Payment or 35% Advance Payment)
+- Select payment option (Full Payment or 20% Advance Payment)
 - Add guarantor (if not already added)
 - Complete payment via Razorpay/Stripe
 - Receive booking confirmation
@@ -110,7 +110,7 @@ These Terms apply to all users of the Platform, including renters, car owners, g
       title: '6. Payment Terms',
       content: `6.1 Payment Options:
 - Full Payment: Pay the entire rental amount upfront
-- 35% Advance Payment: Pay 35% advance, remaining amount auto-debited
+- 20% Advance Payment: Pay 20% advance, remaining amount auto-debited
 
 6.2 Payment Processing:
 - Payments are processed through Razorpay/Stripe

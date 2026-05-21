@@ -111,7 +111,7 @@ export const FleetProvider = ({ children }) => {
     try {
       const response = await api.post('/fleet/outward-bookings', booking);
       if (response.data.success) {
-        setBookings((prev) => [booking, ...prev]);
+        setBookings((prev) => [response.data.data, ...prev]);
         return response.data.data;
       }
       throw new Error("Failed to save booking to database");

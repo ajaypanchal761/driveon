@@ -149,7 +149,7 @@ const AboutPage = () => {
               <ul className="list-disc list-inside space-y-2 text-base md:text-lg leading-relaxed">
                 <li>Complete KYC verification through DigiLocker integration</li>
                 <li>Guarantor system for added security</li>
-                <li>Flexible payment options (Full Payment or 35% Advance)</li>
+                <li>Flexible payment options (Full Payment or 20% Advance)</li>
                 <li>Secure payment processing via Razorpay and Stripe</li>
                 <li>Comprehensive car and owner verification</li>
                 <li>24/7 customer support</li>

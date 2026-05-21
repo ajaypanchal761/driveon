@@ -393,7 +393,7 @@ const BookingPaymentPage = () => {
             {paymentOption === 'advance' && (
               <>
                 <div className="flex justify-between font-semibold pt-2 border-t" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
-                  <span>Advance Payment (35%)</span>
+                  <span>Advance Payment (20%)</span>
                   <span>Rs. {priceDetails.advancePayment}</span>
                 </div>
                 <div className="flex justify-between text-xs" style={{ color: theme.colors.textSecondary }}>

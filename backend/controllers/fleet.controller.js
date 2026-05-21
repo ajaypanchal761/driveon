@@ -3,6 +3,8 @@ import OutwardBooking from '../models/OutwardBooking.js';
 import Vendor from '../models/Vendor.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { uploadImage, isConfigured } from '../services/cloudinary.service.js';
+import quickekycService from '../services/quickekyc.service.js';
 
 // Initialize Razorpay instance if keys are available
 const getRazorpayInstance = () => {
@@ -83,14 +85,22 @@ export const getOutwardBookings = async (req, res) => {
             carType: b.carType,
             carOwnerName: b.carOwnerName,
             customerName: b.customerName,
+            customerImage: b.customerImage,
             licenseImage: b.licenseImage,
             aadhaarImage: b.aadhaarImage,
             fromDate: b.fromDate,
             toDate: b.toDate,
+            startTime: b.startTime || '',
+            endTime: b.endTime || '',
             totalPrice: b.totalPrice,
             paymentMode: b.paymentMode,
             paymentStatus: b.paymentStatus,
             paidAmount: b.paidAmount,
+            discount: b.discount || 0,
+            aadhaarNumber: b.aadhaarNumber || '',
+            aadhaarVerified: b.aadhaarVerified || false,
+            licenseNumber: b.licenseNumber || '',
+            licenseVerified: b.licenseVerified || false,
             createdAt: b.createdAt
         }));
 
@@ -100,10 +110,43 @@ export const getOutwardBookings = async (req, res) => {
     }
 };
 
+// Helper function to upload base64 images to Cloudinary if configured
+const uploadToCloudinaryIfBase64 = async (imageStr, folderName) => {
+    if (!imageStr) return '';
+    // If it's already a Cloudinary or HTTP URL, return as is
+    if (imageStr.startsWith('http://') || imageStr.startsWith('https://')) {
+        return imageStr;
+    }
+    // If it's a base64 image string
+    if (imageStr.startsWith('data:image/')) {
+        try {
+            if (isConfigured()) {
+                const uploadResult = await uploadImage(imageStr, {
+                    folder: `driveon/fleet/${folderName}`,
+                    width: 800,
+                    height: 800,
+                    crop: 'limit'
+                });
+                return uploadResult.secure_url;
+            }
+        } catch (error) {
+            console.error(`Failed to upload ${folderName} to Cloudinary:`, error);
+            // Fallback to base64 if upload fails
+            return imageStr;
+        }
+    }
+    return imageStr;
+};
+
 // Create Outward Booking
 export const createOutwardBooking = async (req, res) => {
     try {
         let bookingData = { ...req.body };
+
+        // Upload images to Cloudinary
+        const customerImageSecure = await uploadToCloudinaryIfBase64(bookingData.customerImage, 'customer-photos');
+        const licenseImageSecure = await uploadToCloudinaryIfBase64(bookingData.licenseImage, 'licenses');
+        const aadhaarImageSecure = await uploadToCloudinaryIfBase64(bookingData.aadhaarImage, 'aadhaars');
 
         const newBooking = await OutwardBooking.create({
             originalBookingId: bookingData.id,
@@ -112,17 +155,52 @@ export const createOutwardBooking = async (req, res) => {
             carType: bookingData.carType,
             carOwnerName: bookingData.carOwnerName,
             customerName: bookingData.customerName,
-            licenseImage: bookingData.licenseImage,
-            aadhaarImage: bookingData.aadhaarImage,
+            customerImage: customerImageSecure,
+            licenseImage: licenseImageSecure,
+            aadhaarImage: aadhaarImageSecure,
             fromDate: bookingData.fromDate,
             toDate: bookingData.toDate,
+            startTime: bookingData.startTime || '',
+            endTime: bookingData.endTime || '',
             totalPrice: bookingData.totalPrice,
             paymentMode: bookingData.paymentMode || 'Cash',
             paymentStatus: bookingData.paymentStatus || 'pending',
-            paidAmount: bookingData.paidAmount || 0
+            paidAmount: bookingData.paidAmount || 0,
+            discount: bookingData.discount || 0,
+            aadhaarNumber: bookingData.aadhaarNumber || '',
+            aadhaarVerified: bookingData.aadhaarVerified || false,
+            licenseNumber: bookingData.licenseNumber || '',
+            licenseVerified: bookingData.licenseVerified || false
         });
 
-        res.status(201).json({ success: true, data: newBooking });
+        // Format backend to frontend expected structure
+        const formattedSaved = {
+            id: newBooking.originalBookingId,
+            carId: newBooking.carId,
+            carName: newBooking.carName,
+            carType: newBooking.carType,
+            carOwnerName: newBooking.carOwnerName,
+            customerName: newBooking.customerName,
+            customerImage: newBooking.customerImage,
+            licenseImage: newBooking.licenseImage,
+            aadhaarImage: newBooking.aadhaarImage,
+            fromDate: newBooking.fromDate,
+            toDate: newBooking.toDate,
+            startTime: newBooking.startTime,
+            endTime: newBooking.endTime,
+            totalPrice: newBooking.totalPrice,
+            paymentMode: newBooking.paymentMode,
+            paymentStatus: newBooking.paymentStatus,
+            paidAmount: newBooking.paidAmount,
+            discount: newBooking.discount,
+            aadhaarNumber: newBooking.aadhaarNumber,
+            aadhaarVerified: newBooking.aadhaarVerified,
+            licenseNumber: newBooking.licenseNumber,
+            licenseVerified: newBooking.licenseVerified,
+            createdAt: newBooking.createdAt
+        };
+
+        res.status(201).json({ success: true, data: formattedSaved });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: 'Failed to create outward booking' });
@@ -139,8 +217,27 @@ export const createFleetRazorpayOrder = async (req, res) => {
             return res.status(500).json({ success: false, message: 'Razorpay keys not configured' });
         }
 
+        const amountInRupees = parseInt(amount) || 0;
+        const amountInPaise = amountInRupees * 100;
+
+        // Razorpay max per transaction is ₹5,00,000 (50,000,000 paise)
+        const RAZORPAY_MAX_PAISE = 5000000 * 100; // ₹50,00,000 in paise (50 lakh)
+        const RAZORPAY_PRACTICAL_MAX = 500000; // ₹5,00,000 practical limit
+
+        if (amountInRupees <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid amount. Please enter a valid booking amount.' });
+        }
+
+        if (amountInRupees > RAZORPAY_PRACTICAL_MAX) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Amount ₹${amountInRupees.toLocaleString('en-IN')} exceeds Razorpay's per-transaction limit of ₹5,00,000. Please use Cash payment mode for this high-value booking.`,
+                code: 'AMOUNT_EXCEEDS_LIMIT'
+            });
+        }
+
         const options = {
-            amount: parseInt(amount) * 100, // in paise
+            amount: amountInPaise,
             currency: 'INR',
             receipt: `fleet_rcpt_${Date.now()}`
         };
@@ -149,7 +246,9 @@ export const createFleetRazorpayOrder = async (req, res) => {
         res.status(200).json({ success: true, data: order });
     } catch (error) {
         console.error('Fleet Razorpay order creation failed', error);
-        res.status(500).json({ success: false, message: 'Failed to create razorpay order' });
+        // Pass through actual Razorpay error description to frontend
+        const razorpayMsg = error?.error?.description || error?.message || 'Failed to create razorpay order';
+        res.status(500).json({ success: false, message: razorpayMsg });
     }
 };
 
@@ -172,5 +271,146 @@ export const verifyFleetRazorpayPayment = async (req, res) => {
     } catch (error) {
         console.error('Verification failed', error);
         res.status(500).json({ success: false, message: 'Verification failed' });
+    }
+};
+
+// --- Fleet QuickEKYC Verification controllers ---
+
+// Generate Aadhaar OTP
+export const generateFleetAadhaarOTP = async (req, res) => {
+    try {
+        const { aadhaarNo } = req.body;
+
+        if (!aadhaarNo || aadhaarNo.length !== 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid 12-digit Aadhaar number'
+            });
+        }
+
+        const result = await quickekycService.generateAadhaarOTP(aadhaarNo);
+
+        if (result.status === 'success' || result.data?.request_id) {
+            const requestId = result.data?.request_id || result.request_id;
+            return res.status(200).json({
+                success: true,
+                message: 'OTP sent successfully to Aadhaar-linked mobile number',
+                data: { requestId }
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message || 'Failed to generate OTP',
+                error: result
+            });
+        }
+    } catch (error) {
+        console.error('Generate Fleet Aadhaar OTP Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error while generating Aadhaar OTP'
+        });
+    }
+};
+
+// Verify Aadhaar OTP
+export const verifyFleetAadhaarOTP = async (req, res) => {
+    try {
+        const { otp, requestId } = req.body;
+
+        if (!otp || !requestId) {
+            return res.status(400).json({
+                success: false,
+                message: 'OTP and Request ID are required'
+            });
+        }
+
+        const result = await quickekycService.submitAadhaarOTP(requestId, otp);
+
+        if (result.status === 'success' || result.data?.status === 'VALID') {
+            return res.status(200).json({
+                success: true,
+                message: 'Aadhaar verified successfully',
+                data: result.data
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message || 'Aadhaar verification failed',
+                error: result
+            });
+        }
+    } catch (error) {
+        console.error('Verify Fleet Aadhaar OTP Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server error while verifying Aadhaar OTP'
+        });
+    }
+};
+
+// Verify Driving License
+export const verifyFleetDL = async (req, res) => {
+    try {
+        const { dlNo, dob } = req.body;
+        
+        const cleanDlNo = dlNo ? dlNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+
+        if (!cleanDlNo || !dob) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid DL number and Date of Birth are required'
+            });
+        }
+
+        let formattedDob = dob;
+        console.log(`📡 Fleet Attempting DL Verification: ${cleanDlNo} with DOB: ${formattedDob}`);
+        
+        try {
+            let result = await quickekycService.verifyDL(cleanDlNo, formattedDob);
+            
+            if (result.status === 'error' && result.message?.toLowerCase().includes('date of birth')) {
+                const parts = dob.split('-');
+                const alternateDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+                console.log(`🔄 Fleet Retrying with alternate DOB format: ${alternateDob}`);
+                result = await quickekycService.verifyDL(cleanDlNo, alternateDob);
+            }
+
+            if (result.status === 'success' || result.data?.status === 'VALID') {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Driving License verified successfully',
+                    data: result.data
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: result.message || 'DL Verification failed',
+                    error: result
+                });
+            }
+        } catch (apiError) {
+            console.error('QuickEKYC API Exception in Fleet:', apiError);
+            
+            if (apiError.message?.toLowerCase().includes('date of birth')) {
+                try {
+                    const parts = dob.split('-');
+                    const lastResortDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    const lastResult = await quickekycService.verifyDL(cleanDlNo, lastResortDob);
+                    if (lastResult.status === 'success') {
+                        return res.status(200).json({ success: true, message: 'Verified on retry', data: lastResult.data });
+                    }
+                } catch (e) {}
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: apiError.message || 'API Error during DL verification',
+                error: apiError
+            });
+        }
+    } catch (error) {
+        console.error('DL Fleet Controller Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during DL verification' });
     }
 };

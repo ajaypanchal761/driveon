@@ -170,8 +170,8 @@ const RentNowPage = () => {
     const discount = couponDiscount || 0;
     const finalPrice = Math.max(0, totalPrice - discount);
 
-    // Advance payment (35%) calculated on final price after discount
-    const advancePayment = Math.round(finalPrice * 0.35);
+    // Advance payment (20%) calculated on final price after discount
+    const advancePayment = Math.round(finalPrice * 0.20);
     const remainingPayment = finalPrice - advancePayment;
 
     return {
@@ -636,8 +636,8 @@ const RentNowPage = () => {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <span className="font-semibold text-base block" style={{ color: theme.colors.textPrimary }}>35% Advance Payment</span>
-                    <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>Pay 35% now, rest later in office</p>
+                    <span className="font-semibold text-base block" style={{ color: theme.colors.textPrimary }}>20% Advance Payment</span>
+                    <p className="text-xs mt-1" style={{ color: theme.colors.textSecondary }}>Pay 20% now, rest later in office</p>
                   </div>
                 </div>
               </div>
@@ -803,7 +803,7 @@ const RentNowPage = () => {
                     <span>₹{priceDetails.finalPrice.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between font-semibold pt-3 border-t text-base" style={{ color: theme.colors.textPrimary, borderColor: theme.colors.borderLight }}>
-                    <span>Advance Payment (35%)</span>
+                    <span>Advance Payment (20%)</span>
                     <span>₹{priceDetails.advancePayment.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-xs pt-1" style={{ color: theme.colors.textSecondary }}>

@@ -50,7 +50,7 @@ We collect verified documents through DigiLocker OAuth2 integration:
 - Payment method details (processed through Razorpay/Stripe)
 - Transaction history
 - Billing address
-- Payment preferences (Full Payment or 35% Advance Payment)
+- Payment preferences (Full Payment or 20% Advance Payment)
 
 2.5 Booking Information:
 - Car rental bookings
@@ -96,7 +96,7 @@ We collect verified documents through DigiLocker OAuth2 integration:
 - To manage guarantor relationships
 
 3.3 Payment Processing:
-- To process payments (Full Payment or 35% Advance Payment)
+- To process payments (Full Payment or 20% Advance Payment)
 - To handle refunds and cancellations
 - To manage security deposits
 - To process auto-debit of remaining amounts

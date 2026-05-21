@@ -443,7 +443,7 @@ const BookNowPage = () => {
     const finalPrice = Math.max(0, totalPrice - discount);
 
     // Payment options
-    const advancePayment = finalPrice * 0.35; // 35% advance (exact)
+    const advancePayment = finalPrice * 0.20; // 20% advance (exact)
     const remainingPayment = finalPrice - advancePayment;
 
     return {
@@ -1210,13 +1210,13 @@ const BookNowPage = () => {
                       className="font-bold text-sm mb-0.5"
                       style={{ color: colors.textPrimary }}
                     >
-                      35% Advance Payment
+                      20% Advance Payment
                     </div>
                     <div
                       className="text-xs"
                       style={{ color: colors.textSecondary }}
                     >
-                      Pay 35% now, rest later
+                      Pay 20% now, rest later
                     </div>
                   </div>
                   <div
@@ -1410,7 +1410,7 @@ const BookNowPage = () => {
                         opacity: 0.9,
                       }}
                     >
-                      <span>Advance Payment (35%)</span>
+                      <span>Advance Payment (20%)</span>
                       <span className="font-semibold">
                         Rs. {formatDecimal(priceDetails.advancePayment)}
                       </span>

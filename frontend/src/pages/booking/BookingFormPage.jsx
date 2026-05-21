@@ -64,8 +64,8 @@ const BookingFormPage = () => {
       basePrice,
       totalDays,
       totalPrice: Math.round(totalPrice),
-      advancePayment: Math.round(totalPrice * 0.35),
-      remainingPayment: Math.round(totalPrice * 0.65),
+      advancePayment: Math.round(totalPrice * 0.20),
+      remainingPayment: Math.round(totalPrice * 0.80),
     };
   };
 
@@ -349,8 +349,8 @@ const BookingFormPage = () => {
                       style={{ accentColor: theme.colors.primary }}
                     />
                     <div className="flex-1">
-                      <span className="font-medium text-sm md:text-base" style={{ color: theme.colors.textPrimary }}>35% Advance Payment</span>
-                      <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>Pay 35% now, rest later in office</p>
+                      <span className="font-medium text-sm md:text-base" style={{ color: theme.colors.textPrimary }}>20% Advance Payment</span>
+                      <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>Pay 20% now, rest later in office</p>
                     </div>
                   </label>
                 </div>
@@ -376,7 +376,7 @@ const BookingFormPage = () => {
                     {paymentOption === 'advance' && (
                       <>
                         <div className="flex justify-between font-semibold pt-2 md:pt-3 border-t text-base md:text-lg" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
-                          <span>Advance Payment (35%)</span>
+                          <span>Advance Payment (20%)</span>
                           <span>Rs. {priceDetails.advancePayment}</span>
                         </div>
                         <div className="flex justify-between text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>

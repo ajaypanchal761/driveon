@@ -222,7 +222,7 @@ const ActiveBookingPage = () => {
     // Payment Information
     addText('PAYMENT INFORMATION', margin, yPos, 12, true);
     yPos += lineHeight + 2;
-    addText(`Payment Type: ${booking.paymentType === 'advance' ? '35% Advance Payment' : 'Full Payment'}`, margin, yPos, 10);
+    addText(`Payment Type: ${booking.paymentType === 'advance' ? '20% Advance Payment' : 'Full Payment'}`, margin, yPos, 10);
     yPos += lineHeight;
     addText(`Payment Status: ${booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}`, margin, yPos, 10);
     yPos += lineHeight;
@@ -604,7 +604,7 @@ const ActiveBookingPage = () => {
                     : 'bg-blue-100 text-blue-800'
                 }`}
               >
-                {booking.paymentType === 'full' ? 'Full Payment' : '35% Advance Payment'}
+                {booking.paymentType === 'full' ? 'Full Payment' : '20% Advance Payment'}
               </span>
             </div>
             <div>

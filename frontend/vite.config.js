@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     host: true, // Listen on all network interfaces
     port: 5173, // Default Vite port
+    historyApiFallback: true, // SPA: refresh pe same page par rehna
   },
   resolve: {
     dedupe: ['react', 'react-dom', 'react-router-dom'],
