@@ -423,6 +423,37 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
           name: 'DriveOn Admin',
           description: `Fleet Booking: ${car.name}`,
           order_id: order.id,
+          method: {
+            upi: true,
+            netbanking: true,
+            card: true,
+            wallet: true,
+          },
+          webview_intent: true,
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'Pay via UPI',
+                  instruments: [
+                    { method: 'upi', flows: ['collect', 'intent', 'qr'] },
+                  ],
+                },
+                banks: {
+                  name: 'Other Payment Methods',
+                  instruments: [
+                    { method: 'card' },
+                    { method: 'netbanking' },
+                    { method: 'wallet' },
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.banks'],
+              preferences: {
+                show_default_blocks: false,
+              },
+            },
+          },
           handler: async function (response) {
             try {
               // 3. Verify Payment
@@ -452,19 +483,38 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
           },
           prefill: {
             name: customerName,
-            contact: car.ownerPhone || '', 
+            contact: car.ownerPhone || '',
           },
           theme: {
             color: '#3B82F6',
           },
+          retry: {
+            enabled: true,
+            max_count: 3,
+          },
+          timeout: 90,
           modal: {
-            ondismiss: function() {
+            ondismiss: function () {
               setSubmitting(false);
-            }
-          }
+            },
+            backdropclose: false,
+            escape: false,
+            animation: true,
+          },
         };
 
         const rzp = new window.Razorpay(options);
+
+        rzp.on('payment.failed', function (response) {
+          console.error('❌ Razorpay payment.failed:', response);
+          const errMsg =
+            response.error?.description ||
+            response.error?.reason ||
+            'Payment failed. Please try again.';
+          setError(errMsg);
+          setSubmitting(false);
+        });
+
         rzp.open();
 
       } else {
