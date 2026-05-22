@@ -1,7 +1,7 @@
 // Razorpay service for DriveOn frontend
 class RazorpayService {
   constructor() {
-    this.razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw';
+    this.razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SatrrxFwKXJX8e';
     this.apiUrl = import.meta.env.VITE_API_URL || '/api';
 
     // Log API URL for debugging

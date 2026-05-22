@@ -417,7 +417,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
 
         // 2. Open Razorpay Checkout
         const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw',
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SatrrxFwKXJX8e',
           amount: order.amount,
           currency: 'INR',
           name: 'DriveOn Admin',
