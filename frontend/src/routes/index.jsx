@@ -45,6 +45,7 @@ const ModuleSupportPage = lazy(() => import("../module/pages/ModuleSupportPage")
 const ModuleLoginPage = lazy(() => import("../module/pages/LoginPage"));
 const ModuleRegisterPage = lazy(() => import("../module/pages/RegisterPage"));
 const ModuleBookingsPage = lazy(() => import("../module/pages/BookingsPage"));
+const ModulePaymentCallbackPage = lazy(() => import("../module/pages/PaymentCallbackPage"));
 const ModuleBookNowPage = lazy(() => import("../module/pages/BookNowPage"));
 const ModuleWriteReviewPage = lazy(() => import("../module/pages/ModuleWriteReviewPage"));
 const ModuleFAQPage = lazy(() => import("../module/pages/FAQPage"));
@@ -480,6 +481,10 @@ const router = createBrowserRouter([
       {
         path: "/bookings",
         element: <ModuleBookingsPage />,
+      },
+      {
+        path: "/booking/payment-callback",
+        element: <ModulePaymentCallbackPage />,
       },
       {
         path: "/write-review/:bookingId",
