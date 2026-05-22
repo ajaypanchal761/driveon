@@ -153,29 +153,70 @@ const getMessagingInstance = () => {
 
 export const sendPushNotification = async (
     userId,
-    payload,
-    isMobile = false
+    payloadOrTitle,
+    bodyOrIsMobile = false,
+    dataOrUndefined = {},
+    isMobileOrUndefined = false
 ) => {
     try {
         const messaging = getMessagingInstance();
         if (!messaging) return;
 
-        const user = await User.findById(userId);
-        if (!user) {
-            console.log(`❌ User ${userId} not found for notification`);
-            return;
+        let payload = {};
+        let isMobile = false;
+
+        // Determine signature
+        if (typeof payloadOrTitle === 'object' && payloadOrTitle !== null) {
+            // New signature: sendPushNotification(userId, payload, isMobile)
+            payload = payloadOrTitle;
+            isMobile = !!bodyOrIsMobile;
+        } else {
+            // Old signature: sendPushNotification(userId, title, body, data, isMobile)
+            const title = payloadOrTitle;
+            const body = bodyOrIsMobile;
+            const data = dataOrUndefined || {};
+            isMobile = !!isMobileOrUndefined;
+
+            payload = {
+                notification: {
+                    title: title ? String(title) : '',
+                    body: body ? String(body) : '',
+                },
+                data: {},
+            };
+
+            // Ensure all data values are strings (FCM requirements)
+            if (data && typeof data === 'object') {
+                for (const [key, val] of Object.entries(data)) {
+                    payload.data[key] = String(val);
+                }
+            }
         }
 
-        const token = isMobile ? user.fcmTokenMobile : user.fcmToken;
+        // Handle case where userId is actually a direct FCM token
+        const isToken = typeof userId === 'string' && !/^[0-9a-fA-F]{24}$/.test(userId);
+
+        let token;
+        if (isToken) {
+            token = userId;
+            console.log(`ℹ️ sendPushNotification: First argument looks like an FCM token. Sending directly.`);
+        } else {
+            const user = await User.findById(userId);
+            if (!user) {
+                console.log(`❌ User ${userId} not found for notification`);
+                return;
+            }
+            token = isMobile ? user.fcmTokenMobile : user.fcmToken;
+        }
 
         if (!token) {
-            console.log(`⚠️ No ${isMobile ? 'Mobile' : 'Web'} FCM Token for user ${userId}`);
+            console.log(`⚠️ No ${isToken ? 'direct' : (isMobile ? 'Mobile' : 'Web')} FCM Token for user/token ${userId}`);
             return;
         }
 
         const message = {
             token,
-            ...payload, // ✅ VERY IMPORTANT FIX
+            ...payload,
         };
 
         console.log(
@@ -190,14 +231,18 @@ export const sendPushNotification = async (
         console.error('❌ Error sending notification:', error);
 
         if (error.code === 'messaging/registration-token-not-registered') {
-            const user = await User.findById(userId);
-            if (user) {
-                if (isMobile) user.fcmTokenMobile = null;
-                else user.fcmToken = null;
-                await user.save();
-                console.log(
-                    `🗑️ Invalid ${isMobile ? 'Mobile' : 'Web'} token removed for ${userId}`
-                );
+            const isToken = typeof userId === 'string' && !/^[0-9a-fA-F]{24}$/.test(userId);
+            if (!isToken) {
+                const user = await User.findById(userId);
+                if (user) {
+                    const isMobile = typeof payloadOrTitle === 'object' ? !!bodyOrIsMobile : !!isMobileOrUndefined;
+                    if (isMobile) user.fcmTokenMobile = null;
+                    else user.fcmToken = null;
+                    await user.save();
+                    console.log(
+                        `🗑️ Invalid ${isMobile ? 'Mobile' : 'Web'} token removed for ${userId}`
+                    );
+                }
             }
         }
         throw error;
@@ -205,7 +250,12 @@ export const sendPushNotification = async (
 };
 
 
-export const sendPushToToken = async (token, payload) => {
+export const sendPushToToken = async (
+    token,
+    payloadOrTitle,
+    body = null,
+    data = {}
+) => {
     try {
         const messaging = getMessagingInstance();
         if (!messaging) return;
@@ -215,9 +265,27 @@ export const sendPushToToken = async (token, payload) => {
             return;
         }
 
+        let payload = {};
+        if (typeof payloadOrTitle === 'object' && payloadOrTitle !== null) {
+            payload = payloadOrTitle;
+        } else {
+            payload = {
+                notification: {
+                    title: payloadOrTitle ? String(payloadOrTitle) : '',
+                    body: body ? String(body) : '',
+                },
+                data: {},
+            };
+            if (data && typeof data === 'object') {
+                for (const [key, val] of Object.entries(data)) {
+                    payload.data[key] = String(val);
+                }
+            }
+        }
+
         const message = {
             token,
-            ...payload, // ✅ VERY IMPORTANT FIX
+            ...payload,
         };
 
         console.log(

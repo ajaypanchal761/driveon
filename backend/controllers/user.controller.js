@@ -29,7 +29,7 @@ export const sendReturningNotification = async (req, res) => {
       const title = "Returning Soon ⏳";
       const body = `Your ${carName} is returning in less than 2 hours. Please be on time!`;
 
-      await sendPushNotification(user.fcmToken, title, body, {
+      await sendPushNotification(user._id, title, body, {
         type: 'returning_soon',
         bookingId: booking._id.toString(),
         click_action: 'FLUTTER_NOTIFICATION_CLICK'
