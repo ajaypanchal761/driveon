@@ -2,7 +2,7 @@
 class RazorpayService {
   constructor() {
     this.razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SatrrxFwKXJX8e';
-    this.apiUrl = import.meta.env.VITE_API_URL || '/api';
+    this.apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api';
 
     // Log API URL for debugging
     console.log('🔧 RazorpayService initialized:', {
@@ -240,7 +240,10 @@ class RazorpayService {
       console.log('✅ Payment order created:', order.orderId || order.id);
 
       // Build callback URL for redirect mode (WebView/APK)
-      const apiBase = this.apiUrl;
+      let apiBase = this.apiUrl;
+      if (apiBase.startsWith('/')) {
+        apiBase = window.location.origin + apiBase;
+      }
       const callbackUrl = useRedirectMode
         ? `${apiBase}/payments/razorpay/callback`
         : undefined;
@@ -500,7 +503,10 @@ class RazorpayService {
       });
 
       // Build callback URL for redirect mode
-      const apiBase = this.apiUrl;
+      let apiBase = this.apiUrl;
+      if (apiBase.startsWith('/')) {
+        apiBase = window.location.origin + apiBase;
+      }
       const callbackUrl = useRedirectMode
         ? `${apiBase}/payments/razorpay/callback?source=crm_salary`
         : undefined;
