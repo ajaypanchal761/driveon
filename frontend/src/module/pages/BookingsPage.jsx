@@ -687,7 +687,7 @@ const BookingsPage = () => {
       style={{ backgroundColor: colors.backgroundPrimary }}
     >
       {/* Header */}
-      <SearchHeader title="Bookings" />
+      <SearchHeader title="Bookings" backRoute="/" />
 
       {/* Web container - max-width and centered on larger screens */}
       <div className="max-w-6xl mx-auto">

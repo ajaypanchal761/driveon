@@ -114,7 +114,7 @@ const ModuleFavoritesPage = () => {
         ----------------------------------------------------
       */}
       <div className="md:hidden">
-        <SearchHeader title="My Favorites" />
+        <SearchHeader title="My Favorites" backRoute="/" />
       </div>
 
       {/* 

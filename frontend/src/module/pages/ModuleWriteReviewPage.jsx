@@ -134,7 +134,7 @@ const ModuleWriteReviewPage = () => {
       style={{ backgroundColor: colors.backgroundPrimary }}
     >
       {/* Header */}
-      <SearchHeader title="Write Review" />
+      <SearchHeader title="Write Review" backRoute="/bookings" />
 
       {/* Web container - max-width and centered on larger screens */}
       <div className="max-w-3xl mx-auto">

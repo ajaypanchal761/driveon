@@ -5,8 +5,23 @@ import { colors } from '../../theme/colors';
  * SearchHeader Component - Exact match to design
  * Header with back arrow, title text, and menu icon
  */
-const SearchHeader = ({ title = 'Search' }) => {
+const SearchHeader = ({ title = 'Search', onBack, backRoute }) => {
   const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (backRoute) {
+      navigate(backRoute);
+    } else {
+      // If there is back history, go back. Otherwise go to Home.
+      if (window.history.state && window.history.state.idx > 0) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
+    }
+  };
 
   return (
     <header 
@@ -75,7 +90,7 @@ const SearchHeader = ({ title = 'Search' }) => {
       <div className="relative z-10 px-4 md:px-6 lg:px-8 py-3 md:py-4 lg:py-5 flex items-center justify-between max-w-7xl mx-auto">
         {/* Back Arrow - Circular Button */}
         <button 
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center md:shadow-md"
           style={{ 
             border: `1px solid ${colors.borderForm}`,
