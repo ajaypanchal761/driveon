@@ -43,9 +43,10 @@ const CouponManagementPage = () => {
     validityEnd: '',
     usageLimit: '',
     usedCount: 0,
-    applicableTo: 'car_id', // car_id, user_id
+    applicableTo: 'car_id', // car_id, user_id, all
     carIds: [], // Array of car IDs for multi-select
     userId: '',
+    validDays: [], // Days of week coupon is valid (empty = all days)
     isActive: true,
     description: '',
   });
@@ -144,6 +145,7 @@ const CouponManagementPage = () => {
       applicableTo: 'car_id',
       carIds: [],
       userId: '',
+      validDays: [],
       isActive: true,
       description: '',
     });
@@ -181,6 +183,7 @@ const CouponManagementPage = () => {
       applicableTo: coupon.applicableTo || 'car_id',
       carIds: carIds,
       userId: coupon.userId?._id || coupon.userId || '',
+      validDays: coupon.validDays || [],
       isActive: coupon.isActive !== undefined ? coupon.isActive : true,
       description: coupon.description || '',
     });
@@ -196,11 +199,7 @@ const CouponManagementPage = () => {
         return;
       }
 
-      // Validate car selection if applicableTo is car_id
-      if (couponForm.applicableTo === 'car_id' && (!couponForm.carIds || couponForm.carIds.length === 0)) {
-        toastUtils.error('Please select at least one car');
-        return;
-      }
+      // Car selection is optional - if applicableTo is car_id but no cars selected, coupon applies to all cars
 
       // Prepare data with proper types
       const couponData = {
@@ -215,6 +214,7 @@ const CouponManagementPage = () => {
         applicableTo: couponForm.applicableTo,
         isActive: couponForm.isActive,
         description: couponForm.description || '',
+        validDays: couponForm.validDays.length > 0 ? couponForm.validDays : [], // Empty = all days
       };
 
       // Add carIds or userId based on applicableTo
@@ -728,12 +728,43 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
             />
           </div>
 
+          {/* Valid Days Selection (Optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Valid Days (Optional - leave empty for all days)</label>
+            <div className="flex flex-wrap gap-2">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+                const isSelected = couponForm.validDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setCouponForm({ ...couponForm, validDays: couponForm.validDays.filter(d => d !== day) });
+                      } else {
+                        setCouponForm({ ...couponForm, validDays: [...couponForm.validDays, day] });
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${isSelected ? 'text-white border-purple-600' : 'text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                    style={isSelected ? { backgroundColor: colors.backgroundTertiary, borderColor: colors.backgroundTertiary } : {}}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+            {couponForm.validDays.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">{couponForm.validDays.length} day(s) selected</p>
+            )}
+          </div>
+
           <div>
             <AdminCustomSelect
               label="Applicable To *"
               value={couponForm.applicableTo}
-              onChange={(value) => setCouponForm({ ...couponForm, applicableTo: value })}
+              onChange={(value) => setCouponForm({ ...couponForm, applicableTo: value, carIds: [] })}
               options={[
+                { value: 'all', label: 'All Cars' },
                 { value: 'car_id', label: 'Specific Car' },
                 { value: 'user_id', label: 'Specific User' },
               ]}
@@ -742,7 +773,7 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
 
           {couponForm.applicableTo === 'car_id' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Cars *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Cars (Optional)</label>
               {loadingCars ? (
                 <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.backgroundTertiary }}></div>
@@ -754,6 +785,25 @@ const CouponModal = ({ couponForm, setCouponForm, onClose, onSave, cars = [], lo
                     <p className="text-sm text-gray-500 text-center py-4">No cars available</p>
                   ) : (
                     <div className="space-y-2">
+                      {/* Select All Checkbox */}
+                      <label className="flex items-center gap-2 p-2 bg-gray-50 rounded cursor-pointer border-b border-gray-200 mb-1">
+                        <input
+                          type="checkbox"
+                          checked={couponForm.carIds.length === cars.length && cars.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setCouponForm({
+                                ...couponForm,
+                                carIds: cars.map(car => car._id || car.id),
+                              });
+                            } else {
+                              setCouponForm({ ...couponForm, carIds: [] });
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="text-sm font-bold text-gray-800">Select All ({cars.length})</span>
+                      </label>
                       {cars.map((car) => {
                         const carId = car._id || car.id;
                         const isSelected = couponForm.carIds.includes(carId);

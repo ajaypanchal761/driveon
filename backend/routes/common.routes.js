@@ -8,7 +8,7 @@ import {
   getReturningCars,
   getCarSpecificCoupons,
 } from '../controllers/common.controller.js';
-import { getAddOnServicesPrices } from '../controllers/addonServices.controller.js';
+import { getAddOnServicesPrices, getCustomAddOnServices } from '../controllers/addonServices.controller.js';
 
 const router = express.Router();
 
@@ -19,6 +19,7 @@ router.get('/banners/overlay', getBannerOverlay);
 router.get('/faqs', getFAQs);
 router.get('/places/search', searchPlaces);
 router.get('/addon-services/prices', getAddOnServicesPrices);
+router.get('/addon-services/custom', getCustomAddOnServices);
 router.get('/returning-cars', getReturningCars);
 router.get('/coupons/car-specific', getCarSpecificCoupons);
 

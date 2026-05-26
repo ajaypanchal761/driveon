@@ -174,6 +174,7 @@ export const adminService = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 120000, // 2 minutes for image uploads
       });
       return response.data;
     } catch (error) {

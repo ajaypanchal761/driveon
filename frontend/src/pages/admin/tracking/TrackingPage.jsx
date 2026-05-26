@@ -404,7 +404,7 @@ const TrackingPage = () => {
                 Location & Tracking
               </h1>
               <p className="text-sm md:text-base text-gray-600">
-                Track live locations of users and guarantors
+                Track live locations of users
                 {isConnected && (
                   <span className="ml-2 inline-flex items-center">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></span>
@@ -436,16 +436,6 @@ const TrackingPage = () => {
                 >
                   Users
                 </button>
-                <button
-                  onClick={() => setFilterType('guarantor')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${filterType === 'guarantor'
-                    ? 'text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  style={filterType === 'guarantor' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  Guarantors
-                </button>
               </div>
             </div>
           </div>
@@ -462,10 +452,6 @@ const TrackingPage = () => {
           <Card className="p-4 text-center">
             <div className="text-2xl md:text-3xl font-bold mb-1 text-blue-600">{stats.users}</div>
             <div className="text-xs md:text-sm text-gray-600">Users</div>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1 text-red-600">{stats.guarantors}</div>
-            <div className="text-xs md:text-sm text-gray-600">Guarantors</div>
           </Card>
           <Card className="p-4 text-center">
             <div className="text-2xl md:text-3xl font-bold mb-1 text-green-600">{stats.active}</div>

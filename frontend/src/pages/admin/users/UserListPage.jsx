@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
@@ -56,12 +56,14 @@ const formatUserId = (userId) => {
  */
 const UserListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const urlParams = new URLSearchParams(location.search);
 
   // State management
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDetail, setShowUserDetail] = useState(false);
 
@@ -82,6 +84,13 @@ const UserListPage = () => {
         console.log("Admin Notification:", payload);
       })
       .catch((err) => console.log("failed: ", err));
+  }, []);
+
+  // Listen for global search events from header
+  useEffect(() => {
+    const handleGlobalSearch = (e) => setSearchQuery(e.detail);
+    window.addEventListener('admin-global-search', handleGlobalSearch);
+    return () => window.removeEventListener('admin-global-search', handleGlobalSearch);
   }, []);
 
   // Fetch users from API
@@ -186,8 +195,67 @@ const UserListPage = () => {
   };
 
   const handleExport = () => {
-    // In real app, this would generate and download CSV/Excel
-    console.log('Exporting users data...');
+    if (!users || users.length === 0) {
+      alert('No users available to export.');
+      return;
+    }
+
+    const escapeCsvValue = (value) => {
+      if (value === null || value === undefined) return '';
+      const stringValue = String(value);
+      if (/[",\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const headers = [
+      'Name',
+      'Email',
+      'Phone',
+      'Age',
+      'Gender',
+      'Address',
+      'Account Status',
+      'KYC Status',
+      'Profile Complete (%)',
+      'Referral Code',
+      'Registered At',
+      'Last Login',
+    ];
+
+    const rows = users.map((user) => [
+      user.name || user.fullName || '',
+      user.email || '',
+      user.phone || '',
+      user.age || '',
+      user.gender || '',
+      user.address || '',
+      user.isActive === false ? 'Suspended' : (user.isBanned ? 'Banned' : 'Active'),
+      user.isKYCVerified ? 'Verified' : 'Pending',
+      user.profileComplete || 0,
+      user.referralCode || '',
+      user.createdAt ? new Date(user.createdAt).toLocaleString() : '',
+      user.lastLogin ? new Date(user.lastLogin).toLocaleString() : '',
+    ]);
+
+    const csvLines = [
+      headers.map(escapeCsvValue).join(','),
+      ...rows.map((row) => row.map(escapeCsvValue).join(',')),
+    ];
+
+    const csvContent = csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    link.download = `users-export-${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Get status badge color
@@ -238,13 +306,6 @@ const UserListPage = () => {
               </h1>
               <p className="text-xs md:text-sm" style={{ color: colors.textSecondary }}>Manage all users and their accounts</p>
             </div>
-            <button
-              onClick={handleExport}
-              className="px-3 py-1.5 text-sm rounded-lg text-white font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: colors.backgroundTertiary }}
-            >
-              Export Data
-            </button>
           </div>
         </div>
 

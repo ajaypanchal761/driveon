@@ -17,6 +17,9 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
   const [model, setModel] = useState('');
   const [location, setLocation] = useState('');
   const [pricePerDay, setPricePerDay] = useState('');
+  const [carNumber, setCarNumber] = useState('');
+  const [carImages, setCarImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,6 +32,9 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
     setModel('');
     setLocation('');
     setPricePerDay('');
+    setCarNumber('');
+    setCarImages([]);
+    setImagePreviews([]);
     setSubmitting(false);
     setError('');
   }, [open]);
@@ -73,6 +79,8 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
         type: FLEET_CAR_TYPES.OUTWARD,
         ownerName: ownerName.trim(),
         ownerPhone: ownerPhone.trim(),
+        carNumber: carNumber.trim().toUpperCase(),
+        carImages: carImages,
         createdAt: new Date().toISOString(),
       };
       await onCreate(car);
@@ -149,10 +157,17 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
               </label>
               <input
                 value={ownerPhone}
-                onChange={(e) => setOwnerPhone(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setOwnerPhone(value);
+                }}
+                type="tel"
+                maxLength={10}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
                 className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
-                placeholder="Enter phone number"
+                placeholder="Enter 10-digit phone number"
               />
             </div>
 
@@ -221,6 +236,89 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
                 placeholder="e.g. 1200"
               />
+            </div>
+
+            {/* Car Registration Number */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium" style={{ color: colors.textPrimary }}>
+                Car Number (Registration) <span style={{ color: colors.accentRed }}>*</span>
+              </label>
+              <input
+                value={carNumber}
+                onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
+                className="mt-1 w-full rounded-lg border px-3 py-2 outline-none uppercase"
+                style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                placeholder="e.g. MP09AB1234"
+              />
+            </div>
+
+            {/* Car Images */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+                Car Images (Front & Back)
+              </label>
+              <div className="flex gap-3 flex-wrap">
+                {/* Camera Capture */}
+                <label className="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer hover:bg-gray-50" style={{ borderColor: colors.borderMedium }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>Capture</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setCarImages(prev => [...prev, file]);
+                        const reader = new FileReader();
+                        reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result]);
+                        reader.readAsDataURL(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {/* File Upload */}
+                <label className="flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer hover:bg-gray-50" style={{ borderColor: colors.borderMedium }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>Upload File</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files);
+                      setCarImages(prev => [...prev, ...files]);
+                      files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result]);
+                        reader.readAsDataURL(file);
+                      });
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {imagePreviews.length > 0 && (
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {imagePreviews.map((preview, idx) => (
+                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border" style={{ borderColor: colors.borderMedium }}>
+                      <img src={preview} alt={`Car ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCarImages(prev => prev.filter((_, i) => i !== idx));
+                          setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>Capture front & back of car using camera or upload files</p>
             </div>
           </div>
 

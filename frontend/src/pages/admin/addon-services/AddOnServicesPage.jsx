@@ -3,12 +3,8 @@ import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import toastUtils from '../../../config/toast';
 import { adminService } from '../../../services/admin.service';
+import api from '../../../services/api';
 
-/**
- * Add-on Services Management Page
- * Admin can edit prices for add-on services (Driver, Bodyguard, Gun men, Bouncer)
- * Prices are stored in localStorage (frontend only)
- */
 const AddOnServicesPage = () => {
   const [prices, setPrices] = useState({
     driver: 500,
@@ -18,146 +14,153 @@ const AddOnServicesPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [customServices, setCustomServices] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', address: '', pricePerUnit: '' });
 
-  // Service definitions
+  // Fixed services
   const services = [
-    {
-      key: 'driver',
-      name: 'Driver',
-      description: 'Professional driver service',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
-    {
-      key: 'bodyguard',
-      name: 'Bodyguard',
-      description: 'Security personnel',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-    {
-      key: 'gunmen',
-      name: 'Gun men',
-      description: 'Armed security personnel',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-    {
-      key: 'bouncer',
-      name: 'Bouncer',
-      description: 'Event security personnel',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
+    { key: 'driver', name: 'Driver', description: 'Professional driver service' },
+    { key: 'bodyguard', name: 'Bodyguard', description: 'Security personnel' },
+    { key: 'gunmen', name: 'Gun men', description: 'Armed security personnel' },
+    { key: 'bouncer', name: 'Bouncer', description: 'Event security personnel' },
   ];
 
-  // Load prices from API on mount
   useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        setLoading(true);
-        const response = await adminService.getAddOnServicesPrices();
-        if (response.success && response.data) {
-          setPrices({
-            driver: response.data.driver || 500,
-            bodyguard: response.data.bodyguard || 1000,
-            gunmen: response.data.gunmen || 1500,
-            bouncer: response.data.bouncer || 800,
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching add-on services prices:', error);
-        toastUtils.error('Failed to load prices');
-        // Fallback to default prices
-        setPrices({
-          driver: 500,
-          bodyguard: 1000,
-          gunmen: 1500,
-          bouncer: 800,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPrices();
+    fetchCustomServices();
   }, []);
 
-  // Handle price change
-  const handlePriceChange = (serviceKey, value) => {
-    const numValue = parseFloat(value) || 0;
-    setPrices((prev) => ({
-      ...prev,
-      [serviceKey]: numValue,
-    }));
-    setHasChanges(true);
-  };
-
-  // Save all prices
-  const handleSave = async () => {
+  const fetchPrices = async () => {
     try {
       setLoading(true);
-      const response = await adminService.updateAddOnServicesPrices(prices);
-      if (response.success) {
-        toastUtils.success('Add-on services prices updated successfully!');
-        setHasChanges(false);
-        // Update local state with response data
-        if (response.data) {
-          setPrices({
-            driver: response.data.driver || prices.driver,
-            bodyguard: response.data.bodyguard || prices.bodyguard,
-            gunmen: response.data.gunmen || prices.gunmen,
-            bouncer: response.data.bouncer || prices.bouncer,
-          });
-        }
-      } else {
-        toastUtils.error(response.message || 'Failed to save prices');
+      const response = await adminService.getAddOnServicesPrices();
+      if (response.success && response.data) {
+        setPrices({
+          driver: response.data.driver || 500,
+          bodyguard: response.data.bodyguard || 1000,
+          gunmen: response.data.gunmen || 1500,
+          bouncer: response.data.bouncer || 800,
+        });
       }
     } catch (error) {
-      console.error('Error saving prices:', error);
-      toastUtils.error(error.response?.data?.message || 'Failed to save prices');
+      console.error('Error fetching prices:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Reset to defaults
-  const handleReset = async () => {
-    if (window.confirm('Are you sure you want to reset all prices to default values?')) {
-      try {
-        setLoading(true);
-        const defaultPrices = {
-          driver: 500,
-          bodyguard: 1000,
-          gunmen: 1500,
-          bouncer: 800,
-        };
-        const response = await adminService.updateAddOnServicesPrices(defaultPrices);
-        if (response.success) {
-          setPrices(defaultPrices);
-          toastUtils.success('Prices reset to default values');
-          setHasChanges(false);
-        } else {
-          toastUtils.error(response.message || 'Failed to reset prices');
-        }
-      } catch (error) {
-        console.error('Error resetting prices:', error);
-        toastUtils.error(error.response?.data?.message || 'Failed to reset prices');
-      } finally {
-        setLoading(false);
+  const fetchCustomServices = async () => {
+    try {
+      const response = await api.get('/admin/addon-services/custom');
+      if (response.data.success) {
+        setCustomServices(response.data.data.services);
       }
+    } catch (error) {
+      console.error('Error fetching custom services:', error);
+    }
+  };
+
+  const handlePriceChange = (serviceKey, value) => {
+    setPrices(prev => ({ ...prev, [serviceKey]: parseFloat(value) || 0 }));
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const response = await adminService.updateAddOnServicesPrices(prices);
+      if (response.success) {
+        toastUtils.success('Prices updated successfully!');
+        setHasChanges(false);
+      }
+    } catch (error) {
+      toastUtils.error('Failed to save prices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!window.confirm('Reset all prices to default?')) return;
+    const defaultPrices = { driver: 500, bodyguard: 1000, gunmen: 1500, bouncer: 800 };
+    try {
+      await adminService.updateAddOnServicesPrices(defaultPrices);
+      setPrices(defaultPrices);
+      setHasChanges(false);
+      toastUtils.success('Prices reset to default');
+    } catch (error) {
+      toastUtils.error('Failed to reset');
+    }
+  };
+
+  // Custom service CRUD
+  const openAddModal = () => {
+    setEditingService(null);
+    setFormData({ name: '', phone: '', email: '', address: '', pricePerUnit: '' });
+    setShowModal(true);
+  };
+
+  const openEditModal = (service) => {
+    setEditingService(service);
+    setFormData({
+      name: service.name,
+      phone: service.phone || '',
+      email: service.email || '',
+      address: service.address || '',
+      pricePerUnit: service.pricePerUnit,
+    });
+    setShowModal(true);
+  };
+
+  const handleSaveService = async () => {
+    if (!formData.name.trim()) {
+      toastUtils.error('Service Name is required');
+      return;
+    }
+    if (!formData.phone || formData.phone.length !== 10) {
+      toastUtils.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toastUtils.error('Please enter a valid email address');
+      return;
+    }
+    if (!formData.pricePerUnit || parseFloat(formData.pricePerUnit) <= 0) {
+      toastUtils.error('Price Per Unit is required');
+      return;
+    }
+
+    try {
+      if (editingService) {
+        const res = await api.put(`/admin/addon-services/custom/${editingService._id}`, formData);
+        if (res.data.success) {
+          toastUtils.success('Service updated');
+          fetchCustomServices();
+        }
+      } else {
+        const res = await api.post('/admin/addon-services/custom', formData);
+        if (res.data.success) {
+          toastUtils.success('Service added');
+          fetchCustomServices();
+        }
+      }
+      setShowModal(false);
+    } catch (error) {
+      toastUtils.error('Failed to save service');
+    }
+  };
+
+  const handleDeleteService = async (id) => {
+    try {
+      const res = await api.delete(`/admin/addon-services/custom/${id}`);
+      if (res.data.success) {
+        setCustomServices(prev => prev.filter(s => s._id !== id));
+        toastUtils.success('Service deleted');
+      }
+    } catch (error) {
+      toastUtils.error('Failed to delete');
     }
   };
 
@@ -165,115 +168,116 @@ const AddOnServicesPage = () => {
     <div className="min-h-screen" style={{ backgroundColor: colors.backgroundPrimary }}>
       <div className="container mx-auto px-4 pt-24 pb-8 lg:py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2" style={{ color: colors.textPrimary }}>
-            Add-on Services Management
-          </h1>
-          <p className="text-sm" style={{ color: colors.textSecondary }}>
-            Manage prices for add-on services that appear in booking forms
-          </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-1" style={{ color: colors.textPrimary }}>Add-on Services Management</h1>
+            <p className="text-sm" style={{ color: colors.textSecondary }}>Manage prices for add-on services that appear in booking forms</p>
+          </div>
+          <button
+            onClick={openAddModal}
+            className="px-5 py-2.5 rounded-lg text-white font-bold text-sm"
+            style={{ backgroundColor: colors.backgroundTertiary }}
+          >
+            + Add Service
+          </button>
         </div>
 
-        {/* Services List */}
-        <Card className="p-6">
+        {/* Fixed Services */}
+        <Card className="p-6 mb-6">
+          <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Default Services</h2>
           <div className="space-y-4">
             {services.map((service) => (
-              <div
-                key={service.key}
-                className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg border-2 gap-4 md:gap-0"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center gap-4 flex-1 w-full md:w-auto">
-                  <div
-                    className="w-12 h-12 rounded-lg flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${colors.backgroundTertiary}15`,
-                      color: colors.backgroundTertiary,
-                    }}
-                  >
-                    {service.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-semibold mb-1" style={{ color: colors.textPrimary }}>
-                      {service.name}
-                    </h3>
-                    <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      {service.description}
-                    </p>
-                  </div>
+              <div key={service.key} className="flex items-center justify-between p-4 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                <div>
+                  <h3 className="text-base font-semibold" style={{ color: colors.textPrimary }}>{service.name}</h3>
+                  <p className="text-sm" style={{ color: colors.textSecondary }}>{service.description}</p>
                 </div>
-                <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
-                  <div className="flex items-center gap-2 flex-1 md:flex-none">
-                    <span className="text-sm font-medium" style={{ color: colors.textSecondary }}>
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="10"
-                      value={prices[service.key]}
-                      onChange={(e) => handlePriceChange(service.key, e.target.value)}
-                      className="w-full md:w-32 px-3 py-2 rounded-lg border-2 text-base font-semibold"
-                      style={{
-                        borderColor: colors.borderMedium,
-                        backgroundColor: colors.backgroundPrimary,
-                        color: colors.textPrimary,
-                      }}
-                    />
-                  </div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    per unit
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium" style={{ color: colors.textSecondary }}>₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={prices[service.key]}
+                    onChange={(e) => handlePriceChange(service.key, e.target.value)}
+                    className="w-28 px-3 py-2 rounded-lg border-2 text-base font-semibold"
+                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                  />
+                  <span className="text-sm" style={{ color: colors.textSecondary }}>per unit</span>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-4 mt-6 pt-6 border-t" style={{ borderColor: colors.borderMedium }}>
-            <button
-              onClick={handleReset}
-              className="px-6 py-2 rounded-lg font-medium transition-colors"
-              style={{
-                backgroundColor: colors.backgroundLight,
-                color: colors.textPrimary,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.borderMedium;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = colors.backgroundLight;
-              }}
-            >
-              Reset to Default
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={loading || !hasChanges}
-              className="px-6 py-2 rounded-lg font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: hasChanges ? colors.backgroundTertiary : colors.borderMedium,
-              }}
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: colors.borderMedium }}>
+            <button onClick={handleReset} className="px-5 py-2 rounded-lg font-medium border" style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}>Reset to Default</button>
+            <button onClick={handleSave} disabled={!hasChanges || loading} className="px-5 py-2 rounded-lg font-medium text-white disabled:opacity-50" style={{ backgroundColor: colors.backgroundTertiary }}>{loading ? 'Saving...' : 'Save Changes'}</button>
           </div>
         </Card>
 
-        {/* Info Note */}
-        <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-          <p className="text-sm" style={{ color: colors.textSecondary }}>
-            <strong style={{ color: colors.textPrimary }}>Note:</strong> These prices will be displayed
-            dynamically in all booking forms. The total price will be calculated as: Quantity × Price per unit.
-          </p>
-        </div>
+        {/* Custom Services */}
+        <Card className="p-6">
+          <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Custom Services ({customServices.length})</h2>
+          {customServices.length === 0 ? (
+            <p className="text-sm text-center py-8" style={{ color: colors.textSecondary }}>No custom services added yet. Click "Add Service" to create one.</p>
+          ) : (
+            <div className="space-y-3">
+              {customServices.map((service) => (
+                <div key={service._id} className="flex items-center justify-between p-4 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold" style={{ color: colors.textPrimary }}>{service.name}</h3>
+                    <div className="flex flex-wrap gap-3 mt-1">
+                      {service.phone && <span className="text-xs" style={{ color: colors.textSecondary }}>📞 {service.phone}</span>}
+                      {service.email && <span className="text-xs" style={{ color: colors.textSecondary }}>✉️ {service.email}</span>}
+                      {service.address && <span className="text-xs" style={{ color: colors.textSecondary }}>📍 {service.address}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-base font-bold" style={{ color: colors.backgroundTertiary }}>₹{service.pricePerUnit}/unit</span>
+                    <button onClick={() => openEditModal(service)} className="px-3 py-1.5 rounded-lg text-xs font-bold border" style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}>Edit</button>
+                    <button onClick={() => handleDeleteService(service._id)} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-50 text-red-600 border border-red-200">Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
+
+      {/* Add/Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4" style={{ color: colors.textPrimary }}>{editingService ? 'Edit Service' : 'Add New Service'}</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Service Name *</label>
+                <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Personal Driver" className="w-full px-3 py-2 border-2 rounded-lg text-sm" style={{ borderColor: colors.borderMedium }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Phone Number *</label>
+                <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10-digit phone" maxLength={10} className="w-full px-3 py-2 border-2 rounded-lg text-sm" style={{ borderColor: colors.borderMedium }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Email *</label>
+                <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@example.com" className="w-full px-3 py-2 border-2 rounded-lg text-sm" style={{ borderColor: colors.borderMedium }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Address</label>
+                <input type="text" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="Service address" className="w-full px-3 py-2 border-2 rounded-lg text-sm" style={{ borderColor: colors.borderMedium }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.textPrimary }}>Price Per Unit (₹) *</label>
+                <input type="number" min="0" value={formData.pricePerUnit} onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })} placeholder="e.g., 500" className="w-full px-3 py-2 border-2 rounded-lg text-sm" style={{ borderColor: colors.borderMedium }} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-lg font-medium border" style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}>Cancel</button>
+                <button onClick={handleSaveService} className="flex-1 py-2.5 rounded-lg font-bold text-white" style={{ backgroundColor: colors.backgroundTertiary }}>{editingService ? 'Update' : 'Add Service'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default AddOnServicesPage;
-

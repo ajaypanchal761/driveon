@@ -4,6 +4,7 @@ import { colors } from '../theme/colors';
 import SearchHeader from '../components/layout/SearchHeader';
 import BottomNavbar from '../components/layout/BottomNavbar';
 import toastUtils from '../../config/toast';
+import reviewService from '../../services/review.service';
 
 /**
  * ModuleWriteReviewPage Component
@@ -98,21 +99,16 @@ const ModuleWriteReviewPage = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Call API to submit review
-      // await reviewService.submitReview({
-      //   bookingId: booking?.id || bookingId,
-      //   tripRating,
-      //   comment: comment.trim(),
-      // });
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await reviewService.submitReview(booking?.id || booking?._id || bookingId, {
+        rating: tripRating,
+        comment: comment.trim(),
+      });
 
       toastUtils.success('Review submitted successfully!');
       navigate('/bookings', { replace: true });
     } catch (error) {
       console.error('Error submitting review:', error);
-      toastUtils.error('Failed to submit review. Please try again.');
+      toastUtils.error(error.response?.data?.message || 'Failed to submit review. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
