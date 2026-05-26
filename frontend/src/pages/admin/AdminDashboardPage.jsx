@@ -232,7 +232,7 @@ const AdminDashboardPage = () => {
             >
               <div className="flex gap-3">
                 {/* Left Column: Icon and Title */}
-                <div className="flex flex-col gap-2 flex-shrink-0">
+                <div className="flex flex-col gap-2 flex-1 min-w-0">
                   <div style={{ color: stat.color }}>
                     {stat.icon}
                   </div>
@@ -242,7 +242,7 @@ const AdminDashboardPage = () => {
                 </div>
 
                 {/* Right Column: Number and Status */}
-                <div className="flex flex-col items-end justify-between flex-1 min-w-0">
+                <div className="flex flex-col items-end justify-between flex-shrink-0">
                   <div className="text-lg md:text-xl font-bold text-right" style={{ color: stat.color }}>
                     {stat.value}
                   </div>
