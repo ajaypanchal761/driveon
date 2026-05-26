@@ -120,7 +120,7 @@ const AttendancePage = () => {
   return (
     <div className="min-h-screen bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100 flex flex-col">
 
-      <div className="sticky top-0 z-30">
+      <div className="relative z-30">
         {/* HEADER BACKGROUND - REDUCED HEIGHT */}
         <div className="bg-[#1C205C] h-64 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>

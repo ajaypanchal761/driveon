@@ -238,13 +238,6 @@ const UserListPage = () => {
               </h1>
               <p className="text-xs md:text-sm" style={{ color: colors.textSecondary }}>Manage all users and their accounts</p>
             </div>
-            <button
-              onClick={handleExport}
-              className="px-3 py-1.5 text-sm rounded-lg text-white font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: colors.backgroundTertiary }}
-            >
-              Export Data
-            </button>
           </div>
         </div>
 
@@ -490,10 +483,18 @@ const UserListPage = () => {
 const UserDetailModal = ({ user, onClose, onAction }) => {
   const [activeTab, setActiveTab] = useState('profile');
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   if (!user) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}

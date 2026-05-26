@@ -41,6 +41,18 @@ const GuarantorListPage = () => {
     linkedUser: 'all', // all or specific user
   });
 
+  // Prevent body scroll when any modal is open
+  useEffect(() => {
+    if (showGuarantorDetail || showAddGuarantorModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showGuarantorDetail, showAddGuarantorModal]);
+
   // Load guarantor data from both bookings and guarantor requests
   useEffect(() => {
     const fetchGuarantors = async () => {
@@ -860,7 +872,7 @@ const GuarantorListPage = () => {
 
       {/* Add Guarantor Modal */}
       {showAddGuarantorModal && selectedBookingForGuarantor && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAddGuarantorModal(false)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAddGuarantorModal(false)}>
           <div
             className="bg-white rounded-lg max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
@@ -953,7 +965,7 @@ const GuarantorDetailModal = ({ guarantor, onClose, onVerify, onReject, onRemove
   if (!guarantor) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}

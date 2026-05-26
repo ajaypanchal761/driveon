@@ -6,7 +6,7 @@ import { FLEET_CAR_TYPES } from '../constants/fleetConstants';
 const isValidPhone = (value) => {
   if (!value) return false;
   const digits = String(value).replace(/\D/g, '');
-  return digits.length >= 8;
+  return digits.length === 10;
 };
 
 const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
@@ -148,12 +148,21 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
                 Owner Number <span style={{ color: colors.accentRed }}>*</span>
               </label>
               <input
+                type="tel"
                 value={ownerPhone}
-                onChange={(e) => setOwnerPhone(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setOwnerPhone(val);
+                }}
                 className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
-                placeholder="Enter phone number"
+                placeholder="Enter 10-digit phone number"
               />
+              {ownerPhone && ownerPhone.length > 0 && ownerPhone.length < 10 && (
+                <p className="text-xs mt-1" style={{ color: colors.accentRed }}>
+                  Mobile number must be exactly 10 digits.
+                </p>
+              )}
             </div>
 
             <div className="md:col-span-2">

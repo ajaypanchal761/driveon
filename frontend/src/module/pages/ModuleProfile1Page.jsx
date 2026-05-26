@@ -352,8 +352,8 @@ const ModuleProfile1Page = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
         >
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-3 flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Profile Picture or Initial */}
               {userPhoto && !imageError ? (
                 <motion.img
@@ -408,7 +408,7 @@ const ModuleProfile1Page = () => {
                 </h2>
                 {userEmail && (
                   <p
-                    className="text-xs leading-tight"
+                    className="text-xs leading-tight truncate"
                     style={{ color: colors.textSecondary || "#666666" }}
                   >
                     {userEmail}
@@ -453,7 +453,7 @@ const ModuleProfile1Page = () => {
             </div>
 
             {/* Logout & Delete Buttons */}
-            <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+            <div className="flex flex-row sm:flex-col gap-2 sm:gap-1.5 items-center sm:items-end w-full sm:w-auto justify-end mt-2 sm:mt-0 flex-shrink-0">
               <button
                 onClick={handleLogout}
                 className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-red-50 flex-shrink-0"
