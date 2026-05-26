@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiLock, FiShield, FiEye, FiEyeOff, FiSmartphone, FiGlobe, FiFileText } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
 import { toast } from 'react-hot-toast';
 import userService from '../../services/user.service';
 
 const PrivacySecurityPage = () => {
+  const navigate = useNavigate();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [passwords, setPasswords] = useState({
@@ -128,9 +130,9 @@ const PrivacySecurityPage = () => {
         {/* LEGAL */}
         <SectionContainer title="Legal & Compliance" icon={<FiFileText />}>
           <div className="space-y-2">
-            <LinkRow label="Privacy Policy" />
-            <LinkRow label="Terms of Service" />
-            <LinkRow label="Third-Party Licenses" />
+            <LinkRow label="Privacy Policy" onClick={() => navigate('/employee/privacy-policy')} />
+            <LinkRow label="Terms of Service" onClick={() => navigate('/employee/terms-of-service')} />
+            <LinkRow label="Third-Party Licenses" onClick={() => navigate('/employee/licenses')} />
           </div>
         </SectionContainer>
 
@@ -203,8 +205,8 @@ const ToggleRow = ({ label, description, active, onToggle, icon }) => (
   </div>
 );
 
-const LinkRow = ({ label }) => (
-  <button className="w-full flex items-center justify-between py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors text-left group">
+const LinkRow = ({ label, onClick }) => (
+  <button onClick={onClick} className="w-full flex items-center justify-between py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors text-left group">
     <span className="font-bold text-gray-600 text-sm group-hover:text-[#1C205C] transition-colors">{label}</span>
     <span className="text-gray-300 group-hover:text-blue-500 transition-colors">↗</span>
   </button>

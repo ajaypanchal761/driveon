@@ -1010,6 +1010,7 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 };
 
 const RoleDetails = ({ role, staffList = [], onBack }) => {
+  const navigate = useNavigate();
   // Mock Permissions based on access level
   const permissions = role.access === 'Full Access'
     ? ['Create/Edit/Delete Staff', 'Manage Roles', 'View Financial Reports', 'Manage Bookings', 'Edit Content']
@@ -1017,11 +1018,10 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
       ? ['View Staff Directory', 'Manage Bookings', 'View Basic Reports']
       : ['View Assigned Tasks', 'Mark Attendance'];
 
-  // Find assigned staff
+  // Find assigned staff - exact match (case-insensitive)
   const assignedStaff = staffList.filter(s =>
-    (s.role && role.role && s.role.toLowerCase().includes(role.role.toLowerCase())) ||
-    (s.role && role.role && role.role.toLowerCase().includes(s.role.toLowerCase()))
-  );
+    s.role && role.role && s.role.toLowerCase() === role.role.toLowerCase()
+  ).map(s => ({ ...s, id: s._id || s.id }));
 
   const [activeTab, setActiveTab] = useState('permissions');
 
@@ -1118,14 +1118,14 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
                         </div>
                         {staff.name}
                       </td>
-                      <td className="p-4 text-gray-500 font-medium text-sm">STF-{1000 + staff.id}</td>
+                      <td className="p-4 text-gray-500 font-medium text-sm">{staff.employeeId || `STF-${staff.id?.slice(-6) || '000'}`}</td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded text-xs font-bold border ${staff.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
                           {staff.status}
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <button className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">View Profile</button>
+                        <button onClick={() => navigate('/crm/staff/directory')} className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">View Profile</button>
                       </td>
                     </tr>
                   ))}
@@ -1176,10 +1176,9 @@ export const RolesPage = () => {
 
       if (rolesRes.data.success) {
         const roles = rolesRes.data.data.roles.map(role => {
-          // Calculate count
+          // Calculate count - exact match
           const count = staffData.filter(s =>
-            (s.role && s.role.toLowerCase() === role.roleName.toLowerCase()) ||
-            (s.role && role.roleName.toLowerCase().includes(s.role.toLowerCase()))
+            s.role && s.role.toLowerCase() === role.roleName.toLowerCase()
           ).length;
 
           return {
@@ -1738,12 +1737,24 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
                     <span className="text-gray-800 font-bold">Net Payable</span>
                     <span className="font-bold text-xl text-[#1C205C]">₹ {payroll.netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
-                  <button
-                    onClick={handleProcessSalary}
-                    className="w-full py-3 mt-2 bg-[#1C205C] text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-[#2a3550] transition-colors"
-                  >
-                    Process Salary
-                  </button>
+                  {payroll.paidAmount > 0 && (
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-green-600 font-semibold text-sm">Paid Amount</span>
+                      <span className="font-bold text-green-600">₹ {payroll.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  {payroll.salaryStatus === 'Paid' && payroll.netPayable <= 0 ? (
+                    <div className="w-full py-3 mt-2 bg-green-500 text-white rounded-xl font-bold text-center">
+                      ✅ Salary Paid
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleProcessSalary}
+                      className="w-full py-3 mt-2 bg-[#1C205C] text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-[#2a3550] transition-colors"
+                    >
+                      {payroll.paidAmount > 0 ? 'Pay Remaining' : 'Process Salary'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1768,17 +1779,20 @@ export const AttendancePage = () => {
   const [dateFilter, setDateFilter] = useState('Date: Today');
   const [roleFilter, setRoleFilter] = useState('Staff: All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchDataWithRange = async (fromDate, toDate) => {
     setLoading(true);
     try {
       const [staffRes, attRes] = await Promise.all([
         api.get('/crm/staff'),
-        api.get('/crm/attendance?date=' + new Date().toISOString())
+        api.get(`/crm/attendance?dateFrom=${fromDate}&dateTo=${toDate}`)
       ]);
 
       let staffData = [];
@@ -1795,11 +1809,91 @@ export const AttendancePage = () => {
         setStaffInfoList(staffData);
       }
 
-      if (attRes.data.success) {
-        const records = attRes.data.data.records;
-        // Merge staff with attendance
-        const mergedData = staffData.map((staff, index) => {
-          const record = records.find(r => r.staff._id === staff.id || r.staff === staff.id);
+      let records = [];
+      if (attRes.data.success && attRes.data.data?.records) {
+        records = attRes.data.data.records;
+      }
+
+      const mergedData = staffData.map((staff) => {
+        const staffRecords = records.filter(r => (r.staff?._id || r.staff) === staff.id);
+        const latestRecord = staffRecords.length > 0 ? staffRecords[0] : null;
+
+        let liveLoc = { status: 'Offline', address: 'Location Unavailable', lat: 0, lng: 0 };
+        if (staff.location && staff.location.latitude) {
+          const lastUpdate = new Date(staff.location.lastLocationUpdate);
+          const now = new Date();
+          const diffMins = (now - lastUpdate) / (1000 * 60);
+          const isOnline = diffMins < 15;
+          liveLoc = {
+            status: isOnline ? 'Online' : 'Offline',
+            address: staff.location.address || 'Address Unavailable',
+            lat: staff.location.latitude,
+            lng: staff.location.longitude,
+            lastUpdate: lastUpdate
+          };
+        }
+        if (liveLoc.status === 'Offline' && staff.location?.address) {
+          liveLoc.address = `Last seen: ${staff.location.address}`;
+        }
+
+        // For date range, count present days
+        const presentDays = staffRecords.filter(r => r.status === 'Present' || r.status === 'Late').length;
+        const status = latestRecord?.status || (presentDays > 0 ? 'Present' : 'Absent');
+
+        return {
+          id: staff.id,
+          staffId: staff.id,
+          name: staff.name,
+          role: staff.role,
+          inTime: latestRecord?.inTime || '-',
+          outTime: latestRecord?.outTime || '-',
+          status: status,
+          workHours: latestRecord?.workHours || (presentDays > 0 ? `${presentDays} day(s)` : '-'),
+          recordId: latestRecord?._id,
+          location: liveLoc
+        };
+      });
+      setAttendanceList(mergedData);
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchData = async (targetDate = null) => {
+    setLoading(true);
+    try {
+      const dateParam = targetDate || new Date().toISOString();
+      const [staffRes, attRes] = await Promise.all([
+        api.get('/crm/staff'),
+        api.get('/crm/attendance?date=' + dateParam)
+      ]);
+
+
+      let staffData = [];
+      if (staffRes.data.success) {
+        staffData = staffRes.data.data.staff.map(s => ({
+          id: s._id,
+          name: s.name,
+          role: s.role,
+          department: s.department,
+          email: s.email,
+          phone: s.phone,
+          location: s.location
+        }));
+        setStaffInfoList(staffData);
+      }
+
+      // Get attendance records (may be empty or fail)
+      let records = [];
+      if (attRes.data.success && attRes.data.data?.records) {
+        records = attRes.data.data.records;
+      }
+
+      // Always merge staff with attendance (even if no attendance records)
+      const mergedData = staffData.map((staff, index) => {
+        const record = records.find(r => (r.staff?._id || r.staff) === staff.id);
 
           // Live Location Data
           let liveLoc = { status: 'Offline', address: 'Location Unavailable', lat: 0, lng: 0 };
@@ -1825,26 +1919,44 @@ export const AttendancePage = () => {
             liveLoc.address = `Last seen: ${staff.location.address}`;
           }
 
-          const mockLoc = liveLoc; // Keep variable name to match return object usage or rename below
+          const mockLoc = liveLoc;
+
+          // Determine attendance status:
+          // 1. If attendance record exists in DB, use that status
+          // 2. If no record but location is Live (online), mark as Late (checked in but no DB record yet)
+          let attendanceStatus = 'Absent';
+          if (record?.status) {
+            attendanceStatus = record.status;
+          } else if (liveLoc.status === 'Online') {
+            // Staff is live/online but no attendance record - they are present (likely checked in from employee app before fix)
+            attendanceStatus = 'Late';
+          }
+
+          // Determine work hours display
+          let displayWorkHours = '-';
+          if (record?.workHours) {
+            displayWorkHours = record.workHours;
+          } else if (record?.inTime && !record?.outTime) {
+            // Checked in but not checked out - show Running
+            displayWorkHours = 'Running';
+          } else if (liveLoc.status === 'Online' && !record) {
+            displayWorkHours = 'Running';
+          }
 
           return {
-            id: staff.id, // Use staff ID as row ID mostly, or record ID if exists? 
-            // Better to use record ID if exists, but we want to show ALL staff.
-            // Let's use staff ID for key, and track record ID separately if needed.
-            // Actually existing UI uses 'id' for key.
+            id: staff.id,
             staffId: staff.id,
             name: staff.name,
             role: staff.role,
-            inTime: record?.inTime || '-',
+            inTime: record?.inTime || (liveLoc.status === 'Online' && !record ? 'Active' : '-'),
             outTime: record?.outTime || '-',
-            status: record?.status || 'Absent', // Default to Absent if no record
-            workHours: record?.workHours || '-',
+            status: attendanceStatus,
+            workHours: displayWorkHours,
             recordId: record?._id,
             location: mockLoc
           };
         });
         setAttendanceList(mergedData);
-      }
     } catch (error) {
       console.error("Error fetching attendance data:", error);
     } finally {
@@ -1865,18 +1977,10 @@ export const AttendancePage = () => {
       );
     }
 
-    // 1. Filter by Role
+    // 1. Filter by Role (case-insensitive exact match)
     if (roleFilter !== 'Staff: All') {
-      const keyword = roleFilter === 'Drivers' ? 'Driver' : 'Sales';
-      data = data.filter(item => item.role.includes(keyword));
-    }
-
-    // 2. Filter by Date (Mocking different data for "Yesterday")
-    if (dateFilter === 'Yesterday') {
-      // Ideally fetch from backend for yesterday
-      return [];
-    } else if (dateFilter === 'Select Date') {
-      return [];
+      const keyword = roleFilter.toLowerCase();
+      data = data.filter(item => item.role.toLowerCase() === keyword);
     }
 
     return data;
@@ -2006,6 +2110,63 @@ export const AttendancePage = () => {
         staff={viewingMonthly}
       />
 
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDatePicker(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Select Date Range</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (customDateFrom) {
+                      const label = customDateTo
+                        ? `${customDateFrom} to ${customDateTo}`
+                        : customDateFrom;
+                      setDateFilter(label);
+                      // Fetch with date range
+                      if (customDateTo) {
+                        fetchDataWithRange(customDateFrom, customDateTo);
+                      } else {
+                        fetchData(new Date(customDateFrom).toISOString());
+                      }
+                    }
+                    setShowDatePicker(false);
+                  }}
+                  className="flex-1 py-2 bg-[#1C205C] text-white rounded-xl text-sm font-bold hover:bg-[#2a3550]"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
@@ -2035,7 +2196,7 @@ export const AttendancePage = () => {
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <ThemedDropdown
-            options={['Staff: All', 'Sales', 'Drivers']}
+            options={['Staff: All', ...([...new Set(attendanceList.map(item => item.role))].filter(Boolean))]}
             value={roleFilter}
             onChange={(val) => setRoleFilter(val)}
             className="bg-white text-sm"
@@ -2044,13 +2205,24 @@ export const AttendancePage = () => {
           <ThemedDropdown
             options={['Date: Today', 'Yesterday', 'Select Date']}
             value={dateFilter}
-            onChange={(val) => setDateFilter(val)}
+            onChange={(val) => {
+              setDateFilter(val);
+              if (val === 'Date: Today') {
+                fetchData(new Date().toISOString());
+              } else if (val === 'Yesterday') {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                fetchData(yesterday.toISOString());
+              } else if (val === 'Select Date') {
+                setShowDatePicker(true);
+              }
+            }}
             className="bg-white text-sm"
             width="w-40"
           />
         </div>
         <div className="text-sm text-gray-500 font-medium">
-          Total Present: <span className="text-green-600 font-bold">{filteredAttendance.filter(i => i.status === 'Present').length}</span> / <span className="text-gray-800">{filteredAttendance.length}</span>
+          Total Present: <span className="text-green-600 font-bold">{filteredAttendance.filter(i => i.status === 'Present' || i.status === 'Late').length}</span> / <span className="text-gray-800">{filteredAttendance.length}</span>
         </div>
       </div>
 
@@ -2453,13 +2625,31 @@ export const SalaryPage = () => {
 
 const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
   const [formData, setFormData] = useState({ staffId: '', rating: '5', summary: '' });
+  const [staffSearch, setStaffSearch] = useState('');
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
 
-  // Reset or set default staff when modal opens
+  // Reset when modal opens
   useEffect(() => {
-    if (isOpen && staffList.length > 0 && !formData.staffId) {
-      setFormData(prev => ({ ...prev, staffId: staffList[0].id }));
+    if (isOpen) {
+      setStaffSearch('');
+      setShowStaffDropdown(false);
+      if (staffList.length > 0 && !formData.staffId) {
+        setFormData(prev => ({ ...prev, staffId: staffList[0].id }));
+        setStaffSearch(staffList[0].name);
+      }
     }
   }, [isOpen, staffList]);
+
+  // Filter staff based on search
+  const filteredStaff = staffList.filter(s =>
+    s.name.toLowerCase().includes(staffSearch.toLowerCase())
+  );
+
+  const handleSelectStaff = (staff) => {
+    setFormData({ ...formData, staffId: staff.id });
+    setStaffSearch(staff.name);
+    setShowStaffDropdown(false);
+  };
 
   return (
     <AnimatePresence>
@@ -2480,13 +2670,40 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
           >
             <h3 className="text-xl font-bold mb-4">New Performance Review</h3>
             <div className="space-y-4">
-              <ThemedDropdown
-                options={staffList.map(staff => ({ value: staff.id, label: staff.name }))}
-                value={formData.staffId}
-                onChange={(val) => setFormData({ ...formData, staffId: val })}
-                placeholder="Select Staff"
-                className="bg-white"
-              />
+              {/* Searchable Staff Dropdown */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search employee name..."
+                  value={staffSearch}
+                  onChange={(e) => {
+                    setStaffSearch(e.target.value);
+                    setShowStaffDropdown(true);
+                  }}
+                  onFocus={() => setShowStaffDropdown(true)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm font-medium"
+                />
+                {showStaffDropdown && filteredStaff.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
+                    {filteredStaff.map(staff => (
+                      <button
+                        key={staff.id}
+                        onClick={() => handleSelectStaff(staff)}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition-colors flex items-center justify-between ${formData.staffId === staff.id ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-gray-700'}`}
+                      >
+                        <span>{staff.name}</span>
+                        {staff.role && <span className="text-xs text-gray-400">{staff.role}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showStaffDropdown && staffSearch && filteredStaff.length === 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-50">
+                    <p className="text-sm text-gray-400 text-center">No staff found</p>
+                  </div>
+                )}
+              </div>
+
               <ThemedDropdown
                 options={[
                   { value: '5', label: '5 - Excellent' },
@@ -2507,13 +2724,18 @@ const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
               />
               <button
                 onClick={() => {
+                  if (!formData.staffId) {
+                    alert('Please select a staff member');
+                    return;
+                  }
                   onSubmit(formData);
                   onClose();
-                  setFormData({ staffId: staffList.length > 0 ? staffList[0].id : '', rating: '5', summary: '' })
+                  setFormData({ staffId: '', rating: '5', summary: '' });
+                  setStaffSearch('');
                 }}
                 className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
               >
-                Display Review
+                Submit Review
               </button>
             </div>
           </motion.div>
@@ -2530,7 +2752,7 @@ export const PerformancePage = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [staffFilter, setStaffFilter] = useState('Staff: All');
-  const [yearFilter, setYearFilter] = useState('Year: 2025');
+  const [yearFilter, setYearFilter] = useState(`Year: ${new Date().getFullYear()}`);
 
   useEffect(() => {
     fetchData();
@@ -2547,7 +2769,8 @@ export const PerformancePage = () => {
       if (staffRes.data.success) {
         setStaffList(staffRes.data.data.staff.map(s => ({
           id: s._id,
-          name: s.name
+          name: s.name,
+          role: s.role
         })));
       }
 
@@ -2589,9 +2812,28 @@ export const PerformancePage = () => {
     }
   };
 
+  const handleDeleteReview = async (reviewId) => {
+    try {
+      const response = await api.delete(`/crm/performance/${reviewId}`);
+      if (response.data.success) {
+        setPerformanceList(prev => prev.filter(item => item.id !== reviewId));
+      }
+    } catch (error) {
+      console.error("Error deleting review:", error);
+    }
+  };
+
   const filteredPerformance = performanceList.filter(item => {
-    if (staffFilter === 'Staff: All') return true;
-    return true; // Simplified filter to match simplified mock logic or extend if real filters needed
+    // Role filter
+    if (staffFilter !== 'Staff: All') {
+      if (!item.role.toLowerCase().includes(staffFilter.toLowerCase())) return false;
+    }
+    // Year filter
+    if (yearFilter && yearFilter.startsWith('Year:')) {
+      const filterYear = yearFilter.replace('Year: ', '').trim();
+      if (item.date && !item.date.includes(filterYear)) return false;
+    }
+    return true;
   });
 
   return (
@@ -2624,14 +2866,17 @@ export const PerformancePage = () => {
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex gap-3 w-full md:w-auto">
           <ThemedDropdown
-            options={['Staff: All', 'Sales', 'Drivers']}
+            options={['Staff: All', ...([...new Set(staffList.map(s => s.role))].filter(r => r && r !== '-'))]}
             value={staffFilter}
             onChange={(val) => setStaffFilter(val)}
             className="bg-white text-sm"
             width="w-40"
           />
           <ThemedDropdown
-            options={['Year: 2025', '2024']}
+            options={(() => {
+              const currentYear = new Date().getFullYear();
+              return [`Year: ${currentYear}`, `Year: ${currentYear - 1}`, `Year: ${currentYear - 2}`];
+            })()}
             value={yearFilter}
             onChange={(val) => setYearFilter(val)}
             className="bg-white text-sm"
@@ -2654,6 +2899,7 @@ export const PerformancePage = () => {
                 <th className="p-4">Rating</th>
                 <th className="p-4">Review Date</th>
                 <th className="p-4">Feedback Summary</th>
+                <th className="p-4">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
@@ -2677,6 +2923,15 @@ export const PerformancePage = () => {
                   </td>
                   <td className="p-4 text-gray-600 italic">
                     "{item.summary}"
+                  </td>
+                  <td className="p-4">
+                    <button
+                      onClick={() => handleDeleteReview(item.id)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Review"
+                    >
+                      <MdDelete size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}

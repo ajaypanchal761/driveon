@@ -27,7 +27,7 @@ import City from '../models/City.js';
 import { uploadImage } from '../services/cloudinary.service.js';
 import razorpayService from '../services/razorpay.service.js';
 import { createNotification } from './notification.controller.js';
-import { sendAdminNotification } from '../services/firebase.service.js';
+import { sendAdminNotification, sendStaffPushNotification } from '../services/firebase.service.js';
 
 /**
  * @desc    Get All Enquiries (with filters)
@@ -908,22 +908,35 @@ export const deleteRole = async (req, res) => {
  */
 export const getAttendance = async (req, res) => {
     try {
-        const { date, staffId } = req.query;
+        const { date, dateFrom, dateTo, staffId } = req.query;
         let query = {};
 
-        if (date) {
-            const searchDate = new Date(date);
-            searchDate.setHours(0, 0, 0, 0);
-            query.date = searchDate;
+        if (dateFrom && dateTo) {
+            // Date range query
+            const from = new Date(dateFrom);
+            from.setHours(0, 0, 0, 0);
+            const to = new Date(dateTo);
+            to.setHours(23, 59, 59, 999);
+            query.date = { $gte: from, $lte: to };
+        } else if (date) {
+            // Single date - get start and end of that day
+            const targetDate = new Date(date);
+            const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
+            const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+            query.date = { $gte: startOfDay, $lte: endOfDay };
         }
 
         if (staffId) {
             query.staff = staffId;
         }
 
+        console.log('📅 Attendance query:', JSON.stringify(query, null, 2));
+
         const records = await Attendance.find(query)
             .populate('staff', 'name role department')
             .sort({ createdAt: -1 });
+
+        console.log(`📊 Found ${records.length} attendance records`);
 
         res.status(200).json({
             success: true,
@@ -948,8 +961,8 @@ export const getAttendance = async (req, res) => {
 export const markAttendance = async (req, res) => {
     try {
         const { staffId, date, status, inTime, outTime, workHours } = req.body;
-        const searchDate = new Date(date || Date.now());
-        searchDate.setHours(0, 0, 0, 0);
+        const targetDate = new Date(date || Date.now());
+        const searchDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
         let calculatedWorkHours = workHours;
 
         if (inTime && outTime) {
@@ -985,10 +998,12 @@ export const markAttendance = async (req, res) => {
         let attendance = await Attendance.findOneAndUpdate(
             { staff: staffId, date: searchDate },
             {
-                status,
-                inTime,
-                outTime,
-                workHours: calculatedWorkHours
+                $set: {
+                    status,
+                    ...(inTime && { inTime }),
+                    ...(outTime && { outTime }),
+                    ...(calculatedWorkHours && { workHours: calculatedWorkHours })
+                }
             },
             { upsert: true, new: true }
         );
@@ -1327,6 +1342,25 @@ export const createPerformanceReview = async (req, res) => {
             message: 'Server error creating performance review',
             error: error.message
         });
+    }
+};
+
+/**
+ * @desc    Delete Performance Review
+ * @route   DELETE /api/crm/performance/:id
+ * @access  Admin
+ */
+export const deletePerformanceReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const review = await PerformanceReview.findByIdAndDelete(id);
+        if (!review) {
+            return res.status(404).json({ success: false, message: 'Review not found' });
+        }
+        res.status(200).json({ success: true, message: 'Review deleted successfully' });
+    } catch (error) {
+        console.error('Delete review error:', error);
+        res.status(500).json({ success: false, message: 'Server error deleting review', error: error.message });
     }
 };
 
@@ -2724,6 +2758,26 @@ export const getStaffPayroll = async (req, res) => {
 
         const netPayable = baseSalary - absentDeduction - halfDayDeduction + extraWorkAmount;
 
+        // Check if salary already paid for this month
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+        const monthString = `${monthNames[targetMonth]} ${targetYear}`;
+
+        const salaryRecord = await Salary.findOne({ staff: id, month: monthString });
+
+        let paidAmount = 0;
+        let salaryStatus = 'Pending';
+        let remainingAmount = netPayable;
+
+        if (salaryRecord) {
+            paidAmount = salaryRecord.netPay || 0;
+            salaryStatus = salaryRecord.status || 'Pending';
+
+            if (salaryStatus === 'Paid') {
+                remainingAmount = Math.max(0, netPayable - paidAmount);
+            }
+        }
+
         res.status(200).json({
             success: true,
             data: {
@@ -2737,7 +2791,10 @@ export const getStaffPayroll = async (req, res) => {
                 absentDeduction,
                 halfDayDeduction,
                 extraWorkAmount,
-                netPayable,
+                netPayable: remainingAmount,
+                totalNetPayable: netPayable,
+                paidAmount,
+                salaryStatus,
                 month: targetMonth,
                 year: targetYear,
                 totalExtraMinutes // Debugging/Info
@@ -2880,6 +2937,20 @@ export const verifySalaryPayment = async (req, res) => {
             message: 'Payment verified successfully and payroll recorded',
             data: payroll
         });
+
+        // Send real-time notification to employee (async, don't block response)
+        sendStaffPushNotification(staffId, {
+            notification: {
+                title: '💰 Salary Credited!',
+                body: `Your salary of ₹${parseFloat(amount).toLocaleString('en-IN')} for ${monthString} has been processed successfully.`,
+            },
+            data: {
+                type: 'salary_paid',
+                amount: String(amount),
+                month: monthString,
+                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            }
+        }).catch(err => console.error('❌ Failed to send salary notification:', err));
 
     } catch (error) {
         console.error('Verify Salary Payment Error:', error);

@@ -75,6 +75,8 @@ const NotificationsPage = lazy(() => import("../employee/pages/NotificationsPage
 const EmployeeLoginPage = lazy(() => import("../employee/pages/EmployeeLoginPage"));
 const EmployeeResetPasswordPage = lazy(() => import("../employee/pages/EmployeeResetPasswordPage"));
 const EmployeePrivacyPolicyPage = lazy(() => import("../employee/pages/EmployeePrivacyPolicyPage"));
+const EmployeeTermsPage = lazy(() => import("../employee/pages/EmployeeTermsPage"));
+const EmployeeLicensesPage = lazy(() => import("../employee/pages/EmployeeLicensesPage"));
 const EmployeeSupportPage = lazy(() => import("../employee/pages/EmployeeSupportPage"));
 
 
@@ -770,6 +772,14 @@ const router = createBrowserRouter([
   {
     path: "/employee/privacy-policy",
     element: <EmployeePrivacyPolicyPage />,
+  },
+  {
+    path: "/employee/terms-of-service",
+    element: <EmployeeTermsPage />,
+  },
+  {
+    path: "/employee/licenses",
+    element: <EmployeeLicensesPage />,
   },
   {
     path: "/employee/support",

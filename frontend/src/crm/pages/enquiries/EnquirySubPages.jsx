@@ -147,6 +147,9 @@ export const AllEnquiriesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Status: All');
   const [dateFilter, setDateFilter] = useState('Date: All Time');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
 
   const [enquiriesList, setEnquiriesList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -249,6 +252,13 @@ export const AllEnquiriesPage = () => {
         matchesDate = enquiryDate >= last7;
       } else if (dateFilter === 'Date: This Month') {
         matchesDate = enquiryDate.getMonth() === today.getMonth() && enquiryDate.getFullYear() === today.getFullYear();
+      } else if (customDateFrom) {
+        // Custom date range filter
+        const from = new Date(customDateFrom);
+        from.setHours(0, 0, 0, 0);
+        const to = customDateTo ? new Date(customDateTo) : new Date(customDateFrom);
+        to.setHours(23, 59, 59, 999);
+        matchesDate = enquiryDate >= from && enquiryDate <= to;
       }
     }
 
@@ -314,15 +324,70 @@ export const AllEnquiriesPage = () => {
 
           <div className="relative min-w-[140px]">
             <ThemedDropdown
-              options={['Date: All Time', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month']}
+              options={['Date: All Time', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month', 'Select Date']}
               value={dateFilter}
-              onChange={(val) => setDateFilter(val)}
+              onChange={(val) => {
+                if (val === 'Select Date') {
+                  setShowDatePicker(true);
+                } else {
+                  setDateFilter(val);
+                }
+              }}
               className="bg-white text-sm"
               width="w-full"
             />
           </div>
         </div>
       </div>
+
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDatePicker(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Select Date Range</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowDatePicker(false)}
+                  className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (customDateFrom) {
+                      const label = customDateTo ? `${customDateFrom} to ${customDateTo}` : customDateFrom;
+                      setDateFilter(label);
+                    }
+                    setShowDatePicker(false);
+                  }}
+                  className="flex-1 py-2 bg-[#1C205C] text-white rounded-xl text-sm font-bold hover:bg-[#2a3550]"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
@@ -654,6 +719,9 @@ export const NewEnquiriesPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('Date: All');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingEnquiry, setEditingEnquiry] = useState(null);
   const [enquiriesList, setEnquiriesList] = useState([]);
@@ -725,6 +793,18 @@ export const NewEnquiriesPage = () => {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         matchesDate = enquiryDate.toDateString() === yesterday.toDateString();
+      } else if (dateFilter === 'Date: Last 7 Days') {
+        const last7 = new Date(today);
+        last7.setDate(last7.getDate() - 7);
+        matchesDate = enquiryDate >= last7;
+      } else if (dateFilter === 'Date: This Month') {
+        matchesDate = enquiryDate.getMonth() === today.getMonth() && enquiryDate.getFullYear() === today.getFullYear();
+      } else if (customDateFrom) {
+        const from = new Date(customDateFrom);
+        from.setHours(0, 0, 0, 0);
+        const to = customDateTo ? new Date(customDateTo) : new Date(customDateFrom);
+        to.setHours(23, 59, 59, 999);
+        matchesDate = enquiryDate >= from && enquiryDate <= to;
       }
     }
 
@@ -824,15 +904,44 @@ export const NewEnquiriesPage = () => {
 
           <div className="relative">
             <ThemedDropdown 
-              options={['Date: All', 'Date: Today', 'Date: Yesterday']}
+              options={['Date: All', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month', 'Select Date']}
               value={dateFilter}
-              onChange={(val) => setDateFilter(val)}
+              onChange={(val) => {
+                if (val === 'Select Date') {
+                  setShowDatePicker(true);
+                } else {
+                  setDateFilter(val);
+                }
+              }}
               className="bg-white text-sm"
               width="w-40"
             />
           </div>
         </div>
       </div>
+
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDatePicker(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Select Date Range</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
+                <input type="date" value={customDateFrom} onChange={(e) => setCustomDateFrom(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
+                <input type="date" value={customDateTo} onChange={(e) => setCustomDateTo(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowDatePicker(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
+                <button onClick={() => { if (customDateFrom) { setDateFilter(customDateTo ? `${customDateFrom} to ${customDateTo}` : customDateFrom); } setShowDatePicker(false); }} className="flex-1 py-2 bg-[#1C205C] text-white rounded-xl text-sm font-bold hover:bg-[#2a3550]">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
@@ -1367,6 +1476,9 @@ export const ConvertedEnquiriesPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('Date: All Time');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [convertedList, setConvertedList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1446,6 +1558,12 @@ export const ConvertedEnquiriesPage = () => {
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       matchesDate = itemDate.getMonth() === lastMonth.getMonth() &&
         itemDate.getFullYear() === lastMonth.getFullYear();
+    } else if (dateFilter !== 'Date: All Time' && customDateFrom) {
+      const from = new Date(customDateFrom);
+      from.setHours(0, 0, 0, 0);
+      const to = customDateTo ? new Date(customDateTo) : new Date(customDateFrom);
+      to.setHours(23, 59, 59, 999);
+      matchesDate = itemDate >= from && itemDate <= to;
     }
 
     return matchesSearch && matchesDate;
@@ -1483,14 +1601,43 @@ export const ConvertedEnquiriesPage = () => {
         </div>
         <div className="flex gap-3">
           <ThemedDropdown 
-            options={['Date: All Time', 'Date: This Month', 'Last Month']}
+            options={['Date: All Time', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month', 'Last Month', 'Select Date']}
             value={dateFilter}
-            onChange={(val) => setDateFilter(val)}
+            onChange={(val) => {
+              if (val === 'Select Date') {
+                setShowDatePicker(true);
+              } else {
+                setDateFilter(val);
+              }
+            }}
             className="bg-white text-sm"
             width="w-40"
           />
         </div>
       </div>
+
+      {/* Date Range Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDatePicker(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Select Date Range</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
+                <input type="date" value={customDateFrom} onChange={(e) => setCustomDateFrom(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
+                <input type="date" value={customDateTo} onChange={(e) => setCustomDateTo(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 text-sm" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowDatePicker(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
+                <button onClick={() => { if (customDateFrom) { setDateFilter(customDateTo ? `${customDateFrom} to ${customDateTo}` : customDateFrom); } setShowDatePicker(false); }} className="flex-1 py-2 bg-[#1C205C] text-white rounded-xl text-sm font-bold hover:bg-[#2a3550]">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">

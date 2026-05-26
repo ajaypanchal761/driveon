@@ -359,8 +359,8 @@ const EmployeeHomePage = () => {
             variants={itemVariants}
             className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white"
           >
-            <div className="flex justify-between items-start mb-6">
-              <div>
+            <div className="flex justify-between items-start mb-6 gap-3">
+              <div className="min-w-0 flex-1">
                 <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Current Time</p>
                 <div className="flex items-baseline gap-1">
                   <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">
@@ -380,8 +380,8 @@ const EmployeeHomePage = () => {
 
                 <div className="flex items-start gap-2 mt-3">
                   <FiMapPin className="text-blue-500 mt-1 shrink-0" size={14} />
-                  <div>
-                    <p className="text-xs text-gray-600 font-bold leading-relaxed">{locationState.address}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-600 font-bold leading-relaxed break-words">{locationState.address}</p>
                   </div>
                 </div>
               </div>
@@ -391,7 +391,7 @@ const EmployeeHomePage = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleClockToggle}
                 className={`${clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
-                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 h-fit`}
+                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap`}
               >
                 <FiClock />
                 {clockedIn ? 'Check Out' : 'Check In'}

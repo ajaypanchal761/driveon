@@ -1733,6 +1733,20 @@ const CarDetailsPage = () => {
       return;
     }
 
+    // Validate personal details if Personal is selected
+    if (isPersonal) {
+      const { name, phone, email, age, gender } = personalDetails;
+      if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
+        alert('Please fill all Personal Details (Name, Phone, Email, Age, Gender)');
+        return;
+      }
+      // Validate phone number is exactly 10 digits and starts with 6-9
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        alert('Please enter a valid 10-digit Indian mobile number (starting with 6-9)');
+        return;
+      }
+    }
+
     // Both mobile and web views: Use Razorpay payment flow
     if (!car || (!car.id && !car._id)) return;
 
@@ -2616,14 +2630,6 @@ const CarDetailsPage = () => {
                     onChange={async (e) => {
                       setIsPersonal(e.target.checked);
                       if (e.target.checked) {
-                        // Clear other purpose if personal is selected
-                        setBookingPurpose('');
-                        setJobDetails('');
-                        setBusinessDetails('');
-                        setStudentId('');
-                        setDocumentPhoto(null);
-                        setDocumentPhotoPreview(null);
-
                         // Fetch fresh user data from database when checkbox is checked
                         if (isAuthenticated) {
                           try {
@@ -2741,8 +2747,14 @@ const CarDetailsPage = () => {
                       type="tel"
                       value={personalDetails.phone}
                       autoComplete="off"
-                      onChange={(e) => setPersonalDetails(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setPersonalDetails(prev => ({ ...prev, phone: value }));
+                      }}
                       placeholder="Enter your phone number"
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
                       className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                       style={{
                         borderColor: colors.borderMedium,
@@ -2817,10 +2829,6 @@ const CarDetailsPage = () => {
                     value={bookingPurpose}
                     onChange={(value) => {
                       setBookingPurpose(value);
-                      // Clear personal if other purpose is selected
-                      if (value) {
-                        setIsPersonal(false);
-                      }
                       // Reset conditional fields when purpose changes
                       setJobDetails('');
                       setBusinessDetails('');

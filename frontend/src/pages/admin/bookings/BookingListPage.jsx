@@ -582,6 +582,8 @@ const BookingListPage = () => {
       completed: 'bg-gray-100 text-gray-800',
       cancelled: 'bg-red-100 text-red-800',
       paid: 'bg-green-100 text-green-800',
+      partial: 'bg-blue-100 text-blue-800',
+      failed: 'bg-red-100 text-red-800',
       refunded: 'bg-purple-100 text-purple-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
@@ -831,22 +833,34 @@ const BookingListPage = () => {
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.status)}`}>
                         {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                       </span>
-                      {booking.paymentStatus === 'partial' ? (
+                      {booking.status === 'cancelled' ? (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.paymentStatus === 'refunded' ? 'refunded' : 'cancelled')}`}>
+                          Payment: {booking.paymentStatus === 'refunded' ? 'Refunded' : 'Cancelled'}
+                        </span>
+                      ) : booking.paymentStatus === 'partial' ? (
                         <>
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor('paid')}`}>
-                            Advance Done
+                            Advance Paid
                           </span>
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor('pending')}`}>
-                            Remaining amount is Pending
+                            Remaining Pending
                           </span>
                         </>
-                      ) : booking.paymentStatus === 'pending' ? (
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.paymentStatus)}`}>
-                          Payment : Remaining Amount Pending
+                      ) : booking.paymentStatus === 'paid' ? (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor('paid')}`}>
+                          Payment: Paid
+                        </span>
+                      ) : booking.paymentStatus === 'refunded' ? (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor('refunded')}`}>
+                          Payment: Refunded
+                        </span>
+                      ) : booking.paymentStatus === 'failed' ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                          Payment: Failed
                         </span>
                       ) : (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(booking.paymentStatus)}`}>
-                          Payment: {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                          Payment: {booking.paymentStatus ? booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1) : 'Pending'}
                         </span>
                       )}
                     </div>
@@ -1054,12 +1068,15 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
   const remainingAmount = (booking.totalAmount || 0) - (booking.paidAmount || 0);
   const advanceAmount = booking.paidAmount || 0;
 
-  // Determine advance payment status
-  const advancePaymentStatus = advanceAmount > 0 ? 'done' : 'pending';
+  // Determine advance payment status based on booking status
+  const advancePaymentStatus = booking.status === 'cancelled'
+    ? 'cancelled'
+    : advanceAmount > 0 ? 'done' : 'pending';
 
-  // Determine remaining payment status based on overall payment status
-  // If payment status is "paid", remaining payment is done, otherwise check remaining amount
-  const remainingPaymentStatus = paymentStatus === 'paid' ? 'done' : (remainingAmount <= 0 ? 'done' : 'pending');
+  // Determine remaining payment status based on booking status and payment
+  const remainingPaymentStatus = booking.status === 'cancelled'
+    ? 'cancelled'
+    : paymentStatus === 'paid' ? 'done' : (remainingAmount <= 0 ? 'done' : 'pending');
 
   // Handle payment status update
   const handlePaymentStatusUpdate = async (newStatus) => {
@@ -1347,6 +1364,9 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                     options={[
                       { value: 'pending', label: 'Pending' },
                       { value: 'paid', label: 'Paid' },
+                      { value: 'partial', label: 'Partial' },
+                      { value: 'refunded', label: 'Refunded' },
+                      { value: 'failed', label: 'Failed' },
                     ]}
                     className={isUpdatingPayment ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
                   />
@@ -1374,9 +1394,11 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                     <label className="text-sm font-medium text-gray-700">Advance Payment Status</label>
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${advancePaymentStatus === 'done'
                       ? 'bg-green-100 text-green-800'
+                      : advancePaymentStatus === 'cancelled'
+                      ? 'bg-red-100 text-red-800'
                       : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                      {advancePaymentStatus === 'done' ? 'Done' : 'Pending'}
+                      {advancePaymentStatus === 'done' ? 'Done' : advancePaymentStatus === 'cancelled' ? 'Cancelled' : 'Pending'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-600">Advance Amount: ₹{advanceAmount.toLocaleString()}</p>
@@ -1388,9 +1410,11 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                     <label className="text-sm font-medium text-gray-700">Remaining Payment Status</label>
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${remainingPaymentStatus === 'done'
                       ? 'bg-green-100 text-green-800'
+                      : remainingPaymentStatus === 'cancelled'
+                      ? 'bg-red-100 text-red-800'
                       : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                      {remainingPaymentStatus === 'done' ? 'Done' : 'Pending'}
+                      {remainingPaymentStatus === 'done' ? 'Done' : remainingPaymentStatus === 'cancelled' ? 'Cancelled' : 'Pending'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-600">Remaining Amount: ₹{remainingAmount.toLocaleString()}</p>
@@ -1431,10 +1455,12 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                       <p className="text-xs text-gray-500">{new Date(booking.completedDate).toLocaleString()}</p>
                     </div>
                   )}
-                  {booking.status === 'cancelled' && booking.cancellationReason && (
+                  {booking.status === 'cancelled' && (
                     <div className="p-3 bg-red-50 rounded-lg">
-                      <p className="text-sm font-medium text-gray-900">Booking Cancelled</p>
-                      <p className="text-xs text-gray-500">{booking.cancellationReason}</p>
+                      <p className="text-sm font-medium text-red-800">Booking Cancelled</p>
+                      {booking.cancellationReason && (
+                        <p className="text-xs text-red-600 mt-1">Reason: {booking.cancellationReason}</p>
+                      )}
                       {booking.cancelledDate && (
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(booking.cancelledDate).toLocaleString()}

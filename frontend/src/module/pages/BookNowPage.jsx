@@ -739,6 +739,11 @@ const BookNowPage = () => {
         );
         return;
       }
+      // Validate phone number is exactly 10 digits and starts with 6-9
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        alert("Please enter a valid 10-digit Indian mobile number (starting with 6-9)");
+        return;
+      }
     }
 
     // If a specific purpose is selected (Job/Business/Student), validate its fields
@@ -1464,15 +1469,7 @@ const BookNowPage = () => {
                 checked={isPersonal}
                 onChange={(e) => {
                   setIsPersonal(e.target.checked);
-                  if (e.target.checked) {
-                    // Clear other purpose if personal is selected
-                    setBookingPurpose("");
-                    setJobDetails("");
-                    setBusinessDetails("");
-                    setStudentId("");
-                    setDocumentPhoto(null);
-                    setDocumentPhotoPreview(null);
-                  } else {
+                  if (!e.target.checked) {
                     // Clear personal details if unchecked
                     setPersonalDetails({
                       name: "",
@@ -1551,14 +1548,18 @@ const BookNowPage = () => {
                   <input
                     type="tel"
                     value={personalDetails.phone}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                       setPersonalDetails((prev) => ({
                         ...prev,
-                        phone: e.target.value,
-                      }))
-                    }
+                        phone: value,
+                      }));
+                    }}
                     placeholder="Enter your phone number"
                     autoComplete="off"
+                    maxLength={10}
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
                     className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
                     style={{
                       borderColor: colors.borderMedium,
@@ -1655,10 +1656,6 @@ const BookNowPage = () => {
                 value={bookingPurpose}
                 onChange={(value) => {
                   setBookingPurpose(value);
-                  // Clear personal if other purpose is selected
-                  if (value) {
-                    setIsPersonal(false);
-                  }
                   // Reset conditional fields when purpose changes
                   setJobDetails("");
                   setBusinessDetails("");

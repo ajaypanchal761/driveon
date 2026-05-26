@@ -29,6 +29,7 @@ import {
     addRepayment,
     getPerformanceReviews,
     createPerformanceReview,
+    deletePerformanceReview,
     getStaffWorkTasks,
     createStaffWorkTask,
     updateStaffWorkTask,
@@ -173,6 +174,9 @@ router.route('/advances/:id/repay')
 router.route('/performance')
     .get(getPerformanceReviews)
     .post(createPerformanceReview);
+
+router.route('/performance/:id')
+    .delete(deletePerformanceReview);
 
 // Staff Work Task Routes
 router.route('/staff-tasks')

@@ -98,6 +98,31 @@ export const EmployeeProvider = ({ children }) => {
     localStorage.setItem('emp_attendance_status', attendanceStatus);
   }, [clockedIn, startTime, accumulatedSeconds, attendanceStatus, attendanceDays]);
 
+  // Sync attendance to backend when app loads and employee is already clocked in
+  useEffect(() => {
+    const syncAttendanceToBackend = async () => {
+      const staffId = user?._id || user?.id;
+      if (!staffId || !clockedIn || !startTime) return;
+
+      try {
+        const clockInTime = new Date(startTime);
+        const inTime = `${clockInTime.getHours().toString().padStart(2, '0')}:${clockInTime.getMinutes().toString().padStart(2, '0')}`;
+
+        await api.post('/crm/attendance', {
+          staffId,
+          date: new Date().toISOString(),
+          status: attendanceStatus === 'Absent' ? 'Late' : attendanceStatus,
+          inTime,
+        });
+        console.log('✅ Attendance synced to backend on app load');
+      } catch (error) {
+        console.error('❌ Error syncing attendance on load:', error);
+      }
+    };
+
+    syncAttendanceToBackend();
+  }, [user]); // Run when user data becomes available
+
   // Timer logic
   useEffect(() => {
     let timer;
@@ -116,30 +141,74 @@ export const EmployeeProvider = ({ children }) => {
     return () => clearInterval(timer);
   }, [clockedIn, startTime]);
 
-  const handleClockToggle = () => {
+  const handleClockToggle = async () => {
+    const staffId = user?._id || user?.id;
+
     if (clockedIn) {
       // Clock Out
       setClockedIn(false);
       // Add current session time to accumulated total
-      setAccumulatedSeconds(prev => prev + elapsedSeconds);
+      const sessionSeconds = elapsedSeconds;
+      setAccumulatedSeconds(prev => prev + sessionSeconds);
       setStartTime(null);
       setElapsedSeconds(0);
+
+      // Save check-out to backend
+      if (staffId) {
+        try {
+          const now = new Date();
+          const outTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+          const totalSecs = accumulatedSeconds + sessionSeconds;
+          const hours = Math.floor(totalSecs / 3600);
+          const mins = Math.floor((totalSecs % 3600) / 60);
+          const workHours = `${hours}h ${mins}m`;
+
+          await api.post('/crm/attendance', {
+            staffId,
+            date: now.toISOString(),
+            status: attendanceStatus === 'Absent' ? 'Present' : attendanceStatus,
+            outTime,
+            workHours,
+          });
+          console.log('✅ Check-out saved to backend');
+        } catch (error) {
+          console.error('❌ Error saving check-out to backend:', error);
+        }
+      }
     } else {
       // Clock In
       setClockedIn(true);
       setStartTime(Date.now());
       setElapsedSeconds(0);
 
-      // Update Status and Days if specifically starting a new day (simple logic: if status is Absent)
-      if (attendanceStatus === 'Absent') {
-        const now = new Date();
-        const shiftStart = new Date();
-        shiftStart.setHours(10, 0, 0, 0); // 10:00 AM
+      // Determine attendance status
+      let newStatus = 'Present';
+      const now = new Date();
+      const shiftStart = new Date();
+      shiftStart.setHours(10, 0, 0, 0); // 10:00 AM
 
-        if (now > shiftStart) {
-          setAttendanceStatus('Late');
-        } else {
-          setAttendanceStatus('On Time');
+      if (now > shiftStart) {
+        newStatus = 'Late';
+      }
+
+      if (attendanceStatus === 'Absent') {
+        setAttendanceStatus(newStatus);
+      }
+
+      // Save check-in to backend
+      if (staffId) {
+        try {
+          const inTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+          await api.post('/crm/attendance', {
+            staffId,
+            date: now.toISOString(),
+            status: newStatus,
+            inTime,
+          });
+          console.log('✅ Check-in saved to backend');
+        } catch (error) {
+          console.error('❌ Error saving check-in to backend:', error);
         }
       }
     }
