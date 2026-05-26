@@ -1061,13 +1061,19 @@ export const getTeamPresence = async (req, res) => {
             _id: { $in: presentAttendances.map(a => a.staff) }
         }).select('employeeId name avatar status'); // Selecting minimal fields
 
-        // Map to format suitable for UI (U1, U2 etc from employeeId or create short code)
-        const presentStaffMapped = presentStaffDetails.map(s => ({
-            id: s._id,
-            shortName: s.employeeId || s.name.substring(0, 2).toUpperCase(),
-            name: s.name,
-            avatar: s.avatar
-        }));
+        // Map to format suitable for UI (2-letter initials from name for clean avatar fallback)
+        const presentStaffMapped = presentStaffDetails.map(s => {
+            const nameParts = s.name ? s.name.trim().split(/\s+/) : [];
+            const shortName = nameParts.length >= 2 
+                ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+                : (s.name ? s.name.substring(0, 2).toUpperCase() : 'ST');
+            return {
+                id: s._id,
+                shortName,
+                name: s.name,
+                avatar: s.avatar
+            };
+        });
 
         res.status(200).json({
             success: true,

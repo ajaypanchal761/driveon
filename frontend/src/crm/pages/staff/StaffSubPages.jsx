@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-hot-toast';
 import razorpayService from '../../../services/razorpay.service';
 import { useNavigate } from 'react-router-dom';
@@ -138,6 +139,17 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
   const [step, setStep] = useState(1);
   const modalScrollRef = useRef(null);
   const [salaryMethod, setSalaryMethod] = useState('Monthly');
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
   const [formData, setFormData] = useState({
     name: '',
     role: '',
@@ -275,9 +287,9 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
@@ -550,16 +562,28 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 const ViewStaffModal = ({ isOpen, onClose, staff }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !staff) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
@@ -649,7 +673,8 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
           </button>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -956,6 +981,17 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
       if (initialData) {
         setFormData(initialData);
       } else {
@@ -970,10 +1006,10 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
     onClose();
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1005,7 +1041,8 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
@@ -1350,6 +1387,17 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
       if (initialData && initialData.staffId) {
         setFormData({
           staffId: initialData.staffId,
@@ -1370,10 +1418,10 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
     onClose();
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1440,16 +1488,28 @@ const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
 const ViewLocationModal = ({ isOpen, onClose, data }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !data) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
@@ -1493,23 +1553,36 @@ const ViewLocationModal = ({ isOpen, onClose, data }) => {
           </div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
-  if (!isOpen || !staff) return null;
-
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [payroll, setPayroll] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchPayroll();
-  }, [selectedMonth, selectedYear, staff.id]);
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && staff?.id) {
+      fetchPayroll();
+    }
+  }, [selectedMonth, selectedYear, staff?.id, isOpen]);
 
   const fetchPayroll = async () => {
+    if (!staff?.id) return;
     setLoading(true);
     try {
       const res = await api.get(`/crm/staff/${staff.id}/payroll`, {
@@ -1587,9 +1660,11 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
     });
   }
 
-  return (
+  if (!isOpen || !staff) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
@@ -1761,7 +1836,8 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
           </div>
         )}
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

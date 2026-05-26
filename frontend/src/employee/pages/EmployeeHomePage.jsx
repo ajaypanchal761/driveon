@@ -26,6 +26,17 @@ import toastUtils from '../../config/toast';
 
 const EmployeeHomePage = () => {
   const navigate = useNavigate();
+
+  // Helper to get clean 2-letter initials from name
+  const getInitials = (name) => {
+    if (!name) return 'ST';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0].substring(0, 2).toUpperCase();
+  };
+
   const {
     clockedIn,
     elapsedSeconds,
@@ -359,34 +370,19 @@ const EmployeeHomePage = () => {
             variants={itemVariants}
             className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white"
           >
-            <div className="flex justify-between items-start mb-6 gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Current Time</p>
+            {/* Top Row: Time on Left, Check In/Out Button on Right */}
+            <div className="flex justify-between items-center mb-5 gap-3">
+              <div>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-0.5">Current Time</p>
                 <div className="flex items-baseline gap-1">
                   <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">
                     {formatTime(time).split(' ')[0]}
                     <span className="text-sm text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
                   </h2>
                 </div>
-
-                {/* Timer Display */}
-                <div className="mt-2 px-3 py-1.5 bg-blue-50/80 rounded-lg border border-blue-100 w-fit">
-                  <p className="text-blue-500 text-[9px] font-bold uppercase tracking-wider mb-0 leading-none">Session Timer</p>
-                  <div className="text-lg font-mono font-bold text-blue-700 flex items-center gap-1.5 mt-0.5 leading-none">
-                    <FiActivity className={`${clockedIn ? 'animate-pulse' : ''}`} size={14} />
-                    {formatDuration(elapsedSeconds)}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2 mt-3">
-                  <FiMapPin className="text-blue-500 mt-1 shrink-0" size={14} />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-600 font-bold leading-relaxed break-words">{locationState.address}</p>
-                  </div>
-                </div>
               </div>
 
-              {/* Clock Out Button - Prominent */}
+              {/* Clock Out/In Button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleClockToggle}
@@ -396,6 +392,26 @@ const EmployeeHomePage = () => {
                 <FiClock />
                 {clockedIn ? 'Check Out' : 'Check In'}
               </motion.button>
+            </div>
+
+            {/* Bottom Row: Timer & Full-Width Address */}
+            <div className="space-y-3 mb-6 pt-4 border-t border-gray-100">
+              {/* Timer Display */}
+              <div className="px-3 py-1.5 bg-blue-50/80 rounded-lg border border-blue-100 w-fit">
+                <p className="text-blue-500 text-[9px] font-bold uppercase tracking-wider mb-0 leading-none">Session Timer</p>
+                <div className="text-lg font-mono font-bold text-blue-700 flex items-center gap-1.5 mt-0.5 leading-none">
+                  <FiActivity className={`${clockedIn ? 'animate-pulse' : ''}`} size={14} />
+                  {formatDuration(elapsedSeconds)}
+                </div>
+              </div>
+
+              {/* Live Location Full-Width */}
+              <div className="flex items-start gap-2 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50">
+                <FiMapPin className="text-blue-500 mt-0.5 shrink-0" size={14} />
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-600 font-bold leading-relaxed break-words">{locationState.address}</p>
+                </div>
+              </div>
             </div>
 
             {/* Stats Row within Card */}
@@ -465,8 +481,16 @@ const EmployeeHomePage = () => {
               <div className="flex -space-x-3">
                 {teamPresenceData.activeStaff && teamPresenceData.activeStaff.length > 0 ? (
                   teamPresenceData.activeStaff.slice(0, 4).map((staff, i) => (
-                    <div key={staff.id} className={`w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white shadow-sm bg-gradient-to-br ${i % 2 === 0 ? 'from-blue-400 to-blue-600' : 'from-indigo-400 to-indigo-600'} z-${10 - i} relative`}>
-                      {staff.avatar ? <img src={staff.avatar} alt={staff.name} className="w-full h-full rounded-full object-cover" /> : staff.shortName}
+                    <div 
+                      key={staff.id || i} 
+                      style={{ zIndex: 10 - i }}
+                      className={`w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white shadow-sm bg-gradient-to-br ${i % 2 === 0 ? 'from-blue-400 to-blue-600' : 'from-indigo-400 to-indigo-600'} relative`}
+                    >
+                      {staff.avatar ? (
+                        <img src={staff.avatar} alt={staff.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        getInitials(staff.name)
+                      )}
                     </div>
                   ))
                 ) : (
@@ -517,8 +541,7 @@ const EmployeeHomePage = () => {
               onClick={() => navigate('/employee/tasks')}
               className="bg-blue-50 p-4 rounded-3xl relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
             >
-              <div className="absolute top-0 right-0 p-4 opacity-50"><FiPhone className="text-blue-200 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
-              <div className="absolute top-0 right-0 p-4 opacity-50"><FiPhone className="text-blue-200 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
+              <div className="absolute top-0 right-0 p-4 opacity-[0.08] pointer-events-none"><FiPhone className="text-blue-600 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
               <p className="text-gray-500 text-xs font-semibold mb-1">Tasks Target</p>
               <h4 className="text-gray-800 font-bold text-lg mb-6">Daily Goal</h4>
               <div className="flex justify-between items-end">
@@ -535,7 +558,7 @@ const EmployeeHomePage = () => {
               onClick={() => navigate('/employee/enquiries', { state: { activeTab: 'Pending' } })}
               className="bg-indigo-50 p-4 rounded-3xl relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
             >
-              <div className="absolute top-0 right-0 p-4 opacity-50"><FiActivity className="text-indigo-200 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
+              <div className="absolute top-0 right-0 p-4 opacity-[0.08] pointer-events-none"><FiActivity className="text-indigo-600 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
               <p className="text-gray-500 text-xs font-semibold mb-1">Follow-ups</p>
               <h4 className="text-gray-800 font-bold text-lg mb-6">High Priority</h4>
               <div className="flex justify-between items-end">
@@ -563,8 +586,16 @@ const EmployeeHomePage = () => {
                     <div className="flex -space-x-2">
                       {/* Reuse team avatars for decoration if available, else static placeholders */}
                       {teamPresenceData.activeStaff && teamPresenceData.activeStaff.slice(0, 3).map((staff, i) => (
-                        <div key={i} className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm bg-gradient-to-br from-indigo-400 to-purple-600 overflow-hidden">
-                          {staff.avatar ? <img src={staff.avatar} className="w-full h-full object-cover" /> : staff.shortName}
+                        <div 
+                          key={i} 
+                          style={{ zIndex: 10 - i }}
+                          className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm bg-gradient-to-br from-indigo-400 to-purple-600 overflow-hidden"
+                        >
+                          {staff.avatar ? (
+                            <img src={staff.avatar} className="w-full h-full object-cover" />
+                          ) : (
+                            getInitials(staff.name)
+                          )}
                         </div>
                       ))}
                       {(!teamPresenceData.activeStaff || teamPresenceData.activeStaff.length === 0) && (
