@@ -1406,18 +1406,15 @@ export const createStaffWorkTask = async (req, res) => {
 
         // Send notification to assigned employee
         if (task.assignedTo) {
-            sendStaffPushNotification(task.assignedTo.toString(), {
-                notification: {
-                    title: '📋 New Task Assigned',
-                    body: `You have a new task: "${task.title}" (Priority: ${task.priority})`,
-                },
-                data: {
-                    type: 'task_assigned',
-                    taskId: task._id.toString(),
-                    title: task.title,
-                    priority: task.priority,
-                    click_action: 'FLUTTER_NOTIFICATION_CLICK',
-                }
+            createNotification({
+                recipient: task.assignedTo,
+                recipientModel: 'Staff',
+                title: '📋 New Task Assigned',
+                message: `You have a new task: "${task.title}" (Priority: ${task.priority})`,
+                type: 'task_assigned',
+                relatedId: task._id,
+                relatedModel: 'StaffWorkTask',
+                sendPush: true
             }).catch(err => console.error('❌ Failed to send task assignment notification:', err));
         }
 
@@ -2962,17 +2959,15 @@ export const verifySalaryPayment = async (req, res) => {
         });
 
         // Send real-time notification to employee (async, don't block response)
-        sendStaffPushNotification(staffId, {
-            notification: {
-                title: '💰 Salary Credited!',
-                body: `Your salary of ₹${parseFloat(amount).toLocaleString('en-IN')} for ${monthString} has been processed successfully.`,
-            },
-            data: {
-                type: 'salary_paid',
-                amount: String(amount),
-                month: monthString,
-                click_action: 'FLUTTER_NOTIFICATION_CLICK',
-            }
+        createNotification({
+            recipient: staffId,
+            recipientModel: 'Staff',
+            title: '💰 Salary Credited!',
+            message: `Your salary of ₹${parseFloat(amount).toLocaleString('en-IN')} for ${monthString} has been processed successfully.`,
+            type: 'salary_paid',
+            relatedId: payroll._id,
+            relatedModel: 'Salary',
+            sendPush: true
         }).catch(err => console.error('❌ Failed to send salary notification:', err));
 
     } catch (error) {

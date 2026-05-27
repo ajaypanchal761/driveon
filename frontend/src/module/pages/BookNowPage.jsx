@@ -2462,49 +2462,6 @@ const BookNowPage = () => {
               </div>
             </div>
 
-            {/* Custom Services from DB */}
-            {customServices.length > 0 && (
-              <div className="mt-4 pt-4 border-t" style={{ borderColor: colors.borderMedium }}>
-                <p className="text-xs font-bold mb-3" style={{ color: colors.textSecondary }}>Additional Services</p>
-                <div className="space-y-3">
-                  {customServices.map((service) => {
-                    const qty = customServiceQuantities[service._id] || 0;
-                    return (
-                      <div key={service._id} className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-semibold" style={{ color: colors.textPrimary }}>{service.name}</h4>
-                          <p className="text-xs" style={{ color: colors.backgroundTertiary }}>₹{service.pricePerUnit} per unit</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {qty > 0 && (
-                            <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
-                              ₹{qty * service.pricePerUnit}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setCustomServiceQuantities(prev => ({ ...prev, [service._id]: Math.max(0, (prev[service._id] || 0) - 1) }))}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                            style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
-                          </button>
-                          <span className="w-8 text-center text-sm font-bold" style={{ color: colors.textPrimary }}>{qty}</span>
-                          <button
-                            type="button"
-                            onClick={() => setCustomServiceQuantities(prev => ({ ...prev, [service._id]: (prev[service._id] || 0) + 1 }))}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                            style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </motion.div>
 
           {/* Physical Document Verification Notice */}
