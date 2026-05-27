@@ -145,7 +145,8 @@ const BottomNavbar = () => {
     }
   };
 
-  if (isKeyboardVisible) return null;
+  const hideOnRoutes = ['/terms', '/privacy-policy'];
+  if (isKeyboardVisible || hideOnRoutes.includes(location.pathname)) return null;
 
   return (
     <>

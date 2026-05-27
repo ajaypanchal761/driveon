@@ -12,6 +12,7 @@ import {
   getGuarantorPoints,
 } from '../controllers/user.guarantor.controller.js';
 import { validateCoupon } from '../controllers/admin.coupon.controller.js';
+import { validateOffer, getActiveOffers } from '../controllers/admin.offer.controller.js';
 
 const router = express.Router();
 
@@ -155,6 +156,18 @@ router.get('/user/guarantor-points', getGuarantorPoints);
 // Validate Coupon - PROTECTED
 // Route: POST /api/coupons/validate
 router.post('/coupons/validate', validateCoupon);
+
+// ============================================
+// OFFER ROUTES - PROTECTED
+// ============================================
+
+// Validate Offer - PROTECTED
+// Route: POST /api/offers/validate
+router.post('/offers/validate', validateOffer);
+
+// Get Active Offers for User - PROTECTED
+// Route: GET /api/offers/active
+router.get('/offers/active', getActiveOffers);
 
 export default router;
 

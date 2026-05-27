@@ -123,6 +123,9 @@ const ReferralManagementPage = lazy(() =>
 const CouponManagementPage = lazy(() =>
   import("../pages/admin/coupons/CouponManagementPage")
 );
+const OfferManagementPage = lazy(() =>
+  import("../pages/admin/offers/OfferManagementPage")
+);
 const AddOnServicesPage = lazy(() =>
   import("../pages/admin/addon-services/AddOnServicesPage")
 );
@@ -689,6 +692,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/coupons",
             element: <CouponManagementPage />,
+          },
+          {
+            path: "/admin/offers",
+            element: <OfferManagementPage />,
           },
           {
             path: "/admin/addon-services",

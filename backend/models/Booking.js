@@ -134,6 +134,15 @@ const bookingSchema = new mongoose.Schema(
         trim: true,
         uppercase: true,
       },
+      offerCode: {
+        type: String,
+        trim: true,
+        uppercase: true,
+      },
+      offerDiscount: {
+        type: Number,
+        default: 0,
+      },
       finalPrice: {
         type: Number,
         required: true,

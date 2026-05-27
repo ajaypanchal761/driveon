@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import razorpayService from "../../services/razorpay.service";
 import bookingService from "../../services/booking.service";
 import { userService } from "../../services/user.service";
 import { commonService } from "../../services/common.service";
+import { couponService } from "../../services/coupon.service";
+import { offerService } from "../../services/offer.service";
 import api from "../../services/api";
 import { useAppSelector } from "../../hooks/redux";
+import toastUtils from "../../config/toast";
 import CarDetailsHeader from "../components/layout/CarDetailsHeader";
 import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
 import CustomSelect from "../components/common/CustomSelect";
@@ -243,8 +246,12 @@ const BookNowPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
+  const [activeOffers, setActiveOffers] = useState([]);
+  const [appliedOffer, setAppliedOffer] = useState(null);
+  const [offerDiscount, setOfferDiscount] = useState(0);
   const [bookingPurpose, setBookingPurpose] = useState(""); // 'job', 'business', 'student'
-  const [isPersonal, setIsPersonal] = useState(false); // Separate checkbox for personal
+  const [showAddons, setShowAddons] = useState(true);
+
   const [personalDetails, setPersonalDetails] = useState({
     name: "",
     phone: "",
@@ -374,6 +381,23 @@ const BookNowPage = () => {
     fetchCustomServices();
   }, []);
 
+  // Fetch active promotional offers
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const response = await offerService.getActiveOffers();
+        if (response.success && response.data) {
+          setActiveOffers(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching active offers:", err);
+      }
+    };
+    if (isAuthenticated) {
+      fetchOffers();
+    }
+  }, [isAuthenticated]);
+
   // Sync serviceQuantities -> addOnServices for booking submission
   const handleServiceQtyChange = (key, newQty) => {
     setServiceQuantities(prev => ({ ...prev, [key]: newQty }));
@@ -468,8 +492,11 @@ const BookNowPage = () => {
     const basePrice = extractPrice(car.price || car.pricePerDay || 0);
     let totalPrice = basePrice * totalDays;
 
-    // No dynamic pricing multiplier needed
-    totalPrice = totalPrice;
+    // Apply weekend surcharge (15%) if the booking pickup date is a Saturday or Sunday, matching the backend
+    const dayOfWeek = pickup.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+    const weekendMultiplier = isWeekend ? 0.15 : 0;
+    totalPrice = totalPrice * (1 + weekendMultiplier);
 
     // Calculate add-on services total dynamically
     const addOnServicesTotal = Object.entries(serviceQuantities).reduce((total, [key, qty]) => {
@@ -485,8 +512,8 @@ const BookNowPage = () => {
     // Add add-on services to total price
     totalPrice += addOnServicesTotal + customServicesTotal;
 
-    // Apply coupon discount if available
-    const discount = couponDiscount || 0;
+    // Apply coupon or offer discount (Only one can be applied - Option A)
+    const discount = couponDiscount > 0 ? couponDiscount : (offerDiscount > 0 ? offerDiscount : 0);
     const finalPrice = Math.max(0, totalPrice - discount);
 
     // Payment options
@@ -666,24 +693,77 @@ const BookNowPage = () => {
     setIsDateTimePickerOpen(false);
   };
 
-  // Handle coupon application (mock for now)
-  const handleApplyCoupon = () => {
+  // Handle real coupon application
+  const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      alert("Please enter a coupon code");
+      toastUtils.error("Please enter a coupon code");
       return;
     }
 
-    // Mock coupon validation
-    if (couponCode.toUpperCase() === "SAVE10") {
-      const discount = priceDetails.totalPrice * 0.1; // 10% discount
-      setAppliedCoupon({ code: "SAVE10", discount: discount });
-      setCouponDiscount(discount);
-      alert("Coupon applied successfully!");
-    } else {
-      alert("Invalid coupon code");
+    try {
+      const response = await couponService.validateCoupon({
+        code: couponCode.trim().toUpperCase(),
+        amount: priceDetails.totalPrice - (couponDiscount || 0) - (offerDiscount || 0),
+        carId: car.id || car._id || id,
+      });
+
+      if (response.success && response.data) {
+        const discountAmount = response.data.discountAmount || response.data.discount || 0;
+        setAppliedCoupon(response.data.coupon);
+        setCouponDiscount(discountAmount);
+
+        // Clear offer when coupon is applied (Option A)
+        setAppliedOffer(null);
+        setOfferDiscount(0);
+
+        toastUtils.success("Coupon applied successfully!");
+      }
+    } catch (err) {
+      toastUtils.error(err.response?.data?.message || "Invalid coupon code");
       setAppliedCoupon(null);
       setCouponDiscount(0);
     }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode("");
+  };
+
+  // Handle offer application
+  const handleApplyOffer = async (offerCodeToApply) => {
+    try {
+      const response = await offerService.validateOffer({
+        code: offerCodeToApply,
+        amount: priceDetails.totalPrice - (couponDiscount || 0) - (offerDiscount || 0),
+      });
+
+      if (response.success && response.data) {
+        const discountAmount = response.data.discountAmount || 0;
+        setAppliedOffer({
+          code: response.data.code,
+          title: response.data.title,
+          discountType: response.data.discountType,
+          discountValue: response.data.discountValue,
+        });
+        setOfferDiscount(discountAmount);
+
+        // Clear coupon when offer is applied (Option A)
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
+        setCouponCode("");
+
+        toastUtils.success(`Offer "${response.data.title}" applied successfully!`);
+      }
+    } catch (err) {
+      toastUtils.error(err.response?.data?.message || "Failed to apply offer");
+    }
+  };
+
+  const handleRemoveOffer = () => {
+    setAppliedOffer(null);
+    setOfferDiscount(0);
   };
 
   // Handle form submission with backend + Razorpay
@@ -769,64 +849,18 @@ const BookNowPage = () => {
       return;
     }
 
-    // At least one mode must be selected: Personal OR specific purpose
-    if (!isPersonal && !bookingPurpose) {
+    // All personal details are required
+    const { name, phone, email, age, gender } = personalDetails;
+    if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
       alert(
-        "Please select Personal or a booking purpose (Job/Business/Student)"
+        "Please fill all Personal Details (Name, Phone, Email, Age, Gender)"
       );
       return;
     }
-
-    // If Personal is selected, all personal details are required
-    if (isPersonal) {
-      const { name, phone, email, age, gender } = personalDetails;
-      if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
-        alert(
-          "Please fill all Personal Details (Name, Phone, Email, Age, Gender)"
-        );
-        return;
-      }
-      // Validate phone number is exactly 10 digits and starts with 6-9
-      if (!/^[6-9]\d{9}$/.test(phone)) {
-        alert("Please enter a valid 10-digit Indian mobile number (starting with 6-9)");
-        return;
-      }
-    }
-
-    // If a specific purpose is selected (Job/Business/Student), validate its fields
-    if (!isPersonal && bookingPurpose) {
-      if (bookingPurpose === "job") {
-        if (!jobDetails.trim()) {
-          alert("Please enter your job details");
-          return;
-        }
-        if (!documentPhotoPreview) {
-          alert("Please upload your job document photo");
-          return;
-        }
-      }
-
-      if (bookingPurpose === "business") {
-        if (!businessDetails.trim()) {
-          alert("Please enter your business details");
-          return;
-        }
-        if (!documentPhotoPreview) {
-          alert("Please upload your business document photo");
-          return;
-        }
-      }
-
-      if (bookingPurpose === "student") {
-        if (!studentId.trim()) {
-          alert("Please enter your student ID");
-          return;
-        }
-        if (!documentPhotoPreview) {
-          alert("Please upload your student ID / document photo");
-          return;
-        }
-      }
+    // Validate phone number is exactly 10 digits and starts with 6-9
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      alert("Please enter a valid 10-digit Indian mobile number (starting with 6-9)");
+      return;
     }
 
     // Parse car name to extract brand and model
@@ -875,9 +909,11 @@ const BookNowPage = () => {
       specialRequests: specialRequests || "",
       couponCode: appliedCoupon?.code || null,
       couponDiscount: couponDiscount,
+      offerCode: appliedOffer?.code || null,
+      offerDiscount: offerDiscount,
       // Additional details for verification and reporting
-      bookingPurpose: isPersonal ? "personal" : bookingPurpose || null,
-      personalDetails: isPersonal ? personalDetails : null,
+      bookingPurpose: "personal",
+      personalDetails: personalDetails,
       currentAddress: currentAddress || null,
       jobDetails: bookingPurpose === "job" ? jobDetails : null,
       businessDetails: bookingPurpose === "business" ? businessDetails : null,
@@ -1031,17 +1067,20 @@ const BookNowPage = () => {
           alert(error?.message || "Payment failed. Please try again.");
         },
       });
-    } catch (error) {
-      console.error("Error during booking/payment:", error);
+    } catch (err) {
+      console.error("Error during booking/payment:", err);
       setIsProcessing(false);
-      const serverMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message;
-      const friendly =
-        serverMessage || "Failed to process booking. Please try again.";
-      setSubmitWarning(friendly);
-      alert(friendly);
+
+      let serverMessage = err.response?.data?.message || err.message;
+      
+      if (err.response?.data?.errors) {
+        const errorStrings = err.response.data.errors.map(e => `${e.field}: ${e.message}`).join("\n");
+        serverMessage = "Validation errors:\n" + errorStrings;
+        console.error("Validation errors array:", err.response.data.errors);
+      }
+      
+      alert(serverMessage);
+      setSubmitWarning(serverMessage);
     }
   };
 
@@ -1223,268 +1262,6 @@ const BookNowPage = () => {
             </div>
           </motion.div>
 
-          {/* Payment Option */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={
-              isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-            }
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="rounded-2xl p-3 shadow-lg"
-            style={{ backgroundColor: colors.backgroundSecondary }}
-          >
-            <h2
-              className="text-base font-bold mb-3"
-              style={{ color: colors.textPrimary }}
-            >
-              Payment Option
-            </h2>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setPaymentOption("advance")}
-                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${paymentOption === "advance" ? "shadow-md" : ""
-                  }`}
-                style={{
-                  borderColor:
-                    paymentOption === "advance"
-                      ? colors.backgroundTertiary
-                      : colors.borderMedium,
-                  backgroundColor:
-                    paymentOption === "advance"
-                      ? colors.backgroundPrimary
-                      : colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div
-                      className="font-bold text-sm mb-0.5"
-                      style={{ color: colors.textPrimary }}
-                    >
-                      {advancePercentage}% Advance Payment
-                    </div>
-                    <div
-                      className="text-xs"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      Pay {advancePercentage}% now, rest later
-                    </div>
-                  </div>
-                  <div
-                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                    style={{
-                      borderColor:
-                        paymentOption === "advance"
-                          ? colors.backgroundTertiary
-                          : colors.borderCheckbox,
-                    }}
-                  >
-                    {paymentOption === "advance" && (
-                      <div
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: colors.backgroundTertiary }}
-                      ></div>
-                    )}
-                  </div>
-                </div>
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Coupon Code */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={
-              isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-            }
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="rounded-2xl p-3 shadow-lg"
-            style={{ backgroundColor: colors.backgroundSecondary }}
-          >
-            <h2
-              className="text-base font-bold mb-3"
-              style={{ color: colors.textPrimary }}
-            >
-              Coupon Code
-            </h2>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                placeholder="Enter coupon code"
-                className="flex-1 px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                  color: colors.textPrimary,
-                  maxWidth: "60%",
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleApplyCoupon}
-                className="px-8 py-2 rounded-lg text-white font-semibold text-sm"
-                style={{ backgroundColor: colors.backgroundTertiary }}
-              >
-                Apply
-              </button>
-            </div>
-            {appliedCoupon && (
-              <div
-                className="mt-2 p-2 rounded-lg"
-                style={{ backgroundColor: `${colors.success}20` }}
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs font-semibold"
-                    style={{ color: colors.success }}
-                  >
-                    {appliedCoupon.code} Applied
-                  </span>
-                  <span
-                    className="text-xs font-bold"
-                    style={{ color: colors.success }}
-                  >
-                    -Rs. {couponDiscount.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Special Requests */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={
-              isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-            }
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="rounded-2xl p-3 shadow-lg"
-            style={{ backgroundColor: colors.backgroundSecondary }}
-          >
-            <h2
-              className="text-base font-bold mb-3"
-              style={{ color: colors.textPrimary }}
-            >
-              Special Requests
-            </h2>
-            <textarea
-              value={specialRequests}
-              onChange={(e) => setSpecialRequests(e.target.value)}
-              placeholder="Any special requests or instructions..."
-              rows="3"
-              className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none resize-none text-sm"
-              style={{
-                borderColor: colors.borderMedium,
-                backgroundColor: colors.backgroundSecondary,
-                color: colors.textPrimary,
-              }}
-            />
-          </motion.div>
-
-          {/* Price Summary */}
-          {priceDetails.totalDays > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={
-                isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-              }
-              transition={{ duration: 0.5, delay: 0.5 }}
-              className="rounded-2xl p-4 shadow-xl"
-              style={{ backgroundColor: colors.backgroundTertiary }}
-            >
-              <h2
-                className="text-base font-bold mb-3"
-                style={{ color: colors.backgroundSecondary }}
-              >
-                Price Summary
-              </h2>
-              <div className="space-y-1.5 mb-3">
-                <div
-                  className="flex justify-between text-sm"
-                  style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
-                >
-                  <span>Base Price ({priceDetails.totalDays} days)</span>
-                  <span className="font-semibold">
-                    Rs. {formatDecimal(priceDetails.totalPrice - (priceDetails.addOnServicesTotal || 0))}
-                  </span>
-                </div>
-                {priceDetails.addOnServicesTotal > 0 && (
-                  <div
-                    className="flex justify-between text-sm"
-                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
-                  >
-                    <span>Add-on Services</span>
-                    <span className="font-semibold">
-                      Rs. {priceDetails.addOnServicesTotal}
-                    </span>
-                  </div>
-                )}
-                {priceDetails.discount > 0 && (
-                  <div
-                    className="flex justify-between text-sm"
-                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
-                  >
-                    <span>Discount</span>
-                    <span
-                      className="font-semibold"
-                      style={{ color: colors.success }}
-                    >
-                      -Rs. {priceDetails.discount}
-                    </span>
-                  </div>
-                )}
-                <div
-                  className="border-t pt-1.5 mt-1.5"
-                  style={{ borderColor: colors.overlayWhiteLight }}
-                >
-                  <div
-                    className="flex justify-between font-bold"
-                    style={{ color: colors.backgroundSecondary }}
-                  >
-                    <span className="text-base">Total Amount</span>
-                    <span className="text-base">
-                      Rs. {formatDecimal(priceDetails.finalPrice)}
-                    </span>
-                  </div>
-                </div>
-                {paymentOption === "advance" && (
-                  <div
-                    className="mt-2 pt-2 border-t"
-                    style={{ borderColor: colors.overlayWhiteLight }}
-                  >
-                    <div
-                      className="flex justify-between mb-0.5 text-xs"
-                      style={{
-                        color: colors.backgroundSecondary,
-                        opacity: 0.9,
-                      }}
-                    >
-                      <span>Advance Payment ({advancePercentage}%)</span>
-                      <span className="font-semibold">
-                        Rs. {formatDecimal(priceDetails.advancePayment)}
-                      </span>
-                    </div>
-                    <div
-                      className="flex justify-between text-xs"
-                      style={{
-                        color: colors.backgroundSecondary,
-                        opacity: 0.9,
-                      }}
-                    >
-                      <span>Remaining Amount</span>
-                      <span className="font-semibold">
-                        Rs. {formatDecimal(priceDetails.remainingPayment)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
           {/* Additional Details Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1499,53 +1276,11 @@ const BookNowPage = () => {
               className="text-base font-bold"
               style={{ color: colors.textPrimary }}
             >
-              Additional Details
+              Details
             </h2>
 
-            {/* Personal Purpose Checkbox */}
-            <div
-              className="flex items-start gap-2 p-3 rounded-lg border-2"
-              style={{
-                borderColor: colors.borderMedium,
-                backgroundColor: colors.backgroundSecondary,
-              }}
-            >
-              <input
-                type="checkbox"
-                id="personal-purpose"
-                checked={isPersonal}
-                onChange={(e) => {
-                  setIsPersonal(e.target.checked);
-                  if (!e.target.checked) {
-                    // Clear personal details if unchecked
-                    setPersonalDetails({
-                      name: "",
-                      phone: "",
-                      email: "",
-                      age: "",
-                      gender: "",
-                    });
-                  }
-                }}
-                className="mt-0.5 w-4 h-4 rounded border-2"
-                style={{
-                  borderColor: isPersonal
-                    ? colors.backgroundTertiary
-                    : colors.borderCheckbox,
-                }}
-              />
-              <label
-                htmlFor="personal-purpose"
-                className="text-sm font-semibold cursor-pointer"
-                style={{ color: colors.textPrimary }}
-              >
-                Personal
-              </label>
-            </div>
-
             {/* Personal Details Fields */}
-            {isPersonal && (
-              <div
+            <div
                 className="space-y-3 p-3 rounded-lg"
                 style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
               >
@@ -1695,279 +1430,6 @@ const BookNowPage = () => {
                   />
                 </div>
               </div>
-            )}
-
-            {/* Booking Purpose Dropdown (Job, Business, Student only) */}
-            <div>
-              <CustomSelect
-                value={bookingPurpose}
-                onChange={(value) => {
-                  setBookingPurpose(value);
-                  // Reset conditional fields when purpose changes
-                  setJobDetails("");
-                  setBusinessDetails("");
-                  setStudentId("");
-                  setDocumentPhoto(null);
-                  setDocumentPhotoPreview(null);
-                }}
-                options={[
-                  { label: "Job", value: "job" },
-                  { label: "Business", value: "business" },
-                  { label: "Student", value: "student" },
-                ]}
-                placeholder="Select purpose (Job/Business/Student)"
-              />
-            </div>
-
-            {/* Current Address */}
-            <div>
-              <label
-                className="block text-xs font-semibold mb-1.5"
-                style={{ color: colors.textPrimary }}
-              >
-                Current Address
-              </label>
-              <textarea
-                value={currentAddress}
-                onChange={(e) => setCurrentAddress(e.target.value)}
-                placeholder="Enter your current address"
-                rows="3"
-                className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none resize-none text-sm"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                  color: colors.textPrimary,
-                }}
-              />
-            </div>
-
-            {/* Conditional Fields based on Purpose */}
-            {bookingPurpose === "job" && (
-              <div
-                className="space-y-3 p-3 rounded-lg"
-                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
-              >
-                <label
-                  className="block text-xs font-semibold"
-                  style={{ color: colors.textPrimary }}
-                >
-                  Job Details
-                </label>
-                <input
-                  type="text"
-                  value={jobDetails}
-                  onChange={(e) => setJobDetails(e.target.value)}
-                  placeholder="Enter your job details (e.g., Company name, designation)"
-                  className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                  style={{
-                    borderColor: colors.borderMedium,
-                    backgroundColor: colors.backgroundSecondary,
-                    color: colors.textPrimary,
-                  }}
-                />
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Job Document Photo
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setDocumentPhoto(file);
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setDocumentPhotoPreview(reader.result);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border-2 text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                  {documentPhotoPreview && (
-                    <div className="mt-2">
-                      <img
-                        src={documentPhotoPreview}
-                        alt="Document preview"
-                        className="w-32 h-32 object-cover rounded-lg border-2"
-                        style={{ borderColor: colors.borderMedium }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDocumentPhoto(null);
-                          setDocumentPhotoPreview(null);
-                        }}
-                        className="mt-1 text-xs text-red-600 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {bookingPurpose === "business" && (
-              <div
-                className="space-y-3 p-3 rounded-lg"
-                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
-              >
-                <label
-                  className="block text-xs font-semibold"
-                  style={{ color: colors.textPrimary }}
-                >
-                  Business Details
-                </label>
-                <input
-                  type="text"
-                  value={businessDetails}
-                  onChange={(e) => setBusinessDetails(e.target.value)}
-                  placeholder="Enter your business details (e.g., Business name, type)"
-                  className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                  style={{
-                    borderColor: colors.borderMedium,
-                    backgroundColor: colors.backgroundSecondary,
-                    color: colors.textPrimary,
-                  }}
-                />
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Business Document Photo
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setDocumentPhoto(file);
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setDocumentPhotoPreview(reader.result);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border-2 text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                  {documentPhotoPreview && (
-                    <div className="mt-2">
-                      <img
-                        src={documentPhotoPreview}
-                        alt="Document preview"
-                        className="w-32 h-32 object-cover rounded-lg border-2"
-                        style={{ borderColor: colors.borderMedium }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDocumentPhoto(null);
-                          setDocumentPhotoPreview(null);
-                        }}
-                        className="mt-1 text-xs text-red-600 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {bookingPurpose === "student" && (
-              <div
-                className="space-y-3 p-3 rounded-lg"
-                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
-              >
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Student ID
-                  </label>
-                  <input
-                    type="text"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    placeholder="Enter your student ID"
-                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Student ID Document Photo
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setDocumentPhoto(file);
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setDocumentPhotoPreview(reader.result);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-lg border-2 text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                  {documentPhotoPreview && (
-                    <div className="mt-2">
-                      <img
-                        src={documentPhotoPreview}
-                        alt="Document preview"
-                        className="w-32 h-32 object-cover rounded-lg border-2"
-                        style={{ borderColor: colors.borderMedium }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDocumentPhoto(null);
-                          setDocumentPhotoPreview(null);
-                        }}
-                        className="mt-1 text-xs text-red-600 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </motion.div>
 
           {/* Add-on Services Section */}
@@ -1980,135 +1442,491 @@ const BookNowPage = () => {
             className="rounded-2xl p-3 shadow-lg space-y-3"
             style={{ backgroundColor: colors.backgroundSecondary }}
           >
-            <h2
-              className="text-base font-bold"
-              style={{ color: colors.textPrimary }}
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => setShowAddons(!showAddons)}
             >
-              Add-on Services (Optional)
-            </h2>
-
-            <div className="space-y-3">
-              {allAddOnServices.map((service) => (
-              <div
-                key={service._id || service.key}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
+              <h2
+                className="text-base font-bold"
+                style={{ color: colors.textPrimary }}
               >
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${colors.backgroundTertiary}15`,
-                    }}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      style={{ color: colors.backgroundTertiary }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: colors.textPrimary }}
-                    >
-                      {service.name}
-                    </p>
-
-
-                    <p
-                      className="text-xs font-medium mt-0.5"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{service.price} per unit
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {(serviceQuantities[service.key] || 0) > 0 && (
-                    <span
-                      className="text-xs font-semibold mr-2"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{(serviceQuantities[service.key] || 0) * service.price}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 12H4"
-                      />
-                    </svg>
-                  </button>
-                  <span
-                    className="w-8 text-center text-sm font-semibold"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    {serviceQuantities[service.key] || 0}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              ))}
+                Add-on Services (Optional)
+              </h2>
+              <svg
+                className={`w-5 h-5 transition-transform duration-300 ${showAddons ? 'rotate-180' : ''}`}
+                style={{ color: colors.textPrimary }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
 
+            {showAddons && (
+              <div className="space-y-3 pt-2 mt-2 border-t" style={{ borderColor: colors.borderMedium }}>
+              {allAddOnServices.map((service) => (
+                <div
+                  key={service._id || service.key}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
+                  style={{
+                    borderColor: colors.borderMedium,
+                    backgroundColor: colors.backgroundSecondary,
+                  }}
+                >
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{
+                        backgroundColor: `${colors.backgroundTertiary}15`,
+                      }}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        style={{ color: colors.backgroundTertiary }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: colors.textPrimary }}
+                      >
+                        {service.name}
+                      </p>
+
+
+                      <p
+                        className="text-xs font-medium mt-0.5"
+                        style={{ color: colors.backgroundTertiary }}
+                      >
+                        ₹{service.price} per unit
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {(serviceQuantities[service.key] || 0) > 0 && (
+                      <span
+                        className="text-xs font-semibold mr-2"
+                        style={{ color: colors.backgroundTertiary }}
+                      >
+                        ₹{(serviceQuantities[service.key] || 0) * service.price}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
+                      }
+                      className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M20 12H4"
+                        />
+                      </svg>
+                    </button>
+                    <span
+                      className="w-8 text-center text-sm font-semibold"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      {serviceQuantities[service.key] || 0}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
+                      }
+                      className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                      style={{
+                        borderColor: colors.borderMedium,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            )}
           </motion.div>
 
 
+
+          {/* Special Requests */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={
+              isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+            }
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="rounded-2xl p-3 shadow-lg"
+            style={{ backgroundColor: colors.backgroundSecondary }}
+          >
+            <h2
+              className="text-base font-bold mb-3"
+              style={{ color: colors.textPrimary }}
+            >
+              Special Requests
+            </h2>
+            <textarea
+              value={specialRequests}
+              onChange={(e) => setSpecialRequests(e.target.value)}
+              placeholder="Any special requests or instructions..."
+              rows="3"
+              className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none resize-none text-sm"
+              style={{
+                borderColor: colors.borderMedium,
+                backgroundColor: colors.backgroundSecondary,
+                color: colors.textPrimary,
+              }}
+            />
+          </motion.div>
+
+
+
+          {/* Coupon Code */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={
+              isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+            }
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="rounded-2xl p-3 shadow-lg"
+            style={{ backgroundColor: colors.backgroundSecondary }}
+          >
+            <h2
+              className="text-base font-bold mb-3"
+              style={{ color: colors.textPrimary }}
+            >
+              Coupon Code
+            </h2>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="Enter coupon code"
+                className="flex-1 px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                style={{
+                  borderColor: colors.borderMedium,
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.textPrimary,
+                  maxWidth: "60%",
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleApplyCoupon}
+                className="px-8 py-2 rounded-lg text-white font-semibold text-sm"
+                style={{ backgroundColor: colors.backgroundTertiary }}
+              >
+                Apply
+              </button>
+            </div>
+            {appliedCoupon && (
+              <div
+                className="mt-2 py-2 pl-3 pr-2 rounded-lg flex items-center justify-between group"
+                style={{ backgroundColor: `${colors.success}20` }}
+              >
+                <div className="flex flex-1 items-center justify-between">
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: colors.success }}
+                  >
+                    {appliedCoupon.code} Applied
+                  </span>
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: colors.success }}
+                  >
+                    -Rs. {couponDiscount.toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="ml-3 p-1.5 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50 transition-all cursor-pointer flex-shrink-0"
+                  title="Remove coupon"
+                >
+                  <svg className="w-4 h-4 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Offers Horizontal Carousel / Slider */}
+          {activeOffers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: 0.5, delay: 0.35 }}
+              className="rounded-2xl p-4 shadow-lg overflow-hidden"
+              style={{ backgroundColor: colors.backgroundSecondary }}
+            >
+              <h2
+                className="text-base font-bold mb-3"
+                style={{ color: colors.textPrimary }}
+              >
+                Special Offers
+              </h2>
+
+              <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                {activeOffers.map((offer) => {
+                  const isCurrentApplied = appliedOffer?.code === offer.code;
+                  return (
+                    <motion.div
+                      key={offer._id || offer.id}
+                      whileHover={{ scale: 1.02 }}
+                      className="flex-shrink-0 w-60 rounded-xl p-4 border-2 flex flex-col justify-between relative transition-all"
+                      style={{
+                        borderColor: isCurrentApplied ? colors.backgroundTertiary : colors.borderMedium,
+                        background: isCurrentApplied
+                          ? `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundLight} 100%)`
+                          : colors.backgroundSecondary,
+                        boxShadow: isCurrentApplied ? "0 4px 15px rgba(0, 0, 0, 0.05)" : "none",
+                      }}
+                    >
+
+
+                      <span
+                        className="absolute -top-3 right-2 px-3 py-1 text-xs font-bold text-white rounded-full uppercase tracking-wider shadow-sm"
+                        style={{ backgroundColor: colors.backgroundTertiary }}
+                      >
+                        {offer.discountType === 'percentage'
+                          ? `${offer.discountValue}% Off`
+                          : offer.discountType === 'fixed'
+                            ? `₹${offer.discountValue} Off`
+                            : '100% FREE'}
+                      </span>
+
+                      <div className="mb-4">
+                        <h3 className="font-bold text-sm text-gray-800 mb-1 line-clamp-1">{offer.title}</h3>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => isCurrentApplied ? handleRemoveOffer() : handleApplyOffer(offer.code)}
+                        className="w-full py-2 rounded-lg text-xs font-bold transition-all text-center"
+                        style={{
+                          backgroundColor: isCurrentApplied ? "#F3E8FF" : colors.backgroundTertiary,
+                          color: isCurrentApplied ? "#6B21A8" : colors.textWhite,
+                        }}
+                      >
+                        {isCurrentApplied ? "Remove Offer" : "Apply Offer"}
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Price Summary */}
+          {priceDetails.totalDays > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={
+                isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+              }
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="rounded-2xl p-4 shadow-xl"
+              style={{ backgroundColor: colors.backgroundTertiary }}
+            >
+              <h2
+                className="text-base font-bold mb-3"
+                style={{ color: colors.backgroundSecondary }}
+              >
+                Price Summary
+              </h2>
+              <div className="space-y-1.5 mb-3">
+                <div
+                  className="flex justify-between text-sm"
+                  style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
+                >
+                  <span>Base Price ({priceDetails.totalDays} days)</span>
+                  <span className="font-semibold">
+                    Rs. {formatDecimal(priceDetails.totalPrice - (priceDetails.addOnServicesTotal || 0))}
+                  </span>
+                </div>
+                {priceDetails.addOnServicesTotal > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
+                  >
+                    <span>Add-on Services</span>
+                    <span className="font-semibold">
+                      Rs. {priceDetails.addOnServicesTotal}
+                    </span>
+                  </div>
+                )}
+                {priceDetails.discount > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
+                  >
+                    <span>Discount</span>
+                    <span
+                      className="font-semibold"
+                      style={{ color: colors.success }}
+                    >
+                      -Rs. {priceDetails.discount}
+                    </span>
+                  </div>
+                )}
+                <div
+                  className="border-t pt-1.5 mt-1.5"
+                  style={{ borderColor: colors.overlayWhiteLight }}
+                >
+                  <div
+                    className="flex justify-between font-bold"
+                    style={{ color: colors.backgroundSecondary }}
+                  >
+                    <span className="text-base">Total Amount</span>
+                    <span className="text-base">
+                      Rs. {formatDecimal(priceDetails.finalPrice)}
+                    </span>
+                  </div>
+                </div>
+                {paymentOption === "advance" && (
+                  <div
+                    className="mt-2 pt-2 border-t"
+                    style={{ borderColor: colors.overlayWhiteLight }}
+                  >
+                    <div
+                      className="flex justify-between mb-0.5 text-xs"
+                      style={{
+                        color: colors.backgroundSecondary,
+                        opacity: 0.9,
+                      }}
+                    >
+                      <span>Advance Payment ({advancePercentage}%)</span>
+                      <span className="font-semibold">
+                        Rs. {formatDecimal(priceDetails.advancePayment)}
+                      </span>
+                    </div>
+                    <div
+                      className="flex justify-between text-xs"
+                      style={{
+                        color: colors.backgroundSecondary,
+                        opacity: 0.9,
+                      }}
+                    >
+                      <span>Remaining Amount</span>
+                      <span className="font-semibold">
+                        Rs. {formatDecimal(priceDetails.remainingPayment)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Payment Option */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={
+              isPageLoaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+            }
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="rounded-2xl p-3 shadow-lg"
+            style={{ backgroundColor: colors.backgroundSecondary }}
+          >
+            <h2
+              className="text-base font-bold mb-3"
+              style={{ color: colors.textPrimary }}
+            >
+              Payment Option
+            </h2>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setPaymentOption("advance")}
+                className={`w-full p-3 rounded-lg border-2 text-left transition-all ${paymentOption === "advance" ? "shadow-md" : ""
+                  }`}
+                style={{
+                  borderColor:
+                    paymentOption === "advance"
+                      ? colors.backgroundTertiary
+                      : colors.borderMedium,
+                  backgroundColor:
+                    paymentOption === "advance"
+                      ? colors.backgroundPrimary
+                      : colors.backgroundSecondary,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div
+                      className="font-bold text-sm mb-0.5"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      {advancePercentage}% Advance Payment
+                    </div>
+                    <div
+                      className="text-xs"
+                      style={{ color: colors.textSecondary }}
+                    >
+                      Pay {advancePercentage}% now, rest later
+                    </div>
+                  </div>
+                  <div
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                    style={{
+                      borderColor:
+                        paymentOption === "advance"
+                          ? colors.backgroundTertiary
+                          : colors.borderCheckbox,
+                    }}
+                  >
+                    {paymentOption === "advance" && (
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: colors.backgroundTertiary }}
+                      ></div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </motion.div>
 
           {/* Physical Document Verification Notice */}
 
@@ -2205,26 +2023,27 @@ const BookNowPage = () => {
                   : colors.borderCheckbox,
               }}
             />
-            <label
-              htmlFor="terms"
-              className="text-xs"
+            <div
+              className="text-xs mt-0.5"
               style={{ color: colors.textSecondary }}
             >
               I agree to the{" "}
-              <span
-                className="font-semibold"
+              <Link
+                to="/terms"
+                className="font-semibold hover:underline cursor-pointer"
                 style={{ color: colors.textPrimary }}
               >
                 Terms & Conditions
-              </span>{" "}
+              </Link>{" "}
               and{" "}
-              <span
-                className="font-semibold"
+              <Link
+                to="/privacy-policy"
+                className="font-semibold hover:underline cursor-pointer"
                 style={{ color: colors.textPrimary }}
               >
                 Privacy Policy
-              </span>
-            </label>
+              </Link>
+            </div>
           </motion.div>
 
           {/* Submit Button */}
@@ -2519,35 +2338,35 @@ const BookNowPage = () => {
               >
                 Select Time
               </h3>
-              
+
               <div className="flex items-center justify-center gap-1">
                 {/* Hour */}
-                <div 
+                <div
                   onClick={() => setTimePickerMode('hour')}
                   className={`flex items-center justify-center w-[84px] h-[84px] rounded-lg text-5xl font-light cursor-pointer transition-colors ${timePickerMode === 'hour' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-[#e5e7eb] text-[#1c1b1f] hover:bg-gray-300'}`}
                 >
                   {selectedHour}
                 </div>
-                
+
                 <span className="text-5xl font-light text-[#1c1b1f] mx-1 pb-2">:</span>
-                
+
                 {/* Minute */}
-                <div 
+                <div
                   onClick={() => setTimePickerMode('minute')}
                   className={`flex items-center justify-center w-[84px] h-[84px] rounded-lg text-5xl font-light cursor-pointer transition-colors ${timePickerMode === 'minute' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-[#e5e7eb] text-[#1c1b1f] hover:bg-gray-300'}`}
                 >
                   {String(selectedMinute).padStart(2, '0')}
                 </div>
-                
+
                 {/* AM/PM */}
                 <div className="flex flex-col ml-2 border border-[#79747E] rounded-md overflow-hidden">
-                  <button 
+                  <button
                     onClick={() => setSelectedPeriod('am')}
                     className={`px-3 py-[10px] text-[13px] font-bold transition-colors ${selectedPeriod === 'am' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-white text-[#49454f] hover:bg-gray-100'} border-b border-[#79747E]`}
                   >
                     AM
                   </button>
-                  <button 
+                  <button
                     onClick={() => setSelectedPeriod('pm')}
                     className={`px-3 py-[10px] text-[13px] font-bold transition-colors ${selectedPeriod === 'pm' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-white text-[#49454f] hover:bg-gray-100'}`}
                   >
@@ -2563,15 +2382,15 @@ const BookNowPage = () => {
                 <div className="w-2 h-2 bg-[#4F378B] rounded-full absolute z-10"></div>
                 {/* Draw clock numbers and hand */}
                 {(() => {
-                  const items = timePickerMode === 'hour' 
+                  const items = timePickerMode === 'hour'
                     ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                     : [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
                   const radius = 104; // Radius of numbers circle
                   const cx = 128;
                   const cy = 128;
-                  
+
                   const selectedVal = timePickerMode === 'hour' ? selectedHour : selectedMinute;
-                  
+
                   // For minutes not exactly on a 5-minute mark, find closest angle
                   let angleDegrees = 0;
                   if (timePickerMode === 'hour') {
@@ -2579,7 +2398,7 @@ const BookNowPage = () => {
                   } else {
                     angleDegrees = selectedVal * 6;
                   }
-                  
+
                   const angleRad = (angleDegrees - 90) * (Math.PI / 180);
                   const handX = cx + radius * Math.cos(angleRad);
                   const handY = cy + radius * Math.sin(angleRad);
@@ -2591,7 +2410,7 @@ const BookNowPage = () => {
                         <line x1="128" y1="128" x2={handX} y2={handY} stroke="#4F378B" strokeWidth="2" />
                       </svg>
                       {/* Clock Selected Circle Background */}
-                      <div 
+                      <div
                         className="absolute w-10 h-10 bg-[#4F378B] rounded-full z-0 pointer-events-none"
                         style={{
                           left: `${handX - 20}px`,
@@ -2605,7 +2424,7 @@ const BookNowPage = () => {
                         const x = cx + radius * Math.cos(valAngle);
                         const y = cy + radius * Math.sin(valAngle);
                         const isSelected = selectedVal === val;
-                        
+
                         return (
                           <div
                             key={val}
@@ -2634,7 +2453,7 @@ const BookNowPage = () => {
             <div className="flex justify-between items-center px-6 pb-4 pt-2">
               {/* Keyboard Icon */}
               <svg className="w-5 h-5 text-[#49454f] cursor-pointer" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20,5H4C2.895,5,2,5.895,2,7v10c0,1.105,0.895,2,2,2h16c1.105,0,2-0.895,2-2V7C22,5.895,21.105,5,20,5z M11,8h2v2h-2V8z M11,11h2v2h-2V11z M8,8h2v2H8V8z M8,11h2v2H8V11z M5,8h2v2H5V8z M5,11h2v2H5V11z M16,16H8v-2h8V16z M14,11h2v2h-2V11z M14,8h2v2h-2V8z M17,11h2v2h-2V11z M17,8h2v2h-2V8z"/>
+                <path d="M20,5H4C2.895,5,2,5.895,2,7v10c0,1.105,0.895,2,2,2h16c1.105,0,2-0.895,2-2V7C22,5.895,21.105,5,20,5z M11,8h2v2h-2V8z M11,11h2v2h-2V11z M8,8h2v2H8V8z M8,11h2v2H8V11z M5,8h2v2H5V8z M5,11h2v2H5V11z M16,16H8v-2h8V16z M14,11h2v2h-2V11z M14,8h2v2h-2V8z M17,11h2v2h-2V11z M17,8h2v2h-2V8z" />
               </svg>
               <div className="flex gap-2">
                 <button

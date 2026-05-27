@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
+import Offer from '../models/Offer.js';
 import AddOnServices from '../models/AddOnServices.js';
 import { processReferralTripCompletion } from './referral.controller.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
@@ -21,6 +22,7 @@ export const createBooking = async (req, res) => {
       paymentOption,
       specialRequests,
       couponCode,
+      offerCode,
       addOnServices, // Optional: { driver: 0, bodyguard: 0, gunmen: 0, bouncer: 0 }
     } = req.body;
 
@@ -77,13 +79,24 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    // Set default location if not provided
-    const pickupLocation = tripStart.location && tripStart.location.trim() !== ''
-      ? tripStart.location.trim()
-      : 'Location to be confirmed';
-    const dropLocation = tripEnd.location && tripEnd.location.trim() !== ''
-      ? tripEnd.location.trim()
-      : 'Location to be confirmed';
+    // Set default location if not provided (handles both string and structured object formats)
+    let pickupLocation = 'Location to be confirmed';
+    if (tripStart && tripStart.location) {
+      if (typeof tripStart.location === 'object') {
+        pickupLocation = tripStart.location.address || tripStart.location.city || JSON.stringify(tripStart.location);
+      } else if (typeof tripStart.location === 'string' && tripStart.location.trim() !== '') {
+        pickupLocation = tripStart.location.trim();
+      }
+    }
+
+    let dropLocation = 'Location to be confirmed';
+    if (tripEnd && tripEnd.location) {
+      if (typeof tripEnd.location === 'object') {
+        dropLocation = tripEnd.location.address || tripEnd.location.city || JSON.stringify(tripEnd.location);
+      } else if (typeof tripEnd.location === 'string' && tripEnd.location.trim() !== '') {
+        dropLocation = tripEnd.location.trim();
+      }
+    }
 
     // Validate trip dates - combine date and time for accurate comparison
     let startDate = new Date(tripStart.date);
@@ -229,22 +242,35 @@ export const createBooking = async (req, res) => {
           bouncer: Math.max(0, parseInt(addOnServices.bouncer) || 0),
         };
 
-        // Calculate total for add-on services
+        // Fallback default pricing if add-on services are unseeded in database
+        const defaultPrices = {
+          driver: 500,
+          bodyguard: 1000,
+          gunmen: 1500,
+          bouncer: 800,
+        };
+
+        const getPrice = (key) => {
+          const dbPrice = prices[key];
+          return (typeof dbPrice === 'number' && !isNaN(dbPrice)) ? dbPrice : defaultPrices[key];
+        };
+
+        // Calculate total for add-on services safely
         addOnServicesTotal =
-          (quantities.driver * prices.driver) +
-          (quantities.bodyguard * prices.bodyguard) +
-          (quantities.gunmen * prices.gunmen) +
-          (quantities.bouncer * prices.bouncer);
+          (quantities.driver * getPrice('driver')) +
+          (quantities.bodyguard * getPrice('bodyguard')) +
+          (quantities.gunmen * getPrice('gunmen')) +
+          (quantities.bouncer * getPrice('bouncer'));
 
         addOnServicesData = quantities;
 
-        console.log('✅ Add-on services calculated:', {
+        console.log('✅ Add-on services calculated safely:', {
           quantities,
           prices: {
-            driver: prices.driver,
-            bodyguard: prices.bodyguard,
-            gunmen: prices.gunmen,
-            bouncer: prices.bouncer,
+            driver: getPrice('driver'),
+            bodyguard: getPrice('bodyguard'),
+            gunmen: getPrice('gunmen'),
+            bouncer: getPrice('bouncer'),
           },
           total: addOnServicesTotal,
         });
@@ -305,6 +331,76 @@ export const createBooking = async (req, res) => {
       }
     }
 
+    // Handle offer discount if provided
+    let offerDiscount = 0;
+    let appliedOffer = null;
+    if (offerCode) {
+      try {
+        const offer = await Offer.findOne({ code: offerCode.toUpperCase(), isActive: true });
+        if (offer) {
+          const now = new Date();
+          if (now >= offer.validityStart && now <= offer.validityEnd) {
+            // Check first-time-only criteria
+            let canApply = true;
+            if (offer.isFirstTimeOnly) {
+              const bookingsCount = await Booking.countDocuments({
+                user: userId,
+                status: { $ne: 'cancelled' },
+              });
+              if (bookingsCount > 0) {
+                canApply = false;
+              }
+            }
+
+            if (canApply) {
+              // Calculate discount
+              if (offer.discountType === 'percentage') {
+                offerDiscount = (totalPrice * offer.discountValue) / 100;
+              } else if (offer.discountType === 'fixed') {
+                offerDiscount = offer.discountValue;
+              } else if (offer.discountType === 'free') {
+                offerDiscount = totalPrice;
+              }
+
+              offerDiscount = Math.round(offerDiscount * 100) / 100;
+              offerDiscount = Math.min(offerDiscount, totalPrice);
+
+              appliedOffer = offer;
+              totalPrice = Math.max(0, totalPrice - offerDiscount);
+
+              console.log('✅ Offer applied:', {
+                code: offer.code,
+                discount: offerDiscount,
+                newTotal: totalPrice,
+              });
+            } else {
+              return res.status(400).json({
+                success: false,
+                message: 'This offer is only valid for first time users',
+              });
+            }
+          } else {
+            return res.status(400).json({
+              success: false,
+              message: 'This offer has expired or is not yet valid',
+            });
+          }
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: 'Invalid offer code',
+          });
+        }
+      } catch (offerError) {
+        console.error('❌ Offer validation error:', offerError);
+        return res.status(400).json({
+          success: false,
+          message: 'Error validating offer',
+          error: process.env.NODE_ENV === 'development' ? offerError.message : undefined,
+        });
+      }
+    }
+
     // Calculate advance payment (dynamic % for advance option)
     const Setting = (await import('../models/Setting.js')).default;
     const dbSetting = await Setting.findOne({ key: 'advancePaymentPercentage' });
@@ -321,24 +417,30 @@ export const createBooking = async (req, res) => {
     // Ensure coordinates have proper structure (latitude/longitude as numbers or omit if not provided)
     // Mongoose will handle undefined values, but we need to make sure we don't send empty objects
     const formattedStartCoordinates = {};
+    let hasStartCoords = false;
     if (typeof startCoordinates.latitude === 'number' && !isNaN(startCoordinates.latitude)) {
       formattedStartCoordinates.latitude = startCoordinates.latitude;
+      hasStartCoords = true;
     }
     if (typeof startCoordinates.longitude === 'number' && !isNaN(startCoordinates.longitude)) {
       formattedStartCoordinates.longitude = startCoordinates.longitude;
+      hasStartCoords = true;
     }
 
     const formattedEndCoordinates = {};
+    let hasEndCoords = false;
     if (typeof endCoordinates.latitude === 'number' && !isNaN(endCoordinates.latitude)) {
       formattedEndCoordinates.latitude = endCoordinates.latitude;
+      hasEndCoords = true;
     }
     if (typeof endCoordinates.longitude === 'number' && !isNaN(endCoordinates.longitude)) {
       formattedEndCoordinates.longitude = endCoordinates.longitude;
+      hasEndCoords = true;
     }
 
     console.log('📍 Coordinates formatted:', {
-      start: formattedStartCoordinates,
-      end: formattedEndCoordinates,
+      start: hasStartCoords ? formattedStartCoordinates : 'none',
+      end: hasEndCoords ? formattedEndCoordinates : 'none',
     });
 
     // Create booking
@@ -347,27 +449,29 @@ export const createBooking = async (req, res) => {
       car: carId,
       tripStart: {
         location: pickupLocation,
-        coordinates: formattedStartCoordinates,
+        coordinates: hasStartCoords ? formattedStartCoordinates : undefined,
         date: startDate,
         time: tripStart.time || '10:00',
       },
       tripEnd: {
         location: dropLocation,
-        coordinates: formattedEndCoordinates,
+        coordinates: hasEndCoords ? formattedEndCoordinates : undefined,
         date: endDate,
         time: tripEnd.time || '18:00',
       },
       totalDays,
       pricing: {
         basePrice,
-        totalPrice: totalPrice + couponDiscount, // Original total before discount
+        totalPrice: totalPrice + couponDiscount + offerDiscount, // Original total before discount
         advancePayment,
         remainingPayment,
         weekendMultiplier,
         timeOfDayMultiplier: 0,
-        discount: couponDiscount,
+        discount: couponDiscount + offerDiscount,
         finalPrice,
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        offerCode: appliedOffer ? appliedOffer.code : undefined,
+        offerDiscount: offerDiscount,
         addOnServicesTotal,
       },
       addOnServices: addOnServicesData,

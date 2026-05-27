@@ -121,7 +121,9 @@ export const couponService = {
       const response = await api.post('/coupons/validate', data);
       return response.data;
     } catch (error) {
-      console.error('Validate coupon error:', error);
+      if (error.response?.status !== 404 && error.response?.status !== 400) {
+        console.error('Validate coupon error:', error);
+      }
       throw error;
     }
   },

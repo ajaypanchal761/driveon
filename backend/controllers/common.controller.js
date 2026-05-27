@@ -135,7 +135,7 @@ export const getFAQs = async (req, res) => {
 export const getPromotionalBanner = async (req, res) => {
   try {
     const banner = {
-      title: "20% Off Your First Ride!",
+      title: "20% Off Your Ride!",
       subtitle: "Experience Seamless Car Rentals.",
     };
 

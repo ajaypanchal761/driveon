@@ -62,6 +62,14 @@ import {
   getCouponUsage,
 } from '../controllers/admin.coupon.controller.js';
 import {
+  createOffer,
+  getAllOffers,
+  getOfferById,
+  updateOffer,
+  deleteOffer,
+  toggleOfferStatus,
+} from '../controllers/admin.offer.controller.js';
+import {
   getAdminAddOnServicesPrices,
   updateAddOnServicesPrices,
   getCustomAddOnServices,
@@ -329,6 +337,34 @@ router.patch('/coupons/:id/toggle', authenticateAdmin, toggleCouponStatus);
 // Get Coupon Usage Statistics - PROTECTED
 // Route: GET /api/admin/coupons/:id/usage
 router.get('/coupons/:id/usage', authenticateAdmin, getCouponUsage);
+
+// ============================================
+// OFFER MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Create Offer - PROTECTED
+// Route: POST /api/admin/offers
+router.post('/offers', authenticateAdmin, createOffer);
+
+// Get All Offers - PROTECTED
+// Route: GET /api/admin/offers
+router.get('/offers', authenticateAdmin, getAllOffers);
+
+// Get Offer by ID - PROTECTED
+// Route: GET /api/admin/offers/:id
+router.get('/offers/:id', authenticateAdmin, getOfferById);
+
+// Update Offer - PROTECTED
+// Route: PUT /api/admin/offers/:id
+router.put('/offers/:id', authenticateAdmin, updateOffer);
+
+// Delete Offer - PROTECTED
+// Route: DELETE /api/admin/offers/:id
+router.delete('/offers/:id', authenticateAdmin, deleteOffer);
+
+// Toggle Offer Status - PROTECTED
+// Route: PATCH /api/admin/offers/:id/toggle
+router.patch('/offers/:id/toggle', authenticateAdmin, toggleOfferStatus);
 
 // ============================================
 // ADD-ON SERVICES MANAGEMENT ROUTES - PROTECTED

@@ -1283,7 +1283,7 @@ const CarDetailsPage = () => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [bookingPurpose, setBookingPurpose] = useState(''); // 'job', 'business', 'student'
-  const [isPersonal, setIsPersonal] = useState(false); // Separate checkbox for personal
+
   const [personalDetails, setPersonalDetails] = useState({
     name: '',
     phone: '',
@@ -1411,13 +1411,8 @@ const CarDetailsPage = () => {
 
   // Auto-fill personal details from database when checkbox is checked and user data is available
   useEffect(() => {
-    // Only auto-fill if checkbox is checked and user data is available
-    if (!isPersonal || !user) {
-      // Reset ref when checkbox is unchecked
-      if (!isPersonal) {
-        autoFilledRef.current = false;
-        lastUserDataRef.current = null;
-      }
+    // Only auto-fill if user data is available
+    if (!user) {
       return;
     }
 
@@ -1448,7 +1443,7 @@ const CarDetailsPage = () => {
       autoFilledRef.current = true;
       lastUserDataRef.current = userDataKey;
     }
-  }, [isPersonal, user?.name, user?.phone, user?.email, user?.age, user?.gender]);
+  }, [user?.name, user?.phone, user?.email, user?.age, user?.gender]);
 
   // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
   // Use noon (12:00) to avoid timezone shift issues
@@ -1761,10 +1756,9 @@ const CarDetailsPage = () => {
       return;
     }
 
-    // Validate personal details if Personal is selected
-    if (isPersonal) {
-      const { name, phone, email, age, gender } = personalDetails;
-      if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
+    // Validate personal details
+    const { name, phone, email, age, gender } = personalDetails;
+    if (!name.trim() || !phone.trim() || !email.trim() || !age || !gender) {
         alert('Please fill all Personal Details (Name, Phone, Email, Age, Gender)');
         return;
       }
@@ -1773,7 +1767,6 @@ const CarDetailsPage = () => {
         alert('Please enter a valid 10-digit Indian mobile number (starting with 6-9)');
         return;
       }
-    }
 
     // Both mobile and web views: Use Razorpay payment flow
     if (!car || (!car.id && !car._id)) return;
@@ -1814,13 +1807,13 @@ const CarDetailsPage = () => {
       couponCode: appliedCoupon?.code || null,
       couponDiscount: couponDiscount,
       // Additional details for verification and reporting
-      bookingPurpose: isPersonal ? "personal" : bookingPurpose || null,
-      personalDetails: isPersonal ? personalDetails : null,
+      bookingPurpose: "personal",
+      personalDetails: personalDetails,
       currentAddress: currentAddress || null,
-      jobDetails: bookingPurpose === "job" ? jobDetails : null,
-      businessDetails: bookingPurpose === "business" ? businessDetails : null,
-      studentId: bookingPurpose === "student" ? studentId : null,
-      documentPhoto: documentPhoto ? documentPhotoPreview : null,
+      jobDetails: null,
+      businessDetails: null,
+      studentId: null,
+      documentPhoto: null,
       addOnServices,
     };
 
@@ -2649,99 +2642,6 @@ const CarDetailsPage = () => {
               <div className="space-y-4">
                 <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Additional Details</h3>
 
-                {/* Personal Purpose Checkbox */}
-                <div className="flex items-start gap-2 p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
-                  <input
-                    type="checkbox"
-                    id="personal-purpose"
-                    checked={isPersonal}
-                    onChange={async (e) => {
-                      setIsPersonal(e.target.checked);
-                      if (e.target.checked) {
-                        // Fetch fresh user data from database when checkbox is checked
-                        if (isAuthenticated) {
-                          try {
-                            const response = await userService.getProfile();
-                            const userData = response?.data?.user || response?.user || response?.data;
-
-                            if (userData) {
-                              // Normalize user data
-                              const normalizedUserData = {
-                                ...userData,
-                                name: userData.name || userData.fullName || '',
-                                phone: userData.phone || '',
-                                email: userData.email || '',
-                                age: userData.age || null,
-                                gender: userData.gender || '',
-                              };
-
-                              // Update Redux store
-                              dispatch(setUser(normalizedUserData));
-
-                              // Auto-fill personal details from fresh database data immediately
-                              setPersonalDetails({
-                                name: normalizedUserData.name || '',
-                                phone: normalizedUserData.phone || '',
-                                email: normalizedUserData.email || '',
-                                age: normalizedUserData.age ? String(normalizedUserData.age) : '',
-                                gender: normalizedUserData.gender || '',
-                              });
-
-                              // Update refs to prevent duplicate auto-fill
-                              autoFilledRef.current = true;
-                              lastUserDataRef.current = `${normalizedUserData.name || ''}_${normalizedUserData.phone || ''}_${normalizedUserData.email || ''}_${normalizedUserData.age || ''}_${normalizedUserData.gender || ''}`;
-                            } else if (user) {
-                              // Fallback to Redux user data if API doesn't return data
-                              setPersonalDetails({
-                                name: user.name || '',
-                                phone: user.phone || '',
-                                email: user.email || '',
-                                age: user.age ? String(user.age) : '',
-                                gender: user.gender || '',
-                              });
-                            }
-                          } catch (error) {
-                            console.error('❌ CarDetailsPage - Error fetching user data on checkbox check:', error);
-                            // Fallback to Redux user data if API call fails
-                            if (user) {
-                              setPersonalDetails({
-                                name: user.name || '',
-                                phone: user.phone || '',
-                                email: user.email || '',
-                                age: user.age ? String(user.age) : '',
-                                gender: user.gender || '',
-                              });
-                            }
-                          }
-                        } else if (user) {
-                          // If not authenticated but user data exists in Redux, use it
-                          setPersonalDetails({
-                            name: user.name || '',
-                            phone: user.phone || '',
-                            email: user.email || '',
-                            age: user.age ? String(user.age) : '',
-                            gender: user.gender || '',
-                          });
-                        }
-                      } else {
-                        // Clear personal details if unchecked
-                        setPersonalDetails({
-                          name: '',
-                          phone: '',
-                          email: '',
-                          age: '',
-                          gender: '',
-                        });
-                      }
-                    }}
-                    className="mt-0.5 w-4 h-4 rounded border-2"
-                    style={{ borderColor: isPersonal ? colors.backgroundTertiary : colors.borderCheckbox }}
-                  />
-                  <label htmlFor="personal-purpose" className="text-sm font-semibold cursor-pointer" style={{ color: colors.textPrimary }}>
-                    Personal
-                  </label>
-                </div>
-
                 {/* Personal Details Fields - Always visible and auto-filled */}
                 <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
                   <h4 className="text-xs font-bold mb-2" style={{ color: colors.textPrimary }}>Personal Details</h4>
@@ -2851,247 +2751,6 @@ const CarDetailsPage = () => {
                   </div>
                 </div>
 
-                {/* Booking Purpose Dropdown (Job, Business, Student only) */}
-                <div>
-                  <CustomSelect
-                    value={bookingPurpose}
-                    onChange={(value) => {
-                      setBookingPurpose(value);
-                      // Reset conditional fields when purpose changes
-                      setJobDetails('');
-                      setBusinessDetails('');
-                      setStudentId('');
-                      setDocumentPhoto(null);
-                      setDocumentPhotoPreview(null);
-                    }}
-                    options={[
-                      { label: 'Job', value: 'job' },
-                      { label: 'Business', value: 'business' },
-                      { label: 'Student', value: 'student' },
-                    ]}
-                    placeholder="Select purpose (Job/Business/Student)"
-                  />
-                </div>
-
-                {/* Current Address */}
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                    Current Address
-                  </label>
-                  <textarea
-                    value={currentAddress}
-                    onChange={(e) => setCurrentAddress(e.target.value)}
-                    placeholder="Enter your current address"
-                    rows="3"
-                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none resize-none text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary
-                    }}
-                  />
-                </div>
-
-                {/* Conditional Fields based on Purpose */}
-                {bookingPurpose === 'job' && (
-                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                    <label className="block text-xs font-semibold" style={{ color: colors.textPrimary }}>
-                      Job Details
-                    </label>
-                    <input
-                      type="text"
-                      value={jobDetails}
-                      onChange={(e) => setJobDetails(e.target.value)}
-                      placeholder="Enter your job details (e.g., Company name, designation)"
-                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                      style={{
-                        borderColor: colors.borderMedium,
-                        backgroundColor: colors.backgroundSecondary,
-                        color: colors.textPrimary
-                      }}
-                    />
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Job Document Photo
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setDocumentPhoto(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setDocumentPhotoPreview(reader.result);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="w-full px-3 py-2 rounded-lg border-2 text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                      {documentPhotoPreview && (
-                        <div className="mt-2">
-                          <img
-                            src={documentPhotoPreview}
-                            alt="Document preview"
-                            className="w-32 h-32 object-cover rounded-lg border-2"
-                            style={{ borderColor: colors.borderMedium }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDocumentPhoto(null);
-                              setDocumentPhotoPreview(null);
-                            }}
-                            className="mt-1 text-xs text-red-600 hover:underline"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {bookingPurpose === 'business' && (
-                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                    <label className="block text-xs font-semibold" style={{ color: colors.textPrimary }}>
-                      Business Details
-                    </label>
-                    <input
-                      type="text"
-                      value={businessDetails}
-                      onChange={(e) => setBusinessDetails(e.target.value)}
-                      placeholder="Enter your business details (e.g., Business name, type)"
-                      className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                      style={{
-                        borderColor: colors.borderMedium,
-                        backgroundColor: colors.backgroundSecondary,
-                        color: colors.textPrimary
-                      }}
-                    />
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Business Document Photo
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setDocumentPhoto(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setDocumentPhotoPreview(reader.result);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="w-full px-3 py-2 rounded-lg border-2 text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                      {documentPhotoPreview && (
-                        <div className="mt-2">
-                          <img
-                            src={documentPhotoPreview}
-                            alt="Document preview"
-                            className="w-32 h-32 object-cover rounded-lg border-2"
-                            style={{ borderColor: colors.borderMedium }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDocumentPhoto(null);
-                              setDocumentPhotoPreview(null);
-                            }}
-                            className="mt-1 text-xs text-red-600 hover:underline"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {bookingPurpose === 'student' && (
-                  <div className="space-y-3 p-3 rounded-lg" style={{ backgroundColor: `${colors.backgroundTertiary}10` }}>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Student ID
-                      </label>
-                      <input
-                        type="text"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        placeholder="Enter your student ID"
-                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: colors.textPrimary }}>
-                        Student ID Document Photo
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setDocumentPhoto(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setDocumentPhotoPreview(reader.result);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="w-full px-3 py-2 rounded-lg border-2 text-sm"
-                        style={{
-                          borderColor: colors.borderMedium,
-                          backgroundColor: colors.backgroundSecondary,
-                          color: colors.textPrimary
-                        }}
-                      />
-                      {documentPhotoPreview && (
-                        <div className="mt-2">
-                          <img
-                            src={documentPhotoPreview}
-                            alt="Document preview"
-                            className="w-32 h-32 object-cover rounded-lg border-2"
-                            style={{ borderColor: colors.borderMedium }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDocumentPhoto(null);
-                              setDocumentPhotoPreview(null);
-                            }}
-                            className="mt-1 text-xs text-red-600 hover:underline"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Add-on Services Section */}
@@ -3350,9 +3009,9 @@ const CarDetailsPage = () => {
                   className="mt-0.5 w-4 h-4 rounded border-2"
                   style={{ borderColor: agreeToTerms ? colors.backgroundTertiary : colors.borderCheckbox }}
                 />
-                <label htmlFor="terms" className="text-xs" style={{ color: colors.textSecondary }}>
-                  I agree to the <span className="font-semibold" style={{ color: colors.textPrimary }}>Terms & Conditions</span> and <span className="font-semibold" style={{ color: colors.textPrimary }}>Privacy Policy</span>
-                </label>
+                <div className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+                  I agree to the <Link to="/terms" className="font-semibold hover:underline cursor-pointer" style={{ color: colors.textPrimary }}>Terms & Conditions</Link> and <Link to="/privacy-policy" className="font-semibold hover:underline cursor-pointer" style={{ color: colors.textPrimary }}>Privacy Policy</Link>
+                </div>
               </div>
 
               {/* Submit Button */}
