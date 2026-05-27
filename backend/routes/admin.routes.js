@@ -63,6 +63,10 @@ import {
 import {
   getAdminAddOnServicesPrices,
   updateAddOnServicesPrices,
+  getCustomAddOnServices,
+  createCustomAddOnService,
+  updateCustomAddOnService,
+  deleteCustomAddOnService,
 } from '../controllers/addonServices.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 
@@ -324,6 +328,12 @@ router.get('/addon-services/prices', authenticateAdmin, getAdminAddOnServicesPri
 // Update Add-On Services Prices - PROTECTED
 // Route: PUT /api/admin/addon-services/prices
 router.put('/addon-services/prices', authenticateAdmin, updateAddOnServicesPrices);
+
+// Custom Add-On Services CRUD - PROTECTED
+router.get('/addon-services/custom', authenticateAdmin, getCustomAddOnServices);
+router.post('/addon-services/custom', authenticateAdmin, createCustomAddOnService);
+router.put('/addon-services/custom/:id', authenticateAdmin, updateCustomAddOnService);
+router.delete('/addon-services/custom/:id', authenticateAdmin, deleteCustomAddOnService);
 
 // ============================================
 // REFERRAL MANAGEMENT ROUTES - PROTECTED

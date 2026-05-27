@@ -56,6 +56,9 @@ class QuickEKYCService {
    */
   async verifyPAN(panNo) {
     try {
+      if (!QUICKEKYC_API_KEY) {
+        return { status: 'error', message: 'KYC service not configured. Please contact support.' };
+      }
       const response = await axios.post(`${BASE_URL}/pan/pan`, {
         key: QUICKEKYC_API_KEY,
         id_number: panNo
@@ -65,7 +68,14 @@ class QuickEKYCService {
       return response.data;
     } catch (error) {
       console.error('QuickEKYC PAN Verification Error:', error.response?.data || error.message);
-      throw error.response?.data || error;
+      // Handle specific error codes
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return { status: 'error', message: 'KYC service authentication failed. Please contact support.' };
+      }
+      if (error.response?.data) {
+        return { status: 'error', message: error.response.data.message || 'PAN verification failed. Please try again.' };
+      }
+      throw error;
     }
   }
 
@@ -76,6 +86,9 @@ class QuickEKYCService {
    */
   async verifyDL(dlNo, dob) {
     try {
+      if (!QUICKEKYC_API_KEY) {
+        return { status: 'error', message: 'KYC service not configured. Please contact support.' };
+      }
       const response = await axios.post(`${BASE_URL}/driving-license/driving-license`, {
         key: QUICKEKYC_API_KEY,
         id_number: dlNo,
@@ -86,7 +99,13 @@ class QuickEKYCService {
       return response.data;
     } catch (error) {
       console.error('QuickEKYC DL Verification Error:', error.response?.data || error.message);
-      throw error.response?.data || error;
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return { status: 'error', message: 'KYC service authentication failed. Please contact support.' };
+      }
+      if (error.response?.data) {
+        return { status: 'error', message: error.response.data.message || 'DL verification failed. Please try again.' };
+      }
+      throw error;
     }
   }
 }

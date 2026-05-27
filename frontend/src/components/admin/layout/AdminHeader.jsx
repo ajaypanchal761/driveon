@@ -16,6 +16,7 @@ const AdminHeader = () => {
   const { adminUser, logout } = useAdminAuth();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
   const notificationRef = useRef(null);
 
   // Default admin user if not available
@@ -102,33 +103,11 @@ const AdminHeader = () => {
         </h1>
       </div>
 
-      {/* Desktop: Left Side - Search Bar */}
-      <div className="hidden lg:flex flex-1 max-w-md min-w-0 mr-4">
-        <div className="relative w-full">
-          <svg
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search users, cars, bookings..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent text-sm"
-            style={{
-              border: `1px solid ${colors.borderMedium}`,
-              backgroundColor: colors.backgroundSecondary,
-              color: colors.textPrimary
-            }}
-          />
-        </div>
+      {/* Desktop: Left Side - Title */}
+      <div className="hidden lg:flex flex-1 min-w-0 mr-4">
+        <h1 className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+          Driveon Admin
+        </h1>
       </div>
 
       {/* Right Side - Admin Info & Actions */}

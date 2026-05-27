@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-hot-toast';
 import razorpayService from '../../../services/razorpay.service';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
 import { requestForToken } from '../../../services/firebase';
 import {
@@ -680,7 +680,10 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
 
 export const StaffDirectoryPage = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const location = useLocation();
+  const urlParams = new URLSearchParams(location.search);
+  const initialSearch = urlParams.get('search') || '';
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [deptFilter, setDeptFilter] = useState('All');
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1162,7 +1165,7 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <button onClick={() => navigate('/crm/staff/directory')} className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">View Profile</button>
+                        <button onClick={() => navigate(`/crm/staff/directory?search=${encodeURIComponent(staff.name)}`)} className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">View Profile</button>
                       </td>
                     </tr>
                   ))}

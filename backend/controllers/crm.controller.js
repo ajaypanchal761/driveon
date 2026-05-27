@@ -1409,6 +1409,24 @@ export const getStaffWorkTasks = async (req, res) => {
 export const createStaffWorkTask = async (req, res) => {
     try {
         const task = await StaffWorkTask.create(req.body);
+
+        // Send notification to assigned employee
+        if (task.assignedTo) {
+            sendStaffPushNotification(task.assignedTo.toString(), {
+                notification: {
+                    title: '📋 New Task Assigned',
+                    body: `You have a new task: "${task.title}" (Priority: ${task.priority})`,
+                },
+                data: {
+                    type: 'task_assigned',
+                    taskId: task._id.toString(),
+                    title: task.title,
+                    priority: task.priority,
+                    click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                }
+            }).catch(err => console.error('❌ Failed to send task assignment notification:', err));
+        }
+
         res.status(201).json({
             success: true,
             data: { task }
@@ -1436,17 +1454,22 @@ export const updateStaffWorkTask = async (req, res) => {
         // Fetch old task to check status change
         const oldTask = await StaffWorkTask.findById(id).populate('assignedTo', 'name');
 
+        if (!oldTask) {
+            return res.status(404).json({ success: false, message: 'Task not found' });
+        }
+
+        // Prevent double-completion
+        if (status === 'Done' && oldTask.status === 'Done') {
+            return res.status(400).json({ success: false, message: 'Task is already completed' });
+        }
+
         const task = await StaffWorkTask.findByIdAndUpdate(id, req.body, {
             new: true,
             runValidators: true
         });
 
-        if (!task) {
-            return res.status(404).json({ success: false, message: 'Task not found' });
-        }
-
-        // Notify Admins on Staff Task Completion
-        if (status === 'Done' && oldTask && oldTask.status !== 'Done') {
+        // Notify Admins on Staff Task Completion (only once)
+        if (status === 'Done' && oldTask.status !== 'Done') {
             const staffName = oldTask.assignedTo?.name || 'An employee';
             const title = 'Employee Task Completed ✅';
             const message = `${staffName} has completed the task: ${task.title}`;

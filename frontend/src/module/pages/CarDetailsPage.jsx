@@ -1701,19 +1701,34 @@ const CarDetailsPage = () => {
   };
 
   // Handle coupon application
-  const handleApplyCoupon = () => {
-    if (!couponCode.trim()) {
+  const handleApplyCoupon = async (code = null) => {
+    const codeToApply = (code || couponCode).trim().toUpperCase();
+    if (!codeToApply) {
       alert('Please enter a coupon code');
       return;
     }
 
-    if (couponCode.toUpperCase() === 'SAVE10') {
-      const discount = finalPriceDetails.totalPrice * 0.1;
-      setAppliedCoupon({ code: 'SAVE10', discount: discount });
-      setCouponDiscount(discount);
-      alert('Coupon applied successfully!');
-    } else {
-      alert('Invalid coupon code');
+    try {
+      const { couponService } = await import('../../services/coupon.service');
+      const response = await couponService.validateCoupon({
+        code: codeToApply,
+        amount: finalPriceDetails.totalPrice || 0,
+        carId: car?.id || car?._id,
+      });
+
+      if (response.success && response.data) {
+        setCouponCode(codeToApply);
+        setAppliedCoupon({
+          code: response.data.coupon.code,
+          discountType: response.data.coupon.discountType,
+          discountValue: response.data.coupon.discountValue,
+        });
+        setCouponDiscount(response.data.discount);
+        alert(`Coupon "${response.data.coupon.code}" applied! You save ₹${response.data.discount}`);
+      }
+    } catch (error) {
+      console.error('Coupon validation error:', error);
+      alert(error.response?.data?.message || 'Invalid coupon code');
       setAppliedCoupon(null);
       setCouponDiscount(0);
     }
@@ -3822,10 +3837,11 @@ const CarDetailsPage = () => {
                       </div>
                       {offer.code && (
                         <button
+                          onClick={() => handleApplyCoupon(offer.code)}
                           className="px-6 py-2 rounded-lg text-white font-semibold text-sm"
                           style={{ backgroundColor: colors.backgroundTertiary }}
                         >
-                          {index === 0 ? 'APPLY' : 'Apply Code'}
+                          Apply
                         </button>
                       )}
                     </div>
@@ -3884,10 +3900,29 @@ const CarDetailsPage = () => {
             {/* Location Section */}
             <div ref={locationRefWeb} className="mb-8 scroll-mt-24">
               <div
-                className="p-4 rounded-xl border-2"
+                className="p-4 rounded-xl border-2 cursor-pointer hover:shadow-md transition-all"
                 style={{
                   backgroundColor: colors.backgroundSecondary,
                   borderColor: colors.borderMedium
+                }}
+                onClick={() => {
+                  const location = car?.locationObject || car?.location || {};
+                  let query = '';
+                  if (location?.coordinates?.latitude && location?.coordinates?.longitude) {
+                    query = `${location.coordinates.latitude},${location.coordinates.longitude}`;
+                  } else {
+                    const parts = [];
+                    if (typeof location === 'string') { parts.push(location); }
+                    else {
+                      if (location.address) parts.push(location.address);
+                      if (location.city) parts.push(location.city);
+                      if (location.state) parts.push(location.state);
+                    }
+                    query = parts.join(', ') || car?.location || '';
+                  }
+                  if (query) {
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
+                  }
                 }}
               >
                 <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>
@@ -4283,73 +4318,48 @@ const CarDetailsPage = () => {
             <div ref={offersRef} className="mb-8 scroll-mt-24">
               <h2 className="text-lg md:text-xl font-bold text-black mb-4">Exclusive Offers</h2>
               <div className="space-y-4">
-                <div
-                  className="p-4 rounded-xl border-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
-                  style={{
-                    backgroundColor: colors.backgroundPrimary,
-                    borderColor: colors.borderMedium
-                  }}
-                >
-                  <div className="flex items-center gap-4">
+                {offers && offers.length > 0 ? (
+                  offers.map((offer, index) => (
                     <div
-                      className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl flex-shrink-0"
-                      style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
+                      key={offer.id || index}
+                      className={`p-4 rounded-xl border-2 ${index === 0 ? 'flex flex-col md:flex-row items-start md:items-center justify-between gap-3' : ''}`}
+                      style={{
+                        backgroundColor: colors.backgroundPrimary,
+                        borderColor: colors.borderMedium
+                      }}
                     >
-                      Z
-                    </div>
-                    <div>
-                      <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
-                        Get 50% OFF!
+                      <div className="flex items-center gap-4">
+                        {index === 0 && (
+                          <div
+                            className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl flex-shrink-0"
+                            style={{ backgroundColor: colors.backgroundTertiary, color: colors.textWhite }}
+                          >
+                            Z
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-bold text-base mb-1" style={{ color: colors.textPrimary }}>
+                            {offer.title}
+                          </div>
+                          <div className="text-sm" style={{ color: colors.textSecondary }}>
+                            {offer.description}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm" style={{ color: colors.textSecondary }}>
-                        Check Availability Here &gt;
-                      </div>
+                      {offer.code && (
+                        <button
+                          onClick={() => handleApplyCoupon(offer.code)}
+                          className="px-6 py-2 rounded-lg text-white font-semibold text-sm w-full md:w-auto mt-3 md:mt-0"
+                          style={{ backgroundColor: colors.backgroundTertiary }}
+                        >
+                          Apply
+                        </button>
+                      )}
                     </div>
-                  </div>
-                  <button
-                    className="px-6 py-2 rounded-lg text-white font-semibold text-sm w-full md:w-auto"
-                    style={{ backgroundColor: colors.backgroundTertiary }}
-                  >
-                    APPLY
-                  </button>
-                </div>
-                <div
-                  className="p-4 rounded-xl border-2"
-                  style={{
-                    backgroundColor: colors.backgroundPrimary,
-                    borderColor: colors.borderMedium
-                  }}
-                >
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    First Time User Discount
-                  </div>
-                  <div className="text-sm mb-3" style={{ color: colors.textSecondary }}>
-                    Get 20% off on your first booking. Use code: FIRST20
-                  </div>
-                  <button
-                    className="px-4 py-1.5 rounded-lg text-sm font-medium"
-                    style={{
-                      backgroundColor: colors.backgroundTertiary,
-                      color: colors.textWhite
-                    }}
-                  >
-                    Apply Code
-                  </button>
-                </div>
-                <div
-                  className="p-4 rounded-xl border-2"
-                  style={{
-                    backgroundColor: colors.backgroundPrimary,
-                    borderColor: colors.borderMedium
-                  }}
-                >
-                  <div className="font-semibold text-base mb-2" style={{ color: colors.textPrimary }}>
-                    Weekend Special
-                  </div>
-                  <div className="text-sm" style={{ color: colors.textSecondary }}>
-                    Book for 3+ days and get 15% discount on weekends
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">No offers available at the moment.</div>
+                )}
               </div>
             </div>
 
@@ -4401,10 +4411,29 @@ const CarDetailsPage = () => {
             {/* Location Section - Mobile */}
             <div ref={locationRef} className="mb-8 scroll-mt-24">
               <div
-                className="p-4 rounded-xl border-2"
+                className="p-4 rounded-xl border-2 cursor-pointer active:scale-[0.98] transition-all"
                 style={{
                   backgroundColor: colors.backgroundSecondary,
                   borderColor: colors.borderMedium
+                }}
+                onClick={() => {
+                  const location = car?.locationObject || car?.location || {};
+                  let query = '';
+                  if (location?.coordinates?.latitude && location?.coordinates?.longitude) {
+                    query = `${location.coordinates.latitude},${location.coordinates.longitude}`;
+                  } else {
+                    const parts = [];
+                    if (typeof location === 'string') { parts.push(location); }
+                    else {
+                      if (location.address) parts.push(location.address);
+                      if (location.city) parts.push(location.city);
+                      if (location.state) parts.push(location.state);
+                    }
+                    query = parts.join(', ') || car?.location || '';
+                  }
+                  if (query) {
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
+                  }
                 }}
               >
                 <h2 className="text-lg font-bold mb-4" style={{ color: colors.textPrimary }}>Car Location</h2>

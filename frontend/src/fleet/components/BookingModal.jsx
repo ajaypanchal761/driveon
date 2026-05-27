@@ -131,6 +131,10 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
   // QuickEKYC logic for Aadhaar and Driving License
   const sendAadhaarOtp = async () => {
     setError('');
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+      setError('Please enter a valid 12-digit Aadhaar number');
+      return;
+    }
     setIsKycLoading(true);
     try {
       const response = await api.post('/fleet/kyc/aadhaar/generate-otp', {
@@ -144,12 +148,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
       }
     } catch (err) {
       console.error(err);
-      setError('QuickEKYC API offline. Initiating mock OTP verification for testing...');
-      setTimeout(() => {
-        setError('');
-        setAadhaarRequestId('mock-request-id');
-        setAadhaarOtpSent(true);
-      }, 1000);
+      setError(err.response?.data?.message || 'Failed to send Aadhaar OTP. Please try again.');
     } finally {
       setIsKycLoading(false);
     }
@@ -159,13 +158,6 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     setError('');
     setIsKycLoading(true);
     try {
-      if (aadhaarRequestId === 'mock-request-id') {
-        setTimeout(() => {
-          setIsAadhaarVerified(true);
-          setIsKycLoading(false);
-        }, 800);
-        return;
-      }
       const response = await api.post('/fleet/kyc/aadhaar/verify-otp', {
         requestId: aadhaarRequestId,
         otp: aadhaarOtp
@@ -177,8 +169,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
       }
     } catch (err) {
       console.error(err);
-      setError('Verification failed. Customer verified via mock fallback.');
-      setIsAadhaarVerified(true);
+      setError(err.response?.data?.message || 'Aadhaar verification failed. Please try again.');
     } finally {
       setIsKycLoading(false);
     }
@@ -186,6 +177,14 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
 
   const verifyDlKyc = async () => {
     setError('');
+    if (!licenseNumber.trim()) {
+      setError('Please enter a valid Driving License number');
+      return;
+    }
+    if (!licenseDob) {
+      setError('Please enter Date of Birth');
+      return;
+    }
     setIsKycLoading(true);
     try {
       const response = await api.post('/fleet/kyc/dl/verify', {
@@ -195,15 +194,11 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
       if (response.data.success) {
         setIsDlVerified(true);
       } else {
-        setError(response.data.message || 'Driving License verification failed');
+        setError(response.data.message || 'Driving License verification failed. Please check details.');
       }
     } catch (err) {
       console.error(err);
-      setError('QuickEKYC API offline. DL verified via dev mock.');
-      setTimeout(() => {
-        setError('');
-        setIsDlVerified(true);
-      }, 1000);
+      setError(err.response?.data?.message || 'DL verification failed. Please check the number and DOB.');
     } finally {
       setIsKycLoading(false);
     }
@@ -358,6 +353,14 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     }
     if (!licenseFile || !licensePreview) {
       setError('Please upload a driving license image');
+      return;
+    }
+    if (!isDlVerified) {
+      setError('Please verify Driving License via QuickEKYC before booking');
+      return;
+    }
+    if (!isAadhaarVerified) {
+      setError('Please verify Aadhaar via QuickEKYC before booking');
       return;
     }
     if (hasOverlap) {
@@ -795,7 +798,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
               {/* QuickEKYC DL Verification Section */}
               <div className="mt-4 pt-4 border-t" style={{ borderTopColor: colors.borderMedium }}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">DL Verification (Optional)</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">DL Verification <span style={{ color: colors.accentRed }}>*</span></span>
                   {isDlVerified ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
                       ✓ Verified
@@ -945,7 +948,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
               {/* QuickEKYC Aadhaar Verification Section */}
               <div className="mt-4 pt-4 border-t" style={{ borderTopColor: colors.borderMedium }}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Aadhaar Verification (Optional)</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Aadhaar Verification <span style={{ color: colors.accentRed }}>*</span></span>
                   {isAadhaarVerified ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
                       ✓ Verified

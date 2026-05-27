@@ -37,7 +37,7 @@ const ModuleKYCStatusPage = () => {
       id: 'aadhaar',
       name: 'Aadhaar Card',
       description: 'Verify your Aadhaar card via QuickEKYC',
-      verified: user?.kycDetails?.aadhaar?.isVerified,
+      verified: user?.kycDetails?.aadhaar?.isVerified || user?.kycDetails?.aadhaar?.verified,
       number: aadhaarNumber,
       setNumber: setAadhaarNumber,
       icon: (
@@ -50,7 +50,7 @@ const ModuleKYCStatusPage = () => {
       id: 'pan',
       name: 'PAN Card',
       description: 'Verify your PAN card via QuickEKYC',
-      verified: user?.kycDetails?.pan?.isVerified,
+      verified: user?.kycDetails?.pan?.isVerified || user?.kycDetails?.pan?.verified,
       number: panNumberInput,
       setNumber: setPanNumberInput,
       icon: (
@@ -63,7 +63,7 @@ const ModuleKYCStatusPage = () => {
       id: 'drivingLicense',
       name: 'Driving License',
       description: 'Verify your Driving License via QuickEKYC',
-      verified: user?.kycDetails?.dl?.isVerified,
+      verified: user?.kycDetails?.dl?.isVerified || user?.kycDetails?.dl?.verified,
       number: dlNumber,
       setNumber: setDlNumber,
       icon: (

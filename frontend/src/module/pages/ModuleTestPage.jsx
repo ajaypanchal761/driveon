@@ -111,7 +111,8 @@ const ModuleTestPage = () => {
                 alt: car.model || "Car",
                 title: coupon.code, // Coupon Code as Title
                 subtitle: coupon.description || "Special Discount Available",
-                buttonText: "Book Now"
+                buttonText: "Book Now",
+                carId: car._id || car.id || null
               };
             });
 
@@ -1329,11 +1330,8 @@ const ModuleTestPage = () => {
                       type="button"
                       className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
                       onClick={() => {
-                        // Only allow navigation on desktop (md breakpoint is 768px)
-                        if (window.innerWidth >= 768) {
-                          const brandName = brand.displayName || brand.name || '';
-                          navigate(`/brand/${encodeURIComponent(brandName)}`);
-                        }
+                        const brandName = brand.displayName || brand.name || '';
+                        navigate(`/brand/${encodeURIComponent(brandName)}`);
                       }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -1707,8 +1705,15 @@ const ModuleTestPage = () => {
                   {bannerCars.map((car, index) => (
                     <div
                       key={index}
-                      className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56"
+                      className="min-w-full flex items-center justify-between px-4 md:px-6 lg:px-8 h-36 md:h-48 lg:h-56 cursor-pointer"
                       style={{ scrollSnapAlign: "center" }}
+                      onClick={() => {
+                        if (car.carId) {
+                          navigate(`/car-details/${car.carId}`);
+                        } else {
+                          navigate('/search');
+                        }
+                      }}
                     >
                       <div
                         className={`flex-shrink-0 w-1/3 z-10 transition-all duration-700 ease-out ${index === currentBannerIndex ? "opacity-100 translate-y-0" : "opacity-60 translate-y-4"

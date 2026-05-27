@@ -80,12 +80,18 @@ const TasksPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const toggleTaskStatus = async (id, currentStatus) => {
+    // Prevent double-completion
+    if (currentStatus === 'Completed') {
+      toast.error('Task is already completed');
+      return;
+    }
+
     try {
-      const newStatus = currentStatus === 'Completed' ? 'Pending' : 'Done';
+      const newStatus = 'Done';
 
       // Optimistic update
       setTasks(tasks.map(task =>
-        task.id === id ? { ...task, status: newStatus === 'Done' ? 'Completed' : 'Pending' } : task
+        task.id === id ? { ...task, status: 'Completed' } : task
       ));
 
       // API Call
@@ -93,10 +99,10 @@ const TasksPage = () => {
         status: newStatus
       });
 
-      toast.success(`Task marked as ${newStatus === 'Done' ? 'Completed' : 'Pending'}`);
+      toast.success('Task marked as Completed');
     } catch (error) {
       console.error('Error updating task:', error);
-      toast.error('Failed to update task');
+      toast.error(error.response?.data?.message || 'Failed to update task');
       fetchTasks(); // Revert on error
     }
   };
@@ -106,8 +112,8 @@ const TasksPage = () => {
 
     let filtered = tasks;
     if (filter === 'Today') {
-      // Show Today's tasks AND Overdue tasks that are NOT completed
-      filtered = tasks.filter(t => (t.date === 'Today' || t.date === 'Overdue') && t.status !== 'Completed');
+      // Show all Today's tasks (including completed) AND Overdue pending tasks
+      filtered = tasks.filter(t => t.date === 'Today' || (t.date === 'Overdue' && t.status !== 'Completed'));
     }
     if (filter === 'Tomorrow') {
       filtered = tasks.filter(t => t.date === 'Tomorrow' && t.status !== 'Completed');

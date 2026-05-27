@@ -84,18 +84,19 @@ const AddCarPage = () => {
     'Power Windows', 'Power Steering', 'Fog Lights', 'Alloy Wheels',
   ];
 
-  // Handle image selection
+  // Handle image selection - accumulate images
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 10) {
-      toastUtils.error('Maximum 10 images allowed');
+    if (files.length === 0) return;
+
+    const totalImages = selectedImages.length + files.length;
+    if (totalImages > 10) {
+      toastUtils.error(`Maximum 10 images allowed. You already have ${selectedImages.length}, can add ${10 - selectedImages.length} more.`);
       return;
     }
-    if (files.length < 2) {
-      toastUtils.error('Minimum 2 images required');
-      return;
-    }
-    setSelectedImages(files);
+    setSelectedImages(prev => [...prev, ...files]);
+    // Reset input so same file can be selected again
+    e.target.value = '';
   };
 
   // Handle RC document selection
@@ -511,7 +512,6 @@ const AddCarPage = () => {
                     backgroundColor: colors.backgroundSecondary,
                     color: colors.textPrimary
                   }}
-                  required
                 />
                 {selectedImages.length > 0 && (
                   <div className="mt-2">

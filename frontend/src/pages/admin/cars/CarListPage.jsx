@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
+import api from '../../../services/api';
 import toastUtils from '../../../config/toast';
 import { Button } from '../../../components/common';
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
@@ -26,10 +27,18 @@ const CarListPage = () => {
   const [cars, setCars] = useState([]);
   const [filteredCars, setFilteredCars] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const urlParams = new URLSearchParams(location.search);
+  const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [selectedCar, setSelectedCar] = useState(null);
   const [showCarDetail, setShowCarDetail] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
+
+  // Listen for global search events from header
+  useEffect(() => {
+    const handleGlobalSearch = (e) => setSearchQuery(e.detail);
+    window.addEventListener('admin-global-search', handleGlobalSearch);
+    return () => window.removeEventListener('admin-global-search', handleGlobalSearch);
+  }, []);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -46,16 +55,20 @@ const CarListPage = () => {
     const fetchCars = async () => {
       try {
         setLoading(true);
-        const response = await adminService.getAllCars({
-          page: 1,
-          limit: 1000, // Get all cars for now
-          search: searchQuery,
-          status: filters.status,
-          carType: filters.carType,
-          brand: filters.brand || undefined,
-          location: filters.location !== 'all' ? filters.location : undefined,
-          owner: filters.owner !== 'all' ? filters.owner : undefined,
-        });
+        const [response, outwardRes] = await Promise.all([
+          adminService.getAllCars({
+            page: 1,
+            limit: 1000,
+            status: filters.status,
+            carType: filters.carType,
+            brand: filters.brand || undefined,
+            location: filters.location !== 'all' ? filters.location : undefined,
+            owner: filters.owner !== 'all' ? filters.owner : undefined,
+          }),
+          api.get('/fleet/outward-cars').catch(() => ({ data: { success: false } }))
+        ]);
+
+        let allCars = [];
 
         if (response.success && response.data) {
           // Format cars data for frontend
@@ -78,7 +91,7 @@ const CarListPage = () => {
               ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
               location: car.location?.city || car.location || 'Unknown',
               images: car.images || [],
-              imageUrl: imageUrl, // Add primary image URL for easy access
+              imageUrl: imageUrl,
               rating: car.averageRating || 0,
               totalBookings: car.totalBookings || 0,
               totalRevenue: car.totalRevenue || 0,
@@ -90,13 +103,46 @@ const CarListPage = () => {
               seatingCapacity: car.seatingCapacity,
               isFeatured: car.isFeatured,
               isPopular: car.isPopular,
+              source: 'inward',
             };
           });
-
-          setCars(formattedCars);
-        } else {
-          setCars([]);
+          allCars = [...formattedCars];
         }
+
+        // Add outward cars
+        if (outwardRes.data?.success && outwardRes.data?.data) {
+          const outwardCars = (Array.isArray(outwardRes.data.data) ? outwardRes.data.data : []).map((car) => ({
+            id: car._id || car.id,
+            brand: car.brand || '',
+            model: car.model || '',
+            year: car.year || '',
+            carType: car.carType || 'Outward',
+            pricePerDay: car.pricePerDay || 0,
+            status: 'active',
+            availability: 'available',
+            ownerId: '',
+            ownerName: car.ownerName || 'Unknown',
+            ownerEmail: '',
+            location: car.location || 'Unknown',
+            images: car.carImages || [],
+            imageUrl: null,
+            rating: 0,
+            totalBookings: 0,
+            totalRevenue: 0,
+            features: [],
+            registrationDate: car.createdAt || new Date().toISOString(),
+            registrationNumber: car.carNumber || car.registrationNumber || '',
+            fuelType: '',
+            transmission: '',
+            seatingCapacity: '',
+            isFeatured: false,
+            isPopular: false,
+            source: 'outward',
+          }));
+          allCars = [...allCars, ...outwardCars];
+        }
+
+        setCars(allCars);
       } catch (error) {
         console.error('Error fetching cars:', error);
         setCars([]);
@@ -106,11 +152,24 @@ const CarListPage = () => {
     };
 
     fetchCars();
-  }, [searchQuery, filters.status, filters.carType, filters.brand, filters.location, filters.owner]);
+  }, [filters.status, filters.carType, filters.brand, filters.location, filters.owner]);
 
-  // Client-side filtering for availability (backend doesn't handle this filter)
+  // Client-side filtering for availability, price, and search
   useEffect(() => {
     let filtered = [...cars];
+
+    // Search filter (case-insensitive)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((car) =>
+        (car.brand || '').toLowerCase().includes(query) ||
+        (car.model || '').toLowerCase().includes(query) ||
+        (car.ownerName || '').toLowerCase().includes(query) ||
+        (car.location || '').toLowerCase().includes(query) ||
+        (car.registrationNumber || '').toLowerCase().includes(query) ||
+        (`${car.brand || ''} ${car.model || ''}`).toLowerCase().includes(query)
+      );
+    }
 
     // Availability filter (client-side only)
     if (filters.availability !== 'all') {
@@ -135,7 +194,7 @@ const CarListPage = () => {
     }
 
     setFilteredCars(filtered);
-  }, [cars, filters.availability, filters.priceRange]);
+  }, [cars, searchQuery, filters.availability, filters.priceRange]);
 
   // Helper function to refresh cars list
   const refreshCarsList = async () => {
@@ -143,7 +202,6 @@ const CarListPage = () => {
       const response = await adminService.getAllCars({
         page: 1,
         limit: 1000,
-        search: searchQuery,
         status: filters.status,
         carType: filters.carType,
         brand: filters.brand || undefined,

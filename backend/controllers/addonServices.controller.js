@@ -1,4 +1,5 @@
 import AddOnServices from '../models/AddOnServices.js';
+import CustomAddOnService from '../models/CustomAddOnService.js';
 
 /**
  * @desc    Get add-on services prices (Public)
@@ -136,3 +137,84 @@ export const updateAddOnServicesPrices = async (req, res) => {
   }
 };
 
+
+
+// ============ Custom Add-On Services CRUD ============
+
+/**
+ * @desc    Get all custom add-on services
+ * @route   GET /api/admin/addon-services/custom
+ * @access  Public
+ */
+export const getCustomAddOnServices = async (req, res) => {
+  try {
+    const services = await CustomAddOnService.find().sort({ createdAt: -1 });
+    res.json({ success: true, data: { services } });
+  } catch (error) {
+    console.error('Error fetching custom services:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch services' });
+  }
+};
+
+/**
+ * @desc    Create custom add-on service
+ * @route   POST /api/admin/addon-services/custom
+ * @access  Private (Admin)
+ */
+export const createCustomAddOnService = async (req, res) => {
+  try {
+    const { name, phone, email, address, pricePerUnit } = req.body;
+
+    if (!name || !phone || !email || !pricePerUnit) {
+      return res.status(400).json({ success: false, message: 'Name, Phone, Email and Price are required' });
+    }
+
+    if (phone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Phone must be 10 digits' });
+    }
+
+    const service = await CustomAddOnService.create({ name, phone, email, address, pricePerUnit });
+    res.status(201).json({ success: true, data: { service } });
+  } catch (error) {
+    console.error('Error creating custom service:', error);
+    res.status(500).json({ success: false, message: 'Failed to create service' });
+  }
+};
+
+/**
+ * @desc    Update custom add-on service
+ * @route   PUT /api/admin/addon-services/custom/:id
+ * @access  Private (Admin)
+ */
+export const updateCustomAddOnService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const service = await CustomAddOnService.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    res.json({ success: true, data: { service } });
+  } catch (error) {
+    console.error('Error updating custom service:', error);
+    res.status(500).json({ success: false, message: 'Failed to update service' });
+  }
+};
+
+/**
+ * @desc    Delete custom add-on service
+ * @route   DELETE /api/admin/addon-services/custom/:id
+ * @access  Private (Admin)
+ */
+export const deleteCustomAddOnService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const service = await CustomAddOnService.findByIdAndDelete(id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    res.json({ success: true, message: 'Service deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting custom service:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete service' });
+  }
+};

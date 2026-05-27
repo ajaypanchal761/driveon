@@ -651,6 +651,20 @@ export const updateBookingStatus = async (req, res) => {
       booking.isTrackingActive = false;
       booking.tripStatus = 'cancelled';
 
+      // Update all pending transactions to cancelled
+      if (booking.transactions && booking.transactions.length > 0) {
+        booking.transactions.forEach(txn => {
+          if (txn.status === 'pending') {
+            txn.status = 'cancelled';
+          }
+        });
+      }
+
+      // Update payment status to reflect cancellation
+      if (booking.paymentStatus === 'pending') {
+        booking.paymentStatus = 'failed';
+      }
+
       notificationTitle = "Booking Cancelled";
       notificationBody = "Booking Cancelled. Refund initiated.";
 

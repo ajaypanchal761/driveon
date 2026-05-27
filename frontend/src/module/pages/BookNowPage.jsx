@@ -4,6 +4,7 @@ import razorpayService from "../../services/razorpay.service";
 import bookingService from "../../services/booking.service";
 import { userService } from "../../services/user.service";
 import { commonService } from "../../services/common.service";
+import api from "../../services/api";
 import { useAppSelector } from "../../hooks/redux";
 import CarDetailsHeader from "../components/layout/CarDetailsHeader";
 import BookingConfirmationModal from "../components/common/BookingConfirmationModal";
@@ -306,6 +307,8 @@ const BookNowPage = () => {
     gunmen: 1500,
     bouncer: 800,
   });
+  const [customServices, setCustomServices] = useState([]);
+  const [customServiceQuantities, setCustomServiceQuantities] = useState({});
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [submitWarning, setSubmitWarning] = useState("");
@@ -325,7 +328,6 @@ const BookNowPage = () => {
         }
       } catch (error) {
         console.error('Error fetching add-on services prices:', error);
-        // Fallback to default prices
         setAddOnServicesPrices({
           driver: 500,
           bodyguard: 1000,
@@ -335,7 +337,19 @@ const BookNowPage = () => {
       }
     };
 
+    const fetchCustomServices = async () => {
+      try {
+        const response = await api.get('/common/addon-services/custom');
+        if (response.data.success && response.data.data?.services) {
+          setCustomServices(response.data.data.services);
+        }
+      } catch (error) {
+        console.error('Error fetching custom add-on services:', error);
+      }
+    };
+
     fetchPrices();
+    fetchCustomServices();
   }, []);
 
   // Booking confirmation modal state (shown after successful Razorpay payment)
@@ -435,8 +449,14 @@ const BookNowPage = () => {
       (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
       (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
 
+    // Calculate custom services total
+    const customServicesTotal = customServices.reduce((total, service) => {
+      const qty = customServiceQuantities[service._id] || 0;
+      return total + (qty * service.pricePerUnit);
+    }, 0);
+
     // Add add-on services to total price
-    totalPrice += addOnServicesTotal;
+    totalPrice += addOnServicesTotal + customServicesTotal;
 
     // Apply coupon discount if available
     const discount = couponDiscount || 0;
@@ -2441,6 +2461,50 @@ const BookNowPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Custom Services from DB */}
+            {customServices.length > 0 && (
+              <div className="mt-4 pt-4 border-t" style={{ borderColor: colors.borderMedium }}>
+                <p className="text-xs font-bold mb-3" style={{ color: colors.textSecondary }}>Additional Services</p>
+                <div className="space-y-3">
+                  {customServices.map((service) => {
+                    const qty = customServiceQuantities[service._id] || 0;
+                    return (
+                      <div key={service._id} className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold" style={{ color: colors.textPrimary }}>{service.name}</h4>
+                          <p className="text-xs" style={{ color: colors.backgroundTertiary }}>₹{service.pricePerUnit} per unit</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {qty > 0 && (
+                            <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
+                              ₹{qty * service.pricePerUnit}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setCustomServiceQuantities(prev => ({ ...prev, [service._id]: Math.max(0, (prev[service._id] || 0) - 1) }))}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                            style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                          </button>
+                          <span className="w-8 text-center text-sm font-bold" style={{ color: colors.textPrimary }}>{qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => setCustomServiceQuantities(prev => ({ ...prev, [service._id]: (prev[service._id] || 0) + 1 }))}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                            style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Physical Document Verification Notice */}

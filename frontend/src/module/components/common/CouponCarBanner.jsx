@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { commonService } from '../../../services/common.service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../../config/api';
 
 const CouponCarBanner = ({ onDataAvailability }) => {
+    const navigate = useNavigate();
     const [coupons, setCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -61,6 +63,14 @@ const CouponCarBanner = ({ onDataAvailability }) => {
                                 style={{
                                     background: 'linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%)'
                                 }}
+                                onClick={() => {
+                                    const carId = car._id || car.id;
+                                    if (carId) {
+                                        navigate(`/car-details/${carId}`);
+                                    } else {
+                                        navigate('/search');
+                                    }
+                                }}
                             >
                                 {/* Background Pattern/Accents */}
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
@@ -81,7 +91,7 @@ const CouponCarBanner = ({ onDataAvailability }) => {
                                             On {car.brand} {car.model}
                                         </p>
 
-                                        <button className="bg-white text-gray-900 text-xs font-bold py-1.5 px-3 rounded-lg hover:bg-gray-100 transition-colors w-fit">
+                                        <button className="bg-white text-gray-900 text-xs font-bold py-1.5 px-3 rounded-lg hover:bg-gray-100 transition-colors w-fit active:scale-95">
                                             Book Now
                                         </button>
                                     </div>

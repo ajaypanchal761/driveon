@@ -246,6 +246,20 @@ export const updateBooking = async (req, res) => {
         booking.isTrackingActive = false;
         booking.tripStatus = 'cancelled';
 
+        // Update all pending transactions to cancelled
+        if (booking.transactions && booking.transactions.length > 0) {
+          booking.transactions.forEach(txn => {
+            if (txn.status === 'pending') {
+              txn.status = 'cancelled';
+            }
+          });
+        }
+
+        // Update payment status to reflect cancellation
+        if (booking.paymentStatus === 'pending') {
+          booking.paymentStatus = 'failed';
+        }
+
         // Reverse guarantor points for cancelled booking
         try {
           await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled by admin');
