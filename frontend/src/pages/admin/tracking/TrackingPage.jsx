@@ -42,6 +42,7 @@ const TrackingPage = () => {
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   // Connect to Socket.IO for real-time updates
+  // eslint-disable-next-line react-doctor/effect-needs-cleanup
   useEffect(() => {
     // Get admin token from localStorage
     const adminToken = localStorage.getItem('adminToken');
@@ -316,6 +317,7 @@ const TrackingPage = () => {
 
   // Resolve human-readable addresses on admin side for locations that don't have address
   useEffect(() => {
+    let isMounted = true;
     if (!window.google || !window.google.maps) return;
 
     const geocoder = new window.google.maps.Geocoder();
@@ -335,7 +337,7 @@ const TrackingPage = () => {
           },
         },
         (results, status) => {
-          if (status === 'OK' && results && results[0]) {
+          if (isMounted && status === 'OK' && results && results[0]) {
             const addr = results[0].formatted_address;
             if (addr) {
               setAddressCache((prev) => ({
@@ -347,6 +349,10 @@ const TrackingPage = () => {
         }
       );
     });
+
+    return () => {
+      isMounted = false;
+    };
   }, [filteredLocations, addressCache]);
 
   const handleMarkerClick = (markerData) => {

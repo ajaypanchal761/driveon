@@ -222,7 +222,10 @@ const ActiveBookingPage = () => {
     // Payment Information
     addText('PAYMENT INFORMATION', margin, yPos, 12, true);
     yPos += lineHeight + 2;
-    addText(`Payment Type: ${booking.paymentType === 'advance' ? '20% Advance Payment' : 'Full Payment'}`, margin, yPos, 10);
+    const advancePercentage = booking.totalPrice > 0 && booking.paidAmount > 0 && booking.paymentType === 'advance'
+      ? Math.round((booking.paidAmount / booking.totalPrice) * 100)
+      : 20;
+    addText(`Payment Type: ${booking.paymentType === 'advance' ? `${advancePercentage}% Advance Payment` : 'Full Payment'}`, margin, yPos, 10);
     yPos += lineHeight;
     addText(`Payment Status: ${booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}`, margin, yPos, 10);
     yPos += lineHeight;
@@ -597,15 +600,22 @@ const ActiveBookingPage = () => {
             </div>
             <div>
               <label className="text-xs md:text-sm font-medium text-gray-500 uppercase mb-2 block">Payment Type</label>
-              <span
-                className={`inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-xs md:text-sm font-medium ${
-                  booking.paymentType === 'full'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}
-              >
-                {booking.paymentType === 'full' ? 'Full Payment' : '20% Advance Payment'}
-              </span>
+              {(() => {
+                const advancePercentage = booking.totalPrice > 0 && booking.paidAmount > 0 && booking.paymentType === 'advance'
+                  ? Math.round((booking.paidAmount / booking.totalPrice) * 100)
+                  : 20;
+                return (
+                  <span
+                    className={`inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-xs md:text-sm font-medium ${
+                      booking.paymentType === 'full'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {booking.paymentType === 'full' ? 'Full Payment' : `${advancePercentage}% Advance Payment`}
+                  </span>
+                );
+              })()}
             </div>
             <div>
               <label className="text-xs md:text-sm font-medium text-gray-500 uppercase mb-2 block">Payment Status</label>

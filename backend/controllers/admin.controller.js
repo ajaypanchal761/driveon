@@ -2,6 +2,7 @@ import Admin from '../models/Admin.js';
 import User from '../models/User.js';
 import Car from '../models/Car.js';
 import Booking from '../models/Booking.js';
+import Setting from '../models/Setting.js';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 import { sendPushNotification, sendPushToToken } from '../services/firebase.service.js';
 
@@ -710,12 +711,18 @@ export const getDashboardStats = async (req, res) => {
  */
 export const getSystemSettings = async (req, res) => {
   try {
-    // For now, return default settings
-    // In future, you can store these in a database
+    const dbSettings = await Setting.find({});
+    
+    const settingsObj = {};
+    dbSettings.forEach(s => {
+      settingsObj[s.key] = s.value;
+    });
+
     const settings = {
-      appName: process.env.APP_NAME || 'DriveOn',
-      contactEmail: process.env.CONTACT_EMAIL || 'driveon721@gmail.com',
-      contactPhone: process.env.CONTACT_PHONE || '+91 98765 43210',
+      appName: settingsObj.appName || process.env.APP_NAME || 'DriveOn',
+      contactEmail: settingsObj.contactEmail || process.env.CONTACT_EMAIL || 'driveon721@gmail.com',
+      contactPhone: settingsObj.contactPhone || process.env.CONTACT_PHONE || '+91 98765 43210',
+      advancePaymentPercentage: settingsObj.advancePaymentPercentage !== undefined ? Number(settingsObj.advancePaymentPercentage) : 20,
     };
 
     res.status(200).json({
@@ -741,7 +748,7 @@ export const getSystemSettings = async (req, res) => {
  */
 export const updateSystemSettings = async (req, res) => {
   try {
-    const { appName, contactEmail, contactPhone } = req.body;
+    const { appName, contactEmail, contactPhone, advancePaymentPercentage } = req.body;
 
     // Validation
     if (!appName || !contactEmail || !contactPhone) {
@@ -760,9 +767,28 @@ export const updateSystemSettings = async (req, res) => {
       });
     }
 
-    // For now, we'll just return success
-    // In future, you can store these in a database or environment variables
-    // You could create a Settings model or use a config file
+    const percentage = advancePaymentPercentage !== undefined ? Number(advancePaymentPercentage) : 20;
+    if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Advance payment percentage must be a number between 0 and 100'
+      });
+    }
+
+    const settingsToSave = [
+      { key: 'appName', value: appName.trim() },
+      { key: 'contactEmail', value: contactEmail.trim().toLowerCase() },
+      { key: 'contactPhone', value: contactPhone.trim() },
+      { key: 'advancePaymentPercentage', value: percentage }
+    ];
+
+    for (const s of settingsToSave) {
+      await Setting.findOneAndUpdate(
+        { key: s.key },
+        { value: s.value },
+        { upsert: true, new: true }
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -772,6 +798,7 @@ export const updateSystemSettings = async (req, res) => {
           appName: appName.trim(),
           contactEmail: contactEmail.trim().toLowerCase(),
           contactPhone: contactPhone.trim(),
+          advancePaymentPercentage: percentage,
         },
       },
     });
@@ -1036,6 +1063,42 @@ export const updateUserStatus = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Delete User (Admin)
+ * @route   DELETE /api/admin/users/:userId
+ * @access  Private (Admin)
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Delete user from DB
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully from database'
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error deleting user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 
 /**
  * @desc    Get All Referrals (Admin)

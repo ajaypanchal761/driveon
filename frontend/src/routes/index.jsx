@@ -53,6 +53,7 @@ const ModuleAboutPage = lazy(() => import("../module/pages/AboutPage"));
 const ModuleContactPage = lazy(() => import("../module/pages/ContactPage"));
 const ModulePrivacyPolicyPage = lazy(() => import("../module/pages/PrivacyPolicyPage"));
 const ModuleTermsAndConditionsPage = lazy(() => import("../module/pages/TermsAndConditionsPage"));
+const ModuleCancellationRefundPolicyPage = lazy(() => import("../module/pages/CancellationRefundPolicyPage"));
 const ModuleTestPage = lazy(() => import("../module/pages/ModuleTestPage"));
 const ModuleLocationPage = lazy(() => import("../module/pages/ModuleLocationPage"));
 const CategoryPage = lazy(() => import("../module/pages/CategoryPage"));
@@ -133,6 +134,9 @@ const AdminProfilePage = lazy(() =>
 );
 const AdminSupportPage = lazy(() =>
   import("../pages/admin/support/AdminSupportPage")
+);
+const AdminPolicyEditorPage = lazy(() =>
+  import("../pages/admin/policies/AdminPolicyEditorPage")
 );
 
 // Fleet Management (isolated admin module)
@@ -517,6 +521,10 @@ const router = createBrowserRouter([
         element: <ModuleTermsAndConditionsPage />,
       },
       {
+        path: "/cancellation-policy",
+        element: <ModuleCancellationRefundPolicyPage />,
+      },
+      {
         path: "/module-test",
         element: <ModuleTestPage />,
       },
@@ -709,6 +717,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/profile",
             element: <AdminProfilePage />,
+          },
+          {
+            path: "/admin/policies/:policyKey",
+            element: <AdminPolicyEditorPage />,
           },
         ],
       },

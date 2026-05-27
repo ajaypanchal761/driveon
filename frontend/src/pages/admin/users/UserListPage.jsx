@@ -70,8 +70,7 @@ const UserListPage = () => {
   // Filter states
   const [filters, setFilters] = useState({
     accountStatus: 'all', // all, active, suspended, banned
-    kycStatus: 'all', // all, verified, pending, rejected
-    profileCompletion: 'all', // all, complete, incomplete
+    kycStatus: 'all', // all, verified, pending
     userType: 'all', // all, regular, guarantor, owner
     registrationDate: 'all', // all, today, week, month, year
   });
@@ -93,19 +92,14 @@ const UserListPage = () => {
     return () => window.removeEventListener('admin-global-search', handleGlobalSearch);
   }, []);
 
-  // Fetch users from API
+  // Fetch users from API (Runs only once on mount)
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
         const response = await adminService.getAllUsers({
           page: 1,
-          limit: 1000, // Get all users for now
-          search: searchQuery,
-          accountStatus: filters.accountStatus,
-          kycStatus: filters.kycStatus,
-          profileCompletion: filters.profileCompletion,
-          userType: filters.userType,
+          limit: 1000, // Fetch all users
         });
 
         if (response.success && response.data) {
@@ -124,17 +118,66 @@ const UserListPage = () => {
     };
 
     fetchUsers();
-  }, [searchQuery, filters.accountStatus, filters.kycStatus, filters.profileCompletion, filters.userType]);
+  }, []);
 
-  // Filter users (client-side filtering for additional filters)
+  // Combined client-side search and filtering for ultra-responsive, blink-free user experience
   useEffect(() => {
     let filtered = [...users];
 
-    // Registration date filter (client-side only, as backend handles other filters)
+    // 1. Search Query Filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      
+      // Match special format "user-XXXXX"
+      const userMatch = query.match(/^user-?([0-9a-fA-F]+)$/);
+      const isCustomIdSearch = !!userMatch;
+      const customIdSuffix = userMatch ? userMatch[1] : '';
+
+      filtered = filtered.filter((user) => {
+        const name = (user.name || '').toLowerCase();
+        const email = (user.email || '').toLowerCase();
+        const phone = (user.phone || '').toLowerCase();
+        const id = (user._id || user.id || '').toString().toLowerCase();
+
+        if (isCustomIdSearch) {
+          return id.endsWith(customIdSuffix);
+        }
+
+        return name.includes(query) || email.includes(query) || phone.includes(query);
+      });
+    }
+
+    // 2. Account Status Filter
+    if (filters.accountStatus !== 'all') {
+      filtered = filtered.filter((user) => {
+        const accountStatus = user.accountStatus || 'active';
+        return accountStatus === filters.accountStatus;
+      });
+    }
+
+    // 3. KYC Status Filter
+    if (filters.kycStatus !== 'all') {
+      filtered = filtered.filter((user) => {
+        const kycStatus = getKycStatus(user);
+        return kycStatus === filters.kycStatus;
+      });
+    }
+
+    // 4. User Type Filter
+    if (filters.userType !== 'all') {
+      filtered = filtered.filter((user) => {
+        const role = (user.role || 'user').toLowerCase();
+        if (filters.userType === 'regular') {
+          return role === 'user' || role === 'regular';
+        }
+        return role === filters.userType;
+      });
+    }
+
+    // 6. Registration Date Filter
     if (filters.registrationDate !== 'all') {
       const now = new Date();
       filtered = filtered.filter((user) => {
-        // Use createdAt instead of registrationDate
         const regDate = user.createdAt ? new Date(user.createdAt) : null;
         if (!regDate) return false;
 
@@ -157,7 +200,7 @@ const UserListPage = () => {
     }
 
     setFilteredUsers(filtered);
-  }, [users, filters.registrationDate]);
+  }, [users, searchQuery, filters]);
 
   // Handle user actions
   const handleUserAction = async (userId, action) => {
@@ -186,6 +229,24 @@ const UserListPage = () => {
     } catch (error) {
       console.error('Error updating user status:', error);
       toastUtils.error(error.response?.data?.message || 'Failed to update user status');
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
+      try {
+        const response = await adminService.deleteUser(userId);
+        if (response.success) {
+          toastUtils.success('User deleted successfully');
+          // Remove the user from the state locally
+          setUsers((prevUsers) => prevUsers.filter((user) => getUserId(user) !== userId));
+        } else {
+          toastUtils.error(response.message || 'Failed to delete user');
+        }
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        toastUtils.error(error.response?.data?.message || 'Failed to delete user');
+      }
     }
   };
 
@@ -364,7 +425,7 @@ const UserListPage = () => {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {/* Account Status Filter */}
             <AdminCustomSelect
               label="Account Status"
@@ -387,19 +448,6 @@ const UserListPage = () => {
                 { label: 'All', value: 'all' },
                 { label: 'Verified', value: 'verified' },
                 { label: 'Pending', value: 'pending' },
-                { label: 'Rejected', value: 'rejected' },
-              ]}
-            />
-
-            {/* Profile Completion Filter */}
-            <AdminCustomSelect
-              label="Profile"
-              value={filters.profileCompletion}
-              onChange={(value) => setFilters({ ...filters, profileCompletion: value })}
-              options={[
-                { label: 'All', value: 'all' },
-                { label: 'Complete', value: 'complete' },
-                { label: 'Incomplete', value: 'incomplete' },
               ]}
             />
 
@@ -439,89 +487,125 @@ const UserListPage = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredUsers.map((user) => (
-            <Card key={user._id || user.id} className="p-3 hover:shadow-lg transition-all cursor-pointer relative" onClick={() => handleViewUser(user)}>
-              {/* Status Badges - Top Right */}
-              <div className="absolute top-2 right-2 flex flex-col gap-0.5 items-end">
-                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getStatusColor(user.accountStatus || 'active')}`}>
-                  {capitalize(user.accountStatus || 'active')}
-                </span>
-                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getStatusColor(getKycStatus(user))}`}>
-                  KYC: {capitalize(getKycStatus(user))}
-                </span>
-              </div>
+        <Card className="overflow-hidden p-0 border border-gray-200 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-left">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">User</th>
+                  <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Contact</th>
+                  <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">KYC Status</th>
+                  <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Account Status</th>
+                  <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.map((user) => {
+                  const kycStatus = getKycStatus(user);
+                  const accountStatus = user.accountStatus || 'active';
+                  
+                  return (
+                    <tr 
+                      key={user._id || user.id} 
+                      className="hover:bg-gray-50/80 transition-colors cursor-pointer"
+                      onClick={() => handleViewUser(user)}
+                    >
+                      {/* User Column (Avatar & Name/Email) */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 shadow-inner"
+                            style={{ backgroundColor: colors.backgroundTertiary }}
+                          >
+                            {user.profilePhoto ? (
+                              <img src={user.profilePhoto} alt={user.name || 'User'} className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              <span className="text-xs">{getFirstChar(user.name || user.email || 'U')}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-semibold text-gray-900 truncate">
+                              {user.name || 'No Name'}
+                            </span>
+                            <span className="text-xs text-gray-500 truncate">
+                              {user.email || 'No Email'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
 
-              <div className="flex items-start gap-2 pr-16">
-                {/* Avatar */}
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-                  style={{ backgroundColor: colors.backgroundTertiary }}
-                >
-                  {user.profilePhoto ? (
-                    <img src={user.profilePhoto} alt={user.name || 'User'} className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    <span className="text-xs">{getFirstChar(user.name || user.email || 'U')}</span>
-                  )}
-                </div>
+                      {/* Contact Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-600 font-medium">
+                          {user.phone || '—'}
+                        </span>
+                      </td>
 
-                {/* User Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-0.5 truncate">{user.name || 'No Name'}</h3>
-                  <p className="text-xs text-gray-500 mb-0.5 truncate">{user.email || 'No Email'}</p>
-                  <p className="text-xs text-gray-500">{user.phone || 'No Phone'}</p>
-                </div>
-              </div>
+                      {/* KYC Status Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(kycStatus)}`}>
+                          <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-75"></span>
+                          KYC: {capitalize(kycStatus)}
+                        </span>
+                      </td>
 
-              {/* Quick Actions */}
-              <div
-                className="mt-3 pt-3 border-t flex gap-2"
-                style={{ borderTopColor: colors.borderMedium }}
-              >
-                {(user.accountStatus || 'active') === 'active' ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUserAction(getUserId(user), 'suspend');
-                    }}
-                    className="flex-1 px-2 py-1.5 text-xs font-medium text-yellow-700 bg-yellow-50 rounded hover:bg-yellow-100 transition-colors"
-                  >
-                    Suspend
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUserAction(getUserId(user), 'activate');
-                    }}
-                    className="flex-1 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
-                  >
-                    Activate
-                  </button>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleUserAction(getUserId(user), 'ban');
-                  }}
-                  className="flex-1 px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors"
-                >
-                  Ban
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewUser(user);
-                  }}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                  style={{ backgroundColor: colors.backgroundTertiary }}
-                >
-                  View
-                </button>
-              </div>
-            </Card>
-          ))}
-        </div>
+                      {/* Account Status Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(accountStatus)}`}>
+                          <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-75"></span>
+                          {capitalize(accountStatus)}
+                        </span>
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-2 justify-end">
+                          {accountStatus === 'active' ? (
+                            <button
+                              onClick={() => handleUserAction(getUserId(user), 'suspend')}
+                              className="px-3 py-1.5 text-xs font-semibold text-yellow-700 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors border border-yellow-200"
+                            >
+                              Suspend
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleUserAction(getUserId(user), 'activate')}
+                              className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors border border-green-200"
+                            >
+                              Activate
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleUserAction(getUserId(user), 'ban')}
+                            className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                          >
+                            Ban
+                          </button>
+                          <button
+                            onClick={() => handleViewUser(user)}
+                            className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: colors.backgroundTertiary }}
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(getUserId(user))}
+                            className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                            title="Delete User"
+                          >
+                            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
 
         {filteredUsers.length === 0 && (
           <Card className="p-4 text-center">
@@ -716,27 +800,6 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
           >
             Close
           </button>
-          {user.accountStatus === 'active' ? (
-            <button
-              onClick={() => {
-                onAction(getUserId(user), 'suspend');
-                onClose();
-              }}
-              className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-            >
-              Suspend Account
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                onAction(getUserId(user), 'activate');
-                onClose();
-              }}
-              className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Activate Account
-            </button>
-          )}
         </div>
       </div>
     </div>

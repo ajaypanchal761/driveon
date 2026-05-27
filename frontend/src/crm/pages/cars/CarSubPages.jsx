@@ -38,7 +38,8 @@ import {
   MdCall,
   MdAutorenew,
   MdFolderOff,
-  MdClose
+  MdClose,
+  MdAttachMoney
 } from 'react-icons/md';
 import { premiumColors } from '../../../theme/colors';
 import { rgba } from 'polished';

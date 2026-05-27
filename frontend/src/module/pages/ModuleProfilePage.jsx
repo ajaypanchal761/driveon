@@ -80,10 +80,7 @@ const ModuleProfilePage = () => {
 
           console.log('✅ User data set in Redux');
 
-          // Verify it was set
-          setTimeout(() => {
-            console.log('🔍 Verifying Redux state after setUser...');
-          }, 100);
+
         } else {
           console.warn('⚠️ No user data found in response:', response);
           console.warn('⚠️ Response structure:', JSON.stringify(response, null, 2));

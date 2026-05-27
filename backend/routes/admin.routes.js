@@ -13,6 +13,7 @@ import {
   getAllUsers,
   getUserById,
   updateUserStatus,
+  deleteUser,
   getAllReferrals,
   updateReferralPoints,
   sendNotification,
@@ -67,8 +68,15 @@ import {
   createCustomAddOnService,
   updateCustomAddOnService,
   deleteCustomAddOnService,
+  getAddOnServices,
+  createAddOnService,
+  updateAddOnService,
+  deleteAddOnService,
+  addProvider,
+  deleteProvider,
 } from '../controllers/addonServices.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
+import { getPolicies, getPolicyByKey, updatePolicy } from '../controllers/policy.controller.js';
 
 const router = express.Router();
 
@@ -138,6 +146,11 @@ router.get('/users/:userId', authenticateAdmin, getUserById);
 // Update User Status - PROTECTED
 // Route: PUT /api/admin/users/:userId/status
 router.put('/users/:userId/status', authenticateAdmin, updateUserStatus);
+
+// Delete User - PROTECTED
+// Route: DELETE /api/admin/users/:userId
+router.delete('/users/:userId', authenticateAdmin, deleteUser);
+
 
 // ============================================
 // CAR MANAGEMENT ROUTES - PROTECTED
@@ -329,6 +342,16 @@ router.get('/addon-services/prices', authenticateAdmin, getAdminAddOnServicesPri
 // Route: PUT /api/admin/addon-services/prices
 router.put('/addon-services/prices', authenticateAdmin, updateAddOnServicesPrices);
 
+// Dynamic Add-On Services CRUD - PROTECTED
+router.get('/addon-services', authenticateAdmin, getAddOnServices);
+router.post('/addon-services', authenticateAdmin, createAddOnService);
+router.put('/addon-services/:id', authenticateAdmin, updateAddOnService);
+router.delete('/addon-services/:id', authenticateAdmin, deleteAddOnService);
+
+// Provider Registry CRUD under service - PROTECTED
+router.post('/addon-services/:id/providers', authenticateAdmin, addProvider);
+router.delete('/addon-services/:id/providers/:providerId', authenticateAdmin, deleteProvider);
+
 // Custom Add-On Services CRUD - PROTECTED
 router.get('/addon-services/custom', authenticateAdmin, getCustomAddOnServices);
 router.post('/addon-services/custom', authenticateAdmin, createCustomAddOnService);
@@ -350,6 +373,13 @@ router.put('/referrals/:referralId/points', authenticateAdmin, updateReferralPoi
 // Send Manual Notification - PROTECTED
 // Route: POST /api/admin/send-notification
 router.post('/send-notification', sendNotification);
+
+// ============================================
+// POLICY MANAGEMENT ROUTES - PROTECTED
+// ============================================
+router.get('/policies', authenticateAdmin, getPolicies);
+router.get('/policies/:key', authenticateAdmin, getPolicyByKey);
+router.put('/policies/:key', authenticateAdmin, updatePolicy);
 
 export default router;
 

@@ -206,6 +206,13 @@ export const sendPushNotification = async (
                 console.log(`❌ User ${userId} not found for notification`);
                 return;
             }
+
+            // ✅ Respect user's push notification preference
+            if (user.notificationPreferences?.push === false) {
+                console.log(`🔕 Push notifications disabled for user ${userId} — skipping`);
+                return;
+            }
+
             token = isMobile ? user.fcmTokenMobile : user.fcmToken;
         }
 

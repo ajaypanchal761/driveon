@@ -305,8 +305,12 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    // Calculate advance payment (20% for advance option)
-    const advancePayment = paymentOption === 'advance' ? (totalPrice * 0.20) : 0;
+    // Calculate advance payment (dynamic % for advance option)
+    const Setting = (await import('../models/Setting.js')).default;
+    const dbSetting = await Setting.findOne({ key: 'advancePaymentPercentage' });
+    const advancePercentage = dbSetting ? Number(dbSetting.value) : 20;
+
+    const advancePayment = paymentOption === 'advance' ? (totalPrice * (advancePercentage / 100)) : 0;
     const remainingPayment = totalPrice - advancePayment;
     const finalPrice = paymentOption === 'full' ? totalPrice : advancePayment;
 

@@ -9,6 +9,7 @@ import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg7 from '../../assets/car_img7-removebg-preview.png';
 import toastUtils from '../../config/toast';
+import { commonService } from '../../services/common.service';
 
 /**
  * BookingFormPage Component
@@ -27,6 +28,21 @@ const BookingFormPage = () => {
   const [paymentOption, setPaymentOption] = useState('full'); // 'full' or 'advance'
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [advancePercentage, setAdvancePercentage] = useState(20);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await commonService.getSystemSettings();
+        if (response.success && response.data.settings?.advancePaymentPercentage !== undefined) {
+          setAdvancePercentage(Number(response.data.settings.advancePaymentPercentage));
+        }
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Custom calendar modal state
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -60,12 +76,13 @@ const BookingFormPage = () => {
     let totalPrice = basePrice * totalDays;
 
 
+    const advanceVal = totalPrice * (advancePercentage / 100);
     return {
       basePrice,
       totalDays,
       totalPrice: Math.round(totalPrice),
-      advancePayment: Math.round(totalPrice * 0.20),
-      remainingPayment: Math.round(totalPrice * 0.80),
+      advancePayment: Math.round(advanceVal),
+      remainingPayment: Math.round(totalPrice - advanceVal),
     };
   };
 
@@ -349,8 +366,8 @@ const BookingFormPage = () => {
                       style={{ accentColor: theme.colors.primary }}
                     />
                     <div className="flex-1">
-                      <span className="font-medium text-sm md:text-base" style={{ color: theme.colors.textPrimary }}>20% Advance Payment</span>
-                      <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>Pay 20% now, rest later in office</p>
+                      <span className="font-medium text-sm md:text-base" style={{ color: theme.colors.textPrimary }}>{advancePercentage}% Advance Payment</span>
+                      <p className="text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>Pay {advancePercentage}% now, rest later in office</p>
                     </div>
                   </label>
                 </div>
@@ -376,7 +393,7 @@ const BookingFormPage = () => {
                     {paymentOption === 'advance' && (
                       <>
                         <div className="flex justify-between font-semibold pt-2 md:pt-3 border-t text-base md:text-lg" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
-                          <span>Advance Payment (20%)</span>
+                          <span>Advance Payment ({advancePercentage}%)</span>
                           <span>Rs. {priceDetails.advancePayment}</span>
                         </div>
                         <div className="flex justify-between text-xs md:text-sm" style={{ color: theme.colors.textSecondary }}>

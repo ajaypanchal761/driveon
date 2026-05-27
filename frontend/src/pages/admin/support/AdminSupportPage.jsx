@@ -29,6 +29,8 @@ const AdminSupportPage = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   // Admin response
   const [adminMessage, setAdminMessage] = useState('');
@@ -37,7 +39,7 @@ const AdminSupportPage = () => {
   // Load all tickets from backend
   useEffect(() => {
     loadTickets();
-  }, [statusFilter, categoryFilter, searchQuery, dateFilter]);
+  }, [statusFilter, categoryFilter, searchQuery, dateFilter, customStartDate, customEndDate]);
 
   const loadTickets = async () => {
     try {
@@ -66,6 +68,10 @@ const AdminSupportPage = () => {
 
       if (dateFilter && dateFilter !== 'all') {
         params.dateFilter = dateFilter;
+        if (dateFilter === 'custom') {
+          if (customStartDate) params.customStartDate = customStartDate;
+          if (customEndDate) params.customEndDate = customEndDate;
+        }
         console.log('AdminSupportPage - Date filter applied:', dateFilter);
       }
 
@@ -269,9 +275,9 @@ const AdminSupportPage = () => {
         <div className="max-w-6xl mx-auto">
           {/* Filters */}
           <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${dateFilter === 'custom' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
               {/* Search */}
-              <div className="md:col-span-2 lg:col-span-4">
+              <div className={`md:col-span-2 ${dateFilter === 'custom' ? 'lg:col-span-5' : 'lg:col-span-4'}`}>
                 <input
                   type="text"
                   value={searchQuery}
@@ -318,8 +324,39 @@ const AdminSupportPage = () => {
                   { value: 'today', label: 'Today' },
                   { value: 'week', label: 'Last 7 Days' },
                   { value: 'month', label: 'Last 30 Days' },
+                  { value: 'custom', label: 'Custom Range' },
                 ]}
               />
+
+              {/* Custom Date Range Inputs */}
+              {dateFilter === 'custom' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
+                      style={{ borderColor: colors.borderMedium }}
+                      onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
+                      onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm md:text-base"
+                      style={{ borderColor: colors.borderMedium }}
+                      onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
+                      onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -484,8 +521,12 @@ const AdminSupportPage = () => {
                       <span className="font-medium">{selectedTicket.userName}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Email/Phone:</span>{' '}
-                      <span className="font-medium">{selectedTicket.userEmail}</span>
+                      <span className="text-gray-600">Email:</span>{' '}
+                      <span className="font-medium">{selectedTicket.userEmail || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Phone:</span>{' '}
+                      <span className="font-medium">{selectedTicket.userPhone || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -526,10 +567,6 @@ const AdminSupportPage = () => {
                         })}
                       </span>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Messages:</span>{' '}
-                      <span className="font-medium">{selectedTicket.messages?.length || 0}</span>
-                    </div>
                   </div>
                 </div>
 
@@ -543,58 +580,9 @@ const AdminSupportPage = () => {
                   </div>
                 </div>
 
-                {/* Messages */}
-                {selectedTicket.messages && selectedTicket.messages.length > 0 && (
-                  <div className="border-t border-gray-200 pt-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-3">Messages</p>
-                    <div className="space-y-3 max-h-60 overflow-y-auto">
-                      {selectedTicket.messages.map((msg, index) => (
-                        <div key={index} className={`p-3 rounded-lg ${msg.sender === 'admin' ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold" style={{ color: colors.backgroundTertiary }}>
-                              {msg.senderName} ({msg.sender === 'admin' ? 'Admin' : 'User'})
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(msg.timestamp).toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              })}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700">{msg.message}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {/* Admin Response */}
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Add Response</p>
-                  <textarea
-                    value={adminMessage}
-                    onChange={(e) => setAdminMessage(e.target.value)}
-                    rows={4}
-                    placeholder="Type your response..."
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 mb-3 resize-none text-sm md:text-base"
-                    style={{
-                      borderColor: colors.borderMedium,
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = colors.backgroundTertiary}
-                    onBlur={(e) => e.target.style.borderColor = colors.borderMedium}
-                  />
-                  <button
-                    onClick={handleAddResponse}
-                    className="w-full px-4 py-2.5 rounded-lg font-semibold text-white hover:opacity-90 transition-opacity text-sm md:text-base"
-                    style={{ backgroundColor: colors.backgroundTertiary }}
-                  >
-                    Send Response
-                  </button>
-                </div>
+
+
               </div>
             </div>
           </div>

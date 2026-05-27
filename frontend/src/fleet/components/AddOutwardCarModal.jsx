@@ -159,20 +159,14 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
                 type="tel"
                 value={ownerPhone}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                  setOwnerPhone(value);
-                }}
-                type="tel"
-                maxLength={10}
-                inputMode="numeric"
-                pattern="[0-9]{10}"
-                onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                   setOwnerPhone(val);
                 }}
+                maxLength={10}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
                 className="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
-                placeholder="Enter 10-digit phone number"
                 placeholder="Enter 10-digit phone number"
               />
               {ownerPhone && ownerPhone.length > 0 && ownerPhone.length < 10 && (

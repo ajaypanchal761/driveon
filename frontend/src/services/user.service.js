@@ -407,6 +407,22 @@ export const userService = {
       throw error;
     }
   },
+
+  /**
+   * Update notification preferences (push / email)
+   * @param {{ push?: boolean, email?: boolean }} data
+   * @returns {Promise}
+   */
+  updateNotificationPreferences: async (data) => {
+    try {
+      const api = (await import('./api')).default;
+      const response = await api.put('/user/notification-preferences', data);
+      return response.data;
+    } catch (error) {
+      console.error('Update notification preferences error:', error);
+      throw error;
+    }
+  },
 };
 
 export default userService;

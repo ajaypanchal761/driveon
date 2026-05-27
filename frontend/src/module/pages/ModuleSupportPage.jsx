@@ -10,6 +10,89 @@ import { colors } from '../theme/colors';
 import useInViewAnimation from '../hooks/useInViewAnimation';
 import CustomSelect from '../components/common/CustomSelect';
 
+// Get status color
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'open':
+      return 'bg-blue-500';
+    case 'in_progress':
+      return 'bg-yellow-500';
+    case 'resolved':
+      return 'bg-green-500';
+    case 'closed':
+      return 'bg-gray-500';
+    default:
+      return 'bg-gray-500';
+  }
+};
+
+// Get priority color
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'low':
+      return 'bg-green-100 text-green-800';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'high':
+      return 'bg-orange-100 text-orange-800';
+    case 'urgent':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const categories = [
+  { value: 'general', label: 'General Inquiry' },
+  { value: 'booking', label: 'Booking Issue' },
+  { value: 'payment', label: 'Payment Issue' },
+  { value: 'technical', label: 'Technical Support' },
+  { value: 'kyc', label: 'KYC Verification' },
+  { value: 'guarantor', label: 'Guarantor Related' },
+  { value: 'other', label: 'Other' },
+];
+
+// Ticket Item Component (separate component to use hooks properly)
+const TicketItem = ({ ticket, index, onClick, categories }) => {
+  const [ticketRef, isTicketInView] = useInViewAnimation({ threshold: 0.1 });
+
+  return (
+    <motion.div
+      ref={ticketRef}
+      className="bg-white rounded-xl shadow-sm border border-gray-200 p-3"
+      initial={{ opacity: 0, y: 10 }}
+      animate={isTicketInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+      transition={{ duration: 0.2, delay: index * 0.05 }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <h3 className="text-sm font-semibold truncate" style={{ color: colors.textPrimary }}>
+              {ticket.subject}
+            </h3>
+            <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)} text-white flex-shrink-0`}>
+              {ticket.status.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600 mb-1">
+            <span className="font-mono font-medium" style={{ color: colors.textPrimary }}>
+              {ticket.token}
+            </span>
+            <span>•</span>
+            <span>{categories.find(c => c.value === ticket.category)?.label}</span>
+          </div>
+          <p className="text-xs text-gray-600 line-clamp-2">
+            {ticket.description}
+          </p>
+          <div className="text-xs text-gray-500 mt-1">
+            {new Date(ticket.updatedAt).toLocaleString()}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 /**
  * ModuleSupportPage Component
  * Ticket-based user support system for module
@@ -200,103 +283,11 @@ const ModuleSupportPage = () => {
     toastUtils.success('Token copied to clipboard!');
   };
 
-  // Get status color
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'open':
-        return 'bg-blue-500';
-      case 'in_progress':
-        return 'bg-yellow-500';
-      case 'resolved':
-        return 'bg-green-500';
-      case 'closed':
-        return 'bg-gray-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  // Get priority color
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const categories = [
-    { value: 'general', label: 'General Inquiry' },
-    { value: 'booking', label: 'Booking Issue' },
-    { value: 'payment', label: 'Payment Issue' },
-    { value: 'technical', label: 'Technical Support' },
-    { value: 'kyc', label: 'KYC Verification' },
-    { value: 'guarantor', label: 'Guarantor Related' },
-    { value: 'other', label: 'Other' },
-  ];
-
   const iconBgColor = colors.backgroundPrimary || '#F1F2F4';
 
   // Scroll-based animation refs
   const [formRef, isFormInView] = useInViewAnimation({ threshold: 0.1 });
   const [ticketDetailRef, isTicketDetailInView] = useInViewAnimation({ threshold: 0.1 });
-
-  // Ticket Item Component (separate component to use hooks properly)
-  const TicketItem = ({ ticket, index, onClick, categories }) => {
-    const [ticketRef, isTicketInView] = useInViewAnimation({ threshold: 0.1 });
-
-    return (
-      <motion.div
-        ref={ticketRef}
-        onClick={onClick}
-        className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
-        initial={{ opacity: 0, y: 10 }}
-        animate={isTicketInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-        transition={{ duration: 0.2, delay: index * 0.05 }}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <h3 className="text-sm font-semibold truncate" style={{ color: colors.textPrimary }}>
-                {ticket.subject}
-              </h3>
-              <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(ticket.status)} text-white flex-shrink-0`}>
-                {ticket.status.replace('_', ' ').toUpperCase()}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600 mb-1">
-              <span className="font-mono font-medium" style={{ color: colors.textPrimary }}>
-                {ticket.token}
-              </span>
-              <span>•</span>
-              <span>{categories.find(c => c.value === ticket.category)?.label}</span>
-            </div>
-            <p className="text-xs text-gray-600 line-clamp-2">
-              {ticket.description}
-            </p>
-            <div className="text-xs text-gray-500 mt-1">
-              {new Date(ticket.updatedAt).toLocaleString()}
-            </div>
-          </div>
-          <svg
-            className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </motion.div>
-    );
-  };
 
   return (
     <div
@@ -606,7 +597,6 @@ const ModuleSupportPage = () => {
                         key={ticket.id}
                         ticket={ticket}
                         index={index}
-                        onClick={() => loadTicketDetails(ticket.id)}
                         categories={categories}
                       />
                     ))

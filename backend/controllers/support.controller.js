@@ -385,6 +385,8 @@ export const getAllTickets = async (req, res) => {
       page = 1,
       limit = 20,
       dateFilter,
+      customStartDate,
+      customEndDate,
     } = req.query;
 
     // Build query
@@ -449,6 +451,24 @@ export const getAllTickets = async (req, res) => {
           monthAgo.setDate(monthAgo.getDate() - 30);
           monthAgo.setHours(0, 0, 0, 0);
           startDate = monthAgo;
+          break;
+        }
+        case 'custom': {
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: start, $lte: end };
+          } else if (customStartDate) {
+            const start = new Date(customStartDate);
+            start.setHours(0, 0, 0, 0);
+            query.createdAt = { $gte: start };
+          } else if (customEndDate) {
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            query.createdAt = { $lte: end };
+          }
           break;
         }
         default:
@@ -563,6 +583,7 @@ export const getTicketByIdAdmin = async (req, res) => {
           userId: ticket.userId?._id?.toString() || ticket.userId?.toString(),
           userName: ticket.userName,
           userEmail: ticket.userEmail,
+          userPhone: ticket.userId?.phone || '',
           subject: ticket.subject,
           category: ticket.category,
           description: ticket.description,

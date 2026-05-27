@@ -21,40 +21,46 @@ const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 export const requestForToken = async () => {
     try {
         if (!VAPID_KEY) {
-            console.error("❌ Firebase VAPID Key is missing in environment variables!");
             return null;
         }
 
-        console.log("Requesting FCM Token with VAPID Key:", VAPID_KEY);
+        // Check if notification permission is already denied — skip silently
+        if (Notification.permission === 'denied') {
+            return null;
+        }
 
-        // Explicitly register service worker to ensure correct scope and file
+        // Register service worker
         let registration;
         try {
             if ('serviceWorker' in navigator) {
                 registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                console.log('✅ Service Worker Registered:', registration);
             } else {
-                console.error('❌ Service Worker not supported in this browser.');
                 return null;
             }
         } catch (swError) {
             console.error('❌ Service Worker Registration Failed:', swError);
-            throw swError;
+            return null;
         }
 
         const currentToken = await getToken(messaging, {
             vapidKey: VAPID_KEY,
             serviceWorkerRegistration: registration
         });
-        if (currentToken) {
-            console.log("✅ FCM Token Generated:", currentToken);
-            return currentToken;
-        } else {
-            console.warn("⚠️ No registration token available. Request permission to generate one.");
+
+        return currentToken || null;
+
+    } catch (err) {
+        // Silently ignore expected browser permission errors
+        const ignoredCodes = [
+            'messaging/permission-blocked',
+            'messaging/permission-default',
+            'messaging/notifications-blocked',
+        ];
+        if (err?.code && ignoredCodes.includes(err.code)) {
             return null;
         }
-    } catch (err) {
-        console.error("❌ An error occurred while retrieving token: ", err);
+        // Log genuine unexpected errors only
+        console.error("❌ FCM token error:", err?.message || err);
         return null;
     }
 };

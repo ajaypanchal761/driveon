@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import dotenv from 'dotenv';
+import Setting from '../models/Setting.js';
 
 // Load environment variables (in case they're not loaded)
 dotenv.config();
@@ -490,6 +491,43 @@ export const getCarSpecificCoupons = async (req, res) => {
       success: false,
       message: 'Error fetching car specific coupons',
       error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get Public System Settings
+ * @route   GET /api/common/settings
+ * @access  Public
+ */
+export const getPublicSettings = async (req, res) => {
+  try {
+    const dbSettings = await Setting.find({});
+    
+    const settingsObj = {};
+    dbSettings.forEach(s => {
+      settingsObj[s.key] = s.value;
+    });
+
+    const settings = {
+      appName: settingsObj.appName || process.env.APP_NAME || 'DriveOn',
+      contactEmail: settingsObj.contactEmail || process.env.CONTACT_EMAIL || 'driveon721@gmail.com',
+      contactPhone: settingsObj.contactPhone || process.env.CONTACT_PHONE || '+91 98765 43210',
+      advancePaymentPercentage: settingsObj.advancePaymentPercentage !== undefined ? Number(settingsObj.advancePaymentPercentage) : 20,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        settings,
+      },
+    });
+  } catch (error) {
+    console.error('Get public settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching system settings',
+      error: error.message,
     });
   }
 };

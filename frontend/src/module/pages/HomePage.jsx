@@ -116,6 +116,7 @@ const HomePage = () => {
   const [selectedHour, setSelectedHour] = useState(10);
   const [selectedMinute, setSelectedMinute] = useState(30);
   const [selectedPeriod, setSelectedPeriod] = useState('am');
+  const [timePickerMode, setTimePickerMode] = useState('hour'); // 'hour' or 'minute'
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   // Calendar helper functions
@@ -1662,17 +1663,16 @@ const HomePage = () => {
         <>
           {/* Backdrop */}
           <div
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
             className="fixed inset-0 z-[100] bg-black/40"
             onClick={() => setIsTimePickerOpen(false)}
           />
 
           {/* Time Picker Modal */}
           <div
-            className="fixed z-[110] rounded-xl shadow-2xl border p-4"
+            className="fixed z-[110] shadow-2xl bg-white rounded-md"
             style={{
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.borderForm,
-              width: "280px",
+              width: "320px",
               left: "50%",
               top: "50%",
               transform: "translate(-50%, -50%)",
@@ -1680,149 +1680,146 @@ const HomePage = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="pt-4 px-6 mb-2 mt-2">
               <h3
-                className="text-sm font-semibold"
-                style={{ color: colors.textPrimary }}
+                className="text-[10px] font-bold text-gray-500 tracking-wider mb-4 uppercase"
               >
                 Select Time
               </h3>
-              <button
-                onClick={() => setIsTimePickerOpen(false)}
-                className="p-1 rounded hover:bg-gray-100"
-                style={{ color: colors.textPrimary }}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              
+              <div className="flex items-center justify-center gap-1">
+                {/* Hour */}
+                <div 
+                  onClick={() => setTimePickerMode('hour')}
+                  className={`flex items-center justify-center w-[84px] h-[84px] rounded-lg text-5xl font-light cursor-pointer transition-colors ${timePickerMode === 'hour' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-[#e5e7eb] text-[#1c1b1f] hover:bg-gray-300'}`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {/* Time Selection */}
-            <div className="flex items-center justify-center gap-2 mb-4">
-              {/* Hour */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs mb-1" style={{ color: colors.textSecondary }}>
-                  Hour
-                </label>
-                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
-                    <button
-                      key={hour}
-                      type="button"
-                      onClick={() => setSelectedHour(hour)}
-                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedHour === hour
-                        ? "text-white"
-                        : "hover:bg-gray-100"
-                        }`}
-                      style={{
-                        backgroundColor:
-                          selectedHour === hour
-                            ? colors.backgroundTertiary
-                            : "transparent",
-                        color:
-                          selectedHour === hour
-                            ? colors.backgroundSecondary
-                            : colors.textPrimary,
-                      }}
-                    >
-                      {hour}
-                    </button>
-                  ))}
+                  {selectedHour}
                 </div>
-              </div>
-
-              <span className="text-2xl font-bold mt-6" style={{ color: colors.textPrimary }}>
-                :
-              </span>
-
-              {/* Minute */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs mb-1" style={{ color: colors.textSecondary }}>
-                  Minute
-                </label>
-                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                  {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
-                    <button
-                      key={minute}
-                      type="button"
-                      onClick={() => setSelectedMinute(minute)}
-                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedMinute === minute
-                        ? "text-white"
-                        : "hover:bg-gray-100"
-                        }`}
-                      style={{
-                        backgroundColor:
-                          selectedMinute === minute
-                            ? colors.backgroundTertiary
-                            : "transparent",
-                        color:
-                          selectedMinute === minute
-                            ? colors.backgroundSecondary
-                            : colors.textPrimary,
-                      }}
-                    >
-                      {String(minute).padStart(2, "0")}
-                    </button>
-                  ))}
+                
+                <span className="text-5xl font-light text-[#1c1b1f] mx-1 pb-2">:</span>
+                
+                {/* Minute */}
+                <div 
+                  onClick={() => setTimePickerMode('minute')}
+                  className={`flex items-center justify-center w-[84px] h-[84px] rounded-lg text-5xl font-light cursor-pointer transition-colors ${timePickerMode === 'minute' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-[#e5e7eb] text-[#1c1b1f] hover:bg-gray-300'}`}
+                >
+                  {String(selectedMinute).padStart(2, '0')}
                 </div>
-              </div>
-
-              {/* AM/PM */}
-              <div className="flex flex-col items-center">
-                <label className="text-xs mb-1" style={{ color: colors.textSecondary }}>
-                  Period
-                </label>
-                <div className="flex flex-col gap-1">
-                  {["am", "pm"].map((period) => (
-                    <button
-                      key={period}
-                      type="button"
-                      onClick={() => setSelectedPeriod(period)}
-                      className={`px-3 py-1 rounded text-sm font-semibold transition-all ${selectedPeriod === period
-                        ? "text-white"
-                        : "hover:bg-gray-100"
-                        }`}
-                      style={{
-                        backgroundColor:
-                          selectedPeriod === period
-                            ? colors.backgroundTertiary
-                            : "transparent",
-                        color:
-                          selectedPeriod === period
-                            ? colors.backgroundSecondary
-                            : colors.textPrimary,
-                      }}
-                    >
-                      {period.toUpperCase()}
-                    </button>
-                  ))}
+                
+                {/* AM/PM */}
+                <div className="flex flex-col ml-2 border border-[#79747E] rounded-md overflow-hidden">
+                  <button 
+                    onClick={() => setSelectedPeriod('am')}
+                    className={`px-3 py-[10px] text-[13px] font-bold transition-colors ${selectedPeriod === 'am' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-white text-[#49454f] hover:bg-gray-100'} border-b border-[#79747E]`}
+                  >
+                    AM
+                  </button>
+                  <button 
+                    onClick={() => setSelectedPeriod('pm')}
+                    className={`px-3 py-[10px] text-[13px] font-bold transition-colors ${selectedPeriod === 'pm' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-white text-[#49454f] hover:bg-gray-100'}`}
+                  >
+                    PM
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Confirm Button */}
-            <button
-              type="button"
-              onClick={handleTimeSelect}
-              className="w-full py-2 rounded-lg font-semibold text-sm transition-all hover:opacity-90"
-              style={{
-                backgroundColor: colors.backgroundTertiary,
-                color: colors.textWhite,
-              }}
-            >
-              Confirm
-            </button>
+            {/* Clock Face */}
+            <div className="px-6 py-6 flex justify-center mt-2">
+              <div className="relative w-64 h-64 bg-[#e5e7eb] rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-[#4F378B] rounded-full absolute z-10"></div>
+                {/* Draw clock numbers and hand */}
+                {(() => {
+                  const items = timePickerMode === 'hour' 
+                    ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                    : [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+                  const radius = 104; // Radius of numbers circle
+                  const cx = 128;
+                  const cy = 128;
+                  
+                  const selectedVal = timePickerMode === 'hour' ? selectedHour : selectedMinute;
+                  
+                  // For minutes not exactly on a 5-minute mark, find closest angle
+                  let angleDegrees = 0;
+                  if (timePickerMode === 'hour') {
+                    angleDegrees = (selectedVal % 12) * 30;
+                  } else {
+                    angleDegrees = selectedVal * 6;
+                  }
+                  
+                  const angleRad = (angleDegrees - 90) * (Math.PI / 180);
+                  const handX = cx + radius * Math.cos(angleRad);
+                  const handY = cy + radius * Math.sin(angleRad);
+
+                  return (
+                    <>
+                      {/* Clock Hand Line */}
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                        <line x1="128" y1="128" x2={handX} y2={handY} stroke="#4F378B" strokeWidth="2" />
+                      </svg>
+                      {/* Clock Selected Circle Background */}
+                      <div 
+                        className="absolute w-10 h-10 bg-[#4F378B] rounded-full z-0 pointer-events-none"
+                        style={{
+                          left: `${handX - 20}px`,
+                          top: `${handY - 20}px`,
+                        }}
+                      ></div>
+
+                      {/* Clock Numbers */}
+                      {items.map((val, i) => {
+                        const valAngle = (i * 30 - 90) * (Math.PI / 180);
+                        const x = cx + radius * Math.cos(valAngle);
+                        const y = cy + radius * Math.sin(valAngle);
+                        const isSelected = selectedVal === val;
+                        
+                        return (
+                          <div
+                            key={val}
+                            onClick={() => {
+                              if (timePickerMode === 'hour') {
+                                setSelectedHour(val === 0 ? 12 : val);
+                                setTimePickerMode('minute'); // Auto switch to minute
+                              } else {
+                                setSelectedMinute(val);
+                              }
+                            }}
+                            className={`absolute w-10 h-10 -ml-5 -mt-5 flex items-center justify-center rounded-full cursor-pointer text-base z-10 transition-colors ${isSelected ? 'text-white' : 'text-[#1c1b1f] hover:bg-gray-300'}`}
+                            style={{ left: `${x}px`, top: `${y}px` }}
+                          >
+                            {timePickerMode === 'minute' ? String(val).padStart(2, '0') : val}
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-between items-center px-6 pb-4 pt-2">
+              {/* Keyboard Icon */}
+              <svg className="w-5 h-5 text-[#49454f] cursor-pointer" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20,5H4C2.895,5,2,5.895,2,7v10c0,1.105,0.895,2,2,2h16c1.105,0,2-0.895,2-2V7C22,5.895,21.105,5,20,5z M11,8h2v2h-2V8z M11,11h2v2h-2V11z M8,8h2v2H8V8z M8,11h2v2H8V11z M5,8h2v2H5V8z M5,11h2v2H5V11z M16,16H8v-2h8V16z M14,11h2v2h-2V11z M14,8h2v2h-2V8z M17,11h2v2h-2V11z M17,8h2v2h-2V8z"/>
+              </svg>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsTimePickerOpen(false)}
+                  className="font-bold text-sm text-[#4F378B] hover:bg-[#EADDFF]/50 px-4 py-2 rounded-3xl tracking-wide"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTimeSelect}
+                  className="font-bold text-sm text-[#4F378B] hover:bg-[#EADDFF]/50 px-4 py-2 rounded-3xl tracking-wide"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}

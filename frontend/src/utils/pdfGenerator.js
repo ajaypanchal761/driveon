@@ -497,7 +497,21 @@ export const generateBookingPDF = (bookingData) => {
     }
   }
 
-  yPosition += addKeyValue('Payment Option', bookingData.paymentOption === 'advance' ? '20% Advance' : bookingData.paymentOption || 'N/A', margin + 2, yPosition, contentWidth - 4);
+  let paymentOptionText = bookingData.paymentOption || 'N/A';
+  if (bookingData.paymentOption === 'advance') {
+    let percentage = 20;
+    if (bookingData.pricing && bookingData.pricing.totalPrice > 0 && bookingData.pricing.advancePayment > 0) {
+      percentage = Math.round((bookingData.pricing.advancePayment / bookingData.pricing.totalPrice) * 100);
+    } else if (bookingData.totalPrice > 0 && (bookingData.paidAmount || bookingData.advancePayment)) {
+      const paid = bookingData.paidAmount || bookingData.advancePayment;
+      percentage = Math.round((paid / bookingData.totalPrice) * 100);
+    }
+    paymentOptionText = `${percentage}% Advance`;
+  } else if (bookingData.paymentOption === 'full') {
+    paymentOptionText = 'Full Payment';
+  }
+
+  yPosition += addKeyValue('Payment Option', paymentOptionText, margin + 2, yPosition, contentWidth - 4);
   yPosition = pricingBoxY + pricingBoxHeight + 5; // Add extra padding after box
 
   yPosition += sectionSpacing;

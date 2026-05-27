@@ -56,7 +56,7 @@ const KYCListPage = () => {
   // Mock KYC data
   useEffect(() => {
     // Simulate API call
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       const mockKYC = [
         {
           id: "1",
@@ -180,6 +180,8 @@ const KYCListPage = () => {
       setFilteredKYC(mockKYC);
       setLoading(false);
     }, 500);
+
+    return () => clearTimeout(timerId);
   }, []);
 
   // Filter and search KYC

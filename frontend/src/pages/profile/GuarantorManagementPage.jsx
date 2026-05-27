@@ -417,11 +417,9 @@ const GuarantorManagementPage = () => {
 const RequestDetailsPage = ({ request, loading, onClose, onAccept, onReject }) => {
   const [activeTab, setActiveTab] = useState('user');
 
-  if (!request) return null;
-
-  const booking = request.booking || {};
-  const car = booking.car || {};
-  const user = request.user || {};
+  const booking = request?.booking || {};
+  const car = booking?.car || {};
+  const user = request?.user || {};
 
   // Debug: Log car data to check images
   useEffect(() => {
@@ -435,6 +433,8 @@ const RequestDetailsPage = ({ request, loading, onClose, onAccept, onReject }) =
       });
     }
   }, [car, activeTab]);
+
+  if (!request) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">

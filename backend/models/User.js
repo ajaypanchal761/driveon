@@ -163,7 +163,18 @@ const userSchema = new mongoose.Schema(
     isKYCVerified: {
       type: Boolean,
       default: false
-    }
+    },
+    // User notification preferences
+    notificationPreferences: {
+      push: {
+        type: Boolean,
+        default: true,
+      },
+      email: {
+        type: Boolean,
+        default: true,
+      },
+    },
   },
   {
     timestamps: true,

@@ -8,12 +8,12 @@ import { commonService } from '../../services/common.service';
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
 
 /**
- * TermsAndConditionsPage Component
- * Terms and Conditions page for DriveOn Host Services
- * Responsive for both mobile and web view
- * Condensed version of the full Terms and Conditions
+ * CancellationRefundPolicyPage Component
+ * Cancellation and Refund Policy page for DriveOn
+ * Dynamically fetches content from the backend (set via Admin Panel)
+ * Falls back to default static content if none is configured
  */
-const TermsAndConditionsPage = () => {
+const CancellationRefundPolicyPage = () => {
   const navigate = useNavigate();
 
   // Get authentication state
@@ -30,18 +30,24 @@ const TermsAndConditionsPage = () => {
     const fetchPolicy = async () => {
       try {
         setLoading(true);
-        const res = await commonService.getPolicy('terms_conditions');
+        const res = await commonService.getPolicy('cancellation_refund');
         // res.data = { success, data: { key, title, content, updatedAt } | null }
         if (res?.success && res?.data?.content) {
           setPolicyTitle(res.data.title || null);
           setPolicyContent(res.data.content);
           if (res.data.updatedAt) {
-            setPolicyUpdatedAt(new Date(res.data.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }));
+            setPolicyUpdatedAt(
+              new Date(res.data.updatedAt).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+              })
+            );
           }
         }
         // If data is null, silently use static fallback (policy not configured yet)
       } catch (error) {
-        console.warn('Terms fetch failed, using static content:', error?.message);
+        console.warn('Cancellation policy fetch failed, using static content:', error?.message);
       } finally {
         setLoading(false);
       }
@@ -49,21 +55,19 @@ const TermsAndConditionsPage = () => {
     fetchPolicy();
   }, []);
 
+  // Static fallback content
   return (
     <div
-      className="min-h-screen w-full relative pb-20 md:pb-0"
+      className="min-h-screen w-full"
       style={{ backgroundColor: colors.backgroundSecondary }}
     >
-      {/* Header - Mobile only */}
+      {/* Mobile Header - ProfileHeader (only on mobile) */}
       <div className="md:hidden sticky top-0 z-50">
-        <ProfileHeader title="Terms & Conditions" showBack />
+        <ProfileHeader title="Cancellation & Refund Policy" showBack />
       </div>
 
       {/* Web Header - Only visible on web */}
-      <header
-        className="hidden md:block w-full sticky top-0 z-50"
-        style={{ backgroundColor: colors.brandBlack }}
-      >
+      <header className="hidden md:block w-full sticky top-0 z-50" style={{ backgroundColor: colors.brandBlack }}>
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center h-16 md:h-20 lg:h-24 justify-between">
             {/* Left - Logo */}
@@ -114,7 +118,6 @@ const TermsAndConditionsPage = () => {
                   to="/profile"
                   className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14"
                 >
-                  {/* Circular profile icon with white border */}
                   <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full border-2 border-white flex items-center justify-center overflow-hidden bg-gray-800">
                     {user?.profilePhoto ? (
                       <img
@@ -149,7 +152,7 @@ const TermsAndConditionsPage = () => {
         </div>
       </header>
 
-      {/* Back Button - Below Header */}
+      {/* Back Button - Below Header (web only) */}
       <div className="hidden md:block w-full px-4 md:px-6 lg:px-8 xl:px-12 pt-4 md:pt-6">
         <div className="max-w-7xl mx-auto">
           <button
@@ -175,8 +178,20 @@ const TermsAndConditionsPage = () => {
         </div>
       </div>
 
+      {/* Page Title - Web */}
+      <div className="hidden md:block px-4 md:px-6 lg:px-8 xl:px-12 pt-6 md:pt-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold" style={{ color: colors.textPrimary }}>
+            Cancellation &amp; Refund Policy
+          </h1>
+          <p className="mt-2 text-sm md:text-base" style={{ color: colors.textSecondary }}>
+            Please read our cancellation and refund terms carefully before making a booking.
+          </p>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="px-4 md:px-6 lg:px-8 xl:px-12 pt-6 md:pt-8 pb-6 md:pb-8 mt-4 md:mt-0">
+      <main className="px-4 md:px-6 lg:px-8 xl:px-12 pt-6 md:pt-8 pb-24 md:pb-8 mt-4 md:mt-0">
         <div className="max-w-4xl mx-auto">
           {/* Content Container */}
           <div className="bg-white rounded-xl shadow-lg border-2 p-4 md:p-6 lg:p-8" style={{ borderColor: colors.borderLight }}>
@@ -184,20 +199,33 @@ const TermsAndConditionsPage = () => {
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-3" style={{ borderColor: colors.backgroundTertiary }}></div>
-                    <p className="text-sm" style={{ color: colors.textSecondary }}>Loading Terms & Conditions...</p>
+                    <div
+                      className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-3"
+                      style={{ borderColor: colors.backgroundTertiary }}
+                    ></div>
+                    <p className="text-sm" style={{ color: colors.textSecondary }}>
+                      Loading Cancellation &amp; Refund Policy...
+                    </p>
                   </div>
                 </div>
               ) : (
                 <>
                   {(policyTitle || policyUpdatedAt) && (
                     <div className="mb-4 pb-4 border-b" style={{ borderColor: colors.borderLight }}>
-                      {policyTitle && <h2 className="text-lg md:text-xl font-bold mb-1" style={{ color: colors.textPrimary }}>{policyTitle}</h2>}
-                      {policyUpdatedAt && <p className="text-xs" style={{ color: colors.textSecondary }}>Last Updated: {policyUpdatedAt}</p>}
+                      {policyTitle && (
+                        <h2 className="text-lg md:text-xl font-bold mb-1" style={{ color: colors.textPrimary }}>
+                          {policyTitle}
+                        </h2>
+                      )}
+                      {policyUpdatedAt && (
+                        <p className="text-xs" style={{ color: colors.textSecondary }}>
+                          Last Updated: {policyUpdatedAt}
+                        </p>
+                      )}
                     </div>
                   )}
                   <pre className="whitespace-pre-wrap font-sans text-xs md:text-sm lg:text-base leading-relaxed" style={{ color: colors.textSecondary }}>
-                    {policyContent || 'Terms and Conditions have not been configured yet.'}
+                    {policyContent || 'Cancellation and Refund Policy has not been configured yet.'}
                   </pre>
                 </>
               )}
@@ -214,5 +242,4 @@ const TermsAndConditionsPage = () => {
   );
 };
 
-export default TermsAndConditionsPage;
-
+export default CancellationRefundPolicyPage;

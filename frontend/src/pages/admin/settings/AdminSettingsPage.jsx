@@ -28,6 +28,7 @@ const AdminSettingsPage = () => {
     appName: 'DriveOn',
     contactEmail: 'driveon721@gmail.com',
     contactPhone: '',
+    advancePaymentPercentage: 20,
   });
 
   // Password Change Settings
@@ -54,6 +55,7 @@ const AdminSettingsPage = () => {
             appName: settings.appName || 'DriveOn',
             contactEmail: settings.contactEmail || 'driveon721@gmail.com',
             contactPhone: adminUser?.phone || settings.contactPhone || '+91 98765 43210',
+            advancePaymentPercentage: settings.advancePaymentPercentage !== undefined ? settings.advancePaymentPercentage : 20,
           });
         }
       } catch (err) {
@@ -65,6 +67,7 @@ const AdminSettingsPage = () => {
           appName: 'DriveOn',
           contactEmail: 'driveon721@gmail.com',
           contactPhone: adminUser?.phone || '+91 98765 43210',
+          advancePaymentPercentage: 20,
         });
       } finally {
         setLoading(false);
@@ -100,11 +103,12 @@ const AdminSettingsPage = () => {
         }
       }
 
-      // Update system settings (app name, contact email, contact phone)
+      // Update system settings (app name, contact email, contact phone, advance payment percentage)
       const settingsResponse = await adminService.updateSystemSettings({
         appName: generalSettings.appName,
         contactEmail: generalSettings.contactEmail,
         contactPhone: generalSettings.contactPhone,
+        advancePaymentPercentage: Number(generalSettings.advancePaymentPercentage),
       });
 
       if (!settingsResponse.success) {
@@ -257,7 +261,142 @@ const AdminSettingsPage = () => {
         )}
 
         {/* Password Change Section */}
-        <Card className="p-6">
+        <div className="space-y-6">
+          {/* General System & Profile Settings Card */}
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-6" style={{ color: colors.textPrimary }}>General System & Profile Settings</h2>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Admin Profile Name</label>
+                  <input
+                    type="text"
+                    value={generalSettings.adminName}
+                    onChange={(e) => setGeneralSettings({ ...generalSettings, adminName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                    style={{
+                      border: `1px solid ${colors.borderMedium}`,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
+                    placeholder="Enter admin name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Contact Phone / Admin Phone</label>
+                  <input
+                    type="text"
+                    value={generalSettings.contactPhone}
+                    onChange={(e) => setGeneralSettings({ ...generalSettings, contactPhone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                    style={{
+                      border: `1px solid ${colors.borderMedium}`,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
+                    placeholder="Enter contact phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Application Name</label>
+                  <input
+                    type="text"
+                    value={generalSettings.appName}
+                    onChange={(e) => setGeneralSettings({ ...generalSettings, appName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                    style={{
+                      border: `1px solid ${colors.borderMedium}`,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
+                    placeholder="Enter application name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>Contact Email Address</label>
+                  <input
+                    type="email"
+                    value={generalSettings.contactEmail}
+                    onChange={(e) => setGeneralSettings({ ...generalSettings, contactEmail: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                    style={{
+                      border: `1px solid ${colors.borderMedium}`,
+                      backgroundColor: colors.backgroundSecondary,
+                      color: colors.textPrimary
+                    }}
+                    placeholder="Enter contact email"
+                  />
+                </div>
+              </div>
+
+              {/* Booking Preferences */}
+              <div className="pt-4 border-t" style={{ borderColor: colors.borderMedium }}>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>Booking Preferences</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+                      Advance Payment Percentage (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={generalSettings.advancePaymentPercentage}
+                        onChange={(e) => setGeneralSettings({ ...generalSettings, advancePaymentPercentage: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 pr-10"
+                        style={{
+                          border: `1px solid ${colors.borderMedium}`,
+                          backgroundColor: colors.backgroundSecondary,
+                          color: colors.textPrimary
+                        }}
+                        placeholder="20"
+                      />
+                      <span 
+                        className="absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-sm" 
+                        style={{ color: colors.textSecondary }}
+                      >
+                        %
+                      </span>
+                    </div>
+                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+                      Specify the percentage of total rental amount required upfront to confirm a booking.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSaveGeneral}
+                  disabled={saving}
+                  className="px-6 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  style={{ backgroundColor: colors.backgroundTertiary }}
+                  onMouseEnter={(e) => {
+                    if (!saving) e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!saving) e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save General Settings'
+                  )}
+                </button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Password Change Section */}
+          <Card className="p-6">
             <h2 className="text-xl font-semibold mb-6" style={{ color: colors.textPrimary }}>Change Password</h2>
             <div className="space-y-6">
               <div>
@@ -333,6 +472,7 @@ const AdminSettingsPage = () => {
               </div>
             </div>
           </Card>
+        </div>
       </div>
     </div>
   );

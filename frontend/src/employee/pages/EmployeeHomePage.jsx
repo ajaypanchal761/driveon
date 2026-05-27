@@ -592,7 +592,7 @@ const EmployeeHomePage = () => {
                           className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm bg-gradient-to-br from-indigo-400 to-purple-600 overflow-hidden"
                         >
                           {staff.avatar ? (
-                            <img src={staff.avatar} className="w-full h-full object-cover" />
+                            <img src={staff.avatar} alt="Staff avatar" className="w-full h-full object-cover" />
                           ) : (
                             getInitials(staff.name)
                           )}

@@ -104,6 +104,7 @@ const CarListPage = () => {
               isFeatured: car.isFeatured,
               isPopular: car.isPopular,
               source: 'inward',
+              description: car.description || '',
             };
           });
           allCars = [...formattedCars];
@@ -138,6 +139,7 @@ const CarListPage = () => {
             isFeatured: false,
             isPopular: false,
             source: 'outward',
+            description: car.description || '',
           }));
           allCars = [...allCars, ...outwardCars];
         }
@@ -235,6 +237,7 @@ const CarListPage = () => {
             totalRevenue: car.totalRevenue || 0,
             features: car.features || [],
             registrationDate: car.createdAt || new Date().toISOString(),
+            description: car.description || '',
           };
         });
         setCars(formattedCars);
@@ -999,6 +1002,16 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
                     </div>
                   </div>
                 </div>
+
+                {/* Description */}
+                {car.description && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Description</h3>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{car.description}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Features */}
                 <div>

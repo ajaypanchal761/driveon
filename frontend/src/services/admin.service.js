@@ -149,6 +149,22 @@ export const adminService = {
   },
 
   /**
+   * Delete User (Admin)
+   * @param {String} userId - User ID to delete
+   * @returns {Promise}
+   */
+  deleteUser: async (userId) => {
+    try {
+      const response = await api.delete(`/admin/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete user service error:', error);
+      throw error;
+    }
+  },
+
+
+  /**
    * Get All Cars (Admin)
    * @param {Object} params - Query parameters (page, limit, search, filters)
    * @returns {Promise}
@@ -400,6 +416,98 @@ export const adminService = {
   },
 
   /**
+   * Get all dynamic Add-On Services (Admin)
+   * @returns {Promise}
+   */
+  getAddOnServices: async () => {
+    try {
+      const response = await api.get('/admin/addon-services');
+      return response.data;
+    } catch (error) {
+      console.error('Get add-on services error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new dynamic Add-On Service (Admin)
+   * @param {Object} serviceData - { name, description, price }
+   * @returns {Promise}
+   */
+  createAddOnService: async (serviceData) => {
+    try {
+      const response = await api.post('/admin/addon-services', serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('Create add-on service error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update a dynamic Add-On Service (Admin)
+   * @param {string} id - Service ID
+   * @param {Object} serviceData - { name, description, price }
+   * @returns {Promise}
+   */
+  updateAddOnService: async (id, serviceData) => {
+    try {
+      const response = await api.put(`/admin/addon-services/${id}`, serviceData);
+      return response.data;
+    } catch (error) {
+      console.error('Update add-on service error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a dynamic Add-On Service (Admin)
+   * @param {string} id - Service ID
+   * @returns {Promise}
+   */
+  deleteAddOnService: async (id) => {
+    try {
+      const response = await api.delete(`/admin/addon-services/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete add-on service error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Register a new provider under an Add-On Service (Admin)
+   * @param {string} serviceId - Service ID
+   * @param {Object} providerData - { name, phone, email, address }
+   * @returns {Promise}
+   */
+  addProvider: async (serviceId, providerData) => {
+    try {
+      const response = await api.post(`/admin/addon-services/${serviceId}/providers`, providerData);
+      return response.data;
+    } catch (error) {
+      console.error('Add provider error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Remove a provider from an Add-On Service (Admin)
+   * @param {string} serviceId - Service ID
+   * @param {string} providerId - Provider ID
+   * @returns {Promise}
+   */
+  deleteProvider: async (serviceId, providerId) => {
+    try {
+      const response = await api.delete(`/admin/addon-services/${serviceId}/providers/${providerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete provider error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get Booking Statistics (Admin)
    * @param {Object} params - Query parameters (dateFrom, dateTo)
    * @returns {Promise}
@@ -593,6 +701,51 @@ export const adminService = {
       return response.data;
     } catch (error) {
       console.error('Update referral points error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get All Policies (Admin)
+   * @returns {Promise}
+   */
+  getPolicies: async () => {
+    try {
+      const response = await api.get('/admin/policies');
+      return response.data;
+    } catch (error) {
+      console.error('Get all policies error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Specific Policy by Key (Admin/Public)
+   * @param {String} key - Policy key (privacy_policy, terms_conditions, cancellation_refund)
+   * @returns {Promise}
+   */
+  getPolicy: async (key) => {
+    try {
+      const response = await api.get(`/admin/policies/${key}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Get policy (${key}) error:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create or Update Specific Policy by Key (Admin)
+   * @param {String} key - Policy key
+   * @param {Object} data - Policy data { title, content }
+   * @returns {Promise}
+   */
+  updatePolicy: async (key, data) => {
+    try {
+      const response = await api.put(`/admin/policies/${key}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Update policy (${key}) error:`, error);
       throw error;
     }
   },

@@ -77,6 +77,20 @@ export const commonService = {
   },
 
   /**
+   * Get all dynamic add-on services
+   * @returns {Promise}
+   */
+  getAddOnServices: async () => {
+    try {
+      const response = await api.get('/common/addon-services');
+      return response.data;
+    } catch (error) {
+      console.error('Get add-on services error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get returning cars (cars with active bookings ending soon)
    * @returns {Promise}
    */
@@ -128,6 +142,22 @@ export const commonService = {
     }
   },
   /**
+   * Get policy content by key (public endpoint)
+   * @param {String} key - Policy key: 'privacy_policy' | 'terms_conditions' | 'cancellation_refund'
+   * @returns {Promise}
+   */
+  getPolicy: async (key) => {
+    try {
+      const response = await api.get(`/common/policies/${key}`);
+      return response.data;
+    } catch (error) {
+      // Don't re-throw — let the caller decide to fall back to static content
+      console.warn(`Get policy (${key}) error:`, error?.response?.data?.message || error?.message);
+      return { success: false, data: null };
+    }
+  },
+
+  /**
    * Get car specific coupons
    * @returns {Promise}
    */
@@ -137,6 +167,20 @@ export const commonService = {
       return response.data;
     } catch (error) {
       console.error('Get car specific coupons error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get public system settings
+   * @returns {Promise}
+   */
+  getSystemSettings: async () => {
+    try {
+      const response = await api.get('/common/settings');
+      return response.data;
+    } catch (error) {
+      console.error('Get public system settings error:', error);
       throw error;
     }
   },

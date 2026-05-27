@@ -321,6 +321,10 @@ const BookingPaymentPage = () => {
   };
 
 
+  const advancePercentage = priceDetails && priceDetails.totalPrice > 0
+    ? Math.round((priceDetails.advancePayment / priceDetails.totalPrice) * 100)
+    : 20;
+
   return (
     <div className="min-h-screen pb-24 bg-white">
       {/* Header - Sticky */}
@@ -393,7 +397,7 @@ const BookingPaymentPage = () => {
             {paymentOption === 'advance' && (
               <>
                 <div className="flex justify-between font-semibold pt-2 border-t" style={{ color: theme.colors.primary, borderColor: theme.colors.borderLight }}>
-                  <span>Advance Payment (20%)</span>
+                  <span>Advance Payment ({advancePercentage}%)</span>
                   <span>Rs. {priceDetails.advancePayment}</span>
                 </div>
                 <div className="flex justify-between text-xs" style={{ color: theme.colors.textSecondary }}>

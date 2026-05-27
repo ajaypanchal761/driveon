@@ -23,28 +23,33 @@ const LocationAutocomplete = ({
 
   // Load Google Maps JavaScript API script
   useEffect(() => {
+    let active = true;
     if (!GOOGLE_MAPS_API_KEY) {
       console.warn('Google Maps API key not found for Places Autocomplete');
-      return;
+      return () => {};
     }
 
     // Check if script is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
       setIsScriptLoaded(true);
-      return;
+      return () => {};
     }
 
     // Check if script tag already exists
     const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
     if (existingScript) {
       // Wait for script to load
-      existingScript.addEventListener('load', () => {
-        setIsScriptLoaded(true);
-      });
+      const handleLoad = () => {
+        if (active) setIsScriptLoaded(true);
+      };
+      existingScript.addEventListener('load', handleLoad);
       if (window.google && window.google.maps) {
         setIsScriptLoaded(true);
       }
-      return;
+      return () => {
+        active = false;
+        existingScript.removeEventListener('load', handleLoad);
+      };
     }
 
     // Load Google Maps JavaScript API with Places library
@@ -53,7 +58,7 @@ const LocationAutocomplete = ({
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      setIsScriptLoaded(true);
+      if (active) setIsScriptLoaded(true);
     };
     script.onerror = () => {
       console.error('Failed to load Google Maps script');
@@ -61,7 +66,9 @@ const LocationAutocomplete = ({
     document.head.appendChild(script);
 
     return () => {
-      // Cleanup: remove script if component unmounts (optional)
+      active = false;
+      script.onload = null;
+      script.onerror = null;
     };
   }, [GOOGLE_MAPS_API_KEY]);
 
@@ -90,7 +97,7 @@ const LocationAutocomplete = ({
     autocompleteRef.current = autocomplete;
 
     // Handle place selection
-    autocomplete.addListener('place_changed', () => {
+    const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       
       if (!place) return;
@@ -203,6 +210,11 @@ const LocationAutocomplete = ({
 
     // Cleanup
     return () => {
+      if (listener && listener.remove) {
+        listener.remove();
+      } else if (listener && window.google?.maps?.event) {
+        window.google.maps.event.removeListener(listener);
+      }
       if (autocompleteRef.current) {
         window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
         autocompleteRef.current = null;

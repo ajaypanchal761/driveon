@@ -7,7 +7,8 @@
     "dev": "node --max-http-header-size=16384 node_modules/vite/bin/vite.js",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MdMenu, MdNotifications, MdSearch, MdDoneAll, MdInfo, MdWarning, MdError, MdCheckCircle } from 'react-icons/md';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { premiumColors } from '../../theme/colors';
 import { notificationService } from '../../services/notification.service';
 import { onMessageListener } from '../../services/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Topbar = ({ toggleSidebar }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminActive = location.pathname.startsWith('/admin');
+  const isCrmActive = location.pathname.startsWith('/crm');
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -73,7 +78,7 @@ const Topbar = ({ toggleSidebar }) => {
       className="bg-white/80 backdrop-blur-md sticky top-0 z-20 h-16 border-b border-gray-200 px-4 flex items-center justify-between shadow-sm md:ml-64 transition-all duration-300"
       style={{ borderColor: premiumColors.border.light }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
         {/* Mobile menu button */}
         <button
           onClick={toggleSidebar}
@@ -82,8 +87,43 @@ const Topbar = ({ toggleSidebar }) => {
           <MdMenu size={24} />
         </button>
 
+        {/* Sleek Segmented Switcher for Admin Panel and CRM Panel */}
+        <div className="flex items-center bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/60">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex items-center gap-1.5 ${
+              isAdminActive
+                ? 'bg-white shadow-md text-[#1C205C] transform scale-100'
+                : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
+            }`}
+            style={isAdminActive ? { color: '#1C205C' } : {}}
+          >
+            <svg className="w-3.5 h-3.5 md:w-4 md:h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="hidden sm:inline">Admin Panel</span>
+            <span className="sm:hidden">Admin</span>
+          </button>
+          <button
+            onClick={() => navigate('/crm/dashboard')}
+            className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-all duration-300 flex items-center gap-1.5 ${
+              isCrmActive
+                ? 'bg-white shadow-md text-[#1C205C] transform scale-100'
+                : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
+            }`}
+            style={isCrmActive ? { color: '#1C205C' } : {}}
+          >
+            <svg className="w-3.5 h-3.5 md:w-4 md:h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <span className="hidden sm:inline">CRM Panel</span>
+            <span className="sm:hidden">CRM</span>
+          </button>
+        </div>
+
         {/* Search Bar - Hidden on small mobile */}
-        <div className="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-2 w-64 lg:w-96 focus-within:ring-2 ring-blue-500/20 transition-all">
+        <div className="hidden lg:flex items-center bg-gray-100 rounded-lg px-3 py-2 w-48 xl:w-64 focus-within:ring-2 ring-blue-500/20 transition-all">
           <MdSearch className="text-gray-500 text-xl" />
           <input
             type="text"

@@ -218,7 +218,12 @@ const ModuleProfile1Page = () => {
       description: "Get help and contact support.",
       path: "/profile/support",
     },
-
+    {
+      id: "logout",
+      title: "Logout",
+      description: "Sign out of your account.",
+      onClick: handleLogout,
+    },
   ];
 
   // Show loading state while initializing or fetching user
@@ -452,34 +457,8 @@ const ModuleProfile1Page = () => {
               </div>
             </div>
 
-            {/* Logout & Delete Buttons */}
-            <div className="flex flex-row sm:flex-col gap-2 sm:gap-1.5 items-center sm:items-end w-full sm:w-auto justify-end mt-2 sm:mt-0 flex-shrink-0">
-              <button
-                onClick={handleLogout}
-                className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-red-50 flex-shrink-0"
-                style={{
-                  borderColor: colors.error || "#F44336",
-                  color: colors.error || "#F44336",
-                  backgroundColor: "transparent",
-                }}
-              >
-                {isAuthenticated ? "Logout" : "Login"}
-              </button>
-              
-              {isAuthenticated && (
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="px-2.5 py-1 md:px-4 md:py-2 rounded-lg text-[10px] md:text-sm font-bold border transition-all hover:bg-red-50 flex-shrink-0"
-                  style={{
-                    borderColor: colors.error || "#F44336",
-                    color: colors.error || "#F44336",
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  Delete account
-                </button>
-              )}
-            </div>
+            {/* Spacing alignment */}
+            <div className="flex-shrink-0" />
           </div>
 
           {/* Status Tags */}
@@ -614,7 +593,13 @@ const ModuleProfile1Page = () => {
           {menuItems.map((item, index) => (
             <div key={item.id}>
               <motion.button
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  if (item.onClick) {
+                    item.onClick();
+                  } else if (item.path) {
+                    navigate(item.path);
+                  }
+                }}
                 className="w-full p-4 md:py-4 md:px-6 flex items-center justify-between transition-all active:bg-gray-50 relative"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -629,7 +614,7 @@ const ModuleProfile1Page = () => {
                 <div className="flex-1 text-left min-w-0">
                   <h4
                     className="text-sm font-bold mb-0.5"
-                    style={{ color: colors.textPrimary || "#000000" }}
+                    style={{ color: item.id === 'logout' ? (colors.error || "#F44336") : (colors.textPrimary || "#000000") }}
                   >
                     {item.title}
                   </h4>
@@ -642,7 +627,7 @@ const ModuleProfile1Page = () => {
                 </div>
                 <svg
                   className="w-5 h-5 flex-shrink-0 ml-3"
-                  style={{ color: colors.textTertiary || "#999999" }}
+                  style={{ color: item.id === 'logout' ? (colors.error || "#F44336") : (colors.textTertiary || "#999999") }}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

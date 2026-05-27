@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { getProfile, updateProfile, uploadPhoto, uploadRcDocument, getKYCStatus, updateLocation, changePassword, sendReturningNotification, deleteAccount } from '../controllers/user.controller.js';
+import { getProfile, updateProfile, uploadPhoto, uploadRcDocument, getKYCStatus, updateLocation, changePassword, sendReturningNotification, deleteAccount, updateNotificationPreferences } from '../controllers/user.controller.js';
 
 
 import {
@@ -22,6 +22,7 @@ router.use(authenticate);
 router.get('/user/profile', getProfile);
 router.put('/user/profile', updateProfile);
 router.put('/user/change-password', changePassword);
+router.put('/user/notification-preferences', updateNotificationPreferences);
 router.delete('/user/profile', deleteAccount);
 
 // Upload photo route with multer middleware

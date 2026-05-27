@@ -222,9 +222,24 @@ const BookNowPage = () => {
     } catch (error) {
       console.error("Error reading dates from localStorage:", error);
     }
-  }, [location.state]);
+  }, [location]);
   const [paymentOption, setPaymentOption] = useState("advance"); // Only 'advance' option available
   const [specialRequests, setSpecialRequests] = useState("");
+  const [advancePercentage, setAdvancePercentage] = useState(20);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await commonService.getSystemSettings();
+        if (response.success && response.data.settings?.advancePaymentPercentage !== undefined) {
+          setAdvancePercentage(Number(response.data.settings.advancePaymentPercentage));
+        }
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -294,46 +309,53 @@ const BookNowPage = () => {
 
     fetchUserProfile();
   }, [isAuthenticated, user]);
-  // Add-on services with quantities
-  const [addOnServices, setAddOnServices] = useState({
-    driver: 0,
-    bodyguard: 0,
-    gunmen: 0,
-    bouncer: 0,
-  });
-  const [addOnServicesPrices, setAddOnServicesPrices] = useState({
-    driver: 500,
-    bodyguard: 1000,
-    gunmen: 1500,
-    bouncer: 800,
-  });
+  // Dynamic add-on services from database
+  const [allAddOnServices, setAllAddOnServices] = useState([]);
+  const [serviceQuantities, setServiceQuantities] = useState({});
+  // Legacy compat: keep addOnServices for booking submission
+  const [addOnServices, setAddOnServices] = useState({});
+  const [addOnServicesPrices, setAddOnServicesPrices] = useState({});
   const [customServices, setCustomServices] = useState([]);
   const [customServiceQuantities, setCustomServiceQuantities] = useState({});
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [submitWarning, setSubmitWarning] = useState("");
 
-  // Load add-on services prices from API
+  // Load all add-on services dynamically from API
   useEffect(() => {
-    const fetchPrices = async () => {
+    const fetchAllServices = async () => {
       try {
-        const response = await commonService.getAddOnServicesPrices();
+        const response = await commonService.getAddOnServices();
         if (response.success && response.data) {
-          setAddOnServicesPrices({
-            driver: response.data.driver || 500,
-            bodyguard: response.data.bodyguard || 1000,
-            gunmen: response.data.gunmen || 1500,
-            bouncer: response.data.bouncer || 800,
+          const services = response.data;
+          setAllAddOnServices(services);
+          // Build initial quantities map (key -> 0)
+          const initQty = {};
+          const initPrices = {};
+          services.forEach(s => {
+            initQty[s.key] = 0;
+            initPrices[s.key] = s.price;
           });
+          setServiceQuantities(initQty);
+          setAddOnServicesPrices(initPrices);
+          setAddOnServices(initQty); // keep legacy compat
         }
       } catch (error) {
-        console.error('Error fetching add-on services prices:', error);
-        setAddOnServicesPrices({
-          driver: 500,
-          bodyguard: 1000,
-          gunmen: 1500,
-          bouncer: 800,
-        });
+        console.error('Error fetching add-on services:', error);
+        // Fallback defaults
+        const fallback = [
+          { _id: 'driver', key: 'driver', name: 'Driver', description: 'Professional driver service', price: 500 },
+          { _id: 'bodyguard', key: 'bodyguard', name: 'Bodyguard', description: 'Security personnel', price: 1000 },
+          { _id: 'gunmen', key: 'gunmen', name: 'Gun men', description: 'Armed security personnel', price: 1500 },
+          { _id: 'bouncer', key: 'bouncer', name: 'Bouncer', description: 'Event security personnel', price: 800 },
+        ];
+        setAllAddOnServices(fallback);
+        const initQty = {};
+        const initPrices = {};
+        fallback.forEach(s => { initQty[s.key] = 0; initPrices[s.key] = s.price; });
+        setServiceQuantities(initQty);
+        setAddOnServicesPrices(initPrices);
+        setAddOnServices(initQty);
       }
     };
 
@@ -348,9 +370,15 @@ const BookNowPage = () => {
       }
     };
 
-    fetchPrices();
+    fetchAllServices();
     fetchCustomServices();
   }, []);
+
+  // Sync serviceQuantities -> addOnServices for booking submission
+  const handleServiceQtyChange = (key, newQty) => {
+    setServiceQuantities(prev => ({ ...prev, [key]: newQty }));
+    setAddOnServices(prev => ({ ...prev, [key]: newQty }));
+  };
 
   // Booking confirmation modal state (shown after successful Razorpay payment)
   const [showBookingConfirmationModal, setShowBookingConfirmationModal] =
@@ -369,6 +397,7 @@ const BookNowPage = () => {
 
   // Time picker modal state (for editing time when clicking clock icon)
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [timePickerMode, setTimePickerMode] = useState("hour");
 
   // Helper: Convert date string (YYYY-MM-DD) to Date object in local timezone
   // Use noon (12:00) to avoid timezone shift issues
@@ -442,12 +471,10 @@ const BookNowPage = () => {
     // No dynamic pricing multiplier needed
     totalPrice = totalPrice;
 
-    // Calculate add-on services total
-    const addOnServicesTotal =
-      (addOnServices.driver * (addOnServicesPrices.driver || 0)) +
-      (addOnServices.bodyguard * (addOnServicesPrices.bodyguard || 0)) +
-      (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
-      (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
+    // Calculate add-on services total dynamically
+    const addOnServicesTotal = Object.entries(serviceQuantities).reduce((total, [key, qty]) => {
+      return total + (qty * (addOnServicesPrices[key] || 0));
+    }, 0);
 
     // Calculate custom services total
     const customServicesTotal = customServices.reduce((total, service) => {
@@ -463,7 +490,7 @@ const BookNowPage = () => {
     const finalPrice = Math.max(0, totalPrice - discount);
 
     // Payment options
-    const advancePayment = finalPrice * 0.20; // 20% advance (exact)
+    const advancePayment = finalPrice * (advancePercentage / 100); // Dynamic advance
     const remainingPayment = finalPrice - advancePayment;
 
     return {
@@ -1235,13 +1262,13 @@ const BookNowPage = () => {
                       className="font-bold text-sm mb-0.5"
                       style={{ color: colors.textPrimary }}
                     >
-                      20% Advance Payment
+                      {advancePercentage}% Advance Payment
                     </div>
                     <div
                       className="text-xs"
                       style={{ color: colors.textSecondary }}
                     >
-                      Pay 20% now, rest later
+                      Pay {advancePercentage}% now, rest later
                     </div>
                   </div>
                   <div
@@ -1435,7 +1462,7 @@ const BookNowPage = () => {
                         opacity: 0.9,
                       }}
                     >
-                      <span>Advance Payment (20%)</span>
+                      <span>Advance Payment ({advancePercentage}%)</span>
                       <span className="font-semibold">
                         Rs. {formatDecimal(priceDetails.advancePayment)}
                       </span>
@@ -1961,8 +1988,9 @@ const BookNowPage = () => {
             </h2>
 
             <div className="space-y-3">
-              {/* Driver */}
+              {allAddOnServices.map((service) => (
               <div
+                key={service._id || service.key}
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
                 style={{
                   borderColor: colors.borderMedium,
@@ -1996,288 +2024,31 @@ const BookNowPage = () => {
                       className="text-sm font-semibold"
                       style={{ color: colors.textPrimary }}
                     >
-                      Driver
+                      {service.name}
                     </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      Professional driver service
-                    </p>
-                    <p
-                      className="text-xs font-medium mt-0.5"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{addOnServicesPrices.driver} per unit
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {addOnServices.driver > 0 && (
-                    <span
-                      className="text-xs font-semibold mr-2"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{addOnServices.driver * addOnServicesPrices.driver}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        driver: Math.max(0, prev.driver - 1),
-                      }))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 12H4"
-                      />
-                    </svg>
-                  </button>
-                  <span
-                    className="w-8 text-center text-sm font-semibold"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    {addOnServices.driver}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        driver: prev.driver + 1,
-                      }))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
 
-              {/* Bodyguard */}
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${colors.backgroundTertiary}15`,
-                    }}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      style={{ color: colors.backgroundTertiary }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: colors.textPrimary }}
-                    >
-                      Bodyguard
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      Security personnel
-                    </p>
-                    <p
-                      className="text-xs font-medium mt-0.5"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{addOnServicesPrices.bodyguard} per unit
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {addOnServices.bodyguard > 0 && (
-                    <span
-                      className="text-xs font-semibold mr-2"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{addOnServices.bodyguard * addOnServicesPrices.bodyguard}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        bodyguard: Math.max(0, prev.bodyguard - 1),
-                      }))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 12H4"
-                      />
-                    </svg>
-                  </button>
-                  <span
-                    className="w-8 text-center text-sm font-semibold"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    {addOnServices.bodyguard}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        bodyguard: prev.bodyguard + 1,
-                      }))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
 
-              {/* Gun men */}
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${colors.backgroundTertiary}15`,
-                    }}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      style={{ color: colors.backgroundTertiary }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: colors.textPrimary }}
-                    >
-                      Gun men
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      Armed security personnel
-                    </p>
                     <p
                       className="text-xs font-medium mt-0.5"
                       style={{ color: colors.backgroundTertiary }}
                     >
-                      ₹{addOnServicesPrices.gunmen} per unit
+                      ₹{service.price} per unit
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {addOnServices.gunmen > 0 && (
+                  {(serviceQuantities[service.key] || 0) > 0 && (
                     <span
                       className="text-xs font-semibold mr-2"
                       style={{ color: colors.backgroundTertiary }}
                     >
-                      ₹{addOnServices.gunmen * addOnServicesPrices.gunmen}
+                      ₹{(serviceQuantities[service.key] || 0) * service.price}
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        gunmen: Math.max(0, prev.gunmen - 1),
-                      }))
+                      handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
                     }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
                     style={{
@@ -2303,15 +2074,12 @@ const BookNowPage = () => {
                     className="w-8 text-center text-sm font-semibold"
                     style={{ color: colors.textPrimary }}
                   >
-                    {addOnServices.gunmen}
+                    {serviceQuantities[service.key] || 0}
                   </span>
                   <button
                     type="button"
                     onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        gunmen: prev.gunmen + 1,
-                      }))
+                      handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
                     }
                     className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
                     style={{
@@ -2335,136 +2103,15 @@ const BookNowPage = () => {
                   </button>
                 </div>
               </div>
-
-              {/* Bouncer */}
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
-                style={{
-                  borderColor: colors.borderMedium,
-                  backgroundColor: colors.backgroundSecondary,
-                }}
-              >
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${colors.backgroundTertiary}15`,
-                    }}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      style={{ color: colors.backgroundTertiary }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: colors.textPrimary }}
-                    >
-                      Bouncer
-                    </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: colors.textSecondary }}
-                    >
-                      Event security personnel
-                    </p>
-                    <p
-                      className="text-xs font-medium mt-0.5"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{addOnServicesPrices.bouncer} per unit
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {addOnServices.bouncer > 0 && (
-                    <span
-                      className="text-xs font-semibold mr-2"
-                      style={{ color: colors.backgroundTertiary }}
-                    >
-                      ₹{addOnServices.bouncer * addOnServicesPrices.bouncer}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        bouncer: Math.max(0, prev.bouncer - 1),
-                      }))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 12H4"
-                      />
-                    </svg>
-                  </button>
-                  <span
-                    className="w-8 text-center text-sm font-semibold"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    {addOnServices.bouncer}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAddOnServices((prev) => ({
-                        ...prev,
-                        bouncer: prev.bouncer + 1,
-                      }))
-                    }
-                    className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
 
           </motion.div>
 
+
+
           {/* Physical Document Verification Notice */}
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={
@@ -2631,6 +2278,7 @@ const BookNowPage = () => {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setTimePickerMode("hour");
                       setIsTimePickerOpen(true);
                     }}
                     className="w-auto px-4 py-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
@@ -2846,188 +2494,167 @@ const BookNowPage = () => {
 
       {/* Time Picker Modal - Opens when clicking clock icon */}
       {isTimePickerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setIsTimePickerOpen(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-[100] bg-black/40"
+            onClick={() => setIsTimePickerOpen(false)}
+          />
+
+          {/* Time Picker Modal */}
+          <div
+            className="fixed z-[110] shadow-2xl bg-white rounded-2xl"
+            style={{
+              width: "320px",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-xs rounded-2xl shadow-2xl"
-            style={{ backgroundColor: colors.backgroundSecondary }}
           >
-            <div className="p-6">
+            {/* Header */}
+            <div className="pt-4 px-6 mb-2 mt-2">
               <h3
-                className="text-lg font-bold mb-4 text-center"
-                style={{ color: colors.textPrimary }}
+                className="text-[10px] font-bold text-gray-500 tracking-wider mb-4 uppercase"
               >
                 Select Time
               </h3>
-
-              {/* Time Selection */}
-              <div className="flex items-center justify-center gap-4 mb-6">
-                {/* Hour Selection */}
-                <div className="flex flex-col items-center">
-                  <label
-                    className="text-xs font-semibold mb-2"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Hour
-                  </label>
-                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => (
-                      <button
-                        key={hour}
-                        type="button"
-                        onClick={() => setSelectedHour(hour)}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedHour === hour ? "text-white" : ""
-                          }`}
-                        style={{
-                          backgroundColor:
-                            selectedHour === hour
-                              ? colors.backgroundTertiary
-                              : "transparent",
-                          color:
-                            selectedHour === hour
-                              ? colors.backgroundSecondary
-                              : colors.textPrimary,
-                        }}
-                      >
-                        {hour.toString().padStart(2, "0")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <span
-                  className="text-2xl font-bold mt-8"
-                  style={{ color: colors.textPrimary }}
+              
+              <div className="flex items-center justify-center gap-1">
+                {/* Hour */}
+                <div 
+                  onClick={() => setTimePickerMode('hour')}
+                  className={`flex items-center justify-center w-[84px] h-[84px] rounded-lg text-5xl font-light cursor-pointer transition-colors ${timePickerMode === 'hour' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-[#e5e7eb] text-[#1c1b1f] hover:bg-gray-300'}`}
                 >
-                  :
-                </span>
-
-                {/* Minute Selection */}
-                <div className="flex flex-col items-center">
-                  <label
-                    className="text-xs font-semibold mb-2"
-                    style={{ color: colors.textSecondary }}
-                  >
-                    Minute
-                  </label>
-                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                    {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
-                      <button
-                        key={minute}
-                        type="button"
-                        onClick={() => setSelectedMinute(minute)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedMinute === minute ? "text-white" : ""
-                          }`}
-                        style={{
-                          backgroundColor:
-                            selectedMinute === minute
-                              ? colors.backgroundTertiary
-                              : "transparent",
-                          color:
-                            selectedMinute === minute
-                              ? colors.backgroundSecondary
-                              : colors.textPrimary,
-                        }}
-                      >
-                        {minute.toString().padStart(2, "0")}
-                      </button>
-                    ))}
-                  </div>
+                  {selectedHour}
                 </div>
-
-                {/* AM/PM Selection */}
-                <div className="flex flex-col items-center">
-                  <label
-                    className="text-xs font-semibold mb-2"
-                    style={{ color: colors.textSecondary }}
+                
+                <span className="text-5xl font-light text-[#1c1b1f] mx-1 pb-2">:</span>
+                
+                {/* Minute */}
+                <div 
+                  onClick={() => setTimePickerMode('minute')}
+                  className={`flex items-center justify-center w-[84px] h-[84px] rounded-lg text-5xl font-light cursor-pointer transition-colors ${timePickerMode === 'minute' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-[#e5e7eb] text-[#1c1b1f] hover:bg-gray-300'}`}
+                >
+                  {String(selectedMinute).padStart(2, '0')}
+                </div>
+                
+                {/* AM/PM */}
+                <div className="flex flex-col ml-2 border border-[#79747E] rounded-md overflow-hidden">
+                  <button 
+                    onClick={() => setSelectedPeriod('am')}
+                    className={`px-3 py-[10px] text-[13px] font-bold transition-colors ${selectedPeriod === 'am' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-white text-[#49454f] hover:bg-gray-100'} border-b border-[#79747E]`}
                   >
-                    Period
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPeriod("am")}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === "am" ? "text-white" : ""
-                        }`}
-                      style={{
-                        backgroundColor:
-                          selectedPeriod === "am"
-                            ? colors.backgroundTertiary
-                            : "transparent",
-                        color:
-                          selectedPeriod === "am"
-                            ? colors.backgroundSecondary
-                            : colors.textPrimary,
-                      }}
-                    >
-                      AM
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPeriod("pm")}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${selectedPeriod === "pm" ? "text-white" : ""
-                        }`}
-                      style={{
-                        backgroundColor:
-                          selectedPeriod === "pm"
-                            ? colors.backgroundTertiary
-                            : "transparent",
-                        color:
-                          selectedPeriod === "pm"
-                            ? colors.backgroundSecondary
-                            : colors.textPrimary,
-                      }}
-                    >
-                      PM
-                    </button>
-                  </div>
+                    AM
+                  </button>
+                  <button 
+                    onClick={() => setSelectedPeriod('pm')}
+                    className={`px-3 py-[10px] text-[13px] font-bold transition-colors ${selectedPeriod === 'pm' ? 'bg-[#EADDFF] text-[#4F378B]' : 'bg-white text-[#49454f] hover:bg-gray-100'}`}
+                  >
+                    PM
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {/* Selected Time Display */}
-              <div
-                className="mb-4 p-3 rounded-lg text-center"
-                style={{ backgroundColor: colors.backgroundPrimary }}
-              >
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: colors.textPrimary }}
-                >
-                  {selectedHour.toString().padStart(2, "0")} :{" "}
-                  {selectedMinute.toString().padStart(2, "0")} {selectedPeriod}
-                </span>
+            {/* Clock Face */}
+            <div className="px-6 py-6 flex justify-center mt-2">
+              <div className="relative w-64 h-64 bg-[#e5e7eb] rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-[#4F378B] rounded-full absolute z-10"></div>
+                {/* Draw clock numbers and hand */}
+                {(() => {
+                  const items = timePickerMode === 'hour' 
+                    ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                    : [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+                  const radius = 104; // Radius of numbers circle
+                  const cx = 128;
+                  const cy = 128;
+                  
+                  const selectedVal = timePickerMode === 'hour' ? selectedHour : selectedMinute;
+                  
+                  // For minutes not exactly on a 5-minute mark, find closest angle
+                  let angleDegrees = 0;
+                  if (timePickerMode === 'hour') {
+                    angleDegrees = (selectedVal % 12) * 30;
+                  } else {
+                    angleDegrees = selectedVal * 6;
+                  }
+                  
+                  const angleRad = (angleDegrees - 90) * (Math.PI / 180);
+                  const handX = cx + radius * Math.cos(angleRad);
+                  const handY = cy + radius * Math.sin(angleRad);
+
+                  return (
+                    <>
+                      {/* Clock Hand Line */}
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                        <line x1="128" y1="128" x2={handX} y2={handY} stroke="#4F378B" strokeWidth="2" />
+                      </svg>
+                      {/* Clock Selected Circle Background */}
+                      <div 
+                        className="absolute w-10 h-10 bg-[#4F378B] rounded-full z-0 pointer-events-none"
+                        style={{
+                          left: `${handX - 20}px`,
+                          top: `${handY - 20}px`,
+                        }}
+                      ></div>
+
+                      {/* Clock Numbers */}
+                      {items.map((val, i) => {
+                        const valAngle = (i * 30 - 90) * (Math.PI / 180);
+                        const x = cx + radius * Math.cos(valAngle);
+                        const y = cy + radius * Math.sin(valAngle);
+                        const isSelected = selectedVal === val;
+                        
+                        return (
+                          <div
+                            key={val}
+                            onClick={() => {
+                              if (timePickerMode === 'hour') {
+                                setSelectedHour(val === 0 ? 12 : val);
+                                setTimePickerMode('minute'); // Auto switch to minute
+                              } else {
+                                setSelectedMinute(val);
+                              }
+                            }}
+                            className={`absolute w-10 h-10 -ml-5 -mt-5 flex items-center justify-center rounded-full cursor-pointer text-base z-10 transition-colors ${isSelected ? 'text-white' : 'text-[#1c1b1f] hover:bg-gray-300'}`}
+                            style={{ left: `${x}px`, top: `${y}px` }}
+                          >
+                            {timePickerMode === 'minute' ? String(val).padStart(2, '0') : val}
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
               </div>
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
+            {/* Buttons */}
+            <div className="flex justify-between items-center px-6 pb-4 pt-2">
+              {/* Keyboard Icon */}
+              <svg className="w-5 h-5 text-[#49454f] cursor-pointer" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20,5H4C2.895,5,2,5.895,2,7v10c0,1.105,0.895,2,2,2h16c1.105,0,2-0.895,2-2V7C22,5.895,21.105,5,20,5z M11,8h2v2h-2V8z M11,11h2v2h-2V11z M8,8h2v2H8V8z M8,11h2v2H8V11z M5,8h2v2H5V8z M5,11h2v2H5V11z M16,16H8v-2h8V16z M14,11h2v2h-2V11z M14,8h2v2h-2V8z M17,11h2v2h-2V11z M17,8h2v2h-2V8z"/>
+              </svg>
+              <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setIsTimePickerOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm"
-                  style={{
-                    borderColor: colors.backgroundTertiary,
-                    backgroundColor: colors.backgroundSecondary,
-                    color: colors.textPrimary,
-                  }}
+                  className="font-bold text-sm text-[#4F378B] hover:bg-[#EADDFF]/50 px-4 py-2 rounded-3xl tracking-wide"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsTimePickerOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl text-white font-semibold text-sm"
-                  style={{ backgroundColor: colors.backgroundTertiary }}
+                  className="font-bold text-sm text-[#4F378B] hover:bg-[#EADDFF]/50 px-4 py-2 rounded-3xl tracking-wide"
                 >
-                  Done
+                  OK
                 </button>
               </div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Booking Confirmation Modal */}

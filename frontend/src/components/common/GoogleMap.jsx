@@ -29,6 +29,7 @@ const GoogleMap = ({
 
   // Load Google Maps script using singleton loader
   useEffect(() => {
+    let isMounted = true;
     if (!apiKey) {
       setError('Google Maps API key is required');
       return;
@@ -43,13 +44,21 @@ const GoogleMap = ({
     // Load using singleton loader
     loadGoogleMaps(apiKey)
       .then(() => {
-        setIsLoaded(true);
-        setError(null);
+        if (isMounted) {
+          setIsLoaded(true);
+          setError(null);
+        }
       })
       .catch((err) => {
-        console.error('Failed to load Google Maps:', err);
-        setError(err.message || 'Failed to load Google Maps');
+        if (isMounted) {
+          console.error('Failed to load Google Maps:', err);
+          setError(err.message || 'Failed to load Google Maps');
+        }
       });
+      
+    return () => {
+      isMounted = false;
+    };
   }, [apiKey]);
 
   // Initialize map
@@ -74,6 +83,7 @@ const GoogleMap = ({
   }, [isLoaded, center, zoom]);
 
   // Update markers
+  // eslint-disable-next-line react-doctor/effect-needs-cleanup
   useEffect(() => {
     if (!isLoaded || !mapInstance.current) return;
 

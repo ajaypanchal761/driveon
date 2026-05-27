@@ -147,6 +147,10 @@ export const getProfile = async (req, res) => {
             }
           },
           isKYCVerified: user.isKYCVerified || false,
+          notificationPreferences: {
+            push: user.notificationPreferences?.push !== false,
+            email: user.notificationPreferences?.email !== false,
+          },
         },
       },
     });
@@ -264,6 +268,10 @@ export const updateProfile = async (req, res) => {
             }
           },
           isKYCVerified: user.isKYCVerified || false,
+          notificationPreferences: {
+            push: user.notificationPreferences?.push !== false,
+            email: user.notificationPreferences?.email !== false,
+          },
         },
       },
     });
@@ -724,6 +732,50 @@ export const deleteAccount = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while deleting account',
+    });
+  }
+};
+
+/**
+ * @desc    Update notification preferences
+ * @route   PUT /api/user/notification-preferences
+ * @access  Private
+ */
+export const updateNotificationPreferences = async (req, res) => {
+  try {
+    const { push, email } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Only update fields that were explicitly provided
+    if (push !== undefined) {
+      user.notificationPreferences = user.notificationPreferences || {};
+      user.notificationPreferences.push = !!push;
+    }
+    if (email !== undefined) {
+      user.notificationPreferences = user.notificationPreferences || {};
+      user.notificationPreferences.email = !!email;
+    }
+
+    user.markModified('notificationPreferences');
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification preferences updated',
+      data: {
+        notificationPreferences: user.notificationPreferences,
+      },
+    });
+  } catch (error) {
+    console.error('Update notification preferences error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating notification preferences',
     });
   }
 };
