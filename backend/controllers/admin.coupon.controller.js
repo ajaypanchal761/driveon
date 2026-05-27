@@ -180,6 +180,7 @@ export const createCoupon = async (req, res) => {
       carId: carIdsArray.length === 1 ? carIdsArray[0] : null, // Keep for backward compatibility
       carIds: carIdsArray.length > 0 ? carIdsArray : undefined,
       userId: userId || null,
+      validDays: req.body.validDays || [],
       isActive: isActive !== undefined ? isActive : true,
       description: description || '',
       createdBy: (req.admin || req.user)?._id,

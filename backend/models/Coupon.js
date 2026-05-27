@@ -90,6 +90,12 @@ const couponSchema = new mongoose.Schema(
       ref: 'User',
     },
 
+    // Valid days of week (empty = all days)
+    validDays: [{
+      type: String,
+      enum: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    }],
+
     // Status
     isActive: {
       type: Boolean,
@@ -185,13 +191,8 @@ couponSchema.methods.canBeApplied = function (amount, carId, userId, carType) {
           message: 'This coupon is not applicable to this car',
         };
       }
-    } else if (this.carId && carId?.toString() !== this.carId?.toString()) {
-      // Backward compatibility with single carId
-      return {
-        valid: false,
-        message: 'This coupon is not applicable to this car',
-      };
     }
+    // If carIds is empty, coupon applies to all cars (no restriction)
   }
 
   if (this.applicableTo === 'user_id' && userId?.toString() !== this.userId?.toString()) {

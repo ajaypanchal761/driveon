@@ -2689,9 +2689,16 @@ export const getStaffPayroll = async (req, res) => {
         // Calculate total days in the month
         const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
+        // Calculate working days (exclude Sundays)
+        let workingDays = 0;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
+            if (dayOfWeek !== 0) workingDays++; // Skip Sundays
+        }
+
         // Calculations
-        // Per Day Salary (Base / Total Days) - Do not round
-        const perDaySalary = daysInMonth > 0 ? (baseSalary / daysInMonth) : 0;
+        // Per Day Salary (Base / Working Days) - Do not round
+        const perDaySalary = workingDays > 0 ? (baseSalary / workingDays) : 0;
 
         // Half Day Salary (Per Day / 2) - Do not round
         const halfDaySalary = perDaySalary / 2;
@@ -2737,8 +2744,7 @@ export const getStaffPayroll = async (req, res) => {
             const record = recordsMap[day];
 
             if (dayOfWeek === 0) {
-                // Sunday is a Holiday - Count as Present
-                presentCount++;
+                // Sunday is a Holiday - Skip (not counted as present or absent)
                 continue;
             }
 
@@ -2808,7 +2814,7 @@ export const getStaffPayroll = async (req, res) => {
             success: true,
             data: {
                 baseSalary,
-                daysInMonth,
+                daysInMonth: workingDays,
                 presentDays: presentCount,
                 halfDays: halfDayCount,
                 absentDays: absentCount,
