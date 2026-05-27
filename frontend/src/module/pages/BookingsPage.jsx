@@ -702,28 +702,28 @@ const BookingsPage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="px-4 md:px-6 lg:px-8 mb-4 md:mb-6">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'active', label: 'Active' },
-            { id: 'completed', label: 'Completed' },
-            { id: 'cancelled', label: 'Cancelled' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all"
-              style={{
-                backgroundColor: activeTab === tab.id ? colors.backgroundTertiary : colors.backgroundSecondary,
-                color: activeTab === tab.id ? colors.backgroundSecondary : colors.textPrimary,
-                boxShadow: activeTab === tab.id ? `0 2px 8px ${colors.backgroundTertiary}30` : 'none',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <div className="mb-4 md:mb-6">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 md:px-6 lg:px-8 flex-nowrap pb-1">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'active', label: 'Active' },
+              { id: 'completed', label: 'Completed' },
+              { id: 'cancelled', label: 'Cancelled' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+                style={{
+                  backgroundColor: activeTab === tab.id ? colors.backgroundTertiary : colors.backgroundSecondary,
+                  color: activeTab === tab.id ? colors.backgroundSecondary : colors.textPrimary,
+                  boxShadow: activeTab === tab.id ? `0 2px 8px ${colors.backgroundTertiary}30` : 'none',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Bookings List */}

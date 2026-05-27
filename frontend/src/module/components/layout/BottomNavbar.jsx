@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { colors } from '../../theme/colors';
 
@@ -8,6 +9,53 @@ import { colors } from '../../theme/colors';
 const BottomNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    let initialHeight = window.innerHeight;
+    let initialWidth = window.innerWidth;
+
+    const handleResize = () => {
+      const currentHeight = window.innerHeight;
+      const currentWidth = window.innerWidth;
+
+      // If width changed significantly (like orientation change), update initial tracking values
+      if (Math.abs(currentWidth - initialWidth) > 20) {
+        initialHeight = currentHeight;
+        initialWidth = currentWidth;
+        setIsKeyboardVisible(false);
+        return;
+      }
+
+      // If visualViewport is available, check its height ratio (primarily iOS)
+      if (window.visualViewport) {
+        const isIOSKeyboard = window.visualViewport.height < window.innerHeight * 0.85;
+        if (isIOSKeyboard) {
+          setIsKeyboardVisible(true);
+          return;
+        }
+      }
+
+      // Android/Browser height shrink detection
+      if (initialHeight - currentHeight > 150) {
+        setIsKeyboardVisible(true);
+      } else {
+        setIsKeyboardVisible(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   const handleNavClick = (path, e) => {
     e.preventDefault();
@@ -96,6 +144,8 @@ const BottomNavbar = () => {
         return null;
     }
   };
+
+  if (isKeyboardVisible) return null;
 
   return (
     <>

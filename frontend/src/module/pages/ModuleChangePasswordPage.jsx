@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../../services/user.service';
 import toastUtils from '../../config/toast';
@@ -15,6 +15,54 @@ import { colors } from '../theme/colors';
 const ModuleChangePasswordPage = () => {
   const navigate = useNavigate();
   
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    let initialHeight = window.innerHeight;
+    let initialWidth = window.innerWidth;
+
+    const handleResize = () => {
+      const currentHeight = window.innerHeight;
+      const currentWidth = window.innerWidth;
+
+      // If width changed significantly (like orientation change), update initial tracking values
+      if (Math.abs(currentWidth - initialWidth) > 20) {
+        initialHeight = currentHeight;
+        initialWidth = currentWidth;
+        setIsKeyboardVisible(false);
+        return;
+      }
+
+      // If visualViewport is available, check its height ratio (primarily iOS)
+      if (window.visualViewport) {
+        const isIOSKeyboard = window.visualViewport.height < window.innerHeight * 0.85;
+        if (isIOSKeyboard) {
+          setIsKeyboardVisible(true);
+          return;
+        }
+      }
+
+      // Android/Browser height shrink detection
+      if (initialHeight - currentHeight > 150) {
+        setIsKeyboardVisible(true);
+      } else {
+        setIsKeyboardVisible(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -281,34 +329,36 @@ const ModuleChangePasswordPage = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="fixed md:relative md:max-w-3xl md:mx-auto bottom-16 left-0 right-0 px-4 md:px-6 lg:px-8 xl:px-12 py-4 md:py-6 bg-white md:bg-transparent border-t md:border-t-0 z-40" style={{ borderColor: colors.borderMedium }}>
-        <div className="flex gap-3 md:gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/profile/settings')}
-            className="flex-1 px-4 py-3 rounded-xl font-semibold text-base border-2 transition-all"
-            style={{
-              borderColor: colors.backgroundTertiary,
-              backgroundColor: colors.backgroundSecondary,
-              color: colors.textPrimary,
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isChanging}
-            className="flex-1 px-4 py-3 rounded-xl font-semibold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: isChanging ? colors.textTertiary : colors.backgroundTertiary,
-              color: colors.backgroundSecondary,
-            }}
-          >
-            {isChanging ? 'Changing...' : 'Change Password'}
-          </button>
+      {!isKeyboardVisible && (
+        <div className="fixed md:relative md:max-w-3xl md:mx-auto bottom-16 left-0 right-0 px-4 md:px-6 lg:px-8 xl:px-12 py-4 md:py-6 bg-white md:bg-transparent border-t md:border-t-0 z-40" style={{ borderColor: colors.borderMedium }}>
+          <div className="flex gap-3 md:gap-4">
+            <button
+              type="button"
+              onClick={() => navigate('/profile/settings')}
+              className="flex-1 px-4 py-3 rounded-xl font-semibold text-base border-2 transition-all"
+              style={{
+                borderColor: colors.backgroundTertiary,
+                backgroundColor: colors.backgroundSecondary,
+                color: colors.textPrimary,
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isChanging}
+              className="flex-1 px-4 py-3 rounded-xl font-semibold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isChanging ? colors.textTertiary : colors.backgroundTertiary,
+                color: colors.backgroundSecondary,
+              }}
+            >
+              {isChanging ? 'Changing...' : 'Change Password'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       </div>
       {/* Bottom Navbar - Hidden on web */}
