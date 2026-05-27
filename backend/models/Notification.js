@@ -23,7 +23,7 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         default: 'info',
-        enum: ['info', 'success', 'warning', 'alert', 'enquiry_assigned', 'task_assigned', 'payment_received']
+        enum: ['info', 'success', 'warning', 'alert', 'enquiry_assigned', 'task_assigned', 'payment_received', 'salary_paid']
     },
     relatedId: {
         type: mongoose.Schema.Types.ObjectId,
