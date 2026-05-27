@@ -151,8 +151,51 @@ const ReferralManagementPage = () => {
   };
 
   const handleExport = () => {
-    // In real app, this would generate and download CSV/Excel
-    console.log('Exporting referrals data...');
+    if (referrals.length === 0) {
+      toastUtils.error('No referral data available to export');
+      return;
+    }
+
+    const headers = [
+      'Referrer Name',
+      'Referrer Email',
+      'Referral Code',
+      'Referred User Name',
+      'Referred User Email',
+      'Status',
+      'Points Earned',
+      'Referral Date',
+      'Completed Date'
+    ];
+
+    const rows = referrals.map((r) => [
+      r.referrerName || '',
+      r.referrerEmail || '',
+      r.referralCode || '',
+      r.referredUserName || '',
+      r.referredUserEmail || '',
+      r.status || '',
+      r.pointsEarned || 0,
+      r.referralDate ? new Date(r.referralDate).toLocaleDateString() : '',
+      r.completedDate ? new Date(r.completedDate).toLocaleDateString() : ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `referrals_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toastUtils.success('Referrals report exported successfully!');
   };
 
   // Get status badge color
