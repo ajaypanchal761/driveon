@@ -358,7 +358,7 @@ const CompletedBookingDetailsPage = () => {
               <div>
                 <label className="text-xs md:text-sm font-medium text-gray-500 uppercase mb-2 block">Payment Status</label>
                 <span className="inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-xs md:text-sm font-medium bg-green-100 text-green-800">
-                  {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                  {booking.paymentStatus === 'partial' ? 'Advance Done' : (booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1))}
                 </span>
               </div>
 

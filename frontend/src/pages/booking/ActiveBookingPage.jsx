@@ -227,7 +227,7 @@ const ActiveBookingPage = () => {
       : 20;
     addText(`Payment Type: ${booking.paymentType === 'advance' ? `${advancePercentage}% Advance Payment` : 'Full Payment'}`, margin, yPos, 10);
     yPos += lineHeight;
-    addText(`Payment Status: ${booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}`, margin, yPos, 10);
+    addText(`Payment Status: ${booking.paymentStatus === 'partial' ? 'Advance Done' : (booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1))}`, margin, yPos, 10);
     yPos += lineHeight;
     addText(`Paids Amount: Rs. ${booking.paidAmount.toLocaleString('en-IN')}`, margin, yPos, 10);
     if (booking.remainingAmount > 0) {
@@ -620,7 +620,7 @@ const ActiveBookingPage = () => {
             <div>
               <label className="text-xs md:text-sm font-medium text-gray-500 uppercase mb-2 block">Payment Status</label>
               <span className="inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-xs md:text-sm font-medium bg-green-100 text-green-800">
-                {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                {booking.paymentStatus === 'partial' ? 'Advance Done' : (booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1))}
               </span>
             </div>
 

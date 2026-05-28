@@ -165,7 +165,7 @@ export const phonepeCallback = async (req, res) => {
       }
 
       // Auto-confirm booking after successful payment
-      if (booking.status === 'pending') {
+      if (booking.status === 'unpaid' || booking.status === 'pending') {
         booking.status = 'confirmed';
         booking.confirmedAt = new Date();
       }
@@ -274,7 +274,7 @@ export const checkPaymentStatus = async (req, res) => {
           }
         }
 
-        if (booking.status === 'pending') {
+        if (booking.status === 'unpaid' || booking.status === 'pending') {
           booking.status = 'confirmed';
           booking.confirmedAt = new Date();
         }
@@ -747,12 +747,26 @@ export const verifyRazorpayPayment = async (req, res) => {
 
     // Keep booking status as pending after payment (don't auto-confirm)
     // Booking will be confirmed manually by admin
-    // if (booking.status === 'pending') {
-    //   booking.status = 'confirmed';
-    //   booking.confirmedAt = new Date();
-    //   console.log('✅ Booking status changed from pending to confirmed');
-    // }
-    console.log('✅ Payment verified - booking status remains:', booking.status);
+    if (booking.status === 'unpaid') {
+      booking.status = 'pending';
+      console.log('✅ Booking status changed from unpaid to pending after successful payment verification');
+
+      // Send Push Notification to Admin for the newly confirmed/paid booking
+      try {
+        const { sendAdminNotification } = await import('../services/firebase.service.js');
+        sendAdminNotification(
+          'New Booking Alert 🚗',
+          `New booking #${booking.bookingId || booking._id} created and paid by ${booking.user?.name || 'User'}.`,
+          {
+            type: 'new_booking',
+            bookingId: (booking.bookingId || booking._id).toString(),
+            click_action: 'FLUTTER_NOTIFICATION_CLICK'
+          }
+        );
+      } catch (err) {
+        console.error('Failed to send admin booking notification:', err);
+      }
+    }
 
     // Save booking to database
     try {

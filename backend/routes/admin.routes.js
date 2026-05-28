@@ -40,6 +40,7 @@ import {
   updateBooking,
   getActiveBookingsWithTracking,
   getBookingStats,
+  completeBookingWithPayment,
 } from '../controllers/admin.booking.controller.js';
 import {
   sendGuarantorRequest,
@@ -270,6 +271,10 @@ router.get('/bookings/:id', authenticateAdmin, getBookingById);
 // Update Booking - PROTECTED
 // Route: PATCH /api/admin/bookings/:id
 router.patch('/bookings/:id', authenticateAdmin, updateBooking);
+
+// Complete Booking with Payment Collection - PROTECTED
+// Route: POST /api/admin/bookings/:id/complete
+router.post('/bookings/:id/complete', authenticateAdmin, completeBookingWithPayment);
 
 // ============================================
 // GUARANTOR REQUEST MANAGEMENT ROUTES - PROTECTED

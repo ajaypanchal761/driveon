@@ -1045,7 +1045,11 @@ const BookNowPage = () => {
           }, 500); // 500ms delay to ensure Razorpay modal is closed
         },
         onError: async (error) => {
-          console.error("Payment error:", error);
+          if (error?.message === "PAYMENT_CANCELLED") {
+            console.log("ℹ️ Payment cancelled by the user.");
+          } else {
+            console.error("Payment error:", error);
+          }
           setIsProcessing(false);
 
           if (bookingId) {

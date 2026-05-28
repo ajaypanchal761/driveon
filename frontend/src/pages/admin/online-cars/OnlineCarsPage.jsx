@@ -23,6 +23,12 @@ const formatMoney = (amount) => {
   return number.toLocaleString("en-IN", { style: "currency", currency: "INR" });
 };
 
+const formatPaymentStatus = (status) => {
+  if (!status) return "N/A";
+  if (status === "partial") return "Advance Done";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 const getStatusMeta = (status) => {
   switch (status) {
     case "running":
@@ -63,7 +69,14 @@ const OnlineCarsPage = () => {
   }, []);
 
   const onlineCars = useMemo(() => {
-    return bookingsData.map((b) => {
+    // Filter out unpaid/abandoned checkouts (cancelled bookings with no paid amount or failed payment status)
+    const validBookings = bookingsData.filter((b) => {
+      if (b.status === "unpaid") return false;
+      if (b.status === "cancelled" && (b.paidAmount === 0 || b.paymentStatus === "failed")) return false;
+      return true;
+    });
+
+    return validBookings.map((b) => {
       let mappedStatus = "completed";
       if (b.tripStatus === "in_progress" || b.status === "active") {
         mappedStatus = "running";
@@ -156,7 +169,7 @@ const OnlineCarsPage = () => {
                 <th className="text-left text-xs font-semibold px-4 py-3" style={{ color: colors.textSecondary }}>
                   User
                 </th>
-                <th className="text-left text-xs font-semibold px-4 py-3" style={{ color: colors.textSecondary }}>
+                <th className="text-center text-xs font-semibold px-4 py-3" style={{ color: colors.textSecondary }}>
                   Trip
                 </th>
                 <th className="text-left text-xs font-semibold px-4 py-3" style={{ color: colors.textSecondary }}>
@@ -194,8 +207,17 @@ const OnlineCarsPage = () => {
                       <div className="font-medium" style={{ color: colors.textPrimary }}>
                         {item?.booking?.bookingId || "N/A"}
                       </div>
-                      <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>
-                        Payment: {item?.booking?.paymentStatus || "N/A"}
+                      <div className="text-xs mt-1.5 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-gray-500">Payment:</span>
+                        {item?.booking?.paymentStatus === 'partial' || item?.booking?.paymentStatus === 'paid' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                            {formatPaymentStatus(item?.booking?.paymentStatus)}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            {formatPaymentStatus(item?.booking?.paymentStatus)}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -215,12 +237,17 @@ const OnlineCarsPage = () => {
                         {item?.booking?.user?.phone || "N/A"}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm" style={{ color: colors.textPrimary }}>
-                        {formatDateTime(item?.booking?.tripStart?.dateTime)}
-                      </div>
-                      <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>
-                        to {formatDateTime(item?.booking?.tripEnd?.dateTime)}
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex flex-col items-center justify-center gap-0.5 text-center">
+                        <div className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                          {formatDateTime(item?.booking?.tripStart?.dateTime)}
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-gray-100 text-gray-500 my-0.5">
+                          to
+                        </div>
+                        <div className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                          {formatDateTime(item?.booking?.tripEnd?.dateTime)}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -366,7 +393,21 @@ const BookingDetailsModal = ({ item, onClose }) => {
                 <InfoRow label="User" value={item?.booking?.user?.name || "N/A"} />
                 <InfoRow label="Email" value={item?.booking?.user?.email || "N/A"} />
                 <InfoRow label="Phone" value={item?.booking?.user?.phone || "N/A"} />
-                <InfoRow label="Payment Status" value={item?.booking?.paymentStatus || "N/A"} isLast />
+                <InfoRow 
+                   label="Payment Status" 
+                   value={
+                     item?.booking?.paymentStatus === 'partial' || item?.booking?.paymentStatus === 'paid' ? (
+                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                         {formatPaymentStatus(item?.booking?.paymentStatus)}
+                       </span>
+                     ) : (
+                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                         {formatPaymentStatus(item?.booking?.paymentStatus)}
+                       </span>
+                     )
+                   } 
+                   isLast 
+                 />
               </div>
             </Card>
           </div>

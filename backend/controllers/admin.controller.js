@@ -639,6 +639,8 @@ export const changeAdminPassword = async (req, res) => {
  */
 export const getDashboardStats = async (req, res) => {
   try {
+    const selectedYear = parseInt(req.query.year) || new Date().getFullYear();
+
     // Get total users count
     const totalUsers = await User.countDocuments();
 
@@ -649,23 +651,81 @@ export const getDashboardStats = async (req, res) => {
     const activeCars = await Car.countDocuments({ status: 'active' });
 
     // Get pending KYC count (users with unverified email or phone)
-    const pendingKYC = await User.countDocuments({
+    let pendingKYC = await User.countDocuments({
+      isKYCVerified: false,
       $or: [
-        { isPhoneVerified: false },
-        { isEmailVerified: false },
-      ],
+        { 'kycDetails.aadhaar.number': { $exists: true, $ne: '' } },
+        { 'kycDetails.pan.number': { $exists: true, $ne: '' } },
+        { 'kycDetails.dl.number': { $exists: true, $ne: '' } },
+        { rcDocument: { $exists: true, $ne: '' } }
+      ]
     });
 
-    // Get active bookings count (if Booking model exists, otherwise 0)
-    // For now, we'll return 0 as there's no Booking model yet
-    const activeBookings = 0;
+    if (pendingKYC === 0) {
+      // Fallback to original count: users with unverified email or phone or isKYCVerified false
+      pendingKYC = await User.countDocuments({
+        $or: [
+          { isPhoneVerified: false },
+          { isEmailVerified: false },
+          { isKYCVerified: false }
+        ]
+      });
+    }
 
-    // Get today's revenue (if Payment/Booking model exists, otherwise 0)
-    // For now, we'll return 0
-    const todayRevenue = 0;
+    // Get active bookings count (bookings with status 'confirmed' or 'active')
+    const activeBookings = await Booking.countDocuments({
+      status: { $in: ['confirmed', 'active'] }
+    });
 
-    // Get active trips (same as active bookings for now)
-    const activeTrips = activeBookings;
+    // Get total bookings count (all bookings that are not unpaid, excluding unpaid cancelled checkout attempts)
+    const totalBookings = await Booking.countDocuments({
+      status: { $ne: 'unpaid' },
+      $or: [
+        { status: { $ne: 'cancelled' } },
+        { paidAmount: { $gt: 0 } },
+        { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+      ]
+    });
+
+    // Get today's revenue (sum of successful payments today)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    // Sum successful transaction amounts that took place today
+    let todayRevenue = 0;
+    const bookingsWithTodayTxns = await Booking.find({
+      'transactions.status': 'success',
+      'transactions.paymentDate': { $gte: startOfToday, $lte: endOfToday }
+    });
+
+    bookingsWithTodayTxns.forEach(booking => {
+      booking.transactions.forEach(txn => {
+        if (txn.status === 'success' && txn.paymentDate >= startOfToday && txn.paymentDate <= endOfToday) {
+          todayRevenue += txn.amount || 0;
+        }
+      });
+    });
+
+    // Fallback to sum of paidAmount for bookings created today
+    if (todayRevenue === 0) {
+      const bookingsToday = await Booking.find({
+        createdAt: { $gte: startOfToday, $lte: endOfToday },
+        status: { $ne: 'unpaid' },
+        paidAmount: { $gt: 0 }
+      });
+      todayRevenue = bookingsToday.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
+    }
+
+    // Get active trips (bookings with status 'active', 'confirmed' or trip status 'started' or 'in_progress')
+    const activeTrips = await Booking.countDocuments({
+      $or: [
+        { status: { $in: ['confirmed', 'active'] } },
+        { tripStatus: { $in: ['started', 'in_progress'] } }
+      ]
+    });
 
     // Get additional stats
     const totalActiveUsers = await User.countDocuments({
@@ -677,6 +737,201 @@ export const getDashboardStats = async (req, res) => {
 
     const totalSuspendedCars = await Car.countDocuments({ status: 'suspended' });
 
+    // Fetch Recent Bookings List
+    const recentBookingsList = await Booking.find({
+      status: { $ne: 'unpaid' },
+      $or: [
+        { status: { $ne: 'cancelled' } },
+        { paidAmount: { $gt: 0 } },
+        { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+      ]
+    })
+      .populate('user', 'name phone email')
+      .populate('car', 'brand model year')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const recentBookings = recentBookingsList.map(b => ({
+      id: b._id,
+      userId: b.user ? (b.user.name || formatUserId(b.user._id)) : 'Unknown',
+      car: b.car ? `${b.car.brand} ${b.car.model}` : 'N/A',
+      time: new Date(b.createdAt).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }),
+      amount: b.paidAmount || b.pricing?.totalPrice || 0,
+      status: b.status === 'confirmed' ? 'confirmed' : b.status === 'active' ? 'active' : b.status
+    }));
+
+    // Fetch Pending KYC List
+    const pendingKYCList = await User.find({
+      isKYCVerified: false,
+      $or: [
+        { 'kycDetails.aadhaar.number': { $exists: true, $ne: '' } },
+        { 'kycDetails.pan.number': { $exists: true, $ne: '' } },
+        { 'kycDetails.dl.number': { $exists: true, $ne: '' } },
+        { rcDocument: { $exists: true, $ne: '' } }
+      ]
+    })
+      .sort({ updatedAt: -1 })
+      .limit(5);
+
+    let kycList = pendingKYCList;
+    if (kycList.length === 0) {
+      kycList = await User.find({ isKYCVerified: false })
+        .sort({ createdAt: -1 })
+        .limit(5);
+    }
+
+    const pendingKYCData = kycList.map(u => {
+      const docs = [];
+      if (u.kycDetails?.aadhaar?.number) docs.push('Aadhaar');
+      if (u.kycDetails?.pan?.number) docs.push('PAN');
+      if (u.kycDetails?.dl?.number) docs.push('DL');
+      if (u.rcDocument) docs.push('RC');
+      const documentType = docs.length > 0 ? docs.join('/') : 'Email/Phone';
+
+      return {
+        id: u._id,
+        userId: u.name || formatUserId(u._id),
+        documentType,
+        time: new Date(u.updatedAt || u.createdAt).toLocaleString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      };
+    });
+
+    // Fetch Recent Payments List
+    const bookingsWithTxns = await Booking.find({
+      'transactions.status': 'success'
+    })
+      .populate('user', 'name phone email')
+      .sort({ 'transactions.paymentDate': -1 })
+      .limit(10);
+
+    const recentPaymentsList = [];
+    bookingsWithTxns.forEach(b => {
+      b.transactions.forEach(txn => {
+        if (txn.status === 'success') {
+          recentPaymentsList.push({
+            id: txn._id || txn.transactionId || b._id,
+            bookingId: b.bookingId || b._id.toString(),
+            userId: b.user ? (b.user.name || formatUserId(b.user._id)) : 'Unknown',
+            amount: txn.amount || 0,
+            status: b.paymentStatus === 'partial' ? 'Advance Done' : 'success',
+            time: new Date(txn.paymentDate || b.createdAt).toLocaleString('en-IN', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }),
+            paymentDate: txn.paymentDate || b.createdAt
+          });
+        }
+      });
+    });
+
+    recentPaymentsList.sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate));
+    let recentPayments = recentPaymentsList.slice(0, 5);
+
+    if (recentPayments.length === 0) {
+      const bookingsWithPaidAmount = await Booking.find({
+        paidAmount: { $gt: 0 },
+        status: { $ne: 'unpaid' }
+      })
+        .populate('user', 'name phone email')
+        .sort({ createdAt: -1 })
+        .limit(5);
+
+      bookingsWithPaidAmount.forEach(b => {
+        recentPayments.push({
+          id: b._id,
+          bookingId: b.bookingId || b._id.toString(),
+          userId: b.user ? (b.user.name || formatUserId(b.user._id)) : 'Unknown',
+          amount: b.paidAmount || 0,
+          status: b.paymentStatus === 'partial' ? 'Advance Done' : 'success',
+          time: new Date(b.createdAt).toLocaleString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        });
+      });
+    }
+
+    // Fetch Monthly Booking Trends for Selected Year
+    const monthlyBookings = await Booking.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(`${selectedYear}-01-01T00:00:00.000Z`),
+            $lte: new Date(`${selectedYear}-12-31T23:59:59.999Z`)
+          },
+          status: { $ne: 'unpaid' }
+        }
+      },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          bookings: { $sum: 1 },
+          revenue: { $sum: '$paidAmount' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formattedMonthlyData = monthNames.map((name, index) => {
+      const monthNum = index + 1;
+      const dbData = monthlyBookings.find(item => item._id === monthNum);
+      return {
+        name,
+        bookings: dbData ? dbData.bookings : 0,
+        revenue: dbData ? dbData.revenue : 0
+      };
+    });
+
+    // Fetch Yearly Booking Trends
+    const yearlyBookings = await Booking.aggregate([
+      {
+        $match: {
+          status: { $ne: 'unpaid' }
+        }
+      },
+      {
+        $group: {
+          _id: { $year: '$createdAt' },
+          bookings: { $sum: 1 },
+          revenue: { $sum: '$paidAmount' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const recentYears = [2022, 2023, 2024, 2025, 2026];
+    const formattedYearlyData = recentYears.map(yr => {
+      const dbData = yearlyBookings.find(item => item._id === yr);
+      return {
+        name: yr.toString(),
+        bookings: dbData ? dbData.bookings : 0,
+        revenue: dbData ? dbData.revenue : 0
+      };
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -685,6 +940,7 @@ export const getDashboardStats = async (req, res) => {
           totalCars,
           activeCars,
           activeBookings,
+          totalBookings,
           pendingKYC,
           todayRevenue,
           activeTrips,
@@ -692,6 +948,13 @@ export const getDashboardStats = async (req, res) => {
           totalPendingCars,
           totalSuspendedCars,
         },
+        recentBookings,
+        pendingKYC: pendingKYCData,
+        recentPayments,
+        bookingTrends: {
+          monthly: formattedMonthlyData,
+          yearly: formattedYearlyData
+        }
       },
     });
   } catch (error) {

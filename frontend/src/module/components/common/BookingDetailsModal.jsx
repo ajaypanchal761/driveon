@@ -572,11 +572,11 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                 <span
                   className="px-2 py-1 rounded text-xs font-semibold"
                   style={{
-                    backgroundColor: getStatusColor(booking.tripStatus || booking.status) + '20',
-                    color: getStatusColor(booking.tripStatus || booking.status),
+                    backgroundColor: getStatusColor((booking.tripStatus && booking.tripStatus !== 'not_started') ? booking.tripStatus : booking.status) + '20',
+                    color: getStatusColor((booking.tripStatus && booking.tripStatus !== 'not_started') ? booking.tripStatus : booking.status),
                   }}
                 >
-                  {getStatusLabel(booking.tripStatus || booking.status)}
+                  {getStatusLabel((booking.tripStatus && booking.tripStatus !== 'not_started') ? booking.tripStatus : booking.status)}
                 </span>
               </div>
             </div>

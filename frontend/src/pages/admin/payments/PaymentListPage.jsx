@@ -105,6 +105,7 @@ const PaymentListPage = () => {
                   id: transaction._id?.toString() || transaction.transactionId,
                   transactionId: transaction.transactionId,
                   bookingId: booking.bookingId || booking._id?.toString(),
+                  bookingStatus: booking.status,
                   userId: booking.user?._id?.toString() || booking.user?.toString() || '',
                   userName: booking.user?.name || 'Unknown',
                   userEmail: booking.user?.email || '',
@@ -568,7 +569,7 @@ const PaymentListPage = () => {
                     </button>
                   )}
 
-                  {payment.status === 'success' && payment.status !== 'refunded' && (
+                  {payment.status === 'success' && payment.status !== 'refunded' && payment.bookingStatus === 'cancelled' && (
                     <button
                       onClick={() => handleProcessRefund(payment.id)}
                       className="w-full px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
@@ -765,7 +766,7 @@ const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceive
               Generate Invoice
             </button>
           )}
-          {payment.status === 'success' && payment.status !== 'refunded' && (
+          {payment.status === 'success' && payment.status !== 'refunded' && payment.bookingStatus === 'cancelled' && (
             <button
               onClick={() => {
                 onProcessRefund(payment.id);

@@ -4,7 +4,7 @@ import { colors } from '../../../module/theme/colors';
 import Card from '../../../components/common/Card';
 import { adminService } from '../../../services/admin.service';
 import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelect';
-import { generateBookingPDF } from '../../../utils/pdfGenerator';
+import { generateBookingPDF, generateAllBookingsPDF } from '../../../utils/pdfGenerator';
 import toastUtils from '../../../config/toast';
 import { onMessageListener } from "../../../services/firebase";
 
@@ -14,15 +14,7 @@ import { onMessageListener } from "../../../services/firebase";
  */
 const formatUserId = (userId) => {
   if (!userId) return 'N/A';
-
-  // Extract last 6 characters from ObjectId and convert to number
-  const lastChars = userId.slice(-6);
-  // Convert hex to decimal, then take modulo to get a number between 0-999
-  const num = parseInt(lastChars, 16) % 1000;
-  // Pad with zeros to make it 3 digits
-  const paddedNum = String(num).padStart(3, '0');
-
-  return `USER${paddedNum}`;
+  return `user-${userId.toString().slice(-5)}`;
 };
 
 /**
@@ -79,6 +71,13 @@ const BookingListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [paymentDetailsBooking, setPaymentDetailsBooking] = useState(null);
+  const [globalStats, setGlobalStats] = useState(null);
+
+  // For Mark as Complete flow
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completeBookingTarget, setCompleteBookingTarget] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -112,6 +111,7 @@ const BookingListPage = () => {
 
         // Extract bookings from response.data (backend returns { success: true, data: { bookings, ... } })
         const bookingsData = response?.data?.bookings || response?.bookings || [];
+        setGlobalStats(response?.data?.stats || null);
 
         // Transform API response to match component structure
         const transformedBookings = bookingsData.map((booking) => ({
@@ -145,6 +145,8 @@ const BookingListPage = () => {
           cancelledDate: booking.cancelledDate,
           cancellationReason: booking.cancellationReason,
           rating: booking.rating,
+          transactions: booking.transactions || [],
+          remainingAmount: booking.remainingAmount || 0,
         })) || [];
 
         setBookings(transformedBookings);
@@ -406,78 +408,48 @@ const BookingListPage = () => {
     }
   };
 
-  const handleMarkAsComplete = async (bookingId) => {
-    console.log('🔄 handleMarkAsComplete called with bookingId:', bookingId);
-
+  const handleMarkAsComplete = (bookingId) => {
     if (!bookingId) {
-      console.error('❌ No booking ID provided');
       alert('Error: Booking ID is missing');
       return;
     }
-
-    if (!window.confirm('Are you sure you want to mark this booking as completed?')) {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking) {
+      alert('Booking not found.');
       return;
     }
+    setCompleteBookingTarget(booking);
+    setShowCompleteModal(true);
+  };
 
+  const handleConfirmComplete = async (bookingId, paymentData) => {
     try {
-      console.log('🔄 Marking booking as complete:', bookingId);
-      // Call backend API to update booking status to completed
-      const response = await adminService.updateBooking(bookingId, {
-        status: 'completed',
-      });
-
-      console.log('📊 Mark complete response:', response);
-      console.log('📊 Response success:', response?.success);
-
+      const response = await adminService.completeBookingWithPayment(bookingId, paymentData);
       if (response && response.success) {
-        // Update local state for both bookings and filteredBookings
-        setBookings((prevList) => {
-          const updated = prevList.map((booking) => {
-            if (booking.id === bookingId || booking._id === bookingId) {
-              console.log('✅ Updating booking in bookings state:', booking.id);
-              return {
-                ...booking,
-                status: 'completed',
-                completedDate: new Date().toISOString(),
-              };
-            }
-            return booking;
-          });
-          return updated;
-        });
-
-        // Also update filteredBookings to reflect the change immediately
-        setFilteredBookings((prevList) => {
-          const updated = prevList.map((booking) => {
-            if (booking.id === bookingId || booking._id === bookingId) {
-              console.log('✅ Updating booking in filteredBookings state:', booking.id);
-              return {
-                ...booking,
-                status: 'completed',
-                completedDate: new Date().toISOString(),
-              };
-            }
-            return booking;
-          });
-          return updated;
-        });
-
-        // Show success message
-        alert('Booking marked as completed! User will see it in completed bookings.');
-
-        // Refresh bookings list to get updated data
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        console.error('❌ API returned success: false');
-        alert(response?.message || 'Failed to mark booking as completed. Please try again.');
+        const updatedBooking = response.data?.booking || response.booking;
+        if (updatedBooking) {
+          const updateFn = (prev) => prev.map(b =>
+            (b.id === bookingId || b._id === bookingId) ? { ...b, ...updatedBooking, id: b.id } : b
+          );
+          setBookings(updateFn);
+          setFilteredBookings(updateFn);
+        } else {
+          // Fallback if booking isn't returned
+          const updateFn = (prev) => prev.map(b =>
+            (b.id === bookingId || b._id === bookingId)
+              ? { ...b, status: 'completed', paymentStatus: 'paid', completedDate: new Date().toISOString() }
+              : b
+          );
+          setBookings(updateFn);
+          setFilteredBookings(updateFn);
+        }
+        setShowCompleteModal(false);
+        setCompleteBookingTarget(null);
+        toastUtils.success('✅ Booking completed and payment recorded!');
       }
     } catch (error) {
-      console.error('❌ Error marking booking as complete:', error);
-      console.error('❌ Error response:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
-      alert(error.response?.data?.message || error.message || 'Failed to mark booking as completed. Please try again.');
+      const msg = error.response?.data?.message || error.message || 'Failed to complete booking.';
+      toastUtils.error(`❌ ${msg}`);
     }
   };
 
@@ -486,91 +458,16 @@ const BookingListPage = () => {
     setShowBookingDetail(true);
   };
 
-  // Export bookings to CSV (Excel-readable)
+  // Export to PDF
   const handleExport = () => {
     if (!bookings || bookings.length === 0) {
       alert('No bookings available to export.');
       return;
     }
-
-    // Helper to safely format CSV values
-    const escapeCsvValue = (value) => {
-      if (value === null || value === undefined) return '';
-      const stringValue = String(value);
-      // Escape double quotes by doubling them
-      if (/[",\n]/.test(stringValue)) {
-        return `"${stringValue.replace(/"/g, '""')}"`;
-      }
-      return stringValue;
-    };
-
-    const headers = [
-      'Booking ID',
-      'Status',
-      'Payment Status',
-      'User Name',
-      'User Email',
-      'User Phone',
-      'Car Name',
-      'Pickup Date',
-      'Pickup Time',
-      'Drop Date',
-      'Drop Time',
-      'Days',
-      'Total Amount',
-      'Paid Amount',
-      'Refund Amount',
-      'Booked At',
-      'Completed Date',
-      'Cancelled Date',
-      'Cancellation Reason',
-      'Current Location',
-      'Guarantor Name',
-      'Guarantor ID',
-    ];
-
-    const rows = bookings.map((b) => [
-      b.bookingId || '',
-      b.status || '',
-      b.paymentStatus || '',
-      b.userName || '',
-      b.userEmail || '',
-      b.userPhone || '',
-      b.carName || '',
-      b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : '',
-      b.pickupTime ? formatTimeToAMPM(b.pickupTime) : '',
-      b.dropDate ? new Date(b.dropDate).toLocaleDateString() : '',
-      b.dropTime ? formatTimeToAMPM(b.dropTime) : '',
-      b.days ?? '',
-      typeof b.totalAmount === 'number' ? b.totalAmount : '',
-      typeof b.paidAmount === 'number' ? b.paidAmount : '',
-      typeof b.refundAmount === 'number' ? b.refundAmount : '',
-      b.bookingDate ? new Date(b.bookingDate).toLocaleString() : '',
-      b.completedDate ? new Date(b.completedDate).toLocaleString() : '',
-      b.cancelledDate ? new Date(b.cancelledDate).toLocaleString() : '',
-      b.cancellationReason || '',
-      b.currentLocation || '',
-      b.guarantorName || '',
-      b.guarantorId || '',
-    ]);
-
-    const csvLines = [
-      headers.map(escapeCsvValue).join(','),
-      ...rows.map((row) => row.map(escapeCsvValue).join(',')),
-    ];
-
-    const csvContent = csvLines.join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    link.download = `bookings-${timestamp}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    
+    // Use globalStats if available, else use local calculated stats
+    const statsToUse = globalStats || stats;
+    generateAllBookingsPDF(filteredBookings, statsToUse);
   };
 
   // Get status badge color
@@ -613,8 +510,8 @@ const BookingListPage = () => {
   });
   const users = Array.from(usersMap.values());
 
-  // Stats calculation
-  const stats = {
+  // Stats calculation (fallback if globalStats is not available)
+  const stats = globalStats || {
     total: bookings.length,
     pending: bookings.filter((b) => b.status === 'pending').length,
     confirmed: bookings.filter((b) => b.status === 'confirmed').length,
@@ -624,6 +521,18 @@ const BookingListPage = () => {
     totalRevenue: bookings
       .filter((b) => b.status === 'completed' || b.status === 'active')
       .reduce((sum, b) => sum + b.totalAmount, 0),
+  };
+
+  // Helper to format revenue cleanly
+  const formatRevenue = (revenue) => {
+    if (!revenue) return '₹0';
+    if (revenue >= 1000) {
+      // If it's a clean thousand, show K (e.g. 15000 -> 15K)
+      if (revenue % 1000 === 0) return `₹${revenue / 1000}K`;
+      // Otherwise just show the formatted number
+      return `₹${revenue.toLocaleString('en-IN')}`;
+    }
+    return `₹${revenue.toLocaleString('en-IN')}`;
   };
 
   if (loading) {
@@ -674,7 +583,7 @@ const BookingListPage = () => {
               className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
               style={{ backgroundColor: colors.backgroundTertiary }}
             >
-              Export Data
+              Export PDF
             </button>
           </div>
         </div>
@@ -705,7 +614,7 @@ const BookingListPage = () => {
           </Card>
           <Card className="p-4 text-center">
             <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
-              ₹{(stats.totalRevenue / 1000).toFixed(0)}K
+              {formatRevenue(stats.totalRevenue)}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Revenue</div>
           </Card>
@@ -713,97 +622,107 @@ const BookingListPage = () => {
 
         {/* Search and Filters */}
         <Card className="p-4 md:p-6 mb-6">
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search by booking ID, user name, email, or car name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 gap-4 items-end">
+            {/* Search Bar */}
+            <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-2">
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Search</label>
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search bookings..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div className="col-span-1 lg:col-span-2">
+              <AdminCustomSelect
+                label="Booking Status"
+                value={filters.status}
+                onChange={(value) => setFilters({ ...filters, status: value })}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'confirmed', label: 'Confirmed' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ]}
               />
             </div>
-          </div>
-
-          {/* Filters */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {/* Status Filter */}
-            <AdminCustomSelect
-              label="Booking Status"
-              value={filters.status}
-              onChange={(value) => setFilters({ ...filters, status: value })}
-              options={[
-                { value: 'all', label: 'All' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'confirmed', label: 'Confirmed' },
-                { value: 'active', label: 'Active' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'cancelled', label: 'Cancelled' },
-              ]}
-            />
 
             {/* Payment Status Filter */}
-            <AdminCustomSelect
-              label="Payment Status"
-              value={filters.paymentStatus}
-              onChange={(value) => setFilters({ ...filters, paymentStatus: value })}
-              options={[
-                { value: 'all', label: 'All' },
-                { value: 'paid', label: 'Paid' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'refunded', label: 'Refunded' },
-              ]}
-            />
+            <div className="col-span-1 lg:col-span-2">
+              <AdminCustomSelect
+                label="Payment Status"
+                value={filters.paymentStatus}
+                onChange={(value) => setFilters({ ...filters, paymentStatus: value })}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'paid', label: 'Paid' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'refunded', label: 'Refunded' },
+                ]}
+              />
+            </div>
 
             {/* Date Range Filter */}
-            <AdminCustomSelect
-              label="Date Range"
-              value={filters.dateRange}
-              onChange={(value) => setFilters({ ...filters, dateRange: value })}
-              options={[
-                { value: 'all', label: 'All Time' },
-                { value: 'today', label: 'Today' },
-                { value: 'week', label: 'This Week' },
-                { value: 'month', label: 'This Month' },
-              ]}
-            />
+            <div className="col-span-1 lg:col-span-2">
+              <AdminCustomSelect
+                label="Date Range"
+                value={filters.dateRange}
+                onChange={(value) => setFilters({ ...filters, dateRange: value })}
+                options={[
+                  { value: 'all', label: 'All Time' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'week', label: 'This Week' },
+                  { value: 'month', label: 'This Month' },
+                ]}
+              />
+            </div>
 
             {/* Car Filter */}
-            <AdminCustomSelect
-              label="Car"
-              value={filters.car}
-              onChange={(value) => setFilters({ ...filters, car: value })}
-              options={[
-                { value: 'all', label: 'All Cars' },
-                ...cars.map((car, index) => ({
-                  value: car.id || `car-${index}`,
-                  label: car.name,
-                })),
-              ]}
-            />
+            <div className="col-span-1 lg:col-span-2">
+              <AdminCustomSelect
+                label="Car"
+                value={filters.car}
+                onChange={(value) => setFilters({ ...filters, car: value })}
+                options={[
+                  { value: 'all', label: 'All Cars' },
+                  ...cars.map((car, index) => ({
+                    value: car.id || `car-${index}`,
+                    label: car.name,
+                  })),
+                ]}
+              />
+            </div>
 
             {/* User Filter */}
-            <AdminCustomSelect
-              label="User"
-              value={filters.user}
-              onChange={(value) => setFilters({ ...filters, user: value })}
-              options={[
-                { value: 'all', label: 'All Users' },
-                ...users.map((user, index) => ({
-                  value: user.id || `user-${index}`,
-                  label: user.name,
-                })),
-              ]}
-            />
+            <div className="col-span-1 lg:col-span-2">
+              <AdminCustomSelect
+                label="User"
+                value={filters.user}
+                onChange={(value) => setFilters({ ...filters, user: value })}
+                options={[
+                  { value: 'all', label: 'All Users' },
+                  ...users.map((user, index) => ({
+                    value: user.id || `user-${index}`,
+                    label: user.name,
+                  })),
+                ]}
+              />
+            </div>
           </div>
         </Card>
 
@@ -874,9 +793,6 @@ const BookingListPage = () => {
                         {new Date(booking.pickupDate).toLocaleDateString()}
                       </p>
                       <p className="text-xs text-gray-500">{formatTimeToAMPM(booking.pickupTime)}</p>
-                      {booking.pickupLocation && booking.pickupLocation !== 'Location to be confirmed' && booking.pickupLocation !== 'N/A' && (
-                        <p className="text-xs text-gray-500">{booking.pickupLocation}</p>
-                      )}
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Drop</p>
@@ -884,9 +800,6 @@ const BookingListPage = () => {
                         {new Date(booking.dropDate).toLocaleDateString()}
                       </p>
                       <p className="text-xs text-gray-500">{formatTimeToAMPM(booking.dropTime)}</p>
-                      {booking.dropLocation && booking.dropLocation !== 'Location to be confirmed' && booking.dropLocation !== 'N/A' && (
-                        <p className="text-xs text-gray-500">{booking.dropLocation}</p>
-                      )}
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Duration</p>
@@ -928,6 +841,17 @@ const BookingListPage = () => {
                   >
                     View Details
                   </button>
+
+                  {booking.status === 'completed' && (
+                    <button
+                      type="button"
+                      onClick={() => { setPaymentDetailsBooking(booking); setShowPaymentDetails(true); }}
+                      className="w-full px-3 py-2 text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
+                      style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', fontWeight: 600 }}
+                    >
+                      💳 Payment Details
+                    </button>
+                  )}
 
                   {booking.status === 'active' && (
                     <button
@@ -1022,6 +946,66 @@ const BookingListPage = () => {
           onCancel={handleCancel}
           onProcessRefund={handleProcessRefund}
         />
+      )}
+
+      {/* Complete Payment Collection Modal */}
+      {showCompleteModal && completeBookingTarget && (
+        <CompletePaymentModal
+          booking={completeBookingTarget}
+          onClose={() => { setShowCompleteModal(false); setCompleteBookingTarget(null); }}
+          onConfirm={handleConfirmComplete}
+        />
+      )}
+
+      {/* Payment Details Modal */}
+      {showPaymentDetails && paymentDetailsBooking && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: 16, width: '100%', maxWidth: 500, padding: 24, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: '#111827' }}>Payment Details</h2>
+              <button onClick={() => { setShowPaymentDetails(false); setPaymentDetailsBooking(null); }} style={{ padding: 4, background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Advance Payment */}
+              <div style={{ padding: 16, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 12 }}>Advance Payment</h3>
+                {paymentDetailsBooking.transactions && paymentDetailsBooking.transactions.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: 13 }}>
+                    <div><span style={{ color: '#64748b' }}>Amount:</span> <span style={{ fontWeight: 600 }}>₹{paymentDetailsBooking.transactions[0].amount}</span></div>
+                    <div><span style={{ color: '#64748b' }}>Method:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{paymentDetailsBooking.transactions[0].paymentMethod || 'Online'}</span></div>
+                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Transaction ID:</span> <span style={{ fontWeight: 600 }}>{paymentDetailsBooking.transactions[0].transactionId || 'N/A'}</span></div>
+                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Date:</span> <span style={{ fontWeight: 600 }}>{paymentDetailsBooking.transactions[0].paymentDate ? new Date(paymentDetailsBooking.transactions[0].paymentDate).toLocaleString() : new Date(paymentDetailsBooking.bookingDate).toLocaleString()}</span></div>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>No advance payment recorded.</p>
+                )}
+              </div>
+
+              {/* Completion Payment */}
+              <div style={{ padding: 16, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#166534', marginBottom: 12 }}>Completion Payment</h3>
+                {paymentDetailsBooking.transactions && paymentDetailsBooking.transactions.length > 1 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: 13 }}>
+                    {paymentDetailsBooking.transactions.slice(1).map((tx, idx) => (
+                      <div key={idx} style={{ display: 'contents' }}>
+                        <div><span style={{ color: '#64748b' }}>Amount:</span> <span style={{ fontWeight: 600 }}>₹{tx.amount}</span></div>
+                        <div><span style={{ color: '#64748b' }}>Method:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{tx.paymentMethod}</span></div>
+                        {tx.transactionId && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Transaction ID:</span> <span style={{ fontWeight: 600 }}>{tx.transactionId}</span></div>}
+                        {tx.receivedBy && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Received By:</span> <span style={{ fontWeight: 600 }}>{tx.receivedBy}</span></div>}
+                        <div style={{ gridColumn: '1 / -1', marginBottom: 8 }}><span style={{ color: '#64748b' }}>Date:</span> <span style={{ fontWeight: 600 }}>{tx.paymentDate ? new Date(tx.paymentDate).toLocaleString() : new Date(paymentDetailsBooking.completedDate).toLocaleString()}</span></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: '#64748b' }}>No additional payments found.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1183,18 +1167,12 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                       <p className="text-sm text-gray-900">
                         {new Date(booking.pickupDate).toLocaleDateString()} at {formatTimeToAMPM(booking.pickupTime)}
                       </p>
-                      {booking.pickupLocation && booking.pickupLocation !== 'Location to be confirmed' && booking.pickupLocation !== 'N/A' && (
-                        <p className="text-xs text-gray-500 mt-1">{booking.pickupLocation}</p>
-                      )}
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700">Trip End Date & Time</label>
                       <p className="text-sm text-gray-900">
                         {new Date(booking.dropDate).toLocaleDateString()} at {formatTimeToAMPM(booking.dropTime)}
                       </p>
-                      {booking.dropLocation && booking.dropLocation !== 'Location to be confirmed' && booking.dropLocation !== 'N/A' && (
-                        <p className="text-xs text-gray-500 mt-1">{booking.dropLocation}</p>
-                      )}
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700">Duration</label>
@@ -1545,3 +1523,334 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
 
 export default BookingListPage;
 
+/**
+ * CompletePaymentModal
+ * Shows remaining due amount and lets admin collect it via Online / Cash / Partial
+ */
+const CompletePaymentModal = ({ booking, onClose, onConfirm }) => {
+  const totalAmount = booking.totalAmount || 0;
+  const paidAmount = booking.paidAmount || 0;
+  const remaining = Math.max(0, totalAmount - paidAmount);
+
+  const [mode, setMode] = useState('online'); // 'online' | 'cash' | 'partial'
+  const [transactionId, setTransactionId] = useState('');
+  const [receivedBy, setReceivedBy] = useState('');
+  const [onlineAmt, setOnlineAmt] = useState('');
+  const [cashAmt, setCashAmt] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const formatAmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+
+  // Partial: auto-fill cash when online changes
+  const handleOnlineAmtChange = (val) => {
+    setOnlineAmt(val);
+    const o = parseFloat(val) || 0;
+    const c = Math.max(0, remaining - o);
+    setCashAmt(c > 0 ? c.toString() : '');
+  };
+  const handleCashAmtChange = (val) => {
+    setCashAmt(val);
+    const c = parseFloat(val) || 0;
+    const o = Math.max(0, remaining - c);
+    setOnlineAmt(o > 0 ? o.toString() : '');
+  };
+
+  const validate = () => {
+    const e = {};
+    if (mode === 'online') {
+      if (!transactionId.trim()) e.transactionId = 'Transaction ID is required';
+    } else if (mode === 'cash') {
+      if (!receivedBy.trim()) e.receivedBy = 'Received By name is required';
+    } else {
+      const o = parseFloat(onlineAmt) || 0;
+      const c = parseFloat(cashAmt) || 0;
+      if (Math.round(o + c) !== Math.round(remaining))
+        e.partial = `Online + Cash must equal ${formatAmt(remaining)}. Currently: ${formatAmt(o + c)}`;
+      if (o > 0 && !transactionId.trim()) e.transactionId = 'Transaction ID required for online portion';
+      if (c > 0 && !receivedBy.trim()) e.receivedBy = 'Received By required for cash portion';
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (remaining === 0) {
+      // No payment needed — just complete the booking
+      setSubmitting(true);
+      try {
+        await onConfirm(booking.id, { paymentMode: 'none' });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+    if (!validate()) return;
+    setSubmitting(true);
+    const payload = { paymentMode: mode };
+    if (mode === 'online' || (mode === 'partial' && parseFloat(onlineAmt) > 0)) {
+      payload.transactionId = transactionId.trim();
+    }
+    if (mode === 'cash' || (mode === 'partial' && parseFloat(cashAmt) > 0)) {
+      payload.receivedBy = receivedBy.trim();
+    }
+    if (mode === 'partial') {
+      payload.onlineAmount = parseFloat(onlineAmt) || 0;
+      payload.cashAmount = parseFloat(cashAmt) || 0;
+    }
+    try {
+      await onConfirm(booking.id, payload);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const tabStyle = (active) => ({
+    padding: '8px 20px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.2s',
+    background: active ? '#1e40af' : '#f1f5f9',
+    color: active ? '#ffffff' : '#475569',
+    boxShadow: active ? '0 2px 8px rgba(30,64,175,0.25)' : 'none',
+  });
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px 14px',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: '14px',
+    color: '#1e293b',
+    background: '#f8fafc',
+    outline: 'none',
+    transition: 'border 0.2s',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle = {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#64748b',
+    marginBottom: '6px',
+    display: 'block',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.65)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+        backdropFilter: 'blur(3px)',
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: '20px',
+          width: '100%',
+          maxWidth: '560px',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
+          overflow: 'hidden',
+          animation: 'slideUp 0.25s ease-out',
+        }}
+      >
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 700, margin: 0 }}>
+                Complete Booking
+              </h2>
+              <p style={{ color: '#bfdbfe', fontSize: '13px', margin: '4px 0 0' }}>
+                {booking.bookingId} &mdash; {booking.carName}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          {/* Amount Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+            {[
+              { label: 'Total Amount', value: formatAmt(totalAmount), color: '#1e293b', bg: '#f1f5f9' },
+              { label: 'Already Paid', value: formatAmt(paidAmount), color: '#16a34a', bg: '#f0fdf4' },
+              { label: 'Remaining Due', value: formatAmt(remaining), color: '#d97706', bg: '#fffbeb', bold: true, ring: true },
+            ].map((item) => (
+              <div
+                key={item.label}
+                style={{
+                  background: item.bg,
+                  borderRadius: '12px',
+                  padding: '12px',
+                  textAlign: 'center',
+                  border: item.ring ? '2px solid #fbbf24' : '1.5px solid #e2e8f0',
+                  boxShadow: item.ring ? '0 0 12px rgba(251,191,36,0.2)' : 'none',
+                }}
+              >
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: item.bold ? 800 : 700, color: item.color }}>
+                  {item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Payment Mode Tabs */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Payment Mode</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { key: 'online', label: '💳 Online' },
+                { key: 'cash', label: '💵 Cash' },
+                { key: 'partial', label: '⚡ Partial' },
+              ].map(({ key, label }) => (
+                <button key={key} style={tabStyle(mode === key)} onClick={() => { setMode(key); setErrors({}); }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ---- Online Fields ---- */}
+          {mode === 'online' && (
+            <div style={{ background: '#eff6ff', borderRadius: '12px', padding: '16px', border: '1.5px solid #bfdbfe' }}>
+              <div style={{ marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Collecting</span>
+                  <span style={{ fontSize: '18px', fontWeight: 800, color: '#1e40af' }}>{formatAmt(remaining)}</span>
+                </div>
+                <label style={labelStyle}>Transaction ID <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></label>
+                <input
+                  required
+                  style={{ ...inputStyle, borderColor: errors.transactionId ? '#ef4444' : (transactionId.trim() ? '#22c55e' : '#e2e8f0') }}
+                  placeholder="Enter UPI / Bank Txn ID (required)"
+                  value={transactionId}
+                  onChange={e => setTransactionId(e.target.value)}
+                />
+                {errors.transactionId && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>⚠ {errors.transactionId}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* ---- Cash Fields ---- */}
+          {mode === 'cash' && (
+            <div style={{ background: '#f0fdf4', borderRadius: '12px', padding: '16px', border: '1.5px solid #bbf7d0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Collecting</span>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#16a34a' }}>{formatAmt(remaining)}</span>
+              </div>
+              <label style={labelStyle}>Received By (Admin/Staff Name) <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></label>
+              <input
+                required
+                style={{ ...inputStyle, borderColor: errors.receivedBy ? '#ef4444' : (receivedBy.trim() ? '#22c55e' : '#e2e8f0') }}
+                placeholder="e.g. Ravi Sharma (required)"
+                value={receivedBy}
+                onChange={e => setReceivedBy(e.target.value)}
+              />
+              {errors.receivedBy && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>⚠ {errors.receivedBy}</p>}
+            </div>
+          )}
+
+          {/* ---- Partial Fields ---- */}
+          {mode === 'partial' && (
+            <div style={{ background: '#fafafa', borderRadius: '12px', padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Total to collect</span>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: '#d97706' }}>{formatAmt(remaining)}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '10px 12px', border: '1.5px solid #bfdbfe' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#1e40af', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Online</div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Amount</label>
+                  <input style={{ ...inputStyle, marginBottom: '8px', padding: '7px 10px', fontSize: '13px' }} type='number' min='0' max={remaining} placeholder='0' value={onlineAmt} onChange={e => handleOnlineAmtChange(e.target.value)} />
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Transaction ID <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input required style={{ ...inputStyle, padding: '7px 10px', fontSize: '13px', borderColor: errors.transactionId ? '#ef4444' : (transactionId.trim() ? '#22c55e' : '#e2e8f0') }} placeholder='UPI / Bank Txn (required)' value={transactionId} onChange={e => setTransactionId(e.target.value)} />
+                  {errors.transactionId && <p style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>⚠ {errors.transactionId}</p>}
+                </div>
+                <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '10px 12px', border: '1.5px solid #bbf7d0' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Cash</div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Amount</label>
+                  <input style={{ ...inputStyle, marginBottom: '8px', padding: '7px 10px', fontSize: '13px' }} type='number' min='0' max={remaining} placeholder='0' value={cashAmt} onChange={e => handleCashAmtChange(e.target.value)} />
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Received By <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input required style={{ ...inputStyle, padding: '7px 10px', fontSize: '13px', borderColor: errors.receivedBy ? '#ef4444' : (receivedBy.trim() ? '#22c55e' : '#e2e8f0') }} placeholder='e.g. Ravi Sharma (required)' value={receivedBy} onChange={e => setReceivedBy(e.target.value)} />
+                  {errors.receivedBy && <p style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>⚠ {errors.receivedBy}</p>}
+                </div>
+              </div>
+              {errors.partial && (
+                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '8px 12px', marginTop: '10px' }}>
+                  <p style={{ color: '#dc2626', fontSize: 12, margin: 0, fontWeight: 600 }}>{errors.partial}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <button
+              onClick={onClose}
+              disabled={submitting}
+              style={{
+                flex: 1, padding: '12px', border: '1.5px solid #e2e8f0', borderRadius: '12px',
+                background: '#f8fafc', color: '#475569', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || remaining === 0}
+              style={{
+                flex: 2, padding: '12px', border: 'none', borderRadius: '12px',
+                background: submitting ? '#94a3b8' : 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+                color: '#fff', fontSize: '14px', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer',
+                boxShadow: submitting ? 'none' : '0 4px 15px rgba(30,64,175,0.35)',
+                transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
+              {submitting ? (
+                <>
+                  <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  Processing...
+                </>
+              ) : (
+                `✅ Save & Complete`
+              )}
+            </button>
+          </div>
+
+          {remaining === 0 && (
+            <p style={{ textAlign: 'center', color: '#16a34a', fontSize: 13, fontWeight: 600, marginTop: 12 }}>
+              ✅ No remaining amount — booking can be directly completed.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+};

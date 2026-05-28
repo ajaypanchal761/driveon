@@ -1,10 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend
+} from 'recharts';
 import { colors } from '../../module/theme/colors';
 import Card from '../../components/common/Card';
 import { adminService } from '../../services/admin.service';
 import { onMessageListener } from "../../services/firebase";
 import toastUtils from '../../config/toast';
+
+// Format currency helper
+const formatCurrency = (amount) => {
+  if (amount >= 100000) {
+    return `₹${(amount / 100000).toFixed(1)}L`;
+  } else if (amount >= 1000) {
+    return `₹${(amount / 1000).toFixed(1)}K`;
+  }
+  return `₹${amount}`;
+};
 
 /**
  * Admin Dashboard Page
@@ -14,6 +36,9 @@ import toastUtils from '../../config/toast';
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
 
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [chartView, setChartView] = useState('monthly');
+
   // Dashboard data state (using useState)
   const [dashboardData, setDashboardData] = useState({
     loading: true,
@@ -21,6 +46,7 @@ const AdminDashboardPage = () => {
       totalUsers: 0,
       totalCars: 0,
       activeBookings: 0,
+      totalBookings: 0,
       pendingKYC: 0,
       todayRevenue: 0,
       activeTrips: 0,
@@ -52,8 +78,8 @@ const AdminDashboardPage = () => {
       try {
         setDashboardData(prev => ({ ...prev, loading: true }));
 
-        // Fetch dashboard statistics from backend
-        const statsResponse = await adminService.getDashboardStats();
+        // Fetch dashboard statistics from backend with year parameter
+        const statsResponse = await adminService.getDashboardStats({ year: selectedYear });
 
         if (statsResponse.success && statsResponse.data) {
           const stats = statsResponse.data.stats;
@@ -65,10 +91,15 @@ const AdminDashboardPage = () => {
               totalUsers: stats.totalUsers || 0,
               totalCars: stats.totalCars || 0,
               activeBookings: stats.activeBookings || 0,
+              totalBookings: stats.totalBookings || 0,
               pendingKYC: stats.pendingKYC || 0,
               todayRevenue: stats.todayRevenue || 0,
               activeTrips: stats.activeTrips || 0,
             },
+            recentBookings: statsResponse.data.recentBookings || [],
+            pendingKYC: statsResponse.data.pendingKYC || [],
+            recentPayments: statsResponse.data.recentPayments || [],
+            bookingTrends: statsResponse.data.bookingTrends || { monthly: [], yearly: [] },
           }));
         } else {
           setDashboardData(prev => ({ ...prev, loading: false }));
@@ -80,7 +111,7 @@ const AdminDashboardPage = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [selectedYear]);
 
   // Overview Statistics Cards
   const statsCards = [
@@ -112,8 +143,8 @@ const AdminDashboardPage = () => {
       onClick: () => navigate('/admin/cars'),
     },
     {
-      title: 'Active Bookings',
-      value: dashboardData.stats.activeBookings.toString(),
+      title: 'Total Bookings',
+      value: dashboardData.stats.totalBookings.toString(),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -122,7 +153,7 @@ const AdminDashboardPage = () => {
       color: colors.success,
       change: '--',
       changeType: 'neutral',
-      onClick: () => navigate('/admin/bookings/active'),
+      onClick: () => navigate('/admin/bookings'),
     },
     {
       title: 'Pending KYC',
@@ -139,7 +170,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: "Today's Revenue",
-      value: `₹${(dashboardData.stats.todayRevenue / 1000).toFixed(1)}K`,
+      value: formatCurrency(dashboardData.stats.todayRevenue),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -166,17 +197,8 @@ const AdminDashboardPage = () => {
     },
   ];
 
-  // Format currency
-  const formatCurrency = (amount) => {
-    if (amount >= 100000) {
-      return `₹${(amount / 100000).toFixed(1)}L`;
-    } else if (amount >= 1000) {
-      return `₹${(amount / 1000).toFixed(1)}K`;
-    }
-    return `₹${amount}`;
-  };
 
-  // Get status badge color
+
   const getStatusColor = (status) => {
     const statusColors = {
       confirmed: colors.success,
@@ -185,6 +207,7 @@ const AdminDashboardPage = () => {
       completed: colors.backgroundTertiary,
       cancelled: colors.error,
       success: colors.success,
+      'Advance Done': colors.success,
       failed: colors.error,
     };
     return statusColors[status] || colors.textSecondary;
@@ -262,6 +285,128 @@ const AdminDashboardPage = () => {
             </Card>
           ))}
         </div>
+
+        {/* Booking Trends Chart */}
+        <Card className="p-4 md:p-6 mb-6 md:mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
+                Booking Trends & Analytics
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Real-time booking and reservation charts derived from database bookings.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Month/Year View Toggle */}
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
+                <button
+                  onClick={() => setChartView('monthly')}
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    chartView === 'monthly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  style={chartView === 'monthly' ? { backgroundColor: colors.backgroundTertiary } : {}}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setChartView('yearly')}
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    chartView === 'yearly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  style={chartView === 'yearly' ? { backgroundColor: colors.backgroundTertiary } : {}}
+                >
+                  Yearly
+                </button>
+              </div>
+
+              {/* Year Selector (Only active in Monthly View) */}
+              {chartView === 'monthly' && (
+                <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
+                  {[2024, 2025, 2026].map((yr) => (
+                    <button
+                      key={yr}
+                      onClick={() => setSelectedYear(yr)}
+                      className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        selectedYear === yr ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                      style={selectedYear === yr ? { backgroundColor: colors.backgroundTertiary } : {}}
+                    >
+                      {yr}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ height: '350px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {chartView === 'monthly' ? (
+                <AreaChart
+                  data={dashboardData.bookingTrends?.monthly || []}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
+                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Legend verticalAlign="top" height={36} iconType="circle" />
+                  <Area
+                    name="Bookings"
+                    type="monotone"
+                    dataKey="bookings"
+                    stroke={colors.backgroundTertiary || '#7C3AED'}
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorBookings)"
+                  />
+                </AreaChart>
+              ) : (
+                <BarChart
+                  data={dashboardData.bookingTrends?.yearly || []}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
+                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Legend verticalAlign="top" height={36} iconType="circle" />
+                  <Bar
+                    name="Bookings"
+                    dataKey="bookings"
+                    fill={colors.backgroundTertiary || '#7C3AED'}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={45}
+                  />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          </div>
+        </Card>
 
         {/* Recent Activities Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

@@ -27,9 +27,23 @@ export const getAllBookings = async (req, res) => {
     // Build query
     const query = {};
 
+    // Always filter out unpaid bookings and cancelled bookings that were never paid
+    const filterConditions = [
+      { status: { $ne: 'unpaid' } },
+      {
+        $or: [
+          { status: { $ne: 'cancelled' } },
+          { paidAmount: { $gt: 0 } },
+          { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+        ]
+      }
+    ];
+
     if (status && status !== 'all') {
       query.status = status;
     }
+
+    query.$and = filterConditions;
 
     if (paymentStatus && paymentStatus !== 'all') {
       query.paymentStatus = paymentStatus;
@@ -464,6 +478,179 @@ export const getBookingStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch booking statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+/**
+ * @desc    Complete booking with remaining payment collection (Admin)
+ * @route   POST /api/admin/bookings/:id/complete
+ * @access  Private (Admin)
+ * Body: { paymentMode: 'online'|'cash'|'partial', transactionId?, receivedBy?, onlineAmount?, cashAmount? }
+ */
+export const completeBookingWithPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentMode, transactionId, receivedBy, onlineAmount, cashAmount } = req.body;
+
+    if (!paymentMode || !['online', 'cash', 'partial', 'none'].includes(paymentMode)) {
+      return res.status(400).json({ success: false, message: 'Invalid paymentMode. Must be online, cash, partial, or none.' });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.status === 'completed' || booking.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: `Booking is already ${booking.status}` });
+    }
+
+    const totalPrice = booking.pricing?.totalPrice || 0;
+    const alreadyPaid = booking.paidAmount || 0;
+    const remaining = Math.max(0, totalPrice - alreadyPaid);
+
+    // Generate unique transaction ID prefix for manual payments
+    const generateTxnId = (prefix) =>
+      `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    const now = new Date();
+
+    // If no remaining amount, skip payment recording and directly complete
+    if (remaining === 0) {
+      booking.remainingAmount = 0;
+      booking.paymentStatus = 'paid';
+      booking.status = 'completed';
+      booking.completedAt = now;
+      booking.tripStatus = 'completed';
+      booking.isTrackingActive = false;
+      await booking.save();
+
+      if (booking.user) {
+        const bId = booking.bookingId || booking._id;
+        sendPushNotification(booking.user, {
+          notification: { title: 'Trip Completed', body: `Your booking #${bId} is completed. Thank you for choosing DriveOn!` },
+          data: { bookingId: bId.toString(), status: 'completed', type: 'booking_update' },
+        }, false);
+        sendPushNotification(booking.user, {
+          notification: { title: 'Trip Completed', body: `Your booking #${bId} is completed. Thank you for choosing DriveOn!` },
+          data: { bookingId: bId.toString(), status: 'completed', type: 'booking_update' },
+        }, true);
+      }
+
+      return res.json({ success: true, message: 'Booking completed successfully', data: { booking } });
+    }
+
+    if (!paymentMode || !['online', 'cash', 'partial', 'none'].includes(paymentMode)) {
+      return res.status(400).json({ success: false, message: 'Invalid paymentMode. Must be online, cash, partial, or none.' });
+    }
+
+    if (paymentMode === 'online') {
+      if (!transactionId || !transactionId.trim()) {
+        return res.status(400).json({ success: false, message: 'Transaction ID is required for online payment' });
+      }
+      booking.transactions.push({
+        transactionId: transactionId.trim(),
+        amount: remaining,
+        status: 'success',
+        paymentMethod: 'online',
+        paymentDate: now,
+      });
+      booking.paidAmount = alreadyPaid + remaining;
+
+    } else if (paymentMode === 'cash') {
+      if (!receivedBy || !receivedBy.trim()) {
+        return res.status(400).json({ success: false, message: 'Received By name is required for cash payment' });
+      }
+      booking.transactions.push({
+        transactionId: generateTxnId('CASH'),
+        amount: remaining,
+        status: 'success',
+        paymentMethod: 'cash',
+        receivedBy: receivedBy.trim(),
+        paymentDate: now,
+      });
+      booking.paidAmount = alreadyPaid + remaining;
+
+    } else if (paymentMode === 'partial') {
+      const oAmt = parseFloat(onlineAmount) || 0;
+      const cAmt = parseFloat(cashAmount) || 0;
+
+      if (oAmt < 0 || cAmt < 0) {
+        return res.status(400).json({ success: false, message: 'Amounts cannot be negative' });
+      }
+      if (Math.round(oAmt + cAmt) !== Math.round(remaining)) {
+        return res.status(400).json({
+          success: false,
+          message: `Online (${oAmt}) + Cash (${cAmt}) must equal remaining amount (${remaining})`
+        });
+      }
+      if (oAmt > 0) {
+        if (!transactionId || !transactionId.trim()) {
+          return res.status(400).json({ success: false, message: 'Transaction ID is required for the online portion' });
+        }
+        booking.transactions.push({
+          transactionId: transactionId.trim(),
+          amount: oAmt,
+          status: 'success',
+          paymentMethod: 'online',
+          paymentDate: now,
+        });
+      }
+      if (cAmt > 0) {
+        if (!receivedBy || !receivedBy.trim()) {
+          return res.status(400).json({ success: false, message: 'Received By name is required for the cash portion' });
+        }
+        booking.transactions.push({
+          transactionId: generateTxnId('CASH'),
+          amount: cAmt,
+          status: 'success',
+          paymentMethod: 'cash',
+          receivedBy: receivedBy.trim(),
+          paymentDate: now,
+        });
+      }
+      booking.paidAmount = alreadyPaid + oAmt + cAmt;
+    }
+
+    // Finalise the booking
+    booking.remainingAmount = 0;
+    booking.paymentStatus = 'paid';
+    booking.status = 'completed';
+    booking.completedAt = now;
+    booking.tripStatus = 'completed';
+    booking.isTrackingActive = false;
+
+    await booking.save();
+
+    // Push notification to user
+    if (booking.user) {
+      const bId = booking.bookingId || booking._id;
+      const payload = {
+        notification: {
+          title: 'Trip Completed',
+          body: `Your booking #${bId} is completed. Thank you for choosing DriveOn!`,
+        },
+        data: {
+          bookingId: bId.toString(),
+          status: 'completed',
+          type: 'booking_update',
+        },
+      };
+      sendPushNotification(booking.user, payload, false);
+      sendPushNotification(booking.user, payload, true);
+    }
+
+    res.json({
+      success: true,
+      message: 'Booking completed and payment recorded successfully',
+      data: { booking },
+    });
+  } catch (error) {
+    console.error('completeBookingWithPayment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete booking',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

@@ -480,7 +480,7 @@ export const createBooking = async (req, res) => {
       paidAmount: 0,
       remainingAmount: remainingPayment,
       specialRequests: specialRequests || '',
-      status: 'pending',
+      status: 'unpaid',
     });
 
     // Log booking object before saving
@@ -505,17 +505,6 @@ export const createBooking = async (req, res) => {
     try {
       await booking.save();
       console.log('✅ Booking saved successfully:', booking.bookingId);
-
-      // Send Admin Notification
-      sendAdminNotification(
-        'New Booking Alert 🚗',
-        `New booking #${booking.bookingId || booking._id} created by ${req.user.name || 'User'}.`,
-        {
-          type: 'new_booking',
-          bookingId: (booking.bookingId || booking._id).toString(),
-          click_action: 'FLUTTER_NOTIFICATION_CLICK'
-        }
-      ).catch(err => console.error('Failed to send admin booking notification:', err));
 
       // Increment coupon usage count if coupon was applied
       if (appliedCoupon) {
@@ -620,16 +609,31 @@ export const getUserBookings = async (req, res) => {
     });
 
     const query = { user: userId };
+    
+    // Always filter out unpaid bookings and cancelled bookings that were never paid
+    const filterConditions = [
+      { status: { $ne: 'unpaid' } },
+      {
+        $or: [
+          { status: { $ne: 'cancelled' } },
+          { paidAmount: { $gt: 0 } },
+          { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+        ]
+      }
+    ];
+
     if (status && status !== 'all') {
       query.status = status;
     }
+
+    query.$and = filterConditions;
 
     console.log('🔍 Booking Query:', JSON.stringify(query, null, 2));
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // First, check total bookings for this user
-    const totalBookings = await Booking.countDocuments({ user: userId });
+    // First, check total bookings for this user using query
+    const totalBookings = await Booking.countDocuments(query);
     console.log(`📊 Total bookings for user ${userId}: ${totalBookings}`);
 
     // Debug: Check all bookings in database to see user IDs

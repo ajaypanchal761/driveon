@@ -544,12 +544,28 @@ export const adminService = {
    * Get Dashboard Statistics
    * @returns {Promise}
    */
-  getDashboardStats: async () => {
+  getDashboardStats: async (params = {}) => {
     try {
-      const response = await api.get('/admin/dashboard/stats');
+      const response = await api.get('/admin/dashboard/stats', { params });
       return response.data;
     } catch (error) {
       console.error('Get dashboard stats error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Complete Booking with Remaining Payment Collection
+   * @param {string} bookingId - MongoDB booking ID
+   * @param {Object} data - { paymentMode, transactionId?, receivedBy?, onlineAmount?, cashAmount? }
+   * @returns {Promise}
+   */
+  completeBookingWithPayment: async (bookingId, data) => {
+    try {
+      const response = await api.post(`/admin/bookings/${bookingId}/complete`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Complete booking with payment error:', error);
       throw error;
     }
   },

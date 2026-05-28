@@ -226,13 +226,17 @@ const bookingSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ['pending', 'success', 'failed', 'refunded'],
+        enum: ['pending', 'success', 'failed', 'cancelled', 'refunded'],
         default: 'pending',
       },
       paymentMethod: {
         type: String,
-        enum: ['phonepe', 'razorpay', 'stripe'],
+        enum: ['phonepe', 'razorpay', 'stripe', 'cash', 'online'],
         default: 'razorpay',
+      },
+      receivedBy: {
+        type: String,
+        trim: true,
       },
       paymentDate: {
         type: Date,
@@ -249,8 +253,8 @@ const bookingSchema = new mongoose.Schema(
     // Booking Status
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled', 'rejected'],
-      default: 'pending',
+      enum: ['unpaid', 'pending', 'confirmed', 'active', 'completed', 'cancelled', 'rejected'],
+      default: 'unpaid',
       index: true,
     },
     cancellationReason: {

@@ -358,10 +358,12 @@ const CancelledBookingDetailsPage = () => {
               <span className="text-base text-gray-600">Payment Status</span>
               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                 booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
-                booking.paymentStatus === 'refunded' ? 'bg-blue-100 text-blue-800' :
+                booking.paymentStatus === 'partial' ? 'bg-green-100 text-green-800' :
+                booking.paymentStatus === 'refunded' ? 'bg-purple-100 text-purple-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
                 {booking.paymentStatus === 'paid' ? 'Paid' :
+                 booking.paymentStatus === 'partial' ? 'Advance Done' :
                  booking.paymentStatus === 'refunded' ? 'Refunded' :
                  'Pending'}
               </span>
