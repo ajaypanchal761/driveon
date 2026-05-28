@@ -79,6 +79,9 @@ export const verifyAadhaarOTP = async (req, res) => {
       const user = await User.findById(req.user._id);
       user.kycDetails.aadhaar.verified = true;
       user.kycDetails.aadhaar.verifiedAt = new Date();
+      if (result.data?.profile_image || result.data?.photo) {
+        user.kycDetails.aadhaar.image = result.data.profile_image || result.data.photo;
+      }
       
       // Check if all KYC is done
       checkAndSetKYCStatus(user);
@@ -131,6 +134,9 @@ export const verifyPAN = async (req, res) => {
       user.kycDetails.pan.number = panNo;
       user.kycDetails.pan.verified = true;
       user.kycDetails.pan.verifiedAt = new Date();
+      if (result.data?.profile_image || result.data?.photo) {
+        user.kycDetails.pan.image = result.data.profile_image || result.data.photo;
+      }
       
       checkAndSetKYCStatus(user);
       await user.save();
@@ -201,6 +207,9 @@ export const verifyDL = async (req, res) => {
         user.kycDetails.dl.dob = dob;
         user.kycDetails.dl.verified = true;
         user.kycDetails.dl.verifiedAt = new Date();
+        if (result.data?.profile_image || result.data?.photo) {
+          user.kycDetails.dl.image = result.data.profile_image || result.data.photo;
+        }
         
         checkAndSetKYCStatus(user);
         await user.save();

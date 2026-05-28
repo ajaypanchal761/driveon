@@ -32,6 +32,14 @@ const CarListPage = () => {
   const [selectedCar, setSelectedCar] = useState(null);
   const [showCarDetail, setShowCarDetail] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [reviewsCar, setReviewsCar] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const handleViewReviews = (car) => {
+    setReviewsCar(car);
+    setShowReviewsModal(true);
+  };
 
   // Listen for global search events from header
   useEffect(() => {
@@ -49,6 +57,18 @@ const CarListPage = () => {
     carType: 'all', // all, sedan, suv, hatchback, luxury
     priceRange: 'all', // all, 0-1000, 1000-2000, 2000+
   });
+
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredCars.length / itemsPerPage);
+  const paginatedCars = filteredCars.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchQuery, cars]);
 
   // Fetch cars from API
   useEffect(() => {
@@ -128,8 +148,8 @@ const CarListPage = () => {
             images: car.carImages || [],
             imageUrl: null,
             rating: 0,
-            totalBookings: 0,
-            totalRevenue: 0,
+            totalBookings: car.totalBookings || 0,
+            totalRevenue: car.totalRevenue || 0,
             features: [],
             registrationDate: car.createdAt || new Date().toISOString(),
             registrationNumber: car.carNumber || car.registrationNumber || '',
@@ -586,7 +606,7 @@ const CarListPage = () => {
         {/* Grid View */}
         {viewMode === 'grid' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCars.map((car) => (
+            {paginatedCars.map((car) => (
               <Card key={car.id} className="p-4 hover:shadow-lg transition-all">
                 {/* Car Image */}
                 <div className="w-full h-48 bg-gray-200 rounded-lg mb-4 overflow-hidden">
@@ -635,7 +655,19 @@ const CarListPage = () => {
                       ₹{car.pricePerDay.toLocaleString()}/day
                     </span>
                     {car.rating > 0 && (
-                      <span className="text-gray-600">⭐ {car.rating}</span>
+                      <span className="text-gray-600 flex items-center gap-1">
+                        ⭐ {car.rating}
+                        <button
+                          onClick={() => handleViewReviews(car)}
+                          className="p-1 hover:bg-gray-100 rounded-full transition-colors text-purple-600"
+                          title="View Reviews"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                      </span>
                     )}
                   </div>
 
@@ -701,7 +733,7 @@ const CarListPage = () => {
         {/* List View */}
         {viewMode === 'list' && (
           <div className="space-y-4">
-            {filteredCars.map((car) => (
+            {paginatedCars.map((car) => (
               <Card key={car.id} className="p-4 hover:shadow-lg transition-all">
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* Car Image */}
@@ -767,7 +799,19 @@ const CarListPage = () => {
                       {car.rating > 0 && (
                         <div>
                           <p className="text-xs text-gray-600">Rating</p>
-                          <p className="text-sm font-semibold text-gray-900">⭐ {car.rating}</p>
+                          <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+                            ⭐ {car.rating}
+                            <button
+                              onClick={() => handleViewReviews(car)}
+                              className="p-1 hover:bg-gray-100 rounded-full transition-colors text-purple-600"
+                              title="View Reviews"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          </p>
                         </div>
                       )}
                     </div>
@@ -845,6 +889,78 @@ const CarListPage = () => {
             <p className="text-gray-600">No cars found matching your filters.</p>
           </Card>
         )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg mt-6 shadow-sm">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                Previous
+              </button>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-semibold">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                  <span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredCars.length)}</span> of{' '}
+                  <span className="font-semibold">{filteredCars.length}</span> results
+                </p>
+              </div>
+              <div>
+                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      aria-current={currentPage === page ? 'page' : undefined}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 ${
+                        currentPage === page
+                          ? 'z-10 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                      }`}
+                      style={currentPage === page ? { backgroundColor: colors.backgroundTertiary } : {}}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Car Detail Modal */}
@@ -863,6 +979,17 @@ const CarListPage = () => {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Car Reviews Modal */}
+      {showReviewsModal && reviewsCar && (
+        <CarReviewsModal
+          car={reviewsCar}
+          onClose={() => {
+            setShowReviewsModal(false);
+            setReviewsCar(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -872,6 +999,27 @@ const CarListPage = () => {
  */
 const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, onActivate, onDelete }) => {
   const [activeTab, setActiveTab] = useState('details');
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'reviews' && car?.id) {
+      const fetchReviews = async () => {
+        try {
+          setLoadingReviews(true);
+          const response = await api.get(`/reviews/car/${car.id}`);
+          if (response.data && response.data.success) {
+            setReviews(response.data.data.reviews || []);
+          }
+        } catch (error) {
+          console.error('Error fetching reviews:', error);
+        } finally {
+          setLoadingReviews(false);
+        }
+      };
+      fetchReviews();
+    }
+  }, [activeTab, car?.id]);
 
   if (!car) return null;
 
@@ -1086,8 +1234,32 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
             {activeTab === 'reviews' && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Reviews & Ratings</h3>
-                <p className="text-gray-600">Average Rating: {car.rating > 0 ? `⭐ ${car.rating}` : 'No ratings yet'}</p>
-                <p className="text-sm text-gray-500 mt-2">Reviews will be displayed here...</p>
+                <p className="text-gray-600 mb-4">Average Rating: {car.rating > 0 ? `⭐ ${car.rating}` : 'No ratings yet'}</p>
+                {loadingReviews ? (
+                  <p className="text-sm text-gray-500">Loading reviews...</p>
+                ) : reviews.length === 0 ? (
+                  <p className="text-sm text-gray-500">No reviews found for this car yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-semibold text-sm">
+                              {review.user?.name ? review.user.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{review.user?.name || 'Anonymous User'}</p>
+                              <p className="text-xxs text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold text-yellow-500">⭐ {review.rating}</span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap pl-10">"{review.comment}"</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1165,6 +1337,96 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Car Reviews Modal Component
+ */
+const CarReviewsModal = ({ car, onClose }) => {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/reviews/car/${car.id}`);
+        if (response.data && response.data.success) {
+          setReviews(response.data.data.reviews || []);
+        }
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (car?.id) {
+      fetchReviews();
+    }
+  }, [car]);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              Reviews for {car.brand} {car.model}
+            </h2>
+            <p className="text-xs text-gray-500">Average Rating: ⭐ {car.rating}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="py-8 text-center text-gray-500">Loading reviews...</div>
+          ) : reviews.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">No reviews found for this car yet.</div>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map((review) => (
+                <div key={review.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-semibold text-sm">
+                        {review.user?.name ? review.user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{review.user?.name || 'Anonymous User'}</p>
+                        <p className="text-xxs text-gray-400">{new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-yellow-500">⭐ {review.rating}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap pl-10">"{review.comment}"</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+          >
+            Close
           </button>
         </div>
       </div>

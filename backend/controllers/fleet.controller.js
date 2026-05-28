@@ -22,21 +22,58 @@ export const getOutwardCars = async (req, res) => {
     try {
         const cars = await OutwardCar.find().sort({ createdAt: -1 });
 
+        // Calculate bookings and revenue stats dynamically
+        const carIds = cars.map(c => c.originalOutputId).filter(Boolean);
+        const outwardBookingAggregation = await OutwardBooking.aggregate([
+            { $match: { carId: { $in: carIds } } },
+            {
+                $group: {
+                    _id: '$carId',
+                    count: { $sum: 1 },
+                    revenue: {
+                        $sum: {
+                            $cond: [
+                                { $ne: ['$paymentStatus', 'failed'] },
+                                { $ifNull: ['$paidAmount', 0] },
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const bookingStatsMap = {};
+        outwardBookingAggregation.forEach(stat => {
+            if (stat._id) {
+                bookingStatsMap[stat._id.toString()] = {
+                    count: stat.count,
+                    revenue: stat.revenue
+                };
+            }
+        });
+
         // Map backend format back to frontend expected structure
-        const formattedCars = cars.map(car => ({
-            id: car.originalOutputId,
-            name: car.name,
-            brand: car.brand,
-            model: car.model,
-            pricePerDay: car.pricePerDay,
-            location: car.location,
-            type: car.type,
-            ownerName: car.ownerName,
-            ownerPhone: car.ownerPhone
-        }));
+        const formattedCars = cars.map(car => {
+            const stats = bookingStatsMap[car.originalOutputId] || { count: 0, revenue: 0 };
+            return {
+                id: car.originalOutputId,
+                name: car.name,
+                brand: car.brand,
+                model: car.model,
+                pricePerDay: car.pricePerDay,
+                location: car.location,
+                type: car.type,
+                ownerName: car.ownerName,
+                ownerPhone: car.ownerPhone,
+                totalBookings: stats.count,
+                totalRevenue: stats.revenue
+            };
+        });
 
         res.status(200).json({ success: true, data: formattedCars });
     } catch (error) {
+        console.error('getOutwardCars error:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch outward cars' });
     }
 };

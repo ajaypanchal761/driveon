@@ -6,6 +6,11 @@ dotenv.config();
 const QUICKEKYC_API_KEY = process.env.QUICKEKYC_API_KEY;
 const BASE_URL = 'https://api.quickekyc.com/api/v1';
 
+// Premium SVG data-URL mock images
+const mockAadhaarImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%234f46e5" rx="10"/><circle cx="50" cy="35" r="18" fill="white"/><path d="M20 85c0-15 15-22 30-22s30 7 30 22z" fill="white"/><text x="50" y="93" fill="white" font-size="8" font-family="sans-serif" text-anchor="middle" font-weight="bold">AADHAAR CARD</text></svg>';
+const mockPanImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%230284c7" rx="10"/><circle cx="50" cy="35" r="18" fill="white"/><path d="M20 85c0-15 15-22 30-22s30 7 30 22z" fill="white"/><text x="50" y="93" fill="white" font-size="9" font-family="sans-serif" text-anchor="middle" font-weight="bold">PAN CARD</text></svg>';
+const mockDlImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23059669" rx="10"/><circle cx="50" cy="35" r="18" fill="white"/><path d="M20 85c0-15 15-22 30-22s30 7 30 22z" fill="white"/><text x="50" y="93" fill="white" font-size="8" font-family="sans-serif" text-anchor="middle" font-weight="bold">DRIVING LICENSE</text></svg>';
+
 /**
  * QuickEKYC Service for Aadhaar, PAN, and DL verification
  */
@@ -56,9 +61,9 @@ class QuickEKYCService {
    */
   async submitAadhaarOTP(requestId, otp) {
     try {
-      if (!QUICKEKYC_API_KEY || requestId.startsWith('mock-')) {
+      if (!QUICKEKYC_API_KEY || !requestId || String(requestId).startsWith('mock-')) {
         console.log('⚠️ QuickEKYC Mock Request: Returning Mock Success for Aadhaar Verification');
-        return { status: 'success', data: { status: 'VALID', full_name: 'Mock Aadhaar User' } };
+        return { status: 'success', data: { status: 'VALID', full_name: 'Mock Aadhaar User', profile_image: mockAadhaarImage } };
       }
       const response = await axios.post(`${BASE_URL}/aadhaar-v2/submit-otp`, {
         key: QUICKEKYC_API_KEY,
@@ -72,7 +77,7 @@ class QuickEKYCService {
       console.error('QuickEKYC Aadhaar OTP Submission Error:', error.response?.data || error.message);
       if (this.isWhitelistOrAuthError(error)) {
         console.log('⚠️ QuickEKYC Whitelist/Auth Issue: Returning Mock Success for Aadhaar OTP submission');
-        return { status: 'success', data: { status: 'VALID', full_name: 'Mock Aadhaar User' } };
+        return { status: 'success', data: { status: 'VALID', full_name: 'Mock Aadhaar User', profile_image: mockAadhaarImage } };
       }
       throw error.response?.data || error;
     }
@@ -86,7 +91,7 @@ class QuickEKYCService {
     try {
       if (!QUICKEKYC_API_KEY) {
         console.log('⚠️ QuickEKYC API Key missing: Falling back to Mock Success');
-        return { status: 'success', data: { status: 'VALID', full_name: 'Mock PAN User' } };
+        return { status: 'success', data: { status: 'VALID', full_name: 'Mock PAN User', profile_image: mockPanImage } };
       }
       const response = await axios.post(`${BASE_URL}/pan/pan`, {
         key: QUICKEKYC_API_KEY,
@@ -99,7 +104,7 @@ class QuickEKYCService {
       console.error('QuickEKYC PAN Verification Error:', error.response?.data || error.message);
       if (this.isWhitelistOrAuthError(error)) {
         console.log('⚠️ QuickEKYC Whitelist/Auth Issue: Returning Mock Success for PAN Verification');
-        return { status: 'success', data: { status: 'VALID', full_name: 'Mock PAN User' } };
+        return { status: 'success', data: { status: 'VALID', full_name: 'Mock PAN User', profile_image: mockPanImage } };
       }
       // Handle specific error codes
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -121,7 +126,7 @@ class QuickEKYCService {
     try {
       if (!QUICKEKYC_API_KEY) {
         console.log('⚠️ QuickEKYC API Key missing: Falling back to Mock Success');
-        return { status: 'success', data: { status: 'VALID', full_name: 'Mock DL User' } };
+        return { status: 'success', data: { status: 'VALID', full_name: 'Mock DL User', profile_image: mockDlImage } };
       }
       const response = await axios.post(`${BASE_URL}/driving-license/driving-license`, {
         key: QUICKEKYC_API_KEY,
@@ -135,7 +140,7 @@ class QuickEKYCService {
       console.error('QuickEKYC DL Verification Error:', error.response?.data || error.message);
       if (this.isWhitelistOrAuthError(error)) {
         console.log('⚠️ QuickEKYC Whitelist/Auth Issue: Returning Mock Success for DL Verification');
-        return { status: 'success', data: { status: 'VALID', full_name: 'Mock DL User' } };
+        return { status: 'success', data: { status: 'VALID', full_name: 'Mock DL User', profile_image: mockDlImage } };
       }
       if (error.response?.status === 401 || error.response?.status === 403) {
         return { status: 'error', message: 'KYC service authentication failed. Please contact support.' };

@@ -146,18 +146,21 @@ const userSchema = new mongoose.Schema(
         number: String,
         verified: { type: Boolean, default: false },
         requestId: String, // For OTP verification
-        verifiedAt: Date
+        verifiedAt: Date,
+        image: String
       },
       pan: {
         number: String,
         verified: { type: Boolean, default: false },
-        verifiedAt: Date
+        verifiedAt: Date,
+        image: String
       },
       dl: {
         number: String,
         dob: String,
         verified: { type: Boolean, default: false },
-        verifiedAt: Date
+        verifiedAt: Date,
+        image: String
       }
     },
     isKYCVerified: {

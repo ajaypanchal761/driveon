@@ -90,9 +90,6 @@ const AdminDashboardPage = lazy(() =>
 const UserListPage = lazy(() =>
   import("../pages/admin/users/UserListPage")
 );
-const KYCListPage = lazy(() =>
-  import("../pages/admin/kyc/KYCListPage")
-);
 const GuarantorListPage = lazy(() =>
   import("../pages/admin/guarantors/GuarantorListPage")
 );
@@ -574,22 +571,6 @@ const router = createBrowserRouter([
           {
             path: "/admin/users",
             element: <UserListPage />,
-          },
-          {
-            path: "/admin/kyc",
-            element: <KYCListPage />,
-          },
-          {
-            path: "/admin/kyc/pending",
-            element: <KYCListPage />,
-          },
-          {
-            path: "/admin/kyc/approved",
-            element: <KYCListPage />,
-          },
-          {
-            path: "/admin/kyc/rejected",
-            element: <KYCListPage />,
           },
           {
             path: "/admin/guarantors",

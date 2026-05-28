@@ -1,5 +1,6 @@
 import Car from '../models/Car.js';
 import User from '../models/User.js';
+import Booking from '../models/Booking.js';
 import { uploadImage, deleteImage } from '../services/cloudinary.service.js';
 
 /**
@@ -86,6 +87,50 @@ export const getAllCars = async (req, res) => {
     // Get total count
     const total = await Car.countDocuments(query);
 
+    // Get booking stats and revenue dynamically
+    const carIds = cars.map(c => c._id);
+    const bookingAggregation = await Booking.aggregate([
+      { $match: { car: { $in: carIds } } },
+      {
+        $group: {
+          _id: '$car',
+          count: { $sum: 1 },
+          revenue: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ['$status', 'cancelled'] },
+                    { $ne: ['$status', 'rejected'] }
+                  ]
+                },
+                { $ifNull: ['$paidAmount', 0] },
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    const bookingStatsMap = {};
+    bookingAggregation.forEach(stat => {
+      if (stat._id) {
+        bookingStatsMap[stat._id.toString()] = {
+          count: stat.count,
+          revenue: stat.revenue
+        };
+      }
+    });
+
+    const carsWithStats = cars.map(car => {
+      const stats = bookingStatsMap[car._id.toString()] || { count: 0, revenue: 0 };
+      const carObj = car.toObject();
+      carObj.totalBookings = stats.count;
+      carObj.totalRevenue = stats.revenue;
+      return carObj;
+    });
+
     // Get stats
     const stats = {
       total: await Car.countDocuments({}),
@@ -99,7 +144,7 @@ export const getAllCars = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        cars,
+        cars: carsWithStats,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),

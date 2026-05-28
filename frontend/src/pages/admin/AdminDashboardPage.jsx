@@ -155,19 +155,7 @@ const AdminDashboardPage = () => {
       changeType: 'neutral',
       onClick: () => navigate('/admin/bookings'),
     },
-    {
-      title: 'Pending KYC',
-      value: dashboardData.stats.pendingKYC.toString(),
-      icon: (
-        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      color: colors.warning,
-      change: dashboardData.stats.pendingKYC > 0 ? `${dashboardData.stats.pendingKYC} pending` : '--',
-      changeType: dashboardData.stats.pendingKYC > 0 ? 'warning' : 'neutral',
-      onClick: () => navigate('/admin/kyc/pending'),
-    },
+
     {
       title: "Today's Revenue",
       value: formatCurrency(dashboardData.stats.todayRevenue),
@@ -409,7 +397,7 @@ const AdminDashboardPage = () => {
         </Card>
 
         {/* Recent Activities Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Recent Bookings */}
           <Card className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
@@ -427,13 +415,10 @@ const AdminDashboardPage = () => {
                 dashboardData.recentBookings.slice(0, 5).map((booking) => (
                   <div
                     key={booking.id}
-                    className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-start justify-between p-3 rounded-lg"
                     style={{
                       backgroundColor: colors.backgroundLight,
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundIcon}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
-                    onClick={() => navigate(`/admin/bookings/${booking.id}`)}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: colors.textPrimary }}>{booking.userId}</p>
@@ -461,56 +446,7 @@ const AdminDashboardPage = () => {
             </div>
           </Card>
 
-          {/* Pending KYC */}
-          <Card className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>Pending KYC</h3>
-              <button
-                onClick={() => navigate('/admin/kyc/pending')}
-                className="text-sm font-medium hover:underline"
-                style={{ color: colors.backgroundTertiary }}
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-3">
-              {dashboardData.pendingKYC.length > 0 ? (
-                dashboardData.pendingKYC.map((kyc) => (
-                  <div
-                    key={kyc.id}
-                    className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer border-l-4"
-                    style={{
-                      borderLeftColor: colors.warning,
-                      backgroundColor: colors.lightGreen
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.lightGreenDark}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.lightGreen}
-                    onClick={() => navigate(`/admin/kyc/${kyc.id}`)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: colors.textPrimary }}>{kyc.userId}</p>
-                      <p className="text-xs capitalize" style={{ color: colors.textSecondary }}>{kyc.documentType}</p>
-                      <p className="text-xs mt-1" style={{ color: colors.textTertiary }}>{kyc.time}</p>
-                    </div>
-                    <button
-                      className="ml-3 px-3 py-1 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
-                      style={{ backgroundColor: colors.backgroundTertiary }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/kyc/${kyc.id}`);
-                      }}
-                    >
-                      Review
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8" style={{ color: colors.textSecondary }}>
-                  <p className="text-sm">No pending KYC verifications</p>
-                </div>
-              )}
-            </div>
-          </Card>
+
 
           {/* Recent Payments */}
           <Card className="p-4 md:p-6">
@@ -529,13 +465,10 @@ const AdminDashboardPage = () => {
                 dashboardData.recentPayments.map((payment) => (
                   <div
                     key={payment.id}
-                    className="flex items-start justify-between p-3 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-start justify-between p-3 rounded-lg"
                     style={{
                       backgroundColor: colors.backgroundLight,
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundIcon}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
-                    onClick={() => navigate(`/admin/payments/${payment.id}`)}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: colors.textPrimary }}>{payment.userId}</p>

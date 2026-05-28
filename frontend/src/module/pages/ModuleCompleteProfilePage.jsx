@@ -984,7 +984,7 @@ const ModuleCompleteProfilePage = () => {
               <div
                 className="p-4 rounded-xl border-2 mb-4"
                 style={{
-                  borderColor: user?.kycDetails?.aadhaar?.isVerified ? colors.success : colors.borderMedium,
+                  borderColor: (user?.kycDetails?.aadhaar?.verified || user?.kycDetails?.aadhaar?.isVerified) ? colors.success : colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
@@ -1002,12 +1002,12 @@ const ModuleCompleteProfilePage = () => {
                       <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
                         Aadhaar Verification
                       </p>
-                      {user?.kycDetails?.aadhaar?.isVerified && (
+                      {(user?.kycDetails?.aadhaar?.verified || user?.kycDetails?.aadhaar?.isVerified) && (
                         <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">VERIFIED</span>
                       )}
                     </div>
 
-                    {!user?.kycDetails?.aadhaar?.isVerified ? (
+                    {!(user?.kycDetails?.aadhaar?.verified || user?.kycDetails?.aadhaar?.isVerified) ? (
                       <div className="space-y-3">
                         {aadhaarStep === 1 ? (
                           <div className="flex gap-2">
@@ -1057,7 +1057,7 @@ const ModuleCompleteProfilePage = () => {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        {user.kycDetails.aadhaar.idNumber?.replace(/.(?=.{4})/g, '*')} verified successfully.
+                        {(user.kycDetails.aadhaar.number || user.kycDetails.aadhaar.idNumber)?.replace(/.(?=.{4})/g, '*')} verified successfully.
                       </p>
                     )}
                   </div>
@@ -1068,7 +1068,7 @@ const ModuleCompleteProfilePage = () => {
               <div
                 className="p-4 rounded-xl border-2 mb-4"
                 style={{
-                  borderColor: user?.kycDetails?.pan?.isVerified ? colors.success : colors.borderMedium,
+                  borderColor: (user?.kycDetails?.pan?.verified || user?.kycDetails?.pan?.isVerified) ? colors.success : colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
@@ -1086,12 +1086,12 @@ const ModuleCompleteProfilePage = () => {
                       <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
                         PAN Verification
                       </p>
-                      {user?.kycDetails?.pan?.isVerified && (
+                      {(user?.kycDetails?.pan?.verified || user?.kycDetails?.pan?.isVerified) && (
                         <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">VERIFIED</span>
                       )}
                     </div>
 
-                    {!user?.kycDetails?.pan?.isVerified ? (
+                    {!(user?.kycDetails?.pan?.verified || user?.kycDetails?.pan?.isVerified) ? (
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -1112,7 +1112,7 @@ const ModuleCompleteProfilePage = () => {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        PAN Card {user.kycDetails.pan.idNumber} verified.
+                        PAN Card {user.kycDetails.pan.number || user.kycDetails.pan.idNumber} verified.
                       </p>
                     )}
                   </div>
@@ -1123,7 +1123,7 @@ const ModuleCompleteProfilePage = () => {
               <div
                 className="p-4 rounded-xl border-2 mb-4"
                 style={{
-                  borderColor: user?.kycDetails?.dl?.isVerified ? colors.success : colors.borderMedium,
+                  borderColor: (user?.kycDetails?.dl?.verified || user?.kycDetails?.dl?.isVerified) ? colors.success : colors.borderMedium,
                   backgroundColor: colors.backgroundSecondary,
                 }}
               >
@@ -1141,12 +1141,12 @@ const ModuleCompleteProfilePage = () => {
                       <p className="font-semibold text-base" style={{ color: colors.textPrimary }}>
                         Driving License
                       </p>
-                      {user?.kycDetails?.dl?.isVerified && (
+                      {(user?.kycDetails?.dl?.verified || user?.kycDetails?.dl?.isVerified) && (
                         <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">VERIFIED</span>
                       )}
                     </div>
 
-                    {!user?.kycDetails?.dl?.isVerified ? (
+                    {!(user?.kycDetails?.dl?.verified || user?.kycDetails?.dl?.isVerified) ? (
                       <div className="space-y-2">
                         <input
                           type="text"
@@ -1175,7 +1175,7 @@ const ModuleCompleteProfilePage = () => {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        License {user.kycDetails.dl.idNumber} verified.
+                        License {user.kycDetails.dl.number || user.kycDetails.dl.idNumber} verified.
                       </p>
                     )}
                   </div>

@@ -15,7 +15,7 @@ import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelec
 const getKycStatus = (user) => {
   if (!user) return 'pending';
   if (user.isKYCVerified) return 'verified';
-  if (user.kycDetails?.aadhaar?.isVerified || user.kycDetails?.pan?.isVerified || user.kycDetails?.dl?.isVerified) {
+  if (user.kycDetails?.aadhaar?.verified || user.kycDetails?.pan?.verified || user.kycDetails?.dl?.verified) {
     return 'pending'; // Partially verified
   }
   return 'pending';
@@ -74,6 +74,19 @@ const UserListPage = () => {
     userType: 'all', // all, regular, guarantor, owner
     registrationDate: 'all', // all, today, week, month, year
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, searchQuery, users]);
 
   // Listen for notifications
   useEffect(() => {
@@ -500,7 +513,7 @@ const UserListPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => {
+                {paginatedUsers.map((user) => {
                   const kycStatus = getKycStatus(user);
                   const accountStatus = user.accountStatus || 'active';
                   
@@ -612,6 +625,78 @@ const UserListPage = () => {
             <p className="text-sm" style={{ color: colors.textSecondary }}>No users found matching your filters.</p>
           </Card>
         )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg mt-4 shadow-sm">
+            <div className="flex flex-1 justify-between sm:hidden">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                Previous
+              </button>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-semibold">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                  <span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredUsers.length)}</span> of{' '}
+                  <span className="font-semibold">{filteredUsers.length}</span> results
+                </p>
+              </div>
+              <div>
+                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      aria-current={currentPage === page ? 'page' : undefined}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 ${
+                        currentPage === page
+                          ? 'z-10 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                      }`}
+                      style={currentPage === page ? { backgroundColor: colors.backgroundTertiary } : {}}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User Detail Modal */}
@@ -634,6 +719,9 @@ const UserListPage = () => {
  */
 const UserDetailModal = ({ user, onClose, onAction }) => {
   const [activeTab, setActiveTab] = useState('profile');
+  const [bookings, setBookings] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -643,13 +731,70 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
     };
   }, []);
 
+  // Fetch real booking and transaction data
+  useEffect(() => {
+    const fetchUserBookingAndPaymentData = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getAllBookings({ page: 1, limit: 1000 });
+        if (response.success && response.data?.bookings) {
+          const userId = user._id || user.id;
+          // Filter bookings for this user
+          const userBookings = response.data.bookings.filter(
+            (b) => (b.user?._id || b.user || '').toString() === userId.toString()
+          );
+          setBookings(userBookings);
+
+          // Extract transactions
+          const userTxns = [];
+          userBookings.forEach((b) => {
+            if (b.transactions && Array.isArray(b.transactions)) {
+              // Sort transactions by date ascending to determine the order of payments
+              const sortedTxns = [...b.transactions].sort(
+                (t1, t2) => new Date(t1.paymentDate || t1.createdAt || 0) - new Date(t2.paymentDate || t2.createdAt || 0)
+              );
+              
+              sortedTxns.forEach((t, index) => {
+                let paymentTypeLabel = '';
+                if (b.paymentOption === 'advance') {
+                  paymentTypeLabel = index === 0 ? 'Advance' : 'Balance';
+                } else if (b.paymentOption === 'full') {
+                  paymentTypeLabel = 'Full Payment';
+                }
+
+                userTxns.push({
+                  ...t,
+                  bookingId: b.bookingId,
+                  carInfo: b.car ? `${b.car.brand} ${b.car.model}` : 'Unknown Car',
+                  carReg: b.car?.registrationNumber || 'N/A',
+                  paymentTypeLabel,
+                });
+              });
+            }
+          });
+          // Sort transactions by paymentDate descending for the final display
+          userTxns.sort((a, b) => new Date(b.paymentDate || b.createdAt || 0) - new Date(a.paymentDate || a.createdAt || 0));
+          setPayments(userTxns);
+        }
+      } catch (err) {
+        console.error('Error fetching user bookings/payments:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchUserBookingAndPaymentData();
+    }
+  }, [user]);
+
   if (!user) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+         className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -675,11 +820,16 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 font-medium text-xs transition-colors ${activeTab === tab
-                  ? 'border-b-2 text-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                style={activeTab === tab ? { borderBottomColor: colors.backgroundTertiary } : {}}
+                className={`px-3 py-1.5 font-semibold text-xs transition-all duration-200 ${
+                  activeTab === tab
+                    ? 'border-b-2 font-bold'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/50 rounded-t-lg'
+                }`}
+                style={
+                  activeTab === tab
+                    ? { borderBottomColor: colors.backgroundTertiary, color: colors.backgroundTertiary }
+                    : {}
+                }
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -731,15 +881,188 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
 
             {activeTab === 'bookings' && (
               <div>
-                <p className="text-sm text-gray-600">Total Bookings: {user.totalBookings || 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Booking history will be displayed here...</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-gray-800">Booking History</h3>
+                  <span className="px-2.5 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100">
+                    Total Bookings: {bookings.length}
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="py-12 flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : bookings.length === 0 ? (
+                  <div className="py-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                    <p className="text-sm font-semibold">No bookings found for this user.</p>
+                    <p className="text-xs text-gray-400 mt-1">This user hasn't made any bookings yet.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-hidden border border-gray-200 rounded-xl shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 text-left">
+                        <thead className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                          <tr>
+                            <th className="px-5 py-3.5">Booking ID</th>
+                            <th className="px-5 py-3.5">Car Details</th>
+                            <th className="px-5 py-3.5">Dates & Duration</th>
+                            <th className="px-5 py-3.5">Paid / Total Price</th>
+                            <th className="px-5 py-3.5">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 text-xs text-gray-700 bg-white">
+                          {bookings.map((booking) => {
+                            const statusColors = {
+                              confirmed: 'bg-green-50 text-green-700 border border-green-200',
+                              active: 'bg-blue-50 text-blue-700 border border-blue-200',
+                              completed: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+                              cancelled: 'bg-red-50 text-red-700 border border-red-200',
+                              pending: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+                              rejected: 'bg-red-50 text-red-700 border border-red-200',
+                            };
+                            const statusBg = statusColors[booking.status] || 'bg-gray-50 text-gray-700 border border-gray-200';
+
+                            return (
+                              <tr key={booking._id || booking.bookingId} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-5 py-4 font-bold text-gray-900 font-mono">
+                                  {booking.bookingId || 'N/A'}
+                                </td>
+                                <td className="px-5 py-4">
+                                  {booking.car ? (
+                                    <div>
+                                      <div className="font-semibold text-gray-900">{booking.car.brand} {booking.car.model}</div>
+                                      <div className="text-[10px] text-gray-500 font-mono mt-0.5">{booking.car.registrationNumber || 'No Plate'}</div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">N/A</span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-4">
+                                  <div>
+                                    <div className="font-semibold text-gray-900">
+                                      {booking.tripStart?.date ? new Date(booking.tripStart.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                      <span className="text-gray-400 mx-1.5">→</span>
+                                      {booking.tripEnd?.date ? new Date(booking.tripEnd.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                      Duration: {booking.totalDays || 0} {booking.totalDays === 1 ? 'day' : 'days'}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-4">
+                                  <div>
+                                    <div className="font-bold text-gray-950">₹{(booking.paidAmount || 0).toLocaleString()}</div>
+                                    <div className="text-[10px] text-gray-500 font-medium mt-0.5">Total: ₹{(booking.pricing?.totalPrice || booking.totalPrice || 0).toLocaleString()}</div>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${statusBg}`}>
+                                    {capitalize(booking.status)}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'payments' && (
               <div>
-                <p className="text-sm text-gray-600">Total Spent: ₹{(user.totalSpent || 0).toLocaleString()}</p>
-                <p className="text-xs text-gray-500 mt-1">Payment history will be displayed here...</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-gray-800">Transaction History</h3>
+                  <span className="px-2.5 py-1 text-xs font-bold bg-green-50 text-green-700 rounded-full border border-green-100">
+                    Total Spent: ₹{payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="py-12 flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : payments.length === 0 ? (
+                  <div className="py-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                    <p className="text-sm font-semibold">No transactions found for this user.</p>
+                    <p className="text-xs text-gray-400 mt-1">No transaction history is recorded yet.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-hidden border border-gray-200 rounded-xl shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 text-left">
+                        <thead className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                          <tr>
+                            <th className="px-5 py-3.5">Transaction ID</th>
+                            <th className="px-5 py-3.5">Booking ID & Car</th>
+                            <th className="px-5 py-3.5">Amount</th>
+                            <th className="px-5 py-3.5">Method</th>
+                            <th className="px-5 py-3.5">Date</th>
+                            <th className="px-5 py-3.5">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 text-xs text-gray-700 bg-white">
+                          {payments.map((txn, index) => {
+                            const statusColors = {
+                              success: 'bg-green-50 text-green-700 border border-green-200',
+                              pending: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+                              failed: 'bg-red-50 text-red-700 border border-red-200',
+                              cancelled: 'bg-red-50 text-red-700 border border-red-200',
+                              refunded: 'bg-blue-50 text-blue-700 border border-blue-200',
+                            };
+                            const statusBg = statusColors[txn.status] || 'bg-gray-50 text-gray-700 border border-gray-200';
+                            
+                            const methodColors = {
+                              phonepe: 'bg-purple-50 text-purple-700 border border-purple-200',
+                              razorpay: 'bg-blue-50 text-blue-700 border border-blue-200',
+                              cash: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+                              online: 'bg-cyan-50 text-cyan-700 border border-cyan-200',
+                            };
+                            const methodBg = methodColors[txn.paymentMethod] || 'bg-gray-50 text-gray-700 border border-gray-200';
+
+                            return (
+                              <tr key={txn.transactionId || index} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-5 py-4 font-bold text-gray-900 font-mono">
+                                  {txn.transactionId || 'N/A'}
+                                </td>
+                                <td className="px-5 py-4">
+                                  <div>
+                                    <div className="font-semibold text-gray-900 font-mono">{txn.bookingId || 'N/A'}</div>
+                                    <div className="text-[10px] text-gray-500 font-medium mt-0.5">{txn.carInfo}</div>
+                                  </div>
+                                </td>
+                                <td className="px-5 py-4 font-bold text-gray-950">
+                                  <div>₹{(txn.amount || 0).toLocaleString()}</div>
+                                  {txn.paymentTypeLabel && (
+                                    <div className="text-[10px] text-gray-500 font-medium mt-0.5">{txn.paymentTypeLabel}</div>
+                                  )}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${methodBg}`}>
+                                    {txn.paymentMethod || 'Razorpay'}
+                                  </span>
+                                  {txn.receivedBy && (
+                                    <div className="text-[9px] text-gray-500 mt-0.5 font-medium">Recd by: {txn.receivedBy}</div>
+                                  )}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap text-gray-500 font-medium">
+                                  {txn.paymentDate ? new Date(txn.paymentDate).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${statusBg}`}>
+                                    {capitalize(txn.status)}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -749,28 +1072,43 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Aadhaar */}
-                  <div className={`p-3 rounded-lg border ${user.kycDetails?.aadhaar?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className={`p-3 rounded-lg border ${user.kycDetails?.aadhaar?.verified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                     <h4 className="text-xs font-bold mb-1">Aadhaar Card</h4>
-                    <p className="text-xs text-gray-900">No: {user.kycDetails?.aadhaar?.idNumber || 'N/A'}</p>
-                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.aadhaar?.isVerified ? 'Verified' : 'Not Verified'}</p>
+                    <p className="text-xs text-gray-900">No: {user.kycDetails?.aadhaar?.number || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.aadhaar?.verified ? 'Verified' : 'Not Verified'}</p>
                     {user.kycDetails?.aadhaar?.verifiedAt && <p className="text-[10px] text-gray-500">Date: {new Date(user.kycDetails.aadhaar.verifiedAt).toLocaleDateString()}</p>}
+                    {user.kycDetails?.aadhaar?.image && (
+                      <div className="mt-2 flex justify-center bg-white p-1 rounded border border-gray-200 shadow-sm">
+                        <img src={user.kycDetails.aadhaar.image} alt="Aadhaar Document" className="max-h-24 object-contain rounded" />
+                      </div>
+                    )}
                   </div>
 
                   {/* PAN */}
-                  <div className={`p-3 rounded-lg border ${user.kycDetails?.pan?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className={`p-3 rounded-lg border ${user.kycDetails?.pan?.verified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                     <h4 className="text-xs font-bold mb-1">PAN Card</h4>
-                    <p className="text-xs text-gray-900">No: {user.kycDetails?.pan?.idNumber || 'N/A'}</p>
-                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.pan?.isVerified ? 'Verified' : 'Not Verified'}</p>
+                    <p className="text-xs text-gray-900">No: {user.kycDetails?.pan?.number || 'N/A'}</p>
+                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.pan?.verified ? 'Verified' : 'Not Verified'}</p>
                     {user.kycDetails?.pan?.verifiedAt && <p className="text-[10px] text-gray-500">Date: {new Date(user.kycDetails.pan.verifiedAt).toLocaleDateString()}</p>}
+                    {user.kycDetails?.pan?.image && (
+                      <div className="mt-2 flex justify-center bg-white p-1 rounded border border-gray-200 shadow-sm">
+                        <img src={user.kycDetails.pan.image} alt="PAN Document" className="max-h-24 object-contain rounded" />
+                      </div>
+                    )}
                   </div>
 
                   {/* DL */}
-                  <div className={`p-3 rounded-lg border ${user.kycDetails?.dl?.isVerified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className={`p-3 rounded-lg border ${user.kycDetails?.dl?.verified ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                     <h4 className="text-xs font-bold mb-1">Driving License</h4>
-                    <p className="text-xs text-gray-900">No: {user.kycDetails?.dl?.idNumber || 'N/A'}</p>
+                    <p className="text-xs text-gray-900">No: {user.kycDetails?.dl?.number || 'N/A'}</p>
                     <p className="text-xs text-gray-900">DOB: {user.kycDetails?.dl?.dob || 'N/A'}</p>
-                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.dl?.isVerified ? 'Verified' : 'Not Verified'}</p>
+                    <p className="text-[10px] text-gray-500">Status: {user.kycDetails?.dl?.verified ? 'Verified' : 'Not Verified'}</p>
                     {user.kycDetails?.dl?.verifiedAt && <p className="text-[10px] text-gray-500">Date: {new Date(user.kycDetails.dl.verifiedAt).toLocaleDateString()}</p>}
+                    {user.kycDetails?.dl?.image && (
+                      <div className="mt-2 flex justify-center bg-white p-1 rounded border border-gray-200 shadow-sm">
+                        <img src={user.kycDetails.dl.image} alt="DL Document" className="max-h-24 object-contain rounded" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Basic Verification */}
