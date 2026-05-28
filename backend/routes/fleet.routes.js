@@ -8,7 +8,11 @@ import {
     verifyFleetRazorpayPayment,
     generateFleetAadhaarOTP,
     verifyFleetAadhaarOTP,
-    verifyFleetDL
+    verifyFleetDL,
+    verifyFleetPAN,
+    cancelOutwardBooking,
+    completeOutwardBooking,
+    payOutwardBooking
 } from '../controllers/fleet.controller.js';
 
 const router = express.Router();
@@ -28,5 +32,11 @@ router.post('/razorpay/verify', verifyFleetRazorpayPayment);
 router.post('/kyc/aadhaar/generate-otp', generateFleetAadhaarOTP);
 router.post('/kyc/aadhaar/verify-otp', verifyFleetAadhaarOTP);
 router.post('/kyc/dl/verify', verifyFleetDL);
+router.post('/kyc/pan/verify', verifyFleetPAN);
+
+// Booking state changes
+router.post('/outward-bookings/:id/cancel', cancelOutwardBooking);
+router.post('/outward-bookings/:id/complete', completeOutwardBooking);
+router.post('/outward-bookings/:id/pay', payOutwardBooking);
 
 export default router;

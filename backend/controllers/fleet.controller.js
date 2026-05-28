@@ -122,6 +122,8 @@ export const getOutwardBookings = async (req, res) => {
             carType: b.carType,
             carOwnerName: b.carOwnerName,
             customerName: b.customerName,
+            customerPhone: b.customerPhone || '',
+            customerEmail: b.customerEmail || '',
             customerImage: b.customerImage,
             licenseImage: b.licenseImage,
             aadhaarImage: b.aadhaarImage,
@@ -130,14 +132,21 @@ export const getOutwardBookings = async (req, res) => {
             startTime: b.startTime || '',
             endTime: b.endTime || '',
             totalPrice: b.totalPrice,
+            advanceAmount: b.advanceAmount || 0,
             paymentMode: b.paymentMode,
+            advancePaymentMode: b.advancePaymentMode,
+            remainingPaymentMode: b.remainingPaymentMode,
             paymentStatus: b.paymentStatus,
             paidAmount: b.paidAmount,
             discount: b.discount || 0,
+            transactionId: b.transactionId,
             aadhaarNumber: b.aadhaarNumber || '',
             aadhaarVerified: b.aadhaarVerified || false,
             licenseNumber: b.licenseNumber || '',
             licenseVerified: b.licenseVerified || false,
+            panNumber: b.panNumber || '',
+            panVerified: b.panVerified || false,
+            status: b.status || 'active',
             createdAt: b.createdAt
         }));
 
@@ -192,6 +201,8 @@ export const createOutwardBooking = async (req, res) => {
             carType: bookingData.carType,
             carOwnerName: bookingData.carOwnerName,
             customerName: bookingData.customerName,
+            customerPhone: bookingData.customerPhone || '',
+            customerEmail: bookingData.customerEmail || '',
             customerImage: customerImageSecure,
             licenseImage: licenseImageSecure,
             aadhaarImage: aadhaarImageSecure,
@@ -200,14 +211,20 @@ export const createOutwardBooking = async (req, res) => {
             startTime: bookingData.startTime || '',
             endTime: bookingData.endTime || '',
             totalPrice: bookingData.totalPrice,
+            advanceAmount: bookingData.advanceAmount || 0,
+            advancePaymentMode: bookingData.advancePaymentMode || bookingData.paymentMode || 'Cash',
             paymentMode: bookingData.paymentMode || 'Cash',
             paymentStatus: bookingData.paymentStatus || 'pending',
             paidAmount: bookingData.paidAmount || 0,
             discount: bookingData.discount || 0,
+            transactionId: bookingData.transactionId || '',
             aadhaarNumber: bookingData.aadhaarNumber || '',
             aadhaarVerified: bookingData.aadhaarVerified || false,
             licenseNumber: bookingData.licenseNumber || '',
-            licenseVerified: bookingData.licenseVerified || false
+            licenseVerified: bookingData.licenseVerified || false,
+            panNumber: bookingData.panNumber || '',
+            panVerified: bookingData.panVerified || false,
+            status: bookingData.status || 'active'
         });
 
         // Format backend to frontend expected structure
@@ -218,6 +235,8 @@ export const createOutwardBooking = async (req, res) => {
             carType: newBooking.carType,
             carOwnerName: newBooking.carOwnerName,
             customerName: newBooking.customerName,
+            customerPhone: newBooking.customerPhone || '',
+            customerEmail: newBooking.customerEmail || '',
             customerImage: newBooking.customerImage,
             licenseImage: newBooking.licenseImage,
             aadhaarImage: newBooking.aadhaarImage,
@@ -226,14 +245,21 @@ export const createOutwardBooking = async (req, res) => {
             startTime: newBooking.startTime,
             endTime: newBooking.endTime,
             totalPrice: newBooking.totalPrice,
+            advanceAmount: newBooking.advanceAmount || 0,
+            advancePaymentMode: newBooking.advancePaymentMode,
+            remainingPaymentMode: newBooking.remainingPaymentMode,
             paymentMode: newBooking.paymentMode,
             paymentStatus: newBooking.paymentStatus,
             paidAmount: newBooking.paidAmount,
             discount: newBooking.discount,
+            transactionId: newBooking.transactionId,
             aadhaarNumber: newBooking.aadhaarNumber,
             aadhaarVerified: newBooking.aadhaarVerified,
             licenseNumber: newBooking.licenseNumber,
             licenseVerified: newBooking.licenseVerified,
+            panNumber: newBooking.panNumber,
+            panVerified: newBooking.panVerified,
+            status: newBooking.status,
             createdAt: newBooking.createdAt
         };
 
@@ -449,5 +475,125 @@ export const verifyFleetDL = async (req, res) => {
     } catch (error) {
         console.error('DL Fleet Controller Error:', error);
         res.status(500).json({ success: false, message: 'Server error during DL verification' });
+    }
+};
+
+// Verify PAN Card
+export const verifyFleetPAN = async (req, res) => {
+    try {
+        const { panNo } = req.body;
+        
+        const cleanPanNo = panNo ? panNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
+
+        if (!cleanPanNo || cleanPanNo.length !== 10) {
+            return res.status(400).json({
+                success: false,
+                message: 'A valid 10-digit PAN number is required'
+            });
+        }
+
+        console.log(`📡 Fleet Attempting PAN Verification: ${cleanPanNo}`);
+        
+        const result = await quickekycService.verifyPAN(cleanPanNo);
+
+        if (result.status === 'success' || result.data?.status === 'VALID') {
+            return res.status(200).json({
+                success: true,
+                message: 'PAN Card verified successfully',
+                data: result.data
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message || 'PAN Verification failed',
+                error: result
+            });
+        }
+    } catch (error) {
+        console.error('PAN Fleet Controller Error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Server error during PAN verification' });
+    }
+};
+
+// Cancel Booking
+export const cancelOutwardBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await OutwardBooking.findOneAndUpdate(
+            { originalBookingId: id },
+            { status: 'cancelled' },
+            { new: true }
+        );
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+        res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: booking });
+    } catch (error) {
+        console.error('Cancel booking error:', error);
+        res.status(500).json({ success: false, message: 'Failed to cancel booking' });
+    }
+};
+
+// Complete Booking
+export const completeOutwardBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { paidAmount, paymentMode, paymentStatus, transactionId } = req.body;
+        const booking = await OutwardBooking.findOne({ originalBookingId: id });
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+        
+        booking.status = 'completed';
+        
+        if (paidAmount !== undefined) {
+            booking.paidAmount = Number(paidAmount);
+        } else {
+            booking.paidAmount = booking.totalPrice;
+        }
+
+        if (paymentMode) {
+            booking.remainingPaymentMode = paymentMode;
+            // Append payment mode if it differs
+            if (booking.paymentMode && booking.paymentMode !== paymentMode && !booking.paymentMode.includes(paymentMode)) {
+                booking.paymentMode = `${booking.paymentMode} & ${paymentMode}`;
+            } else {
+                booking.paymentMode = paymentMode;
+            }
+        }
+        
+        if (paymentStatus) {
+            booking.paymentStatus = paymentStatus;
+        } else {
+            booking.paymentStatus = booking.paidAmount >= booking.totalPrice ? 'paid' : 'partial';
+        }
+
+        if (transactionId) {
+            booking.transactionId = transactionId;
+        }
+
+        await booking.save();
+        res.status(200).json({ success: true, message: 'Booking marked as completed', data: booking });
+    } catch (error) {
+        console.error('Complete booking error:', error);
+        res.status(500).json({ success: false, message: 'Failed to complete booking' });
+    }
+};
+
+// Mark booking fully paid
+export const payOutwardBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await OutwardBooking.findOne({ originalBookingId: id });
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+        booking.paymentStatus = 'paid';
+        booking.paidAmount = booking.totalPrice;
+        await booking.save();
+        res.status(200).json({ success: true, message: 'Payment recorded successfully', data: booking });
+    } catch (error) {
+        console.error('Pay booking error:', error);
+        res.status(500).json({ success: false, message: 'Failed to record payment' });
     }
 };

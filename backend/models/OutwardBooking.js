@@ -25,6 +25,12 @@ const outwardBookingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    customerPhone: {
+      type: String,
+    },
+    customerEmail: {
+      type: String,
+    },
     customerImage: {
       type: String,
     },
@@ -64,9 +70,22 @@ const outwardBookingSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    advanceAmount: {
+      type: Number,
+      default: 0,
+    },
+    advancePaymentMode: {
+      type: String,
+    },
+    remainingPaymentMode: {
+      type: String,
+    },
     discount: {
       type: Number,
       default: 0,
+    },
+    transactionId: {
+      type: String,
     },
     aadhaarNumber: {
       type: String,
@@ -81,6 +100,18 @@ const outwardBookingSchema = new mongoose.Schema(
     licenseVerified: {
       type: Boolean,
       default: false,
+    },
+    panNumber: {
+      type: String,
+    },
+    panVerified: {
+      type: Boolean,
+      default: false,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'completed', 'cancelled'],
+      default: 'active',
     }
   },
   {

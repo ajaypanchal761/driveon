@@ -41,7 +41,8 @@ export const FleetProvider = ({ children }) => {
             type: FLEET_CAR_TYPES.INWARD,
             ownerName: car.owner?.name || 'DriveOn Admin',
             ownerPhone: car.owner?.phone || '-',
-            images: car.images
+            images: car.images,
+            registrationNumber: car.registrationNumber || ''
           }));
           allCars = [...allCars, ...mappedInward];
         }
@@ -57,27 +58,32 @@ export const FleetProvider = ({ children }) => {
         }
 
         // Process Inward Bookings (Regular bookings from regular cars)
+        // Only include active bookings for fleet availability check (exclude cancelled/completed)
+        const ACTIVE_BOOKING_STATUSES = ['confirmed', 'active', 'pending'];
         if (regularBookingsRes.success && regularBookingsRes.data?.bookings) {
-          const mappedRegular = regularBookingsRes.data.bookings.map(b => {
-            const carBrand = b.car?.brand || 'DriveOn';
-            const carModel = b.car?.model || 'Car';
-            
-            return {
-              id: b.bookingId || b._id,
-              carId: b.car?._id || b.car,
-              carName: b.car?.name || `${carBrand} ${carModel}`,
-              carType: FLEET_CAR_TYPES.INWARD, 
-              customerName: b.user?.name || 'Customer',
-              fromDate: b.tripStart?.date ? new Date(b.tripStart.date).toISOString().split('T')[0] : (b.fromDate || '-'),
-              toDate: b.tripEnd?.date ? new Date(b.tripEnd.date).toISOString().split('T')[0] : (b.toDate || '-'),
-              totalPrice: b.pricing?.totalPrice || b.pricing?.finalPrice || 0,
-              status: b.status || 'unknown',
-              paymentStatus: b.paymentStatus || 'unknown',
-              paymentMode: b.paymentMode || 'Online',
-              paidAmount: b.pricing?.paidAmount || 0,
-              createdAt: b.createdAt
-            };
-          });
+          const mappedRegular = regularBookingsRes.data.bookings
+            .filter(b => ACTIVE_BOOKING_STATUSES.includes(b.status))
+            .map(b => {
+              const carBrand = b.car?.brand || 'DriveOn';
+              const carModel = b.car?.model || 'Car';
+
+              return {
+                id: b.bookingId || b._id,
+                carId: b.car?._id || b.car,
+                carName: b.car?.name || `${carBrand} ${carModel}`,
+                carType: FLEET_CAR_TYPES.INWARD,
+                customerName: b.user?.name || 'Customer',
+                fromDate: b.tripStart?.date ? new Date(b.tripStart.date).toISOString().split('T')[0] : (b.fromDate || null),
+                toDate: b.tripEnd?.date ? new Date(b.tripEnd.date).toISOString().split('T')[0] : (b.toDate || null),
+                totalPrice: b.pricing?.totalPrice || b.pricing?.finalPrice || 0,
+                status: b.status || 'unknown',
+                paymentStatus: b.paymentStatus || 'unknown',
+                paymentMode: b.paymentMode || 'Online',
+                paidAmount: b.pricing?.paidAmount || 0,
+                createdAt: b.createdAt,
+                isRegularBooking: true
+              };
+            });
           allBookings = [...allBookings, ...mappedRegular];
         }
 
@@ -125,6 +131,12 @@ export const FleetProvider = ({ children }) => {
     setBookings([]);
   }
 
+  const updateBookingInContext = (bookingId, updatedFields) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, ...updatedFields } : b))
+    );
+  };
+
   const value = useMemo(
     () => ({
       cars,
@@ -135,6 +147,7 @@ export const FleetProvider = ({ children }) => {
       addBooking,
       addCar,
       clearAllBookings,
+      updateBookingInContext,
     }),
     [cars, bookings, hydrated]
   );

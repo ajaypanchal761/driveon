@@ -29,7 +29,7 @@ const InwardCarsPage = () => {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {inwardCars.map((car) => {
-          const bookings = getBookingsForCar(car.id);
+          const bookings = getBookingsForCar(car.id).filter(b => b.status !== 'completed' && b.status !== 'cancelled');
           const isBookedNow = bookings.some((b) => isTodayWithinRangeInclusive(b.fromDate, b.toDate));
           return (
             <CarCard
@@ -46,7 +46,7 @@ const InwardCarsPage = () => {
         open={Boolean(selectedCar)}
         onClose={() => setSelectedCar(null)}
         car={selectedCar}
-        existingBookings={selectedCar ? getBookingsForCar(selectedCar.id) : []}
+        existingBookings={selectedCar ? getBookingsForCar(selectedCar.id).filter(b => b.status !== 'completed' && b.status !== 'cancelled') : []}
         onConfirm={onConfirm}
       />
     </div>
