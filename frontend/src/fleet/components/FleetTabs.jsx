@@ -42,7 +42,7 @@ const FleetTabs = () => {
         className={getTabClass}
         style={({ isActive }) => getTabStyle(isActive)}
       >
-        Bookings
+        Inward Bookings
       </NavLink>
     </div>
   );

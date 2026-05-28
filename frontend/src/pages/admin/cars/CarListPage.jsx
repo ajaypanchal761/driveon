@@ -71,167 +71,21 @@ const CarListPage = () => {
   }, [filters, searchQuery, cars]);
 
   // Fetch cars from API
-  useEffect(() => {
-    const fetchCars = async () => {
-      try {
-        setLoading(true);
-        const [response, outwardRes] = await Promise.all([
-          adminService.getAllCars({
-            page: 1,
-            limit: 1000,
-            status: filters.status,
-            carType: filters.carType,
-            brand: filters.brand || undefined,
-            location: filters.location !== 'all' ? filters.location : undefined,
-            owner: filters.owner !== 'all' ? filters.owner : undefined,
-          }),
-          api.get('/fleet/outward-cars').catch(() => ({ data: { success: false } }))
-        ]);
-
-        let allCars = [];
-
-        if (response.success && response.data) {
-          // Format cars data for frontend
-          const formattedCars = response.data.cars.map((car) => {
-            // Get primary image or first image
-            const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
-            const imageUrl = primaryImage?.url || null;
-
-            return {
-              id: car._id || car.id,
-              brand: car.brand,
-              model: car.model,
-              year: car.year,
-              carType: car.carType,
-              pricePerDay: car.pricePerDay,
-              status: car.status,
-              availability: car.isAvailable ? 'available' : 'booked',
-              ownerId: car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner,
-              ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
-              ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
-              location: car.location?.city || car.location || 'Unknown',
-              images: car.images || [],
-              imageUrl: imageUrl,
-              rating: car.averageRating || 0,
-              totalBookings: car.totalBookings || 0,
-              totalRevenue: car.totalRevenue || 0,
-              features: car.features || [],
-              registrationDate: car.createdAt || new Date().toISOString(),
-              registrationNumber: car.registrationNumber,
-              fuelType: car.fuelType,
-              transmission: car.transmission,
-              seatingCapacity: car.seatingCapacity,
-              isFeatured: car.isFeatured,
-              isPopular: car.isPopular,
-              source: 'inward',
-              description: car.description || '',
-            };
-          });
-          allCars = [...formattedCars];
-        }
-
-        // Add outward cars
-        if (outwardRes.data?.success && outwardRes.data?.data) {
-          const outwardCars = (Array.isArray(outwardRes.data.data) ? outwardRes.data.data : []).map((car) => ({
-            id: car._id || car.id,
-            brand: car.brand || '',
-            model: car.model || '',
-            year: car.year || '',
-            carType: car.carType || 'Outward',
-            pricePerDay: car.pricePerDay || 0,
-            status: 'active',
-            availability: 'available',
-            ownerId: '',
-            ownerName: car.ownerName || 'Unknown',
-            ownerEmail: '',
-            location: car.location || 'Unknown',
-            images: car.carImages || [],
-            imageUrl: null,
-            rating: 0,
-            totalBookings: car.totalBookings || 0,
-            totalRevenue: car.totalRevenue || 0,
-            features: [],
-            registrationDate: car.createdAt || new Date().toISOString(),
-            registrationNumber: car.carNumber || car.registrationNumber || '',
-            fuelType: '',
-            transmission: '',
-            seatingCapacity: '',
-            isFeatured: false,
-            isPopular: false,
-            source: 'outward',
-            description: car.description || '',
-          }));
-          allCars = [...allCars, ...outwardCars];
-        }
-
-        setCars(allCars);
-      } catch (error) {
-        console.error('Error fetching cars:', error);
-        setCars([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCars();
-  }, [filters.status, filters.carType, filters.brand, filters.location, filters.owner]);
-
-  // Client-side filtering for availability, price, and search
-  useEffect(() => {
-    let filtered = [...cars];
-
-    // Search filter (case-insensitive)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((car) =>
-        (car.brand || '').toLowerCase().includes(query) ||
-        (car.model || '').toLowerCase().includes(query) ||
-        (car.ownerName || '').toLowerCase().includes(query) ||
-        (car.location || '').toLowerCase().includes(query) ||
-        (car.registrationNumber || '').toLowerCase().includes(query) ||
-        (`${car.brand || ''} ${car.model || ''}`).toLowerCase().includes(query)
-      );
-    }
-
-    // Availability filter (client-side only)
-    if (filters.availability !== 'all') {
-      filtered = filtered.filter((car) => car.availability === filters.availability);
-    }
-
-    // Price range filter (client-side only)
-    if (filters.priceRange !== 'all') {
-      filtered = filtered.filter((car) => {
-        const price = car.pricePerDay;
-        switch (filters.priceRange) {
-          case '0-1000':
-            return price >= 0 && price <= 1000;
-          case '1000-2000':
-            return price > 1000 && price <= 2000;
-          case '2000+':
-            return price > 2000;
-          default:
-            return true;
-        }
-      });
-    }
-
-    setFilteredCars(filtered);
-  }, [cars, searchQuery, filters.availability, filters.priceRange]);
-
-  // Helper function to refresh cars list
-  const refreshCarsList = async () => {
+  const fetchCarsData = async () => {
     try {
-      const response = await adminService.getAllCars({
-        page: 1,
-        limit: 1000,
-        status: filters.status,
-        carType: filters.carType,
-        brand: filters.brand || undefined,
-        location: filters.location !== 'all' ? filters.location : undefined,
-        owner: filters.owner !== 'all' ? filters.owner : undefined,
-      });
+      setLoading(true);
+      const [response, outwardRes] = await Promise.all([
+        adminService.getAllCars({
+          page: 1,
+          limit: 1000,
+        }),
+        api.get('/fleet/outward-cars').catch(() => ({ data: { success: false } }))
+      ]);
+
+      let allCars = [];
 
       if (response.success && response.data) {
+        // Format cars data for frontend
         const formattedCars = response.data.cars.map((car) => {
           // Get primary image or first image
           const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
@@ -251,20 +105,137 @@ const CarListPage = () => {
             ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
             location: car.location?.city || car.location || 'Unknown',
             images: car.images || [],
-            imageUrl: imageUrl, // Add primary image URL for easy access
+            imageUrl: imageUrl,
             rating: car.averageRating || 0,
             totalBookings: car.totalBookings || 0,
             totalRevenue: car.totalRevenue || 0,
             features: car.features || [],
             registrationDate: car.createdAt || new Date().toISOString(),
+            registrationNumber: car.registrationNumber,
+            fuelType: car.fuelType,
+            transmission: car.transmission,
+            seatingCapacity: car.seatingCapacity,
+            isFeatured: car.isFeatured,
+            isPopular: car.isPopular,
+            source: 'inward',
             description: car.description || '',
           };
         });
-        setCars(formattedCars);
+        allCars = [...formattedCars];
       }
+
+      // Add outward cars
+      if (outwardRes.data?.success && outwardRes.data?.data) {
+        const outwardCars = (Array.isArray(outwardRes.data.data) ? outwardRes.data.data : []).map((car) => ({
+          id: car._id || car.id,
+          brand: car.brand || '',
+          model: car.model || '',
+          year: car.year || '',
+          carType: car.carType || 'Outward',
+          pricePerDay: car.pricePerDay || 0,
+          status: 'active',
+          availability: 'available',
+          ownerId: '',
+          ownerName: car.ownerName || 'Unknown',
+          ownerEmail: '',
+          location: car.location || 'Unknown',
+          images: car.carImages || [],
+          imageUrl: null,
+          rating: 0,
+          totalBookings: car.totalBookings || 0,
+          totalRevenue: car.totalRevenue || 0,
+          features: [],
+          registrationDate: car.createdAt || new Date().toISOString(),
+          registrationNumber: car.carNumber || car.registrationNumber || '',
+          fuelType: '',
+          transmission: '',
+          seatingCapacity: '',
+          isFeatured: false,
+          isPopular: false,
+          source: 'outward',
+          description: car.description || '',
+        }));
+        allCars = [...allCars, ...outwardCars];
+      }
+
+      setCars(allCars);
     } catch (error) {
-      console.error('Error refreshing cars list:', error);
+      console.error('Error fetching cars:', error);
+      setCars([]);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchCarsData();
+  }, []);
+
+  // Client-side filtering for availability, price, and search
+  useEffect(() => {
+    let filtered = [...cars];
+
+    // Search filter (case-insensitive)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((car) =>
+        (car.brand || '').toLowerCase().includes(query) ||
+        (car.model || '').toLowerCase().includes(query) ||
+        (car.ownerName || '').toLowerCase().includes(query) ||
+        (car.location || '').toLowerCase().includes(query) ||
+        (car.registrationNumber || '').toLowerCase().includes(query) ||
+        (`${car.brand || ''} ${car.model || ''}`).toLowerCase().includes(query)
+      );
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter((car) => (car.status || '').toLowerCase() === filters.status.toLowerCase());
+    }
+
+    // Availability filter
+    if (filters.availability !== 'all') {
+      filtered = filtered.filter((car) => (car.availability || '').toLowerCase() === filters.availability.toLowerCase());
+    }
+
+    // Owner filter
+    if (filters.owner !== 'all') {
+      filtered = filtered.filter((car) => car.ownerId === filters.owner);
+    }
+
+    // Location filter
+    if (filters.location !== 'all') {
+      filtered = filtered.filter((car) => car.location === filters.location);
+    }
+
+    // Car Type filter
+    if (filters.carType !== 'all') {
+      filtered = filtered.filter((car) => (car.carType || '').toLowerCase() === filters.carType.toLowerCase());
+    }
+
+    // Price range filter
+    if (filters.priceRange !== 'all') {
+      filtered = filtered.filter((car) => {
+        const price = car.pricePerDay || 0;
+        switch (filters.priceRange) {
+          case '0-1000':
+            return price >= 0 && price <= 1000;
+          case '1000-2000':
+            return price > 1000 && price <= 2000;
+          case '2000+':
+            return price > 2000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredCars(filtered);
+  }, [cars, searchQuery, filters]);
+
+  // Helper function to refresh cars list
+  const refreshCarsList = async () => {
+    await fetchCarsData();
   };
 
   // Handle car actions
@@ -398,7 +369,7 @@ const CarListPage = () => {
     active: cars.filter((c) => c.status === 'active').length,
     pending: cars.filter((c) => c.status === 'pending').length,
     suspended: cars.filter((c) => c.status === 'suspended').length,
-    available: cars.filter((c) => c.availability === 'available').length,
+    available: cars.filter((c) => c.status === 'active' && c.availability === 'available').length,
   };
 
   if (loading) {

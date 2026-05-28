@@ -117,11 +117,13 @@ const OnlineCarsPage = () => {
             location: b.tripEnd?.location || "N/A",
           },
           pricing: {
-            pricePerDay: (b.pricing?.basePrice || 0) / (b.totalDays || 1),
+            pricePerDay: b.pricing?.basePrice || 0,
             days: b.totalDays || 1,
             discount: b.pricing?.discount || 0,
             extraCharges: b.pricing?.addOnServicesTotal || 0,
             totalAmount: b.pricing?.totalPrice || b.pricing?.finalPrice || 0,
+            paidAmount: b.paidAmount || 0,
+            remainingAmount: b.remainingAmount || 0,
           },
           paymentStatus: b.paymentStatus || "N/A",
         },
@@ -437,7 +439,6 @@ const BookingDetailsModal = ({ item, onClose }) => {
               <div>
                 <InfoRow label="Price per day" value={formatMoney(pricing?.pricePerDay)} />
                 <InfoRow label="Days" value={pricing?.days || 0} />
-                <InfoRow label="Base Amount" value={formatMoney(baseAmount)} />
                 <InfoRow label="Discount" value={formatMoney(discount)} />
                 <InfoRow label="Extra Charges" value={formatMoney(extraCharges)} />
                 <div
@@ -451,6 +452,31 @@ const BookingDetailsModal = ({ item, onClose }) => {
                     {formatMoney(totalAmount)}
                   </div>
                 </div>
+                {(pricing?.paidAmount > 0 || pricing?.remainingAmount > 0) && (
+                  <div className="mt-3 space-y-2 px-1">
+                    {pricing?.remainingAmount <= 0 && pricing?.paidAmount >= totalAmount ? (
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-bold" style={{ color: colors.success }}>Payment Status</div>
+                        <div className="text-sm font-bold px-2 py-0.5 rounded bg-green-100 text-green-800">Fully Paid</div>
+                      </div>
+                    ) : (
+                      <>
+                        {pricing?.paidAmount > 0 && (
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium" style={{ color: colors.textSecondary }}>Advance Paid</div>
+                            <div className="text-sm font-bold" style={{ color: colors.success }}>{formatMoney(pricing.paidAmount)}</div>
+                          </div>
+                        )}
+                        {pricing?.remainingAmount > 0 && (
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium" style={{ color: colors.textSecondary }}>Remaining Amount</div>
+                            <div className="text-sm font-bold text-red-500">{formatMoney(pricing.remainingAmount)}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </Card>
           </div>
