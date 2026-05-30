@@ -1,4 +1,5 @@
 import Booking from '../models/Booking.js';
+import OutwardBooking from '../models/OutwardBooking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
@@ -280,6 +281,21 @@ export const updateBooking = async (req, res) => {
         } catch (pointsError) {
           console.error('Error reversing guarantor points:', pointsError);
           // Don't fail booking cancellation if points reversal fails
+        }
+
+        // Sync cancellation to OutwardBooking if it exists
+        try {
+          await OutwardBooking.findOneAndUpdate(
+            {
+              $or: [
+                { originalBookingId: booking._id.toString() },
+                { originalBookingId: booking.bookingId }
+              ]
+            },
+            { status: 'cancelled' }
+          );
+        } catch (syncError) {
+          console.error('Error syncing booking cancellation to OutwardBooking:', syncError);
         }
       } else if (status === 'completed') {
         booking.completedAt = new Date();

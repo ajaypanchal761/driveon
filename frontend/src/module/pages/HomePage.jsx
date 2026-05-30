@@ -1664,7 +1664,6 @@ const HomePage = () => {
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
-            className="fixed inset-0 z-[100] bg-black/40"
             onClick={() => setIsTimePickerOpen(false)}
           />
 

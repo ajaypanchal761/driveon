@@ -22,7 +22,7 @@ import { rgba } from 'polished';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState(['Enquiries']); // Default expand Enquiries for demo
+  const [expandedMenus, setExpandedMenus] = useState(['Enquiries', 'Staff Operations', 'Garage', 'Vendors']); // Default expand all dropdown submenus
 
   const toggleSubmenu = (name) => {
     if (expandedMenus.includes(name)) {
@@ -89,20 +89,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/vendors/all', name: 'All Vendors' },
 
         // { path: '/crm/vendors/history', name: 'Vendor History' },
-
-      ]
-    },
-
-
-
-    {
-      name: 'Settings',
-      icon: <MdSettings />,
-      id: 'Settings',
-      subItems: [
-        { path: '/crm/settings/locations', name: 'Cities & Locations' },
-
-
 
       ]
     },

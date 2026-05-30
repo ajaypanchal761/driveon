@@ -33,6 +33,9 @@ const AddOutwardCarPage = () => {
   const [model, setModel] = useState('');
   const [location, setLocation] = useState('');
   const [pricePerDay, setPricePerDay] = useState('');
+  const [agreementPricePerDay, setAgreementPricePerDay] = useState('');
+  const [agreementPricePerMonth, setAgreementPricePerMonth] = useState('');
+  const [vendorAgreementType, setVendorAgreementType] = useState('daily');
   const [carNumber, setCarNumber] = useState('');
   const [image, setImage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
@@ -157,6 +160,9 @@ const AddOutwardCarPage = () => {
     setModel('');
     setLocation('');
     setPricePerDay('');
+    setAgreementPricePerDay('');
+    setAgreementPricePerMonth('');
+    setVendorAgreementType('daily');
     setCarNumber('');
     setImage('');
     setImagePreview('');
@@ -201,6 +207,9 @@ const AddOutwardCarPage = () => {
     setCarNumber(car.carNumber || car.registrationNumber || '');
     setLocation(car.location || '');
     setPricePerDay(String(car.pricePerDay || ''));
+    setAgreementPricePerDay(String(car.agreementPricePerDay || ''));
+    setAgreementPricePerMonth(String(car.agreementPricePerMonth || ''));
+    setVendorAgreementType(car.vendorAgreementType || 'daily');
     setOwnerName(car.ownerName || '');
     setOwnerPhone(car.ownerPhone || '');
     setImage('');
@@ -246,6 +255,9 @@ const AddOutwardCarPage = () => {
         brand: brand.trim(),
         model: model.trim(),
         pricePerDay: Number(pricePerDay),
+        agreementPricePerDay: Number(agreementPricePerDay) || 0,
+        agreementPricePerMonth: Number(agreementPricePerMonth) || 0,
+        vendorAgreementType: vendorAgreementType,
         location: location.trim(),
         type: 'OUTWARD',
         ownerName: ownerName.trim(),
@@ -547,13 +559,20 @@ const AddOutwardCarPage = () => {
                       <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
                         Owner Name <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        list="vendor-autocomplete"
-                        type="text"
+                      <select
                         value={ownerName}
-                        onChange={(e) => setOwnerName(e.target.value)}
-                        placeholder="Enter or select owner name"
-                        className="w-full px-4 py-2.5 rounded-xl border outline-none transition-all duration-200 bg-white"
+                        onChange={(e) => {
+                          const selectedName = e.target.value;
+                          setOwnerName(selectedName);
+                          // Auto fill phone
+                          const matched = vendors.find(v => v.name === selectedName);
+                          if (matched && matched.phone) {
+                            setOwnerPhone(matched.phone);
+                          } else {
+                            setOwnerPhone('');
+                          }
+                        }}
+                        className="w-full px-4 py-2.5 rounded-xl border outline-none transition-all duration-200 bg-white font-semibold text-gray-700"
                         style={{
                           borderColor: colors.borderMedium,
                         }}
@@ -565,14 +584,14 @@ const AddOutwardCarPage = () => {
                           e.target.style.borderColor = colors.borderMedium;
                           e.target.style.boxShadow = 'none';
                         }}
-                      />
-                      <datalist id="vendor-autocomplete">
+                      >
+                        <option value="">-- Select Onboarded Vendor --</option>
                         {vendors.map((vendor) => (
                           <option key={vendor._id} value={vendor.name}>
-                            {vendor.phone ? `Phone: ${vendor.phone}` : ''}
+                            {vendor.name} ({vendor.phone || 'No Phone'})
                           </option>
                         ))}
-                      </datalist>
+                      </select>
                       {loadingVendors && (
                         <span className="absolute right-3 top-10 text-xs text-gray-400">Loading...</span>
                       )}
@@ -743,6 +762,94 @@ const AddOutwardCarPage = () => {
                         }}
                       />
                     </div>
+
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                        Agreement Type <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex p-1 rounded-xl bg-gray-100/80 border border-gray-200/50 max-w-md">
+                        <button
+                          type="button"
+                          onClick={() => setVendorAgreementType('daily')}
+                          className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all duration-200 ${
+                            vendorAgreementType === 'daily'
+                              ? 'bg-white shadow-sm'
+                              : 'text-gray-500 hover:text-gray-800'
+                          }`}
+                          style={{
+                            color: vendorAgreementType === 'daily' ? colors.backgroundDark : undefined,
+                          }}
+                        >
+                          Per Day Wise
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVendorAgreementType('monthly')}
+                          className={`flex-1 py-2 px-4 rounded-lg font-bold text-sm transition-all duration-200 ${
+                            vendorAgreementType === 'monthly'
+                              ? 'bg-white shadow-sm'
+                              : 'text-gray-500 hover:text-gray-800'
+                          }`}
+                          style={{
+                            color: vendorAgreementType === 'monthly' ? colors.backgroundDark : undefined,
+                          }}
+                        >
+                          Fixed / Month
+                        </button>
+                      </div>
+                    </div>
+
+                    {vendorAgreementType === 'daily' ? (
+                      <div>
+                        <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                          Agreement Amount / day (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={agreementPricePerDay}
+                          onChange={(e) => setAgreementPricePerDay(e.target.value)}
+                          placeholder="e.g. 200, 800"
+                          className="w-full px-4 py-2.5 rounded-xl border outline-none transition-all duration-200 bg-white"
+                          style={{
+                            borderColor: colors.borderMedium,
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = colors.backgroundTertiary;
+                            e.target.style.boxShadow = `0 0 0 4px ${colors.shadowFocus}`;
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = colors.borderMedium;
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
+                          Agreement Amount / month (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={agreementPricePerMonth}
+                          onChange={(e) => setAgreementPricePerMonth(e.target.value)}
+                          placeholder="e.g. 5000, 20000"
+                          className="w-full px-4 py-2.5 rounded-xl border outline-none transition-all duration-200 bg-white"
+                          style={{
+                            borderColor: colors.borderMedium,
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = colors.backgroundTertiary;
+                            e.target.style.boxShadow = `0 0 0 4px ${colors.shadowFocus}`;
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = colors.borderMedium;
+                            e.target.style.boxShadow = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </Card>
 

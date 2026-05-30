@@ -876,7 +876,7 @@ export const NewEnquiriesPage = () => {
             <span className="text-gray-800 font-medium">New Leads</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">New Enquiries</h1>
-          <p className="text-gray-500 text-sm">Fresh leads received today. <span className="text-red-500 font-semibold">Action needed immediately.</span></p>
+          <p className="text-gray-500 text-sm">Fresh leads received today</p>
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
@@ -903,7 +903,7 @@ export const NewEnquiriesPage = () => {
         <div className="flex items-center gap-2">
 
           <div className="relative">
-            <ThemedDropdown 
+            <ThemedDropdown
               options={['Date: All', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month', 'Select Date']}
               value={dateFilter}
               onChange={(val) => {
@@ -1138,7 +1138,7 @@ export const InProgressEnquiriesPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <ThemedDropdown 
+        <ThemedDropdown
           options={['Stage: All', 'Negotiation', 'Doc Verification', 'Test Drive Done']}
           value={stageFilter}
           onChange={(val) => setStageFilter(val)}
@@ -1374,7 +1374,7 @@ export const FollowUpsEnquiriesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Show: All', 'Overdue', 'Due Today', 'Upcoming']}
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
@@ -1600,7 +1600,7 @@ export const ConvertedEnquiriesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Date: All Time', 'Date: Today', 'Date: Yesterday', 'Date: Last 7 Days', 'Date: This Month', 'Last Month', 'Select Date']}
             value={dateFilter}
             onChange={(val) => {
@@ -1831,7 +1831,7 @@ export const ClosedEnquiriesPage = () => {
           />
         </div>
         <div className="flex gap-3">
-          <ThemedDropdown 
+          <ThemedDropdown
             options={['Reason: All', 'Price Too High', 'Booked w/ Competitor', 'Plan Cancelled', 'Change of Mind']}
             value={reasonFilter}
             onChange={(val) => setReasonFilter(val)}

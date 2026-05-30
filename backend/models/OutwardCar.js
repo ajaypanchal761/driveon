@@ -26,6 +26,19 @@ const outwardCarSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    agreementPricePerDay: {
+      type: Number,
+      default: 0,
+    },
+    agreementPricePerMonth: {
+      type: Number,
+      default: 0,
+    },
+    vendorAgreementType: {
+      type: String,
+      enum: ['daily', 'monthly'],
+      default: 'daily',
+    },
     location: {
       type: String,
       required: true,

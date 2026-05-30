@@ -20,6 +20,16 @@ export const getAllCars = async (req, res) => {
 
         for (const outCar of outwardCars) {
           const shadowCar = await Car.findOne({ outwardCarId: outCar.originalOutputId });
+          
+          let isCarInRepair = false;
+          if (shadowCar) {
+            const RepairJob = mongoose.model('RepairJob');
+            const activeRepair = await RepairJob.findOne({ car: shadowCar._id, status: { $nin: ['Completed', 'Cancelled'] } });
+            if (activeRepair) {
+              isCarInRepair = true;
+            }
+          }
+
           const carData = {
             owner: ownerId,
             brand: outCar.brand || 'External',
@@ -36,7 +46,7 @@ export const getAllCars = async (req, res) => {
             pricePerMonth: (outCar.pricePerDay || 1000) * 30,
             securityDeposit: 0,
             description: `This verified premium outward car is owned by ${outCar.ownerName} and managed by DriveOn partners.`,
-            isAvailable: true,
+            isAvailable: isCarInRepair ? false : true,
             status: 'active',
             images: outCar.image ? [{ url: outCar.image, isPrimary: true }] : [],
             location: {
@@ -241,6 +251,10 @@ export const getCarById = async (req, res) => {
           const adminUser = await mongoose.model('User').findOne({ role: 'admin' }) || await mongoose.model('User').findOne({});
           const ownerId = adminUser ? adminUser._id : new mongoose.Types.ObjectId('60d5ec0f1f1d2c001f8e29a5');
 
+          const RepairJob = mongoose.model('RepairJob');
+          const activeRepair = await RepairJob.findOne({ car: car._id, status: { $nin: ['Completed', 'Cancelled'] } });
+          const isCarInRepair = !!activeRepair;
+
           const carData = {
             owner: ownerId,
             brand: outCar.brand || car.brand,
@@ -257,7 +271,7 @@ export const getCarById = async (req, res) => {
             pricePerMonth: (outCar.pricePerDay || 1000) * 30,
             securityDeposit: 0,
             description: `This verified premium outward car is owned by ${outCar.ownerName} and managed by DriveOn partners.`,
-            isAvailable: true,
+            isAvailable: isCarInRepair ? false : true,
             status: 'active',
             images: outCar.image ? [{ url: outCar.image, isPrimary: true }] : car.images,
             location: {

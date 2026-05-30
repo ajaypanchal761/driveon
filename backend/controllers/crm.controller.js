@@ -265,53 +265,58 @@ export const getAllCarsSimple = async (req, res) => {
 export const getCarOwnersSimple = async (req, res) => {
     try {
         const User = mongoose.model('User');
-        const Car = mongoose.model('Car');
+        const OutwardCar = mongoose.model('OutwardCar');
 
-        // 1. Fetch all registered users with role 'owner'
+        // 1. Fetch all outward cars to see who has added cars in outwards
+        const outwardCars = await OutwardCar.find().lean();
+
+        // Get unique owner names and phones from OutwardCar records
+        const uniqueOutwardOwners = [];
+        const seen = new Set();
+        outwardCars.forEach(car => {
+            if (car.ownerName) {
+                const nameKey = car.ownerName.trim().toLowerCase();
+                const phoneKey = (car.ownerPhone || '').trim();
+                const compositeKey = `${nameKey}_${phoneKey}`;
+                if (!seen.has(compositeKey)) {
+                    seen.add(compositeKey);
+                    uniqueOutwardOwners.push({
+                        name: car.ownerName.trim(),
+                        phone: (car.ownerPhone || '').trim()
+                    });
+                }
+            }
+        });
+
+        // 2. Fetch all registered users with role 'owner'
         const users = await User.find({ role: 'owner', isActive: true, isDeleted: { $ne: true } })
             .select('name email phone')
             .lean();
 
         const ownersMap = new Map();
 
-        // Populate from Users
-        users.forEach(user => {
-            ownersMap.set(user._id.toString(), {
-                _id: user._id.toString(),
-                name: user.name,
-                email: user.email || '',
-                phone: user.phone || ''
-            });
-        });
+        // 3. Match outward owners with registered users to enrich details, or represent as a new unique owner
+        uniqueOutwardOwners.forEach(outOwner => {
+            const matchedUser = users.find(u => 
+                (u.phone && u.phone === outOwner.phone) || 
+                (u.name.toLowerCase() === outOwner.name.toLowerCase())
+            );
 
-        // 2. Fetch all cars and get unique owners
-        const cars = await Car.find().populate('owner', 'name email phone').lean();
-
-        cars.forEach(car => {
-            if (car.owner) {
-                const ownerId = car.owner._id.toString();
-                if (!ownersMap.has(ownerId)) {
-                    ownersMap.set(ownerId, {
-                        _id: ownerId,
-                        name: car.owner.name,
-                        email: car.owner.email || '',
-                        phone: car.owner.phone || ''
-                    });
-                }
-            } else if (car.ownerInfo && car.ownerInfo.name) {
-                const key = car.ownerInfo.name.toLowerCase();
-                // Check if already present by email or name to prevent duplicates
-                const hasByEmail = car.ownerInfo.email && Array.from(ownersMap.values()).some(o => o.email === car.ownerInfo.email);
-                const hasByName = Array.from(ownersMap.values()).some(o => o.name.toLowerCase() === car.ownerInfo.name.toLowerCase());
-                
-                if (!hasByEmail && !hasByName) {
-                    ownersMap.set(key, {
-                        _id: car.ownerInfo.ownerId || key,
-                        name: car.ownerInfo.name,
-                        email: car.ownerInfo.email || '',
-                        phone: ''
-                    });
-                }
+            if (matchedUser) {
+                ownersMap.set(matchedUser._id.toString(), {
+                    _id: matchedUser._id.toString(),
+                    name: matchedUser.name,
+                    email: matchedUser.email || '',
+                    phone: matchedUser.phone || outOwner.phone || ''
+                });
+            } else {
+                const key = outOwner.name.toLowerCase();
+                ownersMap.set(key, {
+                    _id: key,
+                    name: outOwner.name,
+                    email: '',
+                    phone: outOwner.phone || ''
+                });
             }
         });
 
@@ -2031,6 +2036,12 @@ export const getRepairLogs = async (req, res) => {
 export const createRepairJob = async (req, res) => {
     try {
         const repair = await RepairJob.create(req.body);
+        
+        // If a repair job is successfully created and its status is active (not Completed/Cancelled)
+        if (repair.car && !['Completed', 'Cancelled'].includes(repair.status)) {
+            await Car.findByIdAndUpdate(repair.car, { isAvailable: false });
+        }
+
         res.status(201).json({ success: true, data: { repair } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
@@ -2039,6 +2050,11 @@ export const createRepairJob = async (req, res) => {
 
 export const deleteRepairJob = async (req, res) => {
     try {
+        const repair = await RepairJob.findById(req.params.id);
+        if (repair && repair.car) {
+            // Make the car available again when repair job is deleted
+            await Car.findByIdAndUpdate(repair.car, { isAvailable: true });
+        }
         await RepairJob.findByIdAndDelete(req.params.id);
         res.json({ success: true, message: 'Repair job deleted' });
     } catch (error) {
@@ -2060,11 +2076,23 @@ export const updateRepairJob = async (req, res) => {
             .populate('car', 'brand model registrationNumber')
             .populate('garage', 'name');
 
+        if (repair && repair.car) {
+            const carId = repair.car._id || repair.car;
+            if (['Completed', 'Cancelled'].includes(repair.status)) {
+                // If marked completed or cancelled, make the car available again
+                await Car.findByIdAndUpdate(carId, { isAvailable: true });
+            } else {
+                // If it is in an active repair state, keep/make it unavailable
+                await Car.findByIdAndUpdate(carId, { isAvailable: false });
+            }
+        }
+
         res.json({ success: true, data: { repair } });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
+
 
 /**
  * @desc    Inventory Management
@@ -2123,6 +2151,86 @@ export const onboardVendor = async (req, res) => {
     }
 };
 
+const buildOutwardCarStats = async (outwardCar, vendorId) => {
+    let allBookings = [];
+
+    // 1. Fetch manual outward bookings from fleet portal
+    const outwardBookings = await mongoose.model('OutwardBooking').find({
+        carId: outwardCar.originalOutputId,
+        status: { $ne: 'cancelled' }
+    }).lean();
+
+    outwardBookings.forEach(b => {
+        const from = new Date(b.fromDate);
+        const to = new Date(b.toDate);
+        const timeDiff = to.getTime() - from.getTime();
+        const days = Math.ceil(timeDiff / (1000 * 3600 * 24)) || 1;
+        
+        allBookings.push({
+            days,
+            status: b.status
+        });
+    });
+
+    // 2. Fetch standard bookings made by public customers for this car's shadow car
+    const shadowCar = await mongoose.model('Car').findOne({ outwardCarId: outwardCar.originalOutputId });
+    if (shadowCar) {
+        const regularBookings = await mongoose.model('Booking').find({
+            car: shadowCar._id,
+            status: { $in: ['confirmed', 'active', 'completed'] }
+        }).lean();
+
+        regularBookings.forEach(b => {
+            const days = b.totalDays || 1;
+            allBookings.push({
+                days,
+                status: b.status
+            });
+        });
+    }
+
+    let totalDaysBooked = 0;
+    allBookings.forEach(b => {
+        totalDaysBooked += b.days;
+    });
+
+    const tripsCount = allBookings.length;
+    const totalRevenue = (outwardCar.pricePerDay || 0) * totalDaysBooked;
+
+    // Vendor Cost (Vendor Due) - Only counts if the car has done at least 1 trip
+    let totalVendorCost = 0;
+    if (tripsCount > 0) {
+        if (outwardCar.vendorSettlement?.agreedAmount) {
+            totalVendorCost = outwardCar.vendorSettlement.agreedAmount;
+        } else if (outwardCar.vendorAgreementType === 'monthly') {
+            totalVendorCost = outwardCar.agreementPricePerMonth || 0;
+        } else {
+            totalVendorCost = (outwardCar.agreementPricePerDay || 0) * totalDaysBooked;
+        }
+    }
+
+    const carPayments = await VendorTransaction.find({
+        vendor: vendorId,
+        type: 'Payout',
+        status: 'Completed',
+        relatedCarType: 'Outward',
+        relatedCarId: String(outwardCar._id)
+    }).sort({ date: -1 }).lean();
+    const totalPaidForCar = carPayments.reduce((sum, txn) => sum + (txn.amount || 0), 0);
+
+    return {
+        tripsCount,
+        totalRevenue,
+        totalVendorCost,
+        totalPaidForCar,
+        remainingVendorDue: Math.max(totalVendorCost - totalPaidForCar, 0),
+        excessPaidForCar: Math.max(totalPaidForCar - totalVendorCost, 0),
+        paymentCount: carPayments.length,
+        netProfit: totalRevenue - totalVendorCost,
+        settlementConfigured: Boolean(outwardCar?.vendorSettlement?.agreedAmount)
+    };
+};
+
 export const getVendorDirectory = async (req, res) => {
     try {
         const vendors = await Vendor.find().sort({ createdAt: -1 }).lean();
@@ -2137,38 +2245,27 @@ export const getVendorDirectory = async (req, res) => {
                 ]
             }).lean();
 
-            // Find in Car
-            const standardCars = await mongoose.model('Car').find({
-                $or: [
-                    { 'ownerInfo.ownerId': vendor._id.toString() },
-                    { 'ownerInfo.name': { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } },
-                    { 'ownerInfo.email': vendor.email }
-                ]
-            }).lean();
-
             // Format associated cars list
-            const associatedCars = [
-                ...outwardCars.map(car => ({
-                    id: car._id,
-                    brand: car.brand,
-                    model: car.model,
-                    registrationNumber: car.registrationNumber || 'Outward',
-                    pricePerMonth: car.pricePerDay ? car.pricePerDay * 30 : null,
-                    pricePerDay: car.pricePerDay,
-                    type: 'Outward',
-                    image: null
-                })),
-                ...standardCars.map(car => ({
-                    id: car._id,
-                    brand: car.brand,
-                    model: car.model,
-                    registrationNumber: car.registrationNumber,
-                    pricePerMonth: car.pricePerMonth || (car.pricePerDay ? car.pricePerDay * 30 : null),
-                    pricePerDay: car.pricePerDay,
-                    type: 'Inward',
-                    image: car.images && car.images.length > 0 ? (car.images.find(img => img.isPrimary)?.url || car.images[0].url) : null
-                }))
-            ];
+            const associatedCars = await Promise.all(
+                outwardCars.map(async (car) => {
+                    const stats = await buildOutwardCarStats(car, vendor._id);
+                    return {
+                        id: car._id,
+                        brand: car.brand,
+                        model: car.model,
+                        registrationNumber: car.registrationNumber || 'Outward',
+                        pricePerDay: car.pricePerDay,
+                        agreementPricePerDay: car.agreementPricePerDay || 0,
+                        agreementPricePerMonth: car.agreementPricePerMonth || 0,
+                        vendorAgreementType: car.vendorAgreementType || 'daily',
+                        type: 'Outward',
+                        image: car.image || null,
+                        netProfit: stats.netProfit,
+                        totalRevenue: stats.totalRevenue,
+                        tripsCount: stats.tripsCount
+                    };
+                })
+            );
 
             return {
                 ...vendor,
@@ -3065,148 +3162,35 @@ export const getVendorLedger = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Vendor not found' });
         }
 
-        // Step 1: Find associated cars (Inward + Outward)
-        const [outwardCars, standardCars] = await Promise.all([
-            mongoose.model('OutwardCar').find({
-                $or: [
-                    { vendorId: vendor._id },
-                    { ownerName: { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } }
-                ]
-            }).lean(),
-            mongoose.model('Car').find({
-                $or: [
-                    { 'ownerInfo.ownerId': vendor._id.toString() },
-                    { 'ownerInfo.name': { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } },
-                    { 'ownerInfo.email': vendor.email }
-                ]
-            }).lean()
-        ]);
+        // Step 1: Find associated Outward cars
+        const outwardCars = await mongoose.model('OutwardCar').find({
+            $or: [
+                { vendorId: vendor._id },
+                { ownerName: { $regex: new RegExp(`^${vendor.name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') } }
+            ]
+        }).lean();
 
-        // Step 2: For each car, aggregate bookings (trips + revenue)
-        const buildStandardCarStats = async (carId, vendorCost, carMeta) => {
-            const bookingStats = await Booking.aggregate([
-                {
-                    $match: {
-                        car: new mongoose.Types.ObjectId(carId),
-                        status: { $in: ['completed', 'active', 'confirmed'] }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        tripsCount: { $sum: 1 },
-                        totalRevenue: {
-                            $sum: {
-                                $ifNull: ['$pricing.finalPrice', '$pricing.totalPrice']
-                            }
-                        }
-                    }
-                }
-            ]);
-
-            const tripsCount = bookingStats[0]?.tripsCount || 0;
-            const totalRevenue = bookingStats[0]?.totalRevenue || 0;
-            const totalVendorCost = vendorCost || 0;
-            const carPayments = await VendorTransaction.find({
-                vendor: id,
-                type: 'Payout',
-                status: 'Completed',
-                relatedCarType: 'Inward',
-                relatedCarId: String(carId)
-            }).sort({ date: -1 }).lean();
-            const totalPaidForCar = carPayments.reduce((sum, txn) => sum + (txn.amount || 0), 0);
-
-            return {
-                tripsCount,
-                totalRevenue,
-                totalVendorCost,
-                totalPaidForCar,
-                remainingVendorDue: Math.max(totalVendorCost - totalPaidForCar, 0),
-                excessPaidForCar: Math.max(totalPaidForCar - totalVendorCost, 0),
-                paymentCount: carPayments.length,
-                netProfit: totalRevenue - totalVendorCost,
-                settlementConfigured: Boolean(carMeta?.vendorSettlement?.agreedAmount)
-            };
-        };
-
-        const buildOutwardCarStats = async (outwardCar, vendorCost) => {
-            const outwardBookingStats = await mongoose.model('OutwardBooking').aggregate([
-                {
-                    $match: {
-                        carId: outwardCar.originalOutputId
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        tripsCount: { $sum: 1 },
-                        totalRevenue: { $sum: { $ifNull: ['$totalPrice', 0] } }
-                    }
-                }
-            ]);
-
-            const tripsCount = outwardBookingStats[0]?.tripsCount || 0;
-            const totalRevenue = outwardBookingStats[0]?.totalRevenue || 0;
-            const totalVendorCost = vendorCost || 0;
-            const carPayments = await VendorTransaction.find({
-                vendor: id,
-                type: 'Payout',
-                status: 'Completed',
-                relatedCarType: 'Outward',
-                relatedCarId: String(outwardCar._id)
-            }).sort({ date: -1 }).lean();
-            const totalPaidForCar = carPayments.reduce((sum, txn) => sum + (txn.amount || 0), 0);
-
-            return {
-                tripsCount,
-                totalRevenue,
-                totalVendorCost,
-                totalPaidForCar,
-                remainingVendorDue: Math.max(totalVendorCost - totalPaidForCar, 0),
-                excessPaidForCar: Math.max(totalPaidForCar - totalVendorCost, 0),
-                paymentCount: carPayments.length,
-                netProfit: totalRevenue - totalVendorCost,
-                settlementConfigured: Boolean(outwardCar?.vendorSettlement?.agreedAmount)
-            };
-        };
-
-        // Step 3: Build full car profitability list
-        const carsWithStats = await Promise.all([
-            ...outwardCars.map(async (car) => {
-                const vendorCost = car.vendorSettlement?.agreedAmount || (car.pricePerDay ? car.pricePerDay * 30 : 0);
-                const stats = await buildOutwardCarStats(car, vendorCost);
+        // Step 3: Build Outward car profitability list
+        const carsWithStats = await Promise.all(
+            outwardCars.map(async (car) => {
+                const stats = await buildOutwardCarStats(car, id);
                 return {
                     id: car._id,
                     brand: car.brand,
                     model: car.model,
                     registrationNumber: car.registrationNumber || 'N/A',
                     type: 'Outward',
-                    vendorCost,
+                    vendorCost: stats.totalVendorCost,
                     agreedAmountConfigured: Boolean(car.vendorSettlement?.agreedAmount),
                     settlementNotes: car.vendorSettlement?.notes || '',
-                    image: null,
-                    ...stats
-                };
-            }),
-            ...standardCars.map(async (car) => {
-                const vendorCost = car.vendorSettlement?.agreedAmount || car.pricePerMonth || (car.pricePerDay ? car.pricePerDay * 30 : 0);
-                const stats = await buildStandardCarStats(car._id, vendorCost, car);
-                return {
-                    id: car._id,
-                    brand: car.brand,
-                    model: car.model,
-                    registrationNumber: car.registrationNumber || 'N/A',
-                    type: 'Inward',
-                    vendorCost,
-                    agreedAmountConfigured: Boolean(car.vendorSettlement?.agreedAmount),
-                    settlementNotes: car.vendorSettlement?.notes || '',
-                    image: car.images && car.images.length > 0
-                        ? (car.images.find(img => img.isPrimary)?.url || car.images[0].url)
-                        : null,
+                    image: car.image || null,
+                    agreementPricePerDay: car.agreementPricePerDay || 0,
+                    agreementPricePerMonth: car.agreementPricePerMonth || 0,
+                    vendorAgreementType: car.vendorAgreementType || 'daily',
                     ...stats
                 };
             })
-        ]);
+        );
 
         // Step 4: Fetch Payment Ledger (VendorTransactions)
         const transactions = await VendorTransaction.find({ vendor: id })
@@ -3268,10 +3252,87 @@ export const getVendorLedger = async (req, res) => {
 };
 
 /**
- * @desc    Update hidden agreed amount for a vendor car
- * @route   PATCH /api/crm/vendors/:vendorId/cars/:carType/:carId/settlement
+ * @desc    Get individual trip details for an outward car
+ * @route   GET /api/crm/vendors/:vendorId/cars/outward/:carId/trips
  * @access  Admin
  */
+export const getCarTripDetails = async (req, res) => {
+    try {
+        const { vendorId, carId } = req.params;
+
+        const outwardCar = await mongoose.model('OutwardCar').findById(carId).lean();
+        if (!outwardCar) {
+            return res.status(404).json({ success: false, message: 'Car not found' });
+        }
+
+        const trips = [];
+
+        // 1. Manual outward bookings from fleet portal
+        const outwardBookings = await mongoose.model('OutwardBooking').find({
+            carId: outwardCar.originalOutputId,
+            status: { $ne: 'cancelled' }
+        }).lean();
+
+        outwardBookings.forEach(b => {
+            const from = new Date(b.fromDate);
+            const to = new Date(b.toDate);
+            const days = Math.ceil((to - from) / (1000 * 3600 * 24)) || 1;
+            const adminRevenue = b.totalPrice || (outwardCar.pricePerDay || 0) * days;
+            const vendorCost = outwardCar.vendorAgreementType === 'monthly'
+                ? 0
+                : (outwardCar.agreementPricePerDay || 0) * days;
+
+            trips.push({
+                bookingId: b.bookingId || b._id,
+                source: 'Fleet (Manual)',
+                fromDate: b.fromDate,
+                toDate: b.toDate,
+                days,
+                adminRevenue,
+                vendorCost,
+                profit: adminRevenue - vendorCost,
+                status: b.status
+            });
+        });
+
+        // 2. Standard customer bookings (shadow car)
+        const shadowCar = await mongoose.model('Car').findOne({ outwardCarId: outwardCar.originalOutputId }).lean();
+        if (shadowCar) {
+            const regularBookings = await mongoose.model('Booking').find({
+                car: shadowCar._id,
+                status: { $in: ['confirmed', 'active', 'completed'] }
+            }).lean();
+
+            regularBookings.forEach(b => {
+                const days = b.totalDays || 1;
+                const adminRevenue = b.pricing?.totalPrice || (outwardCar.pricePerDay || 0) * days;
+                const vendorCost = outwardCar.vendorAgreementType === 'monthly'
+                    ? 0
+                    : (outwardCar.agreementPricePerDay || 0) * days;
+
+                trips.push({
+                    bookingId: b.bookingId || b._id,
+                    source: 'Customer Booking',
+                    fromDate: b.tripStart?.date,
+                    toDate: b.tripEnd?.date,
+                    days,
+                    adminRevenue,
+                    vendorCost,
+                    profit: adminRevenue - vendorCost,
+                    status: b.status
+                });
+            });
+        }
+
+        // Sort by date desc
+        trips.sort((a, b) => new Date(b.fromDate) - new Date(a.fromDate));
+
+        res.json({ success: true, data: { trips, car: { brand: outwardCar.brand, model: outwardCar.model, vendorAgreementType: outwardCar.vendorAgreementType } } });
+    } catch (error) {
+        console.error('Get Car Trip Details Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching trip details' });
+    }
+};
 export const updateVendorCarSettlement = async (req, res) => {
     try {
         const { vendorId, carType, carId } = req.params;

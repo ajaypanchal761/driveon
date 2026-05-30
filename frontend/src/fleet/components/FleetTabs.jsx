@@ -32,13 +32,6 @@ const FleetTabs = () => {
   return (
     <div className="flex flex-wrap gap-2">
       <NavLink
-        to="/admin/fleet/outward"
-        className={getTabClass}
-        style={({ isActive }) => getTabStyle(isActive)}
-      >
-        Outward Cars
-      </NavLink>
-      <NavLink
         to="/admin/fleet/inward"
         className={getTabClass}
         style={({ isActive }) => getTabStyle(isActive)}
@@ -51,13 +44,6 @@ const FleetTabs = () => {
         style={({ isActive }) => getTabStyle(isActive)}
       >
         Inward Bookings ({inwardBookingsCount})
-      </NavLink>
-      <NavLink
-        to="/admin/fleet/outward-bookings"
-        className={getTabClass}
-        style={({ isActive }) => getTabStyle(isActive)}
-      >
-        Outward Bookings ({outwardBookingsCount})
       </NavLink>
     </div>
   );

@@ -14,7 +14,8 @@ import {
     MdEdit,
     MdDelete,
     MdReceipt,
-    MdPayments
+    MdPayments,
+    MdPerson
 } from 'react-icons/md';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -91,11 +92,13 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
         amount: '',
         paymentMethod: 'Cash',
         referenceId: '',
+        payerName: '',
         remarks: '',
         relatedCarId: '',
         relatedCarType: '',
         relatedCarLabel: ''
     });
+    const [tripDetails, setTripDetails] = useState(null); // { carId, trips, loading }
     const [submitting, setSubmitting] = useState(false);
 
     const fetchLedger = useCallback(async () => {
@@ -130,19 +133,38 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
     }, [isOpen, fetchLedger]);
 
     const handleRecordPayment = async () => {
-        if (!paymentForm.amount || parseFloat(paymentForm.amount) <= 0) {
-            toast.error('Please enter a valid amount');
+        const amt = parseFloat(paymentForm.amount);
+        if (!paymentForm.amount || isNaN(amt) || amt <= 0) {
+            toast.error('Please enter a valid amount greater than ₹0');
+            return;
+        }
+        if (!paymentForm.relatedCarId) {
+            toast.error('Please select a car for this payment');
+            return;
+        }
+        if (paymentForm.paymentMethod === 'Cash' && !paymentForm.payerName?.trim()) {
+            toast.error('Please enter the payer name for cash payment');
+            return;
+        }
+        if (paymentForm.paymentMethod === 'Online' && !paymentForm.referenceId?.trim()) {
+            toast.error('Please enter the Transaction / Reference ID for online payment');
             return;
         }
         setSubmitting(true);
         try {
-            const res = await api.post(`/crm/vendors/${vendor._id}/payments`, paymentForm);
+            // Build remarks to include payer name for cash
+            const submissionData = { ...paymentForm };
+            if (paymentForm.paymentMethod === 'Cash' && paymentForm.payerName?.trim()) {
+                submissionData.remarks = `Paid by: ${paymentForm.payerName.trim()}${paymentForm.remarks ? '. ' + paymentForm.remarks : ''}`;
+            }
+            const res = await api.post(`/crm/vendors/${vendor._id}/payments`, submissionData);
             if (res.data.success) {
                 toast.success('✅ Payment recorded successfully!');
                 setPaymentForm({
                     amount: '',
                     paymentMethod: 'Cash',
                     referenceId: '',
+                    payerName: '',
                     remarks: '',
                     relatedCarId: '',
                     relatedCarType: '',
@@ -270,11 +292,10 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 py-4 px-4 text-sm font-bold border-b-2 transition-all ${
-                                activeTab === tab.id
-                                    ? 'border-[#212c40] text-[#212c40]'
-                                    : 'border-transparent text-gray-400 hover:text-gray-700'
-                            }`}
+                            className={`flex items-center gap-2 py-4 px-4 text-sm font-bold border-b-2 transition-all ${activeTab === tab.id
+                                ? 'border-[#212c40] text-[#212c40]'
+                                : 'border-transparent text-gray-400 hover:text-gray-700'
+                                }`}
                         >
                             <span>{tab.icon}</span>
                             <span className="hidden sm:block">{tab.label}</span>
@@ -300,14 +321,6 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                     exit={{ opacity: 0, x: 10 }}
                                     className="p-6 space-y-4"
                                 >
-                                    <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
-                                        <p className="text-sm font-semibold text-amber-900">
-                                            Original purchase amount hidden
-                                        </p>
-                                        <p className="text-xs text-amber-700 mt-1">
-                                            Only trip count, customer revenue, vendor due and net profit are shown here for each car.
-                                        </p>
-                                    </div>
                                     {cars.length === 0 ? (
                                         <div className="text-center py-12 text-gray-400">
                                             <MdDirectionsCar size={40} className="mx-auto mb-3 opacity-30" />
@@ -333,33 +346,66 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 flex-wrap">
                                                                 <h4 className="font-extrabold text-gray-900">{car.brand} {car.model}</h4>
-                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border uppercase ${
-                                                                    car.type === 'Inward'
-                                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                                                        : 'bg-purple-50 text-purple-600 border-purple-100'
-                                                                }`}>{car.type}</span>
+                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border uppercase ${car.type === 'Inward'
+                                                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                                    : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                                    }`}>{car.type}</span>
                                                             </div>
                                                             <p className="text-xs text-gray-400 font-mono mt-0.5">{car.registrationNumber}</p>
                                                         </div>
-                                                        <div className={`text-right px-3 py-1.5 rounded-xl ${isProfit ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                                                            <p className={`text-xs font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>Net Profit</p>
-                                                            <p className={`font-extrabold text-base ${isProfit ? 'text-emerald-700' : 'text-red-700'}`}>
-                                                                {isProfit ? '+' : ''}{fmt(car.netProfit)}
-                                                            </p>
-                                                        </div>
+                                                        {car.vendorAgreementType === 'monthly' ? (
+                                                            <div className="text-right px-3 py-1.5 rounded-xl bg-emerald-50">
+                                                                <p className="text-xs font-semibold text-emerald-600">Admin Profit</p>
+                                                                <p className="font-extrabold text-base text-emerald-700">
+                                                                    +{fmt(car.totalRevenue)}
+                                                                </p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className={`text-right px-3 py-1.5 rounded-xl ${isProfit ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                                                                <p className={`text-xs font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>Net Profit</p>
+                                                                <p className={`font-extrabold text-base ${isProfit ? 'text-emerald-700' : 'text-red-700'}`}>
+                                                                    {isProfit ? '+' : ''}{fmt(car.netProfit)}
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     {/* Stats Row */}
                                                     <div className="grid grid-cols-4 divide-x divide-gray-100 border-t border-gray-100">
                                                         <div className="p-3 text-center">
                                                             <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Trips</p>
-                                                            <p className="text-lg font-extrabold text-[#212c40]">{car.tripsCount}</p>
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                <p className="text-lg font-extrabold text-[#212c40]">{car.tripsCount}</p>
+                                                                {car.tripsCount > 0 && (
+                                                                    <button
+                                                                        title="View trip details"
+                                                                        onClick={async () => {
+                                                                            if (tripDetails?.carId === car.id) {
+                                                                                setTripDetails(null);
+                                                                                return;
+                                                                            }
+                                                                            setTripDetails({ carId: car.id, trips: [], loading: true });
+                                                                            try {
+                                                                                const res = await api.get(`/crm/vendors/${vendor._id}/cars/outward/${car.id}/trips`);
+                                                                                if (res.data.success) {
+                                                                                    setTripDetails({ carId: car.id, trips: res.data.data.trips, loading: false });
+                                                                                }
+                                                                            } catch {
+                                                                                setTripDetails({ carId: car.id, trips: [], loading: false, error: true });
+                                                                            }
+                                                                        }}
+                                                                        className="w-5 h-5 rounded-full bg-[#212c40]/10 hover:bg-[#212c40]/20 flex items-center justify-center transition-all"
+                                                                    >
+                                                                        <span className="text-[11px]">👁</span>
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <div className="p-3 text-center">
-                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Customer Revenue</p>
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Admin Revenue</p>
                                                             <p className="text-base font-extrabold text-emerald-600">{fmt(car.totalRevenue)}</p>
                                                         </div>
                                                         <div className="p-3 text-center">
-                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Vendor Due</p>
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Vendor Total Profit</p>
                                                             <p className="text-base font-extrabold text-gray-600">{fmt(car.totalVendorCost)}</p>
                                                         </div>
                                                         <div className="p-3 text-center">
@@ -368,44 +414,73 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                                             <p className="text-xs text-red-500">{fmt(car.remainingVendorDue)} left</p>
                                                         </div>
                                                     </div>
-                                                    <div className="border-t border-gray-100 bg-white/70 p-4">
-                                                        <div className="grid gap-3 sm:grid-cols-[1.2fr_1.5fr_auto]">
-                                                            <div>
-                                                                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                                                                    Hidden Agreed Amount
-                                                                </label>
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={settlementForms[`${car.type}-${car.id}`]?.agreedAmount ?? ''}
-                                                                    onChange={(e) => handleSettlementChange(car, 'agreedAmount', e.target.value)}
-                                                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#212c40]/20"
-                                                                    placeholder="e.g. 250000"
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                                                                    Internal Note
-                                                                </label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={settlementForms[`${car.type}-${car.id}`]?.notes ?? ''}
-                                                                    onChange={(e) => handleSettlementChange(car, 'notes', e.target.value)}
-                                                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#212c40]/20"
-                                                                    placeholder="Only for internal tracking"
-                                                                />
-                                                            </div>
-                                                            <div className="flex items-end">
-                                                                <button
-                                                                    onClick={() => handleSaveSettlement(car)}
-                                                                    disabled={savingSettlementKey === `${car.type}-${car.id}`}
-                                                                    className="w-full rounded-xl bg-[#212c40] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#2d3a55] disabled:opacity-60"
-                                                                >
-                                                                    {savingSettlementKey === `${car.type}-${car.id}` ? 'Saving...' : 'Save'}
-                                                                </button>
-                                                            </div>
+                                                    {car.type === 'Outward' && (
+                                                        <div className="border-t border-gray-100 bg-white/70 p-4 flex items-center gap-2 text-xs font-semibold text-gray-600">
+                                                            <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Onboarded Agreement:</span>
+                                                            <span className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold text-xs">
+                                                                {car.vendorAgreementType === 'monthly'
+                                                                    ? `${fmt(car.agreementPricePerMonth)} / Month (Fixed)`
+                                                                    : `${fmt(car.agreementPricePerDay)} / Day (Per Day Wise)`
+                                                                }
+                                                            </span>
                                                         </div>
-                                                    </div>
+                                                    )}
+                                                    {/* Trip Details Expandable Panel */}
+                                                    {tripDetails?.carId === car.id && (
+                                                        <AnimatePresence>
+                                                            <motion.div
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: 'auto' }}
+                                                                exit={{ opacity: 0, height: 0 }}
+                                                                className="border-t border-blue-100 bg-blue-50/50"
+                                                            >
+                                                                <div className="p-4">
+                                                                    <div className="flex items-center justify-between mb-3">
+                                                                        <p className="text-xs font-bold text-[#212c40] uppercase tracking-wide flex items-center gap-1.5">
+                                                                            👁 Trip Breakdown
+                                                                        </p>
+                                                                        <button
+                                                                            onClick={() => setTripDetails(null)}
+                                                                            className="text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                                                        >✕ Close</button>
+                                                                    </div>
+                                                                    {tripDetails.loading ? (
+                                                                        <div className="flex items-center justify-center py-4 gap-2 text-sm text-gray-400">
+                                                                            <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+                                                                            Loading trips...
+                                                                        </div>
+                                                                    ) : tripDetails.trips.length === 0 ? (
+                                                                        <p className="text-center text-gray-400 text-xs py-3">No trip data found</p>
+                                                                    ) : (
+                                                                        <div className="space-y-2">
+                                                                            {tripDetails.trips.map((trip, idx) => (
+                                                                                <div key={idx} className="bg-white rounded-xl border border-blue-100 p-3 flex flex-col gap-1.5">
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                                            <span className="font-bold text-[11px] text-[#212c40] font-mono">{trip.bookingId}</span>
+                                                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase ${trip.source === 'Customer Booking'
+                                                                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                                                    : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                                                                }`}>{trip.source}</span>
+                                                                                        </div>
+                                                                                        <span className="font-extrabold text-sm text-[#212c40]">
+                                                                                            ₹{(trip.adminRevenue || 0).toLocaleString('en-IN')}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-3 text-[10px] text-gray-500 flex-wrap">
+                                                                                        <span>📅 {trip.fromDate ? new Date(trip.fromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                                                                                        <span>→</span>
+                                                                                        <span>{trip.toDate ? new Date(trip.toDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                                                                                        <span className="font-bold text-[#212c40]">{trip.days} Day{trip.days !== 1 ? 's' : ''}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </motion.div>
+                                                        </AnimatePresence>
+                                                    )}
                                                 </motion.div>
                                             );
                                         })
@@ -425,57 +500,55 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                     {/* Outstanding Balance Card */}
                                     {summary && (
                                         <div className="grid gap-3 sm:grid-cols-2">
-                                            <div className={`rounded-2xl p-4 flex items-center gap-4 ${
-                                            summary.outstandingBalance > 0
+                                            <div className={`rounded-2xl p-4 flex items-center gap-4 ${summary.outstandingBalance > 0
                                                 ? 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-100'
                                                 : 'bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-100'
-                                        }`}>
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
-                                                summary.outstandingBalance > 0 ? 'bg-red-100' : 'bg-emerald-100'
-                                            }`}>
-                                                {summary.outstandingBalance > 0 ? '⚠️' : '✅'}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className={`text-xs font-semibold uppercase tracking-wide ${summary.outstandingBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                                                    {summary.outstandingBalance > 0 ? 'Remaining Vendor Payment' : 'Vendor Fully Settled'}
-                                                </p>
-                                                <p className={`text-2xl font-extrabold ${summary.outstandingBalance > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
-                                                    {fmt(summary.outstandingBalance)}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-xs text-gray-400">Total Due</p>
-                                                <p className="font-bold text-gray-700">{fmt(summary.totalVendorCost)}</p>
-                                            </div>
-                                        </div>
-                                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Cash Paid</p>
-                                                    <p className="text-lg font-extrabold text-emerald-700">
-                                                        {fmt(summary.paymentMethodBreakdown?.Cash?.amount)}
+                                                }`}>
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${summary.outstandingBalance > 0 ? 'bg-red-100' : 'bg-emerald-100'
+                                                    }`}>
+                                                    {summary.outstandingBalance > 0 ? '⚠️' : '✅'}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className={`text-xs font-semibold uppercase tracking-wide ${summary.outstandingBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                        {summary.outstandingBalance > 0 ? 'Remaining Vendor Payment' : 'Vendor Fully Settled'}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {summary.paymentMethodBreakdown?.Cash?.count || 0} payments
+                                                    <p className={`text-2xl font-extrabold ${summary.outstandingBalance > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                                                        {fmt(summary.outstandingBalance)}
                                                     </p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Online Paid</p>
-                                                    <p className="text-lg font-extrabold text-blue-700">
-                                                        {fmt(summary.paymentMethodBreakdown?.Online?.amount)}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {summary.paymentMethodBreakdown?.Online?.count || 0} payments
-                                                    </p>
+                                                <div className="text-right">
+                                                    <p className="text-xs text-gray-400">Total Profit</p>
+                                                    <p className="font-bold text-gray-700">{fmt(summary.totalVendorCost)}</p>
                                                 </div>
                                             </div>
-                                            {summary.excessPaid > 0 && (
-                                                <p className="mt-3 text-xs font-semibold text-violet-700">
-                                                    Extra paid: {fmt(summary.excessPaid)}
-                                                </p>
-                                            )}
+                                            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Cash Paid</p>
+                                                        <p className="text-lg font-extrabold text-emerald-700">
+                                                            {fmt(summary.paymentMethodBreakdown?.Cash?.amount)}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {summary.paymentMethodBreakdown?.Cash?.count || 0} payments
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Online Paid</p>
+                                                        <p className="text-lg font-extrabold text-blue-700">
+                                                            {fmt(summary.paymentMethodBreakdown?.Online?.amount)}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {summary.paymentMethodBreakdown?.Online?.count || 0} payments
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {summary.excessPaid > 0 && (
+                                                    <p className="mt-3 text-xs font-semibold text-violet-700">
+                                                        Extra paid: {fmt(summary.excessPaid)}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
                                     )}
 
                                     {/* Transactions List */}
@@ -502,9 +575,8 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                                         transition={{ delay: i * 0.04 }}
                                                         className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all"
                                                     >
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
-                                                            txn.type === 'Payout' ? 'bg-red-50' : 'bg-emerald-50'
-                                                        }`}>
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${txn.type === 'Payout' ? 'bg-red-50' : 'bg-emerald-50'
+                                                            }`}>
                                                             {txn.type === 'Payout' ? '💸' : '💰'}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -547,15 +619,6 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                     exit={{ opacity: 0, x: 10 }}
                                     className="p-6"
                                 >
-                                    <div className="bg-gradient-to-br from-[#212c40]/5 to-[#212c40]/0 rounded-2xl border border-[#212c40]/10 p-5 mb-6">
-                                        <p className="text-sm text-[#212c40] font-bold flex items-center gap-2">
-                                            <MdPayments size={18} />
-                                            Record New Payment
-                                        </p>
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            Record a payment made to <span className="font-semibold text-gray-600">{vendor?.name}</span> and it will appear in the ledger automatically.
-                                        </p>
-                                    </div>
 
                                     <div className="space-y-4">
                                         {/* Amount */}
@@ -566,14 +629,21 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                             <div className="relative">
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">₹</span>
                                                 <input
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
                                                     placeholder="e.g. 25000"
                                                     value={paymentForm.amount}
-                                                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                                    onChange={(e) => {
+                                                        // Only allow whole digits — no negatives, no arrows
+                                                        const val = e.target.value.replace(/[^0-9]/g, '');
+                                                        setPaymentForm({ ...paymentForm, amount: val });
+                                                    }}
                                                     className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] font-bold text-lg transition-all"
                                                 />
                                             </div>
                                         </div>
+
 
                                         {/* Payment Method */}
                                         <div>
@@ -583,13 +653,12 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                                     <button
                                                         key={method}
                                                         onClick={() => setPaymentForm({ ...paymentForm, paymentMethod: method })}
-                                                        className={`py-3 rounded-xl font-bold text-sm border-2 transition-all flex items-center justify-center gap-2 ${
-                                                            paymentForm.paymentMethod === method
-                                                                ? method === 'Cash'
-                                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                                                    : 'border-blue-500 bg-blue-50 text-blue-700'
-                                                                : 'border-gray-200 text-gray-400 hover:border-gray-300'
-                                                        }`}
+                                                        className={`py-3 rounded-xl font-bold text-sm border-2 transition-all flex items-center justify-center gap-2 ${paymentForm.paymentMethod === method
+                                                            ? method === 'Cash'
+                                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                                                : 'border-blue-500 bg-blue-50 text-blue-700'
+                                                            : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                                                            }`}
                                                     >
                                                         <span>{method === 'Cash' ? '💵' : '💳'}</span>
                                                         {method}
@@ -598,9 +667,10 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                             </div>
                                         </div>
 
+                                        {/* Select Car - Required */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-700 mb-1.5">
-                                                Select Car
+                                                Select Car <span className="text-red-500">*</span>
                                             </label>
                                             <select
                                                 value={paymentForm.relatedCarId ? `${paymentForm.relatedCarType}::${paymentForm.relatedCarId}` : ''}
@@ -628,34 +698,51 @@ const VendorLedgerModal = ({ vendor, isOpen, onClose }) => {
                                                         relatedCarLabel: selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : ''
                                                     });
                                                 }}
-                                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40]"
+                                                className={`w-full rounded-xl border bg-gray-50 px-4 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] ${!paymentForm.relatedCarId ? 'border-orange-300' : 'border-gray-200'
+                                                    }`}
                                             >
-                                                <option value="">General vendor payment</option>
+                                                <option value="">-- Select a Car --</option>
                                                 {cars.map((car) => (
                                                     <option key={`${car.type}-${car.id}`} value={`${car.type}::${car.id}`}>
-                                                        {car.brand} {car.model} ({car.type})
+                                                        {car.brand} {car.model}
                                                     </option>
                                                 ))}
                                             </select>
-                                            <p className="mt-1 text-xs text-gray-500">
-                                                Select a specific car to track its payment separately from the general vendor account.
-                                            </p>
+                                            {!paymentForm.relatedCarId && (
+                                                <p className="mt-1 text-xs text-orange-500 font-medium">⚠ Selecting a car is required</p>
+                                            )}
                                         </div>
 
-                                        {/* Reference ID */}
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
-                                                Transaction / Reference ID
-                                                <span className="text-xs font-normal text-gray-400 ml-1">(optional – auto-generated if blank)</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. UPI-REF-123456"
-                                                value={paymentForm.referenceId}
-                                                onChange={(e) => setPaymentForm({ ...paymentForm, referenceId: e.target.value })}
-                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] font-mono text-sm transition-all"
-                                            />
-                                        </div>
+                                        {/* Cash: Payer Name | Online: Transaction / Reference ID */}
+                                        {paymentForm.paymentMethod === 'Cash' ? (
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                                    Payer Name <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. Ramesh Kumar"
+                                                    value={paymentForm.payerName}
+                                                    onChange={(e) => setPaymentForm({ ...paymentForm, payerName: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] text-sm transition-all"
+                                                />
+                                                <p className="mt-1 text-xs text-gray-500">Enter the name of the person paying in cash.</p>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                                    Transaction / Reference ID <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. UPI-REF-123456"
+                                                    value={paymentForm.referenceId}
+                                                    onChange={(e) => setPaymentForm({ ...paymentForm, referenceId: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/30 focus:border-[#212c40] font-mono text-sm transition-all"
+                                                />
+                                                <p className="mt-1 text-xs text-gray-500">Enter the UPI/bank transaction or reference ID.</p>
+                                            </div>
+                                        )}
 
                                         {/* Remarks / Notes */}
                                         <div>
@@ -805,13 +892,21 @@ const VendorCard = ({ vendor, onEdit, onDelete, onViewLedger }) => {
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <p className="font-bold text-gray-800 truncate">{car.brand} {car.model}</p>
-                                                <span className={`px-1 rounded-[4px] text-[9px] font-bold border uppercase shrink-0 ${
-                                                    car.type === 'Inward'
-                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                                        : 'bg-purple-50 text-purple-600 border-purple-100'
-                                                }`}>
+                                                <span className={`px-1 rounded-[4px] text-[9px] font-bold border uppercase shrink-0 ${car.type === 'Inward'
+                                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                    : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                    }`}>
                                                     {car.type}
                                                 </span>
+                                                {/* Agreement type tag */}
+                                                {car.vendorAgreementType && (
+                                                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold border shrink-0 ${car.vendorAgreementType === 'monthly'
+                                                            ? 'bg-orange-50 text-orange-600 border-orange-100'
+                                                            : 'bg-teal-50 text-teal-600 border-teal-100'
+                                                        }`}>
+                                                        {car.vendorAgreementType === 'monthly' ? '📅 Monthly' : '📆 Per Day'}
+                                                    </span>
+                                                )}
                                             </div>
                                             {car.registrationNumber && car.registrationNumber.toLowerCase() !== 'outward' && (
                                                 <span className="px-1.5 py-0.5 rounded bg-gray-200/60 text-gray-600 font-mono text-[10px] uppercase font-semibold">
@@ -821,10 +916,19 @@ const VendorCard = ({ vendor, onEdit, onDelete, onViewLedger }) => {
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <p className="font-extrabold text-emerald-600 font-mono">
-                                            ₹{car.pricePerMonth ? car.pricePerMonth.toLocaleString('en-IN') : '0'}
-                                        </p>
-                                        <p className="text-[9px] text-gray-400 font-medium font-mono">per month</p>
+                                        {car.vendorAgreementType === 'monthly' ? (
+                                            <>
+                                                <p className="font-extrabold font-mono text-emerald-600">+₹{(car.totalRevenue || 0).toLocaleString('en-IN')}</p>
+                                                <p className="text-[9px] text-emerald-500 font-semibold uppercase tracking-wide">Admin Profit</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className={`font-extrabold font-mono ${car.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                    {car.netProfit >= 0 ? '+' : '-'}₹{Math.abs(car.netProfit || 0).toLocaleString('en-IN')}
+                                                </p>
+                                                <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide">Net Profit</p>
+                                            </>
+                                        )}
                                     </div>
                                 </motion.div>
                             ))}
@@ -1103,8 +1207,12 @@ export const AllVendorsPage = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Photo</label>
                         <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden border border-gray-200">
-                                <img src={newVendor.preview} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden border border-gray-200 flex items-center justify-center">
+                                {newVendor.preview && !newVendor.preview.includes('placeholder.com') ? (
+                                    <img src={newVendor.preview} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <MdPerson size={36} className="text-gray-400" />
+                                )}
                             </div>
                             <input
                                 type="file"
@@ -1126,57 +1234,19 @@ export const AllVendorsPage = () => {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Registered Car Owner</label>
-                        <select
-                            className="w-full px-3 py-2 border border-gray-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] font-semibold text-gray-750"
-                            value={
-                                owners.some(o => o.name === newVendor.name) 
-                                    ? owners.find(o => o.name === newVendor.name)._id 
-                                    : (newVendor.name ? "custom" : "")
-                            }
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
+                        <input
+                            type="text"
+                            placeholder="Enter vendor name..."
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
+                            value={newVendor.name}
                             onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "custom") {
-                                    setNewVendor({ ...newVendor, name: "" });
-                                } else if (!val) {
-                                    setNewVendor({ ...newVendor, name: "", phone: "", email: "" });
-                                } else {
-                                    const selected = owners.find(o => o._id === val);
-                                    if (selected) {
-                                        setNewVendor({
-                                            ...newVendor,
-                                            name: selected.name,
-                                            phone: selected.phone || "",
-                                            email: selected.email || ""
-                                        });
-                                        setErrors({});
-                                    }
-                                }
+                                setNewVendor({ ...newVendor, name: e.target.value });
+                                if (errors.name) setErrors({ ...errors, name: null });
                             }}
-                        >
-                            <option value="">-- Select Registered Car Owner --</option>
-                            {owners.map(owner => (
-                                <option key={owner._id} value={owner._id}>
-                                    {owner.name} ({owner.phone || 'No Phone'})
-                                </option>
-                            ))}
-                            <option value="custom">✍️ Type Custom Vendor Name...</option>
-                        </select>
+                        />
+                        {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
                     </div>
-
-                    {/* Vendor Name field is visible if they select custom or are typing a custom name */}
-                    {(!owners.some(o => o.name === newVendor.name) || (newVendor.name && !owners.some(o => o.name === newVendor.name))) && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
-                            <input
-                                type="text"
-                                placeholder="Enter custom vendor name..."
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]"
-                                value={newVendor.name}
-                                onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
-                            />
-                        </div>
-                    )}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input
@@ -1204,7 +1274,7 @@ export const AllVendorsPage = () => {
                                 setNewVendor({ ...newVendor, email: e.target.value });
                                 if (errors.email) setErrors({ ...errors, email: null });
                             }}
-                            placeholder="example@domain.com"
+                            placeholder="Enter Vendor Email"
                         />
                         {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                     </div>
