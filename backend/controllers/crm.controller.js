@@ -262,6 +262,69 @@ export const getAllCarsSimple = async (req, res) => {
     }
 };
 
+export const getCarOwnersSimple = async (req, res) => {
+    try {
+        const User = mongoose.model('User');
+        const Car = mongoose.model('Car');
+
+        // 1. Fetch all registered users with role 'owner'
+        const users = await User.find({ role: 'owner', isActive: true, isDeleted: { $ne: true } })
+            .select('name email phone')
+            .lean();
+
+        const ownersMap = new Map();
+
+        // Populate from Users
+        users.forEach(user => {
+            ownersMap.set(user._id.toString(), {
+                _id: user._id.toString(),
+                name: user.name,
+                email: user.email || '',
+                phone: user.phone || ''
+            });
+        });
+
+        // 2. Fetch all cars and get unique owners
+        const cars = await Car.find().populate('owner', 'name email phone').lean();
+
+        cars.forEach(car => {
+            if (car.owner) {
+                const ownerId = car.owner._id.toString();
+                if (!ownersMap.has(ownerId)) {
+                    ownersMap.set(ownerId, {
+                        _id: ownerId,
+                        name: car.owner.name,
+                        email: car.owner.email || '',
+                        phone: car.owner.phone || ''
+                    });
+                }
+            } else if (car.ownerInfo && car.ownerInfo.name) {
+                const key = car.ownerInfo.name.toLowerCase();
+                // Check if already present by email or name to prevent duplicates
+                const hasByEmail = car.ownerInfo.email && Array.from(ownersMap.values()).some(o => o.email === car.ownerInfo.email);
+                const hasByName = Array.from(ownersMap.values()).some(o => o.name.toLowerCase() === car.ownerInfo.name.toLowerCase());
+                
+                if (!hasByEmail && !hasByName) {
+                    ownersMap.set(key, {
+                        _id: car.ownerInfo.ownerId || key,
+                        name: car.ownerInfo.name,
+                        email: car.ownerInfo.email || '',
+                        phone: ''
+                    });
+                }
+            }
+        });
+
+        const owners = Array.from(ownersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+        res.status(200).json({ success: true, data: { owners } });
+    } catch (error) {
+        console.error('Error fetching car owners:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching car owners' });
+    }
+};
+
+
 /**
  * @desc    Get All CRM Tasks
  * @route   GET /api/crm/tasks

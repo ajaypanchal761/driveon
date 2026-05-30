@@ -2,6 +2,8 @@ import express from 'express';
 import {
     getOutwardCars,
     createOutwardCar,
+    updateOutwardCar,
+    deleteOutwardCar,
     getOutwardBookings,
     createOutwardBooking,
     createFleetRazorpayOrder,
@@ -20,6 +22,10 @@ const router = express.Router();
 router.route('/outward-cars')
     .get(getOutwardCars)
     .post(createOutwardCar);
+
+router.route('/outward-cars/:id')
+    .put(updateOutwardCar)
+    .delete(deleteOutwardCar);
 
 router.route('/outward-bookings')
     .get(getOutwardBookings)

@@ -74,6 +74,18 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    referralPointsAdjustment: {
+      type: Number,
+      default: 0,
+    },
+    referralSignupPointsAwarded: {
+      type: Boolean,
+      default: false,
+    },
+    referralTripPointsAwarded: {
+      type: Boolean,
+      default: false,
+    },
     heardAbout: {
       type: String,
       trim: true,

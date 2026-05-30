@@ -11,6 +11,8 @@ import smsIndiaHubService from '../services/smsIndiaHubService.js';
  */
 const TEST_PHONE_NUMBERS = {
   '9993911855': '123456', // Default test OTP
+  '8883911855': '123456', // Test referrer OTP
+  '7773911855': '123456', // Test referred OTP
 };
 
 /**

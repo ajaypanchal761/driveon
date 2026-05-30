@@ -7,6 +7,7 @@ import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
 import { onMessageListener } from "../../../services/firebase";
 
+
 /**
  * Payment List Page
  * Admin can view, filter, and manage all payment transactions
@@ -30,6 +31,7 @@ const PaymentListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showPaymentDetail, setShowPaymentDetail] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -246,14 +248,224 @@ const PaymentListPage = () => {
     console.log(`Generating invoice for transaction: ${paymentId}`);
   };
 
+  const handleDownloadInvoice = (payment) => {
+    import('jspdf').then(({ default: jsPDF }) => {
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(33, 37, 41);
+      doc.text("DRIVEON", 10, 20);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(108, 117, 125);
+      doc.text("123 Business Road, Tech City", 10, 28);
+      doc.text("Email: support@driveon.com", 10, 34);
+      doc.text("Phone: +91 9876543210", 10, 40);
+
+      // Title
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(33, 37, 41);
+      doc.text("PAYMENT INVOICE", 105, 20, { align: "center" });
+
+      // Invoice Info
+      doc.setFontSize(10);
+      doc.text(`Invoice No: INV-${payment.transactionId.substring(0, 8).toUpperCase()}`, 130, 28);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 130, 34);
+      doc.text(`Status: Paid`, 130, 40);
+
+      // Customer Info
+      doc.setDrawColor(200, 200, 200);
+      doc.line(10, 48, 200, 48);
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Billed To:", 10, 58);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(payment.userName, 10, 65);
+      doc.text(payment.userEmail, 10, 71);
+
+      // Transaction Info
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Transaction Details:", 130, 58);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Transaction ID: ${payment.transactionId}`, 130, 65);
+      doc.text(`Booking ID: ${payment.bookingId}`, 130, 71);
+      doc.text(`Payment Method: ${payment.paymentMethod}`, 130, 77);
+      doc.text(`Date: ${new Date(payment.timestamp).toLocaleString()}`, 130, 83);
+
+      doc.line(10, 90, 200, 90);
+
+      // Amount Info
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("Description", 15, 100);
+      doc.text("Amount", 170, 100, { align: "right" });
+
+      doc.setFont("helvetica", "normal");
+      const paymentTypeStr = payment.paymentType === 'full' ? 'Full' : payment.paymentType === 'partial' ? 'Partial' : 'Security Deposit';
+      doc.text(`${paymentTypeStr} Payment for Booking`, 15, 110);
+      doc.text(`INR ${payment.amount.toLocaleString()}`, 170, 110, { align: "right" });
+
+      doc.line(10, 120, 200, 120);
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Total Paid:", 130, 130);
+      doc.text(`INR ${payment.amount.toLocaleString()}`, 195, 130, { align: "right" });
+
+      // Footer
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(150, 150, 150);
+      doc.text("Thank you for your business!", 105, 150, { align: "center" });
+
+      doc.save(`Invoice_${payment.transactionId}.pdf`);
+    }).catch(err => {
+      console.error("Failed to load jsPDF", err);
+      toastUtils.error("Failed to generate invoice. Please try again.");
+    });
+  };
+
   const handleViewPayment = (payment) => {
     setSelectedPayment(payment);
     setShowPaymentDetail(true);
   };
 
-  const handleExport = () => {
-    // In real app, this would generate and download CSV/Excel
-    console.log('Exporting payments data...');
+  const handleExport = async () => {
+    if (!filteredPayments.length) {
+      toastUtils.error('No payment data to export');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const themeColor = [28, 32, 92]; // #1C205C
+
+      // ── Header Banner ─────────────────────────────────────
+      doc.setFillColor(...themeColor);
+      doc.rect(0, 0, pageW, 28, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DRIVEON', 14, 12);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Car Rental Management System', 14, 18);
+      doc.text('support@driveon.com  |  +91 9876543210', 14, 23);
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT TRANSACTIONS REPORT', pageW / 2, 12, { align: 'center' });
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, pageW / 2, 18, { align: 'center' });
+      const filterParts = [];
+      if (filters.status !== 'all') filterParts.push(`Status: ${filters.status}`);
+      if (filters.paymentType !== 'all') filterParts.push(`Type: ${filters.paymentType}`);
+      if (filters.dateRange !== 'all') filterParts.push(`Period: ${filters.dateRange}`);
+      const filterLabel = filterParts.length > 0 ? filterParts.join(' | ') : 'All Payments';
+      doc.text(`Filter: ${filterLabel}`, pageW / 2, 23, { align: 'center' });
+
+      // ── Summary Cards ──────────────────────────────────────
+      const cardData = [
+        { label: 'Total', value: String(stats.total), color: themeColor },
+        { label: 'Success', value: String(stats.success), color: [22, 163, 74] },
+        { label: 'Failed', value: String(stats.failed), color: [220, 38, 38] },
+        { label: 'Pending', value: String(stats.pending), color: [202, 138, 4] },
+        { label: 'Revenue (INR)', value: `Rs.${stats.totalRevenue.toLocaleString('en-IN')}`, color: themeColor },
+        { label: 'Refunded (INR)', value: `Rs.${stats.totalRefunded.toLocaleString('en-IN')}`, color: [147, 51, 234] },
+      ];
+      const cardW = (pageW - 28) / cardData.length;
+      let cx = 14;
+      cardData.forEach(({ label, value, color }) => {
+        doc.setFillColor(color[0], color[1], color[2]);
+        doc.roundedRect(cx, 32, cardW - 2, 16, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(value, cx + (cardW - 2) / 2, 39, { align: 'center' });
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(label, cx + (cardW - 2) / 2, 44, { align: 'center' });
+        cx += cardW;
+      });
+
+      // ── Transaction Table ───────────────────────────────────
+      const headers = [
+        'S.No', 'Transaction ID', 'Booking ID', 'Customer Name', 'Customer Email',
+        'Amount (INR)', 'Payment Type', 'Method', 'Gateway', 'Status', 'Date & Time', 'Booking Status',
+      ];
+      const body = filteredPayments.map((p, i) => [
+        i + 1,
+        p.transactionId || '-',
+        p.bookingId || '-',
+        p.userName || '-',
+        p.userEmail || '-',
+        `Rs.${(p.amount || 0).toLocaleString('en-IN')}`,
+        p.paymentType === 'full' ? 'Full' : p.paymentType === 'partial' ? 'Partial' : 'Security',
+        p.paymentMethod || '-',
+        p.paymentGateway || '-',
+        p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1)) : '-',
+        p.timestamp ? new Date(p.timestamp).toLocaleString('en-IN') : '-',
+        p.bookingStatus ? (p.bookingStatus.charAt(0).toUpperCase() + p.bookingStatus.slice(1)) : '-',
+      ]);
+
+      autoTable(doc, {
+        startY: 52,
+        head: [headers],
+        body,
+        theme: 'grid',
+        headStyles: {
+          fillColor: themeColor,
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7,
+          halign: 'center',
+        },
+        bodyStyles: { fontSize: 7, halign: 'center' },
+        alternateRowStyles: { fillColor: [245, 246, 255] },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 34 },
+          2: { cellWidth: 22 },
+          5: { halign: 'right' },
+        },
+        didDrawPage: () => {
+          const pg = doc.internal.getCurrentPageInfo().pageNumber;
+          const total = doc.internal.getNumberOfPages();
+          doc.setFontSize(7);
+          doc.setTextColor(150, 150, 150);
+          doc.text(
+            `DriveOn Payment Report  |  Page ${pg} of ${total}`,
+            pageW / 2,
+            doc.internal.pageSize.getHeight() - 5,
+            { align: 'center' }
+          );
+        },
+      });
+
+      doc.save(`DriveOn_Payment_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+      toastUtils.success('PDF report downloaded successfully!');
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toastUtils.error('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Get status badge color
@@ -340,10 +552,26 @@ const PaymentListPage = () => {
             </div>
             <button
               onClick={handleExport}
-              className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: colors.backgroundTertiary }}
+              disabled={isExporting}
+              className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all flex items-center gap-2"
+              style={{ backgroundColor: colors.backgroundTertiary, opacity: isExporting ? 0.75 : 1, cursor: isExporting ? 'not-allowed' : 'pointer' }}
             >
-              Export Reports
+              {isExporting ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Export Reports
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -569,6 +797,15 @@ const PaymentListPage = () => {
                     </button>
                   )}
 
+                  {payment.status === 'success' && payment.invoiceGenerated && (
+                    <button
+                      onClick={() => handleDownloadInvoice(payment)}
+                      className="w-full px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Download Invoice
+                    </button>
+                  )}
+
                   {payment.status === 'success' && payment.status !== 'refunded' && payment.bookingStatus === 'cancelled' && (
                     <button
                       onClick={() => handleProcessRefund(payment.id)}
@@ -610,8 +847,11 @@ const PaymentListPage = () => {
           onProcessRefund={handleProcessRefund}
           onMarkAsReceived={handleMarkAsReceived}
           onGenerateInvoice={handleGenerateInvoice}
+          onDownloadInvoice={handleDownloadInvoice}
         />
       )}
+
+
     </div>
   );
 };
@@ -619,7 +859,7 @@ const PaymentListPage = () => {
 /**
  * Payment Detail Modal Component
  */
-const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceived, onGenerateInvoice }) => {
+const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceived, onGenerateInvoice, onDownloadInvoice }) => {
   if (!payment) return null;
 
   return (
@@ -766,6 +1006,16 @@ const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceive
               Generate Invoice
             </button>
           )}
+          {payment.status === 'success' && payment.invoiceGenerated && (
+            <button
+              onClick={() => {
+                onDownloadInvoice(payment);
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Download Invoice
+            </button>
+          )}
           {payment.status === 'success' && payment.status !== 'refunded' && payment.bookingStatus === 'cancelled' && (
             <button
               onClick={() => {
@@ -794,5 +1044,395 @@ const PaymentDetailModal = ({ payment, onClose, onProcessRefund, onMarkAsReceive
   );
 };
 
+/**
+ * Export Report Modal Component
+ * Supports PDF, CSV, and Excel export of payment data
+ */
+const ExportReportModal = ({ payments, stats, filters, onClose }) => {
+  const [selectedFormat, setSelectedFormat] = useState('pdf');
+  const [isExporting, setIsExporting] = useState(false);
+
+  const formatOptions = [
+    {
+      id: 'pdf',
+      label: 'PDF Report',
+      description: 'Professional branded PDF with summary & table',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      color: '#dc2626',
+    },
+    {
+      id: 'csv',
+      label: 'CSV File',
+      description: 'Comma-separated values, compatible with Excel',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      ),
+      color: '#16a34a',
+    },
+    {
+      id: 'excel',
+      label: 'Excel (.xlsx)',
+      description: 'Native Excel spreadsheet with formatted columns',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+        </svg>
+      ),
+      color: '#1d6f42',
+    },
+  ];
+
+  const getFilterLabel = () => {
+    const parts = [];
+    if (filters.status !== 'all') parts.push(`Status: ${filters.status}`);
+    if (filters.paymentType !== 'all') parts.push(`Type: ${filters.paymentType}`);
+    if (filters.dateRange !== 'all') parts.push(`Period: ${filters.dateRange}`);
+    return parts.length > 0 ? parts.join(' | ') : 'All Payments';
+  };
+
+  const buildRows = () =>
+    payments.map((p, i) => ({
+      'S.No': i + 1,
+      'Transaction ID': p.transactionId || '-',
+      'Booking ID': p.bookingId || '-',
+      'Customer Name': p.userName || '-',
+      'Customer Email': p.userEmail || '-',
+      'Amount (INR)': p.amount || 0,
+      'Payment Type': p.paymentType === 'full' ? 'Full Payment' : p.paymentType === 'partial' ? 'Partial Payment' : 'Security Deposit',
+      'Payment Method': p.paymentMethod || '-',
+      'Gateway': p.paymentGateway || '-',
+      'Status': p.status ? (p.status.charAt(0).toUpperCase() + p.status.slice(1)) : '-',
+      'Date & Time': p.timestamp ? new Date(p.timestamp).toLocaleString('en-IN') : '-',
+      'Booking Status': p.bookingStatus ? (p.bookingStatus.charAt(0).toUpperCase() + p.bookingStatus.slice(1)) : '-',
+      'Refund Amount (INR)': p.refundAmount || 0,
+      'Refund Date': p.refundDate ? new Date(p.refundDate).toLocaleDateString('en-IN') : '-',
+    }));
+
+  const handleExportPDF = async () => {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const themeColor = [28, 32, 92]; // #1C205C
+
+    // ── Header Banner ──────────────────────────────────────────
+    doc.setFillColor(...themeColor);
+    doc.rect(0, 0, pageW, 28, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DRIVEON', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Car Rental Management System', 14, 18);
+    doc.text('support@driveon.com  |  +91 9876543210', 14, 23);
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT TRANSACTIONS REPORT', pageW / 2, 12, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, pageW / 2, 18, { align: 'center' });
+    doc.text(`Filter: ${getFilterLabel()}`, pageW / 2, 23, { align: 'center' });
+
+    // ── Summary Cards ──────────────────────────────────────────
+    const cardData = [
+      { label: 'Total', value: stats.total, color: themeColor },
+      { label: 'Success', value: stats.success, color: [22, 163, 74] },
+      { label: 'Failed', value: stats.failed, color: [220, 38, 38] },
+      { label: 'Pending', value: stats.pending, color: [202, 138, 4] },
+      { label: 'Revenue (INR)', value: `₹${stats.totalRevenue.toLocaleString('en-IN')}`, color: themeColor },
+      { label: 'Refunded (INR)', value: `₹${stats.totalRefunded.toLocaleString('en-IN')}`, color: [147, 51, 234] },
+    ];
+
+    const cardW = (pageW - 28) / cardData.length;
+    let cx = 14;
+    cardData.forEach(({ label, value, color }) => {
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.roundedRect(cx, 32, cardW - 2, 16, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(value), cx + (cardW - 2) / 2, 39, { align: 'center' });
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(label, cx + (cardW - 2) / 2, 44, { align: 'center' });
+      cx += cardW;
+    });
+
+    // ── Transaction Table ──────────────────────────────────────
+    const rows = buildRows();
+    const headers = Object.keys(rows[0] || {});
+    const body = rows.map(r => headers.map(h => r[h]));
+
+    autoTable(doc, {
+      startY: 52,
+      head: [headers],
+      body,
+      theme: 'grid',
+      headStyles: {
+        fillColor: themeColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7,
+        halign: 'center',
+      },
+      bodyStyles: { fontSize: 7, halign: 'center' },
+      alternateRowStyles: { fillColor: [245, 246, 255] },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 32 },
+        2: { cellWidth: 22 },
+        5: { halign: 'right' },
+        12: { halign: 'right' },
+      },
+      didDrawPage: (data) => {
+        const pg = doc.internal.getCurrentPageInfo().pageNumber;
+        const total = doc.internal.getNumberOfPages();
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          `DriveOn Payment Report  |  Page ${pg} of ${total}`,
+          pageW / 2,
+          doc.internal.pageSize.getHeight() - 5,
+          { align: 'center' }
+        );
+      },
+    });
+
+    doc.save(`DriveOn_Payment_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
+  const handleExportCSV = () => {
+    const rows = buildRows();
+    if (!rows.length) { toastUtils.error('No data to export'); return; }
+
+    const headers = Object.keys(rows[0]);
+    const csvRows = [
+      headers.join(','),
+      ...rows.map(r =>
+        headers.map(h => {
+          const val = String(r[h] ?? '').replace(/"/g, '""');
+          return `"${val}"`;
+        }).join(',')
+      ),
+    ];
+
+    // Add BOM for Excel compatibility
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `DriveOn_Payment_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportExcel = () => {
+    const rows = buildRows();
+    if (!rows.length) { toastUtils.error('No data to export'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    // ── Summary Sheet ──────────────────────────────────────────
+    const summaryData = [
+      ['DriveOn - Payment Transactions Report'],
+      [`Generated: ${new Date().toLocaleString('en-IN')}`],
+      [`Filter Applied: ${getFilterLabel()}`],
+      [],
+      ['Summary Statistics'],
+      ['Metric', 'Value'],
+      ['Total Transactions', stats.total],
+      ['Successful', stats.success],
+      ['Failed', stats.failed],
+      ['Pending', stats.pending],
+      ['Total Revenue (INR)', stats.totalRevenue],
+      ['Total Refunded (INR)', stats.totalRefunded],
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    summarySheet['!cols'] = [{ wch: 30 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+    // ── Transactions Sheet ─────────────────────────────────────
+    const txSheet = XLSX.utils.json_to_sheet(rows);
+    const colWidths = [
+      { wch: 6 }, { wch: 32 }, { wch: 20 }, { wch: 22 }, { wch: 28 },
+      { wch: 14 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
+      { wch: 22 }, { wch: 16 }, { wch: 18 }, { wch: 16 },
+    ];
+    txSheet['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, txSheet, 'Transactions');
+
+    XLSX.writeFile(wb, `DriveOn_Payment_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleDownload = async () => {
+    if (!payments.length) {
+      toastUtils.error('No data to export with current filters');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      if (selectedFormat === 'pdf') await handleExportPDF();
+      else if (selectedFormat === 'csv') handleExportCSV();
+      else handleExportExcel();
+      toastUtils.success(`Report exported as ${selectedFormat.toUpperCase()} successfully!`);
+      onClose();
+    } catch (err) {
+      console.error('Export error:', err);
+      toastUtils.error('Failed to export report. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+        onClick={e => e.stopPropagation()}
+        style={{ animation: 'fadeInUp 0.25s ease' }}
+      >
+        {/* Modal Header */}
+        <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #1C205C 0%, #2d3494 100%)' }}>
+          <div>
+            <h2 className="text-xl font-bold text-white">Export Payment Report</h2>
+            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {payments.length} transaction{payments.length !== 1 ? 's' : ''} • {getFilterLabel()}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+          >
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Summary Strip */}
+        <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
+          {[
+            { label: 'Total', value: stats.total, color: '#1C205C' },
+            { label: 'Revenue', value: `₹${stats.totalRevenue.toLocaleString('en-IN')}`, color: '#16a34a' },
+            { label: 'Refunded', value: `₹${stats.totalRefunded.toLocaleString('en-IN')}`, color: '#9333ea' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="py-3 text-center">
+              <p className="text-lg font-bold" style={{ color }}>{value}</p>
+              <p className="text-xs text-gray-500">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Format Selection */}
+        <div className="p-6">
+          <p className="text-sm font-semibold text-gray-700 mb-3">Select Export Format</p>
+          <div className="space-y-3">
+            {formatOptions.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setSelectedFormat(opt.id)}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left"
+                style={{
+                  borderColor: selectedFormat === opt.id ? opt.color : '#e5e7eb',
+                  backgroundColor: selectedFormat === opt.id ? `${opt.color}10` : '#fafafa',
+                }}
+              >
+                <div
+                  className="flex-shrink-0 p-2 rounded-lg"
+                  style={{
+                    color: opt.color,
+                    backgroundColor: `${opt.color}15`,
+                  }}
+                >
+                  {opt.icon}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">{opt.label}</p>
+                  <p className="text-xs text-gray-500">{opt.description}</p>
+                </div>
+                <div
+                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                  style={{ borderColor: selectedFormat === opt.id ? opt.color : '#d1d5db' }}
+                >
+                  {selectedFormat === opt.id && (
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: opt.color }} />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="px-6 pb-6 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDownload}
+            disabled={isExporting || !payments.length}
+            className="flex-1 px-4 py-2.5 rounded-xl text-white font-semibold transition-all flex items-center justify-center gap-2"
+            style={{
+              background: isExporting || !payments.length
+                ? '#9ca3af'
+                : 'linear-gradient(135deg, #1C205C 0%, #2d3494 100%)',
+              cursor: isExporting || !payments.length ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isExporting ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Exporting…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download {selectedFormat.toUpperCase()}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0);    }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 export default PaymentListPage;
+
 

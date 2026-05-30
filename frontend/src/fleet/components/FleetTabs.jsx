@@ -1,10 +1,18 @@
 import { NavLink } from 'react-router-dom';
 import { colors } from '../../module/theme/colors';
+import { useFleet } from '../context/FleetContext';
+import { FLEET_CAR_TYPES } from '../constants/fleetConstants';
 
 const tabBase =
   'px-4 py-2 rounded-lg text-sm font-medium transition-all border';
 
 const FleetTabs = () => {
+  const { bookings } = useFleet();
+
+  const fleetBookingsOnly = bookings.filter(b => !b.isRegularBooking);
+  const inwardBookingsCount = fleetBookingsOnly.filter(b => b.carType === FLEET_CAR_TYPES.INWARD).length;
+  const outwardBookingsCount = fleetBookingsOnly.filter(b => b.carType === FLEET_CAR_TYPES.OUTWARD).length;
+
   const getTabClass = ({ isActive }) =>
     `${tabBase} ${isActive ? 'text-white shadow-sm' : ''}`;
 
@@ -38,11 +46,18 @@ const FleetTabs = () => {
         Inward Cars
       </NavLink>
       <NavLink
-        to="/admin/fleet/bookings"
+        to="/admin/fleet/inward-bookings"
         className={getTabClass}
         style={({ isActive }) => getTabStyle(isActive)}
       >
-        Inward Bookings
+        Inward Bookings ({inwardBookingsCount})
+      </NavLink>
+      <NavLink
+        to="/admin/fleet/outward-bookings"
+        className={getTabClass}
+        style={({ isActive }) => getTabStyle(isActive)}
+      >
+        Outward Bookings ({outwardBookingsCount})
       </NavLink>
     </div>
   );

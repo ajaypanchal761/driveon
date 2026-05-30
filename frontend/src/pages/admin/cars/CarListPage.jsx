@@ -86,7 +86,8 @@ const CarListPage = () => {
 
       if (response.success && response.data) {
         // Format cars data for frontend
-        const formattedCars = response.data.cars.map((car) => {
+        const inwardOnlyCars = (response.data.cars || []).filter(car => car.source !== 'outward');
+        const formattedCars = inwardOnlyCars.map((car) => {
           // Get primary image or first image
           const primaryImage = car.images?.find(img => img.isPrimary) || car.images?.[0];
           const imageUrl = primaryImage?.url || null;
@@ -99,7 +100,7 @@ const CarListPage = () => {
             carType: car.carType,
             pricePerDay: car.pricePerDay,
             status: car.status,
-            availability: car.isAvailable ? 'available' : 'booked',
+            availability: (car.isCurrentlyBooked || !car.isAvailable) ? 'booked' : 'available',
             ownerId: car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner,
             ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
             ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
@@ -139,9 +140,9 @@ const CarListPage = () => {
           ownerName: car.ownerName || 'Unknown',
           ownerEmail: '',
           location: car.location || 'Unknown',
-          images: car.carImages || [],
-          imageUrl: null,
-          rating: 0,
+          images: car.image ? [{ url: car.image, isPrimary: true }] : [],
+          imageUrl: car.image || null,
+          rating: car.rating || 5,
           totalBookings: car.totalBookings || 0,
           totalRevenue: car.totalRevenue || 0,
           features: [],
@@ -312,7 +313,11 @@ const CarListPage = () => {
   };
 
   const handleEditCar = (car) => {
-    navigate(`/admin/cars/${car.id}/edit`);
+    if (car.source === 'outward') {
+      navigate('/admin/cars/add-outward', { state: { editCarId: car.id } });
+    } else {
+      navigate(`/admin/cars/${car.id}/edit`);
+    }
   };
 
   // Get status badge color
@@ -435,25 +440,40 @@ const CarListPage = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 max-w-4xl">
-          <Card className="p-3 text-center">
+          <Card 
+            className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.status === 'all' && filters.availability === 'all' ? 'ring-2 ring-purple-500' : ''}`}
+            onClick={() => setFilters({ ...filters, status: 'all', availability: 'all' })}
+          >
             <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
             <div className="text-xs text-gray-600">Total Cars</div>
           </Card>
-          <Card className="p-3 text-center">
+          <Card 
+            className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.status === 'active' ? 'ring-2 ring-green-500' : ''}`}
+            onClick={() => setFilters({ ...filters, status: 'active', availability: 'all' })}
+          >
             <div className="text-xl md:text-2xl font-bold mb-1 text-green-600">{stats.active}</div>
             <div className="text-xs text-gray-600">Active</div>
           </Card>
-          <Card className="p-3 text-center">
+          <Card 
+            className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.status === 'pending' ? 'ring-2 ring-yellow-500' : ''}`}
+            onClick={() => setFilters({ ...filters, status: 'pending', availability: 'all' })}
+          >
             <div className="text-xl md:text-2xl font-bold mb-1 text-yellow-600">{stats.pending}</div>
             <div className="text-xs text-gray-600">Pending</div>
           </Card>
-          <Card className="p-3 text-center">
+          <Card 
+            className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.status === 'suspended' ? 'ring-2 ring-red-500' : ''}`}
+            onClick={() => setFilters({ ...filters, status: 'suspended', availability: 'all' })}
+          >
             <div className="text-xl md:text-2xl font-bold mb-1 text-red-600">{stats.suspended}</div>
             <div className="text-xs text-gray-600">Suspended</div>
           </Card>
-          <Card className="p-3 text-center">
+          <Card 
+            className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.availability === 'available' ? 'ring-2 ring-blue-500' : ''}`}
+            onClick={() => setFilters({ ...filters, status: 'all', availability: 'available' })}
+          >
             <div className="text-xl md:text-2xl font-bold mb-1 text-blue-600">{stats.available}</div>
             <div className="text-xs text-gray-600">Available</div>
           </Card>
@@ -606,7 +626,7 @@ const CarListPage = () => {
                 {/* Car Info */}
                 <div className="mb-4">
                   <h3 className="font-semibold text-gray-900 mb-1">
-                    {car.brand} {car.model} ({car.year})
+                    {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
                   </h3>
                   <p className="text-xs text-gray-500 mb-2">{getCarTypeName(car.carType)} • {car.location}</p>
 
@@ -617,6 +637,13 @@ const CarListPage = () => {
                     </span>
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.availability)}`}>
                       {car.availability.charAt(0).toUpperCase() + car.availability.slice(1)}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      car.source === 'outward' 
+                        ? 'bg-indigo-100 text-indigo-800' 
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {car.source === 'outward' ? 'Outward Car' : 'Inward Car'}
                     </span>
                   </div>
 
@@ -736,7 +763,7 @@ const CarListPage = () => {
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="font-semibold text-gray-900 mb-1">
-                          {car.brand} {car.model} ({car.year})
+                          {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
                         </h3>
                         <p className="text-sm text-gray-500 mb-2">
                           {getCarTypeName(car.carType)} • {car.location}
@@ -748,6 +775,13 @@ const CarListPage = () => {
                         </span>
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.availability)}`}>
                           {car.availability.charAt(0).toUpperCase() + car.availability.slice(1)}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          car.source === 'outward' 
+                            ? 'bg-indigo-100 text-indigo-800' 
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {car.source === 'outward' ? 'Outward Car' : 'Inward Car'}
                         </span>
                       </div>
                     </div>

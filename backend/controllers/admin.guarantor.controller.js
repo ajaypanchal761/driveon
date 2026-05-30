@@ -388,39 +388,139 @@ export const deleteGuarantorRequest = async (req, res) => {
       requestId: request._id.toString(),
       bookingId: requestBookingId,
       guarantorId: requestGuarantorId,
+      status: request.status,
     });
 
-    // Remove guarantor from booking if it exists
-    if (requestBookingId && mongoose.Types.ObjectId.isValid(requestBookingId)) {
+    // 1. If request was accepted, perform points reversal and redistribution
+    if (request.status === 'accepted' && requestBookingId && requestGuarantorId) {
       try {
-        const booking = await Booking.findById(requestBookingId);
-        if (booking) {
-          // Check if this booking has the same guarantor
-          const bookingGuarantorId = booking.guarantor ? (booking.guarantor.toString ? booking.guarantor.toString() : String(booking.guarantor)) : null;
+        // Find active points record for this guarantor and booking
+        const pointsRecord = await GuarantorPoints.findOne({
+          booking: request.booking,
+          guarantor: request.guarantor,
+          status: 'active',
+        });
+
+        if (pointsRecord) {
+          const pointsToReverse = pointsRecord.pointsAllocated;
           
-          if (bookingGuarantorId && requestGuarantorId && bookingGuarantorId === requestGuarantorId) {
-            booking.guarantor = null;
-            await booking.save();
-            console.log('✅ Removed guarantor from booking:', booking._id.toString());
-          } else {
-            console.log('ℹ️ Booking has different guarantor or no guarantor', {
-              bookingGuarantorId,
-              requestGuarantorId: requestGuarantorId,
+          // Deduct points from guarantor's balance
+          const guarantorUser = await User.findById(request.guarantor);
+          if (guarantorUser) {
+            const oldBalance = guarantorUser.points || 0;
+            guarantorUser.points = Math.max(0, oldBalance - pointsToReverse);
+            guarantorUser.totalPointsEarned = Math.max(0, (guarantorUser.totalPointsEarned || 0) - pointsToReverse);
+            await guarantorUser.save();
+            
+            console.log('✅ Reverted points for deleted guarantor:', {
+              guarantorId: requestGuarantorId,
+              pointsToReverse,
+              oldBalance,
+              newBalance: guarantorUser.points,
             });
           }
-        } else {
-          console.log('ℹ️ Booking not found for ID:', requestBookingId);
+
+          // Mark points record as reversed
+          pointsRecord.status = 'reversed';
+          pointsRecord.reversedAt = new Date();
+          pointsRecord.reversalReason = 'Guarantor link removed by admin';
+          await pointsRecord.save();
         }
-      } catch (bookingError) {
-        console.error('⚠️ Error updating booking:', bookingError);
-        console.error('Booking error details:', {
-          message: bookingError.message,
-          stack: bookingError.stack,
+
+        // Find other accepted requests for this booking to redistribute points
+        const otherAcceptedRequests = await GuarantorRequest.find({
+          booking: request.booking,
+          status: 'accepted',
+          _id: { $ne: request._id },
         });
-        // Continue with request deletion even if booking update fails
+
+        // 2. Remove or update guarantor in booking if it exists
+        const booking = await Booking.findById(requestBookingId);
+        if (booking) {
+          const bookingGuarantorId = booking.guarantor ? (booking.guarantor.toString ? booking.guarantor.toString() : String(booking.guarantor)) : null;
+          
+          if (bookingGuarantorId && bookingGuarantorId === requestGuarantorId) {
+            // Update booking's primary guarantor to next remaining accepted guarantor or null
+            if (otherAcceptedRequests.length > 0) {
+              booking.guarantor = otherAcceptedRequests[0].guarantor;
+              console.log('✅ Updated booking guarantor reference to remaining guarantor:', otherAcceptedRequests[0].guarantor.toString());
+            } else {
+              booking.guarantor = null;
+              console.log('✅ Removed guarantor reference from booking completely');
+            }
+            await booking.save();
+          }
+        }
+
+        // 3. Redistribute points among remaining accepted guarantors
+        if (otherAcceptedRequests.length > 0) {
+          const bookingAmount = booking ? (booking.pricing?.finalPrice || booking.pricing?.totalPrice || 0) : 0;
+          const totalPoolAmount = bookingAmount * 0.1;
+          const newTotalGuarantors = otherAcceptedRequests.length;
+          const newPointsPerGuarantor = totalPoolAmount / newTotalGuarantors;
+
+          console.log('💰 Redistributing points for remaining guarantors:', {
+            bookingId: requestBookingId,
+            newTotalGuarantors,
+            newPointsPerGuarantor,
+          });
+
+          for (const otherReq of otherAcceptedRequests) {
+            const otherPoints = await GuarantorPoints.findOne({
+              booking: request.booking,
+              guarantor: otherReq.guarantor,
+              status: 'active',
+            });
+
+            if (otherPoints) {
+              const oldPoints = otherPoints.pointsAllocated;
+              const difference = newPointsPerGuarantor - oldPoints;
+
+              otherPoints.pointsAllocated = newPointsPerGuarantor;
+              otherPoints.totalGuarantors = newTotalGuarantors;
+              await otherPoints.save();
+
+              const otherGuarantorUser = await User.findById(otherReq.guarantor);
+              if (otherGuarantorUser) {
+                otherGuarantorUser.points = Math.max(0, (otherGuarantorUser.points || 0) + difference);
+                if (difference > 0) {
+                  otherGuarantorUser.totalPointsEarned = (otherGuarantorUser.totalPointsEarned || 0) + difference;
+                } else if (difference < 0) {
+                  otherGuarantorUser.totalPointsEarned = Math.max(0, (otherGuarantorUser.totalPointsEarned || 0) + difference);
+                }
+                await otherGuarantorUser.save();
+                
+                console.log('✅ Updated points for remaining guarantor:', {
+                  guarantorId: otherReq.guarantor.toString(),
+                  oldPoints,
+                  newPoints: newPointsPerGuarantor,
+                  difference,
+                });
+              }
+            }
+          }
+        }
+      } catch (pointsError) {
+        console.error('⚠️ Error processing points update/reversal during deletion:', pointsError);
+        // Continue with request deletion even if points reversal/redistribution encounters an error
       }
     } else {
-      console.log('ℹ️ No valid booking ID found in request');
+      // If request was not accepted (pending/rejected), just clean up booking field if match
+      if (requestBookingId && requestGuarantorId) {
+        try {
+          const booking = await Booking.findById(requestBookingId);
+          if (booking) {
+            const bookingGuarantorId = booking.guarantor ? (booking.guarantor.toString ? booking.guarantor.toString() : String(booking.guarantor)) : null;
+            if (bookingGuarantorId && bookingGuarantorId === requestGuarantorId) {
+              booking.guarantor = null;
+              await booking.save();
+              console.log('✅ Cleaned up pending guarantor reference from booking');
+            }
+          }
+        } catch (bookingError) {
+          console.error('⚠️ Error cleaning up booking guarantor reference:', bookingError);
+        }
+      }
     }
 
     // Delete the guarantor request

@@ -882,12 +882,17 @@ export const AllVendorsPage = () => {
 
     const [errors, setErrors] = useState({});
 
+    // Car Owners Dropdown State
+    const [owners, setOwners] = useState([]);
+    const [showOwnersDropdown, setShowOwnersDropdown] = useState(false);
+
     // Ledger Modal State
     const [ledgerVendor, setLedgerVendor] = useState(null);
     const [isLedgerOpen, setIsLedgerOpen] = useState(false);
 
     useEffect(() => {
         fetchVendors();
+        fetchOwners();
     }, []);
 
     const fetchVendors = async () => {
@@ -902,6 +907,36 @@ export const AllVendorsPage = () => {
             setLoading(false);
         }
     };
+
+    const fetchOwners = async () => {
+        try {
+            const res = await api.get('/crm/car-owners');
+            if (res.data.success) {
+                setOwners(res.data.data.owners || []);
+            }
+        } catch (error) {
+            console.error('Error fetching car owners:', error);
+        }
+    };
+
+    const handleSelectOwner = (owner) => {
+        setNewVendor(prev => ({
+            ...prev,
+            name: owner.name,
+            phone: owner.phone || '',
+            email: owner.email || ''
+        }));
+        setErrors(prev => ({
+            ...prev,
+            phone: null,
+            email: null
+        }));
+        setShowOwnersDropdown(false);
+    };
+
+    const filteredOwners = owners.filter(owner =>
+        owner.name.toLowerCase().includes((newVendor.name || '').toLowerCase())
+    );
 
     const filteredVendors = vendors.filter(vendor =>
         vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1091,14 +1126,57 @@ export const AllVendorsPage = () => {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
-                        <input
-                            type="text"
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]"
-                            value={newVendor.name}
-                            onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Registered Car Owner</label>
+                        <select
+                            className="w-full px-3 py-2 border border-gray-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] font-semibold text-gray-750"
+                            value={
+                                owners.some(o => o.name === newVendor.name) 
+                                    ? owners.find(o => o.name === newVendor.name)._id 
+                                    : (newVendor.name ? "custom" : "")
+                            }
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "custom") {
+                                    setNewVendor({ ...newVendor, name: "" });
+                                } else if (!val) {
+                                    setNewVendor({ ...newVendor, name: "", phone: "", email: "" });
+                                } else {
+                                    const selected = owners.find(o => o._id === val);
+                                    if (selected) {
+                                        setNewVendor({
+                                            ...newVendor,
+                                            name: selected.name,
+                                            phone: selected.phone || "",
+                                            email: selected.email || ""
+                                        });
+                                        setErrors({});
+                                    }
+                                }
+                            }}
+                        >
+                            <option value="">-- Select Registered Car Owner --</option>
+                            {owners.map(owner => (
+                                <option key={owner._id} value={owner._id}>
+                                    {owner.name} ({owner.phone || 'No Phone'})
+                                </option>
+                            ))}
+                            <option value="custom">✍️ Type Custom Vendor Name...</option>
+                        </select>
                     </div>
+
+                    {/* Vendor Name field is visible if they select custom or are typing a custom name */}
+                    {(!owners.some(o => o.name === newVendor.name) || (newVendor.name && !owners.some(o => o.name === newVendor.name))) && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
+                            <input
+                                type="text"
+                                placeholder="Enter custom vendor name..."
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40]"
+                                value={newVendor.name}
+                                onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
+                            />
+                        </div>
+                    )}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input

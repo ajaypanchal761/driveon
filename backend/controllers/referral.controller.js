@@ -24,9 +24,9 @@ export const processReferralSignup = async (userId) => {
       return;
     }
 
-    // Check if user was referred by someone
-    if (!user.referredBy) {
-      console.log(`ℹ️ User ${userId} was not referred, skipping referral signup processing`);
+    // Check if points already awarded for signup
+    if (user.referralSignupPointsAwarded) {
+      console.log(`ℹ️ Referral signup points already awarded for user ${userId}, skipping`);
       return;
     }
 
@@ -42,6 +42,10 @@ export const processReferralSignup = async (userId) => {
     referrer.points = (referrer.points || 0) + pointsForSignup;
     referrer.totalPointsEarned = (referrer.totalPointsEarned || 0) + pointsForSignup;
     await referrer.save();
+
+    // Mark that signup points have been awarded on the referred user
+    user.referralSignupPointsAwarded = true;
+    await user.save();
 
     // Send Push Notification to Referrer
     try {
@@ -105,21 +109,9 @@ export const processReferralTripCompletion = async (userId) => {
       return;
     }
 
-    // Check if user was referred by someone
-    if (!user.referredBy) {
-      console.log(`ℹ️ User ${userId} was not referred, skipping referral processing`);
-      return;
-    }
-
-    // Check if this is the user's first completed trip
-    const completedBookings = await Booking.countDocuments({
-      user: userId,
-      status: 'completed',
-    });
-
-    // Only award points for the first completed trip
-    if (completedBookings !== 1) {
-      console.log(`ℹ️ User ${userId} has ${completedBookings} completed trips, not first trip. Skipping referral points.`);
+    // Check if points already awarded for trip completion
+    if (user.referralTripPointsAwarded) {
+      console.log(`ℹ️ Referral trip points already awarded for user ${userId}, skipping`);
       return;
     }
 
@@ -135,6 +127,10 @@ export const processReferralTripCompletion = async (userId) => {
     referrer.points = (referrer.points || 0) + pointsForTrip;
     referrer.totalPointsEarned = (referrer.totalPointsEarned || 0) + pointsForTrip;
     await referrer.save();
+
+    // Mark that trip points have been awarded on the referred user
+    user.referralTripPointsAwarded = true;
+    await user.save();
 
     // Send Push Notification to Referrer
     try {
@@ -197,7 +193,7 @@ export const getReferralDashboard = async (req, res) => {
 
     // Get all users referred by this user
     const referredUsers = await User.find({ referredBy: userId })
-      .select('name email createdAt')
+      .select('name email createdAt referralPointsAdjustment')
       .sort({ createdAt: -1 });
 
     // Calculate statistics for each referred user
@@ -210,8 +206,8 @@ export const getReferralDashboard = async (req, res) => {
         });
 
         // Calculate points earned from this referral
-        // 50 points for signup + 50 points for first completed trip
-        let pointsEarned = 50; // Signup points
+        // 50 points for signup + 50 points for first completed trip + admin adjustment
+        let pointsEarned = 50 + (referredUser.referralPointsAdjustment || 0); // Signup points + adjustment
         if (tripsCompleted > 0) {
           pointsEarned += 50; // First trip completion points
         }
@@ -292,7 +288,7 @@ export const getMyReferrals = async (req, res) => {
 
     // Get all users referred by this user
     const referredUsers = await User.find({ referredBy: userId })
-      .select('name email createdAt')
+      .select('name email createdAt referralPointsAdjustment')
       .sort({ createdAt: -1 });
 
     // Calculate statistics for each referred user
@@ -305,7 +301,7 @@ export const getMyReferrals = async (req, res) => {
         });
 
         // Calculate points earned from this referral
-        let pointsEarned = 50; // Signup points
+        let pointsEarned = 50 + (referredUser.referralPointsAdjustment || 0); // Signup points + adjustment
         if (tripsCompleted > 0) {
           pointsEarned += 50; // First trip completion points
         }

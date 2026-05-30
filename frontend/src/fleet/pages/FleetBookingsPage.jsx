@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Card from '../../components/common/Card';
 import { colors } from '../../module/theme/colors';
 import { useFleet } from '../context/FleetContext';
@@ -324,7 +325,12 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
 
 const FleetBookingsPage = () => {
   const { bookings, cars, updateBookingInContext } = useFleet();
-  const [typeFilter, setTypeFilter] = useState(FLEET_BOOKING_FILTERS.ALL);
+  const location = useLocation();
+  const typeFilter = location.pathname.includes('outward-bookings') 
+    ? FLEET_BOOKING_FILTERS.OUTWARD 
+    : location.pathname.includes('inward-bookings')
+      ? FLEET_BOOKING_FILTERS.INWARD
+      : FLEET_BOOKING_FILTERS.ALL;
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [completingBooking, setCompletingBooking] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
@@ -380,23 +386,8 @@ const FleetBookingsPage = () => {
       <Card className="p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
-            All Bookings
+            {typeFilter === FLEET_BOOKING_FILTERS.OUTWARD ? 'Outward Bookings' : typeFilter === FLEET_BOOKING_FILTERS.INWARD ? 'Inward Bookings' : 'All Bookings'} ({filteredBookings.length})
           </h2>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium" style={{ color: colors.textPrimary }}>
-              Filter:
-            </label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="rounded-lg border px-3 py-2 text-sm"
-              style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}
-            >
-              <option value={FLEET_BOOKING_FILTERS.ALL}>All</option>
-              <option value={FLEET_BOOKING_FILTERS.OUTWARD}>Outward</option>
-              <option value={FLEET_BOOKING_FILTERS.INWARD}>Inward</option>
-            </select>
-          </div>
         </div>
       </Card>
 

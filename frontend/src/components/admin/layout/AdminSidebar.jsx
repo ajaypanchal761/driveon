@@ -56,6 +56,16 @@ const AdminSidebar = () => {
       path: '/admin/cars',
     },
     {
+      id: 'add-outward-car',
+      title: 'Add Outward Car',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      path: '/admin/cars/add-outward',
+    },
+    {
       id: 'online-cars',
       title: 'Online Booking Cars',
       icon: (
@@ -88,14 +98,24 @@ const AdminSidebar = () => {
       path: '/admin/fleet/inward',
     },
     {
-      id: 'fleet-bookings',
-      title: 'Fleet: Bookings',
+      id: 'fleet-inward-bookings',
+      title: 'Fleet: Inward Bookings',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       ),
-      path: '/admin/fleet/bookings',
+      path: '/admin/fleet/inward-bookings',
+    },
+    {
+      id: 'fleet-outward-bookings',
+      title: 'Fleet: Outward Bookings',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      ),
+      path: '/admin/fleet/outward-bookings',
     },
     {
       id: 'bookings',
@@ -221,11 +241,17 @@ const AdminSidebar = () => {
     },
   ];
 
-  const isActive = (path) => {
-    if (path === '/admin/dashboard') {
-      return location.pathname === path;
+  const activeItem = menuItems.reduce((bestMatch, item) => {
+    if (location.pathname === item.path || location.pathname.startsWith(item.path + '/')) {
+      if (!bestMatch || item.path.length > bestMatch.path.length) {
+        return item;
+      }
     }
-    return location.pathname.startsWith(path);
+    return bestMatch;
+  }, null);
+
+  const isActive = (path) => {
+    return activeItem && activeItem.path === path;
   };
 
   const handleMenuClick = (path) => {

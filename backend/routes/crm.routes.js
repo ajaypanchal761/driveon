@@ -34,6 +34,7 @@ import {
     createStaffWorkTask,
     updateStaffWorkTask,
     getAllCarsSimple,
+    getCarOwnersSimple,
     getCarDocuments,
     uploadCarDocument,
     createFastBooking,
@@ -192,6 +193,7 @@ router.route('/car-documents')
     .post(handleFileUpload('file'), uploadCarDocument);
 
 router.get('/cars-simple', getAllCarsSimple);
+router.get('/car-owners', getCarOwnersSimple);
 
 // Fast Booking Route
 router.post('/fast-booking', createFastBooking);

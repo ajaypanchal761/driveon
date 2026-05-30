@@ -45,6 +45,28 @@ const outwardCarSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    image: {
+      type: String,
+      default: '',
+    },
+    rating: {
+      type: Number,
+      default: 5,
+    },
+    carNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    registrationNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    features: {
+      type: [String],
+      default: [],
+    },
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',

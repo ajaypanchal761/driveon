@@ -289,6 +289,17 @@ const carSchema = new mongoose.Schema(
     lastBookedAt: {
       type: Date,
     },
+    source: {
+      type: String,
+      enum: ['inward', 'outward'],
+      default: 'inward',
+      index: true,
+    },
+    outwardCarId: {
+      type: String,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,

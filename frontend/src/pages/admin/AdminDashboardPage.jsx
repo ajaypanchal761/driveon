@@ -50,6 +50,13 @@ const AdminDashboardPage = () => {
       pendingKYC: 0,
       todayRevenue: 0,
       activeTrips: 0,
+      totalOutwardCars: 0,
+      pendingBookings: 0,
+      totalInwardBookings: 0,
+      totalOutwardBookings: 0,
+      activeOffers: 0,
+      activeCoupons: 0,
+      totalAddonServices: 0,
     },
     recentBookings: [],
     pendingKYC: [],
@@ -95,6 +102,13 @@ const AdminDashboardPage = () => {
               pendingKYC: stats.pendingKYC || 0,
               todayRevenue: stats.todayRevenue || 0,
               activeTrips: stats.activeTrips || 0,
+              totalOutwardCars: stats.totalOutwardCars || 0,
+              pendingBookings: stats.pendingBookings || 0,
+              totalInwardBookings: stats.totalInwardBookings || 0,
+              totalOutwardBookings: stats.totalOutwardBookings || 0,
+              activeOffers: stats.activeOffers || 0,
+              activeCoupons: stats.activeCoupons || 0,
+              totalAddonServices: stats.totalAddonServices || 0,
             },
             recentBookings: statsResponse.data.recentBookings || [],
             pendingKYC: statsResponse.data.pendingKYC || [],
@@ -182,6 +196,98 @@ const AdminDashboardPage = () => {
       change: 'Live',
       changeType: 'info',
       onClick: () => navigate('/admin/tracking/active'),
+    },
+    {
+      title: 'Total Outward Cars',
+      value: dashboardData.stats.totalOutwardCars.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      ),
+      color: colors.warning,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/fleet/outward'),
+    },
+    {
+      title: 'Pending Bookings',
+      value: dashboardData.stats.pendingBookings.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      color: colors.warning,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/bookings?status=pending'),
+    },
+    {
+      title: 'Total Inward Bookings',
+      value: dashboardData.stats.totalInwardBookings.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      ),
+      color: colors.success,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/fleet/inward-bookings'),
+    },
+    {
+      title: 'Total Outward Bookings',
+      value: dashboardData.stats.totalOutwardBookings.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      ),
+      color: colors.info,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/fleet/outward-bookings'),
+    },
+    {
+      title: 'Active Offers',
+      value: dashboardData.stats.activeOffers.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        </svg>
+      ),
+      color: colors.error,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/offers'),
+    },
+    {
+      title: 'Active Add-on Services',
+      value: dashboardData.stats.totalAddonServices.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      color: colors.success,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/addons'),
+    },
+    {
+      title: 'Active Coupons',
+      value: dashboardData.stats.activeCoupons.toString(),
+      icon: (
+        <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      ),
+      color: colors.backgroundTertiary,
+      change: '--',
+      changeType: 'neutral',
+      onClick: () => navigate('/admin/coupons'),
     },
   ];
 

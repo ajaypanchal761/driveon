@@ -113,6 +113,21 @@ export const getAllCars = async (req, res) => {
       }
     ]);
 
+    const activeBookingAggregation = await Booking.aggregate([
+      { 
+        $match: { 
+          car: { $in: carIds },
+          status: { $in: ['pending', 'confirmed', 'active'] },
+          'tripEnd.date': { $gte: new Date() }
+        } 
+      },
+      {
+        $group: {
+          _id: '$car'
+        }
+      }
+    ]);
+
     const bookingStatsMap = {};
     bookingAggregation.forEach(stat => {
       if (stat._id) {
@@ -123,11 +138,19 @@ export const getAllCars = async (req, res) => {
       }
     });
 
+    const activeBookingMap = {};
+    activeBookingAggregation.forEach(stat => {
+      if (stat._id) {
+        activeBookingMap[stat._id.toString()] = true;
+      }
+    });
+
     const carsWithStats = cars.map(car => {
       const stats = bookingStatsMap[car._id.toString()] || { count: 0, revenue: 0 };
       const carObj = car.toObject();
       carObj.totalBookings = stats.count;
       carObj.totalRevenue = stats.revenue;
+      carObj.isCurrentlyBooked = !!activeBookingMap[car._id.toString()];
       return carObj;
     });
 

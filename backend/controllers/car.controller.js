@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
@@ -9,6 +10,63 @@ import Booking from '../models/Booking.js';
  */
 export const getAllCars = async (req, res) => {
   try {
+    // Perform dynamic sync for outward cars to make sure everything matches
+    try {
+      const OutwardCar = mongoose.model('OutwardCar');
+      if (OutwardCar) {
+        const outwardCars = await OutwardCar.find({});
+        const adminUser = await mongoose.model('User').findOne({ role: 'admin' }) || await mongoose.model('User').findOne({});
+        const ownerId = adminUser ? adminUser._id : new mongoose.Types.ObjectId('60d5ec0f1f1d2c001f8e29a5');
+
+        for (const outCar of outwardCars) {
+          const shadowCar = await Car.findOne({ outwardCarId: outCar.originalOutputId });
+          const carData = {
+            owner: ownerId,
+            brand: outCar.brand || 'External',
+            model: outCar.model || 'Vehicle',
+            year: 2024,
+            color: 'N/A',
+            registrationNumber: outCar.carNumber || outCar.registrationNumber || `OUT-${outCar.originalOutputId.slice(-6).toUpperCase()}`,
+            carType: 'suv',
+            fuelType: 'petrol',
+            transmission: 'automatic',
+            seatingCapacity: 5,
+            pricePerDay: outCar.pricePerDay || 1000,
+            pricePerWeek: (outCar.pricePerDay || 1000) * 7,
+            pricePerMonth: (outCar.pricePerDay || 1000) * 30,
+            securityDeposit: 0,
+            description: `This verified premium outward car is owned by ${outCar.ownerName} and managed by DriveOn partners.`,
+            isAvailable: true,
+            status: 'active',
+            images: outCar.image ? [{ url: outCar.image, isPrimary: true }] : [],
+            location: {
+              city: outCar.location || 'Indore',
+              state: 'Madhya Pradesh',
+              address: outCar.location || 'Indore'
+            },
+            ownerInfo: {
+              name: outCar.ownerName,
+              email: 'partner@driveon.com',
+              phone: outCar.ownerPhone
+            },
+            ownerName: outCar.ownerName,
+            source: 'outward',
+            outwardCarId: outCar.originalOutputId,
+            features: outCar.features || []
+          };
+
+          if (shadowCar) {
+            Object.assign(shadowCar, carData);
+            await shadowCar.save();
+          } else {
+            await Car.create(carData);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.error('Dynamic shadow car sync error:', syncErr);
+    }
+
     const {
       page = 1,
       limit = 20,
@@ -172,6 +230,58 @@ export const getCarById = async (req, res) => {
         success: false,
         message: 'Car not found',
       });
+    }
+
+    // Perform real-time sync for features and other details on the details page itself!
+    if (car.source === 'outward' && car.outwardCarId) {
+      try {
+        const OutwardCar = mongoose.model('OutwardCar');
+        const outCar = await OutwardCar.findOne({ originalOutputId: car.outwardCarId });
+        if (outCar) {
+          const adminUser = await mongoose.model('User').findOne({ role: 'admin' }) || await mongoose.model('User').findOne({});
+          const ownerId = adminUser ? adminUser._id : new mongoose.Types.ObjectId('60d5ec0f1f1d2c001f8e29a5');
+
+          const carData = {
+            owner: ownerId,
+            brand: outCar.brand || car.brand,
+            model: outCar.model || car.model,
+            year: 2024,
+            color: 'N/A',
+            registrationNumber: outCar.carNumber || outCar.registrationNumber || car.registrationNumber,
+            carType: 'suv',
+            fuelType: 'petrol',
+            transmission: 'automatic',
+            seatingCapacity: 5,
+            pricePerDay: outCar.pricePerDay || car.pricePerDay,
+            pricePerWeek: (outCar.pricePerDay || 1000) * 7,
+            pricePerMonth: (outCar.pricePerDay || 1000) * 30,
+            securityDeposit: 0,
+            description: `This verified premium outward car is owned by ${outCar.ownerName} and managed by DriveOn partners.`,
+            isAvailable: true,
+            status: 'active',
+            images: outCar.image ? [{ url: outCar.image, isPrimary: true }] : car.images,
+            location: {
+              city: outCar.location || 'Indore',
+              state: 'Madhya Pradesh',
+              address: outCar.location || 'Indore'
+            },
+            ownerInfo: {
+              name: outCar.ownerName,
+              email: 'partner@driveon.com',
+              phone: outCar.ownerPhone
+            },
+            ownerName: outCar.ownerName,
+            source: 'outward',
+            outwardCarId: outCar.originalOutputId,
+            features: outCar.features || []
+          };
+
+          Object.assign(car, carData);
+          await car.save();
+        }
+      } catch (syncErr) {
+        console.error('Detail sync error in getCarById:', syncErr);
+      }
     }
 
     // Only show active cars to public

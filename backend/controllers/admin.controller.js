@@ -3,6 +3,11 @@ import User from '../models/User.js';
 import Car from '../models/Car.js';
 import Booking from '../models/Booking.js';
 import Setting from '../models/Setting.js';
+import OutwardCar from '../models/OutwardCar.js';
+import OutwardBooking from '../models/OutwardBooking.js';
+import Offer from '../models/Offer.js';
+import Coupon from '../models/Coupon.js';
+import AddOnServices from '../models/AddOnServices.js';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 import { sendPushNotification, sendPushToToken } from '../services/firebase.service.js';
 
@@ -737,6 +742,14 @@ export const getDashboardStats = async (req, res) => {
 
     const totalSuspendedCars = await Car.countDocuments({ status: 'suspended' });
 
+    const totalOutwardCars = await OutwardCar.countDocuments();
+    const pendingBookings = await Booking.countDocuments({ status: 'pending' });
+    const totalInwardBookings = await OutwardBooking.countDocuments({ carType: 'inward' });
+    const totalOutwardBookings = await OutwardBooking.countDocuments({ $or: [{ carType: 'outward' }, { carType: { $exists: false } }] });
+    const activeOffers = await Offer.countDocuments({ isActive: true });
+    const activeCoupons = await Coupon.countDocuments({ isActive: true });
+    const totalAddonServices = await AddOnServices.countDocuments();
+
     // Fetch Recent Bookings List
     const recentBookingsList = await Booking.find({
       status: { $ne: 'unpaid' },
@@ -947,6 +960,13 @@ export const getDashboardStats = async (req, res) => {
           totalActiveUsers,
           totalPendingCars,
           totalSuspendedCars,
+          totalOutwardCars,
+          pendingBookings,
+          totalInwardBookings,
+          totalOutwardBookings,
+          activeOffers,
+          activeCoupons,
+          totalAddonServices,
         },
         recentBookings,
         pendingKYC: pendingKYCData,
@@ -1375,7 +1395,7 @@ export const getAllReferrals = async (req, res) => {
     // Get all users who have been referred (have referredBy field)
     const referredUsers = await User.find({ referredBy: { $exists: true, $ne: null } })
       .populate('referredBy', 'name email referralCode')
-      .select('name email createdAt referredBy points totalPointsEarned totalPointsUsed')
+      .select('name email createdAt referredBy points totalPointsEarned totalPointsUsed referralPointsAdjustment')
       .sort({ createdAt: -1 });
 
     // Transform to referral format
@@ -1389,8 +1409,8 @@ export const getAllReferrals = async (req, res) => {
           status: 'completed',
         });
 
-        // Calculate points earned (50 for signup + 50 for first completed trip)
-        let pointsEarned = 50; // Signup points
+        // Calculate points earned (50 for signup + 50 for first completed trip + admin adjustment)
+        let pointsEarned = 50 + (referredUser.referralPointsAdjustment || 0); // Signup points + adjustment
         if (tripsCompleted > 0) {
           pointsEarned += 50; // First trip completion points
         }
@@ -1517,12 +1537,23 @@ export const updateReferralPoints = async (req, res) => {
       });
     }
 
-    // Update points
-    referredUser.points = Math.max(0, (referredUser.points || 0) + points);
-    if (points > 0) {
-      referredUser.totalPointsEarned = (referredUser.totalPointsEarned || 0) + points;
-    }
+    // Update points adjustment on referred user
+    referredUser.referralPointsAdjustment = (referredUser.referralPointsAdjustment || 0) + points;
     await referredUser.save();
+
+    // Fetch the referrer using referredUser.referredBy
+    let referrerNewPoints = 0;
+    let referrerNewTotal = 0;
+    const referrer = await User.findById(referredUser.referredBy);
+    if (referrer) {
+      referrer.points = Math.max(0, (referrer.points || 0) + points);
+      if (points > 0) {
+        referrer.totalPointsEarned = (referrer.totalPointsEarned || 0) + points;
+      }
+      await referrer.save();
+      referrerNewPoints = referrer.points;
+      referrerNewTotal = referrer.totalPointsEarned;
+    }
 
     res.status(200).json({
       success: true,
@@ -1530,8 +1561,8 @@ export const updateReferralPoints = async (req, res) => {
       data: {
         referral: {
           id: referredUser._id.toString(),
-          points: referredUser.points,
-          totalPointsEarned: referredUser.totalPointsEarned,
+          points: referrerNewPoints,
+          totalPointsEarned: referrerNewTotal,
         },
       },
     });
