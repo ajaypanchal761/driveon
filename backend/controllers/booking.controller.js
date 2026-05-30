@@ -1,4 +1,5 @@
 import Booking from '../models/Booking.js';
+import OutwardBooking from '../models/OutwardBooking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Coupon from '../models/Coupon.js';
@@ -210,14 +211,7 @@ export const createBooking = async (req, res) => {
     let totalPrice = basePrice * totalDays;
 
     // Apply dynamic pricing multipliers
-    const pickupDate = new Date(tripStart.date);
-    const dayOfWeek = pickupDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendMultiplier = isWeekend ? 0.15 : 0; // 15% weekend surcharge
-
-    // No peak hour surcharge applied
-
-    // Apply multipliers
+    const weekendMultiplier = 0; // Disabled 15% weekend surcharge completely
     totalPrice = totalPrice * (1 + weekendMultiplier);
 
     // Calculate add-on services total
@@ -786,6 +780,21 @@ export const updateBookingStatus = async (req, res) => {
       } catch (pointsError) {
         console.error('Error reversing guarantor points:', pointsError);
         // Don't fail booking cancellation if points reversal fails
+      }
+
+      // Sync cancellation to OutwardBooking if it exists
+      try {
+        await OutwardBooking.findOneAndUpdate(
+          {
+            $or: [
+              { originalBookingId: booking._id.toString() },
+              { originalBookingId: booking.bookingId }
+            ]
+          },
+          { status: 'cancelled' }
+        );
+      } catch (syncError) {
+        console.error('Error syncing booking cancellation to OutwardBooking:', syncError);
       }
     } else if (status === 'confirmed') {
       booking.confirmedAt = new Date();

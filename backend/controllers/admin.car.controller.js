@@ -1,7 +1,10 @@
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
+import RepairJob from '../models/RepairJob.js';
 import { uploadImage, deleteImage } from '../services/cloudinary.service.js';
+import mongoose from 'mongoose';
+import OutwardBooking from '../models/OutwardBooking.js';
 
 /**
  * @desc    Get All Cars (Admin)
@@ -145,12 +148,26 @@ export const getAllCars = async (req, res) => {
       }
     });
 
+    // Query active repair jobs for these cars
+    const activeRepairs = await RepairJob.find({
+      car: { $in: carIds },
+      status: { $nin: ['Completed', 'Cancelled'] }
+    });
+
+    const activeRepairsMap = {};
+    activeRepairs.forEach(job => {
+      if (job.car) {
+        activeRepairsMap[job.car.toString()] = true;
+      }
+    });
+
     const carsWithStats = cars.map(car => {
       const stats = bookingStatsMap[car._id.toString()] || { count: 0, revenue: 0 };
       const carObj = car.toObject();
       carObj.totalBookings = stats.count;
       carObj.totalRevenue = stats.revenue;
       carObj.isCurrentlyBooked = !!activeBookingMap[car._id.toString()];
+      carObj.isInActiveRepair = !!activeRepairsMap[car._id.toString()];
       return carObj;
     });
 
@@ -918,6 +935,188 @@ export const togglePopular = async (req, res) => {
       success: false,
       message: 'Server error toggling popular status',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Get Car Bookings Record (Admin)
+ * @route   GET /api/admin/cars/:carId/record
+ * @access  Private (Admin)
+ */
+export const getCarRecord = async (req, res) => {
+  try {
+    const { carId } = req.params;
+
+    // Try to find the car in standard Car collection first (checking both _id and outwardCarId)
+    const car = await Car.findOne({
+      $or: [
+        { _id: mongoose.Types.ObjectId.isValid(carId) ? carId : null },
+        { outwardCarId: carId }
+      ].filter(Boolean)
+    }).populate('owner', 'name email phone');
+    
+    let bookings = [];
+    let carInfo = null;
+
+    if (car) {
+      carInfo = {
+        id: car.outwardCarId || car._id,
+        brand: car.brand,
+        model: car.model,
+        year: car.year,
+        registrationNumber: car.registrationNumber,
+        pricePerDay: car.pricePerDay,
+        source: car.source || 'inward',
+        ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
+        imageUrl: car.images?.find(img => img.isPrimary)?.url || car.images?.[0]?.url || null,
+      };
+
+      // Query standard bookings for this car
+      const rawBookings = await Booking.find({ car: car._id })
+        .populate('user', 'name email phone')
+        .sort({ createdAt: -1 });
+
+      // Transform standard bookings to unified format
+      const standardBookings = rawBookings.map(b => ({
+        id: b._id,
+        bookingId: b.bookingId,
+        customerName: b.user?.name || 'Anonymous',
+        customerPhone: b.user?.phone || 'N/A',
+        customerEmail: b.user?.email || 'N/A',
+        fromDate: b.tripStart?.date ? new Date(b.tripStart.date).toISOString() : b.bookingDate,
+        toDate: b.tripEnd?.date ? new Date(b.tripEnd.date).toISOString() : b.bookingDate,
+        totalPrice: b.pricing?.totalPrice || 0,
+        paidAmount: b.paidAmount || 0,
+        paymentStatus: b.paymentStatus || 'pending',
+        status: b.status,
+        source: 'inward',
+        createdAt: b.createdAt
+      }));
+
+      bookings = [...standardBookings];
+
+      // If it is an outward car, also query OutwardBooking collection
+      if (car.source === 'outward' && car.outwardCarId) {
+        const outwardBookings = await OutwardBooking.find({
+          $or: [
+            { carId: car.outwardCarId },
+            { carId: car._id.toString() }
+          ]
+        }).sort({ createdAt: -1 });
+
+        const formattedOutward = outwardBookings.map(b => ({
+          id: b._id,
+          bookingId: b.originalBookingId || b._id,
+          customerName: b.customerName,
+          customerPhone: b.customerPhone || 'N/A',
+          customerEmail: b.customerEmail || 'N/A',
+          fromDate: b.fromDate,
+          toDate: b.toDate,
+          totalPrice: b.totalPrice,
+          paidAmount: b.paidAmount || 0,
+          paymentStatus: b.paymentStatus,
+          status: b.status,
+          source: 'outward',
+          createdAt: b.createdAt
+        }));
+
+        bookings = [...bookings, ...formattedOutward];
+      }
+    } else {
+      // If not found in standard Car, it might be an outward car. Look in outwardcars collection
+      const outwardCar = await mongoose.connection.db.collection('outwardcars').findOne({ 
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(carId) ? new mongoose.Types.ObjectId(carId) : null },
+          { originalOutputId: carId }
+        ].filter(Boolean)
+      });
+
+      if (outwardCar) {
+        carInfo = {
+          id: outwardCar.originalOutputId || outwardCar._id,
+          brand: outwardCar.brand || '',
+          model: outwardCar.model || '',
+          year: outwardCar.year || '',
+          registrationNumber: outwardCar.carNumber || outwardCar.registrationNumber || '',
+          pricePerDay: outwardCar.pricePerDay || 0,
+          source: 'outward',
+          ownerName: outwardCar.ownerName || 'Unknown',
+          imageUrl: outwardCar.image || null,
+        };
+
+        // Query OutwardBooking collection
+        const outwardBookings = await OutwardBooking.find({
+          $or: [
+            { carId: carId },
+            { carId: outwardCar.originalOutputId },
+            { carId: outwardCar._id?.toString() }
+          ].filter(Boolean)
+        }).sort({ createdAt: -1 });
+
+        bookings = outwardBookings.map(b => ({
+          id: b._id,
+          bookingId: b.originalBookingId || b._id,
+          customerName: b.customerName,
+          customerPhone: b.customerPhone || 'N/A',
+          customerEmail: b.customerEmail || 'N/A',
+          fromDate: b.fromDate,
+          toDate: b.toDate,
+          totalPrice: b.totalPrice,
+          paidAmount: b.paidAmount || 0,
+          paymentStatus: b.paymentStatus,
+          status: b.status,
+          source: 'outward',
+          createdAt: b.createdAt
+        }));
+      }
+    }
+
+    if (!carInfo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Car not found',
+      });
+    }
+
+    // Sort all bookings by createdAt desc
+    bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Calculate Analytics/Stats
+    const totalBookings = bookings.length;
+    const completedBookings = bookings.filter(b => b.status === 'completed' || b.status === 'Completed').length;
+    const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'Active').length;
+    const cancelledBookings = bookings.filter(b => b.status === 'cancelled' || b.status === 'Cancelled').length;
+    
+    // Total Revenue is sum of paidAmount for completed/active bookings or all paidAmount
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
+    const pendingAmount = bookings.reduce((sum, b) => {
+      if (b.status === 'cancelled' || b.status === 'Cancelled') return sum;
+      const rem = Math.max(0, (b.totalPrice || 0) - (b.paidAmount || 0));
+      return sum + rem;
+    }, 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        car: carInfo,
+        bookings,
+        analytics: {
+          totalBookings,
+          completedBookings,
+          activeBookings,
+          cancelledBookings,
+          totalRevenue,
+          pendingAmount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get car record error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error retrieving car record',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

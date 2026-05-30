@@ -180,6 +180,21 @@ export const adminService = {
   },
 
   /**
+   * Get Car Record (Analytics & Bookings) (Admin)
+   * @param {String} carId - Car ID
+   * @returns {Promise}
+   */
+  getCarRecord: async (carId) => {
+    try {
+      const response = await api.get(`/admin/cars/${carId}/record`);
+      return response.data;
+    } catch (error) {
+      console.error('Get car record error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Create New Car (Admin)
    * @param {FormData} formData - Car data with images
    * @returns {Promise}

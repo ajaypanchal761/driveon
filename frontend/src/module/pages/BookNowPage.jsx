@@ -492,10 +492,8 @@ const BookNowPage = () => {
     const basePrice = extractPrice(car.price || car.pricePerDay || 0);
     let totalPrice = basePrice * totalDays;
 
-    // Apply weekend surcharge (15%) if the booking pickup date is a Saturday or Sunday, matching the backend
-    const dayOfWeek = pickup.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
-    const weekendMultiplier = isWeekend ? 0.15 : 0;
+    // Disabled weekend surcharge completely
+    const weekendMultiplier = 0;
     totalPrice = totalPrice * (1 + weekendMultiplier);
 
     // Calculate add-on services total dynamically

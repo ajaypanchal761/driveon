@@ -27,6 +27,7 @@ import {
   deleteCar,
   toggleFeatured,
   togglePopular,
+  getCarRecord,
 } from '../controllers/admin.car.controller.js';
 import {
   getAllTickets,
@@ -227,6 +228,10 @@ router.put('/cars/:carId/featured', authenticateAdmin, toggleFeatured);
 // Toggle Popular Status - PROTECTED
 // Route: PUT /api/admin/cars/:carId/popular
 router.put('/cars/:carId/popular', authenticateAdmin, togglePopular);
+
+// Get Car Record - PROTECTED
+// Route: GET /api/admin/cars/:carId/record
+router.get('/cars/:carId/record', authenticateAdmin, getCarRecord);
 
 // ============================================
 // SUPPORT TICKET MANAGEMENT ROUTES - PROTECTED

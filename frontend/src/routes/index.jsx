@@ -613,11 +613,7 @@ const router = createBrowserRouter([
             children: [
               {
                 index: true,
-                element: <Navigate to="/admin/fleet/outward" replace />,
-              },
-              {
-                path: "outward",
-                element: <FleetOutwardCarsPage />,
+                element: <Navigate to="/admin/fleet/inward" replace />,
               },
               {
                 path: "inward",
@@ -625,10 +621,6 @@ const router = createBrowserRouter([
               },
               {
                 path: "inward-bookings",
-                element: <FleetBookingsPage />,
-              },
-              {
-                path: "outward-bookings",
                 element: <FleetBookingsPage />,
               },
             ],

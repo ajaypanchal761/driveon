@@ -67,6 +67,7 @@ import {
     getVendorLedger,
     updateVendorCarSettlement,
     recordVendorPayment,
+    getCarTripDetails,
     getIncomeOverview,
     getExpenseTracking,
     getPendingPayments,
@@ -254,6 +255,7 @@ router.route('/vendors/:id')
     .delete(deleteVendor);
 
 router.get('/vendors/:id/ledger', getVendorLedger);
+router.get('/vendors/:vendorId/cars/outward/:carId/trips', getCarTripDetails);
 router.patch('/vendors/:vendorId/cars/:carType/:carId/settlement', updateVendorCarSettlement);
 router.post('/vendors/:id/payments', recordVendorPayment);
 

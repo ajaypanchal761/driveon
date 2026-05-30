@@ -238,7 +238,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     if (!customerPhone.trim()) return false;
     if (!customerImagePreview) return false;
     if (!isDlVerified) return false; // Driving license must be verified
-    if (!isPanVerified || !panNumber.trim()) return false; // PAN must be verified
+    if (panNumber.trim() && !isPanVerified) return false; // If PAN is entered, it must be verified
     if (!fromDate || !toDate) return false;
     if (!startTime || !endTime) return false;
     if (!isValidDateRange(fromDate, toDate)) return false;
@@ -265,8 +265,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     if (!fromDate || !toDate || !isValidDateRange(fromDate, toDate)) { setError('Please select a valid date range'); return; }
     if (!startTime || !endTime) { setError('Please select start and end times'); return; }
     if (!isDlVerified) { setError('Please verify Driving License via QuickEKYC before booking'); return; }
-    if (!panNumber.trim()) { setError('Please enter a PAN card number'); return; }
-    if (!isPanVerified) { setError('Please verify PAN Card via QuickEKYC before booking'); return; }
+    if (panNumber.trim() && !isPanVerified) { setError('Please verify PAN Card via QuickEKYC before booking'); return; }
     // Aadhaar is optional — no verification required
     if (hasOverlap) { setError('Car is already booked for these dates'); return; }
 
@@ -580,16 +579,16 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
             )}
           </div>
 
-          {/* ── PAN Card (Mandatory) ── */}
+          {/* ── PAN Card (Optional) ── */}
           <div className="border rounded-xl p-4" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-bold uppercase tracking-wide" style={labelStyle}>
-                PAN Card <span style={{ color: colors.accentRed }}>*</span>
+                PAN Card
               </label>
               {isPanVerified ? (
                 <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">✓ Verified</span>
               ) : (
-                <span className="text-xs text-orange-400 font-medium">Required</span>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: `${colors.info}20`, color: colors.info }}>Optional</span>
               )}
             </div>
             {isPanVerified ? (

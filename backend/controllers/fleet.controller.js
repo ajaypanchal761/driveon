@@ -2,6 +2,7 @@ import OutwardCar from '../models/OutwardCar.js';
 import OutwardBooking from '../models/OutwardBooking.js';
 import Vendor from '../models/Vendor.js';
 import Car from '../models/Car.js';
+import mongoose from 'mongoose';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { uploadImage, isConfigured } from '../services/cloudinary.service.js';
@@ -54,6 +55,54 @@ export const getOutwardCars = async (req, res) => {
             }
         });
 
+        // Also fetch bookings from the standard Booking collection for replicated Cars
+        const standardCars = await Car.find({ outwardCarId: { $in: carIds } });
+        const standardCarMap = {};
+        const standardCarIds = [];
+        standardCars.forEach(sc => {
+            standardCarMap[sc._id.toString()] = sc.outwardCarId;
+            standardCarIds.push(sc._id);
+        });
+
+        if (standardCarIds.length > 0) {
+            const standardBookingAggregation = await mongoose.model('Booking').aggregate([
+                { $match: { car: { $in: standardCarIds } } },
+                {
+                    $group: {
+                        _id: '$car',
+                        count: { $sum: 1 },
+                        revenue: {
+                            $sum: {
+                                $cond: [
+                                    {
+                                        $and: [
+                                            { $ne: ['$status', 'cancelled'] },
+                                            { $ne: ['$status', 'rejected'] }
+                                        ]
+                                    },
+                                    { $ifNull: ['$paidAmount', 0] },
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]);
+
+            standardBookingAggregation.forEach(stat => {
+                if (stat._id) {
+                    const outwardCarId = standardCarMap[stat._id.toString()];
+                    if (outwardCarId) {
+                        if (!bookingStatsMap[outwardCarId]) {
+                            bookingStatsMap[outwardCarId] = { count: 0, revenue: 0 };
+                        }
+                        bookingStatsMap[outwardCarId].count += stat.count;
+                        bookingStatsMap[outwardCarId].revenue += stat.revenue;
+                    }
+                }
+            });
+        }
+
         // Map backend format back to frontend expected structure
         const formattedCars = cars.map(car => {
             const stats = bookingStatsMap[car.originalOutputId] || { count: 0, revenue: 0 };
@@ -63,6 +112,9 @@ export const getOutwardCars = async (req, res) => {
                 brand: car.brand,
                 model: car.model,
                 pricePerDay: car.pricePerDay,
+                agreementPricePerDay: car.agreementPricePerDay || 0,
+                agreementPricePerMonth: car.agreementPricePerMonth || 0,
+                vendorAgreementType: car.vendorAgreementType || 'daily',
                 location: car.location,
                 type: car.type,
                 ownerName: car.ownerName,
@@ -92,6 +144,15 @@ const syncToStandardCar = async (outwardCar) => {
         const adminUser = await mongoose.model('User').findOne({ role: 'admin' }) || await mongoose.model('User').findOne({});
         const ownerId = adminUser ? adminUser._id : new mongoose.Types.ObjectId('60d5ec0f1f1d2c001f8e29a5');
 
+        let isCarInRepair = false;
+        if (shadowCar) {
+            const RepairJob = mongoose.model('RepairJob');
+            const activeRepair = await RepairJob.findOne({ car: shadowCar._id, status: { $nin: ['Completed', 'Cancelled'] } });
+            if (activeRepair) {
+                isCarInRepair = true;
+            }
+        }
+
         const carData = {
             owner: ownerId,
             brand: outwardCar.brand || 'External',
@@ -108,7 +169,7 @@ const syncToStandardCar = async (outwardCar) => {
             pricePerMonth: (outwardCar.pricePerDay || 1000) * 30,
             securityDeposit: 0,
             description: `This verified premium outward car is owned by ${outwardCar.ownerName} and managed by DriveOn partners.`,
-            isAvailable: true,
+            isAvailable: isCarInRepair ? false : true,
             status: 'active',
             images: outwardCar.image ? [{ url: outwardCar.image, isPrimary: true }] : [],
             location: {
@@ -169,6 +230,9 @@ export const createOutwardCar = async (req, res) => {
             brand: carData.brand,
             model: carData.model,
             pricePerDay: carData.pricePerDay,
+            agreementPricePerDay: carData.agreementPricePerDay || 0,
+            agreementPricePerMonth: carData.agreementPricePerMonth || 0,
+            vendorAgreementType: carData.vendorAgreementType || 'daily',
             location: carData.location,
             type: carData.type,
             ownerName: carData.ownerName,
@@ -208,6 +272,9 @@ export const updateOutwardCar = async (req, res) => {
             brand: carData.brand,
             model: carData.model,
             pricePerDay: carData.pricePerDay,
+            agreementPricePerDay: carData.agreementPricePerDay || 0,
+            agreementPricePerMonth: carData.agreementPricePerMonth || 0,
+            vendorAgreementType: carData.vendorAgreementType || 'daily',
             location: carData.location,
             ownerName: carData.ownerName,
             ownerPhone: carData.ownerPhone,
@@ -671,15 +738,94 @@ export const verifyFleetPAN = async (req, res) => {
 export const cancelOutwardBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const booking = await OutwardBooking.findOneAndUpdate(
+        let success = false;
+        let updatedData = null;
+
+        // 1. Cancel OutwardBooking if it exists in OutwardBooking collection
+        const outwardBooking = await OutwardBooking.findOneAndUpdate(
             { originalBookingId: id },
             { status: 'cancelled' },
             { new: true }
         );
-        if (!booking) {
+        if (outwardBooking) {
+            success = true;
+            updatedData = outwardBooking;
+        }
+
+        // 2. Cancel standard Booking if it matches this id/bookingId
+        const BookingModel = mongoose.model('Booking');
+        let standardBooking = null;
+        if (id.match(/^[0-9a-fA-F]{24}$/)) {
+            standardBooking = await BookingModel.findById(id);
+        }
+        if (!standardBooking) {
+            standardBooking = await BookingModel.findOne({ bookingId: id });
+        }
+
+        if (standardBooking) {
+            standardBooking.status = 'cancelled';
+            standardBooking.cancelledBy = 'admin';
+            standardBooking.cancelledAt = new Date();
+            standardBooking.cancellationReason = 'Cancelled via Fleet portal';
+            standardBooking.isTrackingActive = false;
+            standardBooking.tripStatus = 'cancelled';
+
+            // Cancel any pending transactions
+            if (standardBooking.transactions && standardBooking.transactions.length > 0) {
+                standardBooking.transactions.forEach(txn => {
+                    if (txn.status === 'pending') {
+                        txn.status = 'cancelled';
+                    }
+                });
+            }
+
+            // Update payment status
+            if (standardBooking.paymentStatus === 'pending') {
+                standardBooking.paymentStatus = 'failed';
+            }
+
+            // Reverse guarantor points
+            try {
+                const { reverseGuarantorPoints } = await import('../utils/guarantorPoints.js');
+                await reverseGuarantorPoints(standardBooking._id.toString(), 'Cancelled via Fleet portal');
+            } catch (pointsError) {
+                console.error('Error reversing guarantor points during fleet cancellation:', pointsError);
+            }
+
+            await standardBooking.save();
+            success = true;
+            if (!updatedData) {
+                updatedData = standardBooking;
+            }
+
+            // Send push notifications
+            try {
+                const { sendPushNotification } = await import('../services/firebase.service.js');
+                const bIdentifier = standardBooking.bookingId || standardBooking._id;
+                const payload = {
+                    notification: {
+                        title: "Booking Cancelled",
+                        body: "Booking Cancelled. Refund initiated.",
+                    },
+                    data: {
+                        bookingId: bIdentifier.toString(),
+                        status: 'cancelled',
+                        type: 'booking_update',
+                        click_action: 'FLUTTER_NOTIFICATION_CLICK'
+                    }
+                };
+                sendPushNotification(standardBooking.user, payload, false);
+                sendPushNotification(standardBooking.user, payload, true);
+            } catch (notifyError) {
+                console.error('Error sending push notification during fleet cancellation:', notifyError);
+            }
+        }
+
+        if (!success) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
         }
-        res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: booking });
+
+        res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: updatedData });
     } catch (error) {
         console.error('Cancel booking error:', error);
         res.status(500).json({ success: false, message: 'Failed to cancel booking' });

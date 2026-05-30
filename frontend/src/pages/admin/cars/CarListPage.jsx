@@ -31,14 +31,20 @@ const CarListPage = () => {
   const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [selectedCar, setSelectedCar] = useState(null);
   const [showCarDetail, setShowCarDetail] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // grid or list
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [reviewsCar, setReviewsCar] = useState(null);
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [recordCar, setRecordCar] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const handleViewReviews = (car) => {
     setReviewsCar(car);
     setShowReviewsModal(true);
+  };
+
+  const handleViewRecord = (car) => {
+    setRecordCar(car);
+    setShowRecordModal(true);
   };
 
   // Listen for global search events from header
@@ -100,7 +106,9 @@ const CarListPage = () => {
             carType: car.carType,
             pricePerDay: car.pricePerDay,
             status: car.status,
-            availability: (car.isCurrentlyBooked || !car.isAvailable) ? 'booked' : 'available',
+            availability: car.isInActiveRepair 
+              ? 'undermaintenance' 
+              : (car.isCurrentlyBooked ? 'booked' : 'available'),
             ownerId: car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner,
             ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
             ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
@@ -127,35 +135,47 @@ const CarListPage = () => {
 
       // Add outward cars
       if (outwardRes.data?.success && outwardRes.data?.data) {
-        const outwardCars = (Array.isArray(outwardRes.data.data) ? outwardRes.data.data : []).map((car) => ({
-          id: car._id || car.id,
-          brand: car.brand || '',
-          model: car.model || '',
-          year: car.year || '',
-          carType: car.carType || 'Outward',
-          pricePerDay: car.pricePerDay || 0,
-          status: 'active',
-          availability: 'available',
-          ownerId: '',
-          ownerName: car.ownerName || 'Unknown',
-          ownerEmail: '',
-          location: car.location || 'Unknown',
-          images: car.image ? [{ url: car.image, isPrimary: true }] : [],
-          imageUrl: car.image || null,
-          rating: car.rating || 5,
-          totalBookings: car.totalBookings || 0,
-          totalRevenue: car.totalRevenue || 0,
-          features: [],
-          registrationDate: car.createdAt || new Date().toISOString(),
-          registrationNumber: car.carNumber || car.registrationNumber || '',
-          fuelType: '',
-          transmission: '',
-          seatingCapacity: '',
-          isFeatured: false,
-          isPopular: false,
-          source: 'outward',
-          description: car.description || '',
-        }));
+        const standardOutwardCars = (response.data?.cars || []).filter(c => c.source === 'outward');
+        const activeRepairOutwardRegs = new Set(
+          standardOutwardCars
+            .filter(c => c.isInActiveRepair)
+            .map(c => (c.registrationNumber || '').toUpperCase().trim())
+        );
+
+        const outwardCars = (Array.isArray(outwardRes.data.data) ? outwardRes.data.data : []).map((car) => {
+          const reg = (car.carNumber || car.registrationNumber || '').toUpperCase().trim();
+          const isInRepair = activeRepairOutwardRegs.has(reg);
+
+          return {
+            id: car._id || car.id,
+            brand: car.brand || '',
+            model: car.model || '',
+            year: car.year || '',
+            carType: car.carType || 'Outward',
+            pricePerDay: car.pricePerDay || 0,
+            status: 'active',
+            availability: isInRepair ? 'undermaintenance' : 'available',
+            ownerId: '',
+            ownerName: car.ownerName || 'Unknown',
+            ownerEmail: '',
+            location: car.location || 'Unknown',
+            images: car.image ? [{ url: car.image, isPrimary: true }] : [],
+            imageUrl: car.image || null,
+            rating: car.rating || 5,
+            totalBookings: car.totalBookings || 0,
+            totalRevenue: car.totalRevenue || 0,
+            features: [],
+            registrationDate: car.createdAt || new Date().toISOString(),
+            registrationNumber: car.carNumber || car.registrationNumber || '',
+            fuelType: '',
+            transmission: '',
+            seatingCapacity: '',
+            isFeatured: false,
+            isPopular: false,
+            source: 'outward',
+            description: car.description || '',
+          };
+        });
         allCars = [...allCars, ...outwardCars];
       }
 
@@ -329,8 +349,14 @@ const CarListPage = () => {
       suspended: 'bg-red-100 text-red-800',
       available: 'bg-blue-100 text-blue-800',
       booked: 'bg-orange-100 text-orange-800',
+      undermaintenance: 'bg-red-100 text-red-800 border border-red-200 font-bold',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getAvailabilityName = (availability) => {
+    if (availability === 'undermaintenance') return 'Under Maintenance';
+    return availability.charAt(0).toUpperCase() + availability.slice(1);
   };
 
   // Get car type display name
@@ -375,6 +401,7 @@ const CarListPage = () => {
     pending: cars.filter((c) => c.status === 'pending').length,
     suspended: cars.filter((c) => c.status === 'suspended').length,
     available: cars.filter((c) => c.status === 'active' && c.availability === 'available').length,
+    undermaintenance: cars.filter((c) => c.availability === 'undermaintenance').length,
   };
 
   if (loading) {
@@ -411,35 +438,12 @@ const CarListPage = () => {
               >
                 Add New Car
               </button>
-              {/* View Mode Toggle */}
-              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'grid'
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  style={viewMode === 'grid' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  Grid
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'list'
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  style={viewMode === 'list' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  List
-                </button>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 max-w-4xl">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6 max-w-5xl">
           <Card 
             className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.status === 'all' && filters.availability === 'all' ? 'ring-2 ring-purple-500' : ''}`}
             onClick={() => setFilters({ ...filters, status: 'all', availability: 'all' })}
@@ -476,6 +480,13 @@ const CarListPage = () => {
           >
             <div className="text-xl md:text-2xl font-bold mb-1 text-blue-600">{stats.available}</div>
             <div className="text-xs text-gray-600">Available</div>
+          </Card>
+          <Card 
+            className={`p-3 text-center cursor-pointer hover:bg-gray-50 transition-all ${filters.availability === 'undermaintenance' ? 'ring-2 ring-rose-500' : ''}`}
+            onClick={() => setFilters({ ...filters, status: 'all', availability: 'undermaintenance' })}
+          >
+            <div className="text-xl md:text-2xl font-bold mb-1 text-rose-600">{stats.undermaintenance}</div>
+            <div className="text-xs text-gray-600">Maintenance</div>
           </Card>
         </div>
 
@@ -527,6 +538,7 @@ const CarListPage = () => {
                 { label: 'All', value: 'all' },
                 { label: 'Available', value: 'available' },
                 { label: 'Booked', value: 'booked' },
+                { label: 'Under Maintenance', value: 'undermaintenance' },
               ]}
             />
 
@@ -594,13 +606,20 @@ const CarListPage = () => {
           </p>
         </div>
 
-        {/* Grid View */}
-        {viewMode === 'grid' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginatedCars.map((car) => (
-              <Card key={car.id} className="p-4 hover:shadow-lg transition-all">
+        {/* List View */}
+        <div className="space-y-4">
+          {paginatedCars.map((car) => (
+            <Card 
+              key={car.id} 
+              className={`p-4 hover:shadow-lg transition-all ${
+                car.availability === 'undermaintenance'
+                  ? 'bg-gradient-to-r from-red-100/90 to-rose-100/50 border border-red-300 shadow-red-100/20'
+                  : ''
+              }`}
+            >
+              <div className="flex flex-col md:flex-row gap-4">
                 {/* Car Image */}
-                <div className="w-full h-48 bg-gray-200 rounded-lg mb-4 overflow-hidden">
+                <div className="w-full md:w-48 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                   {car.imageUrl ? (
                     <img
                       src={car.imageUrl}
@@ -617,277 +636,150 @@ const CarListPage = () => {
                     className={`w-full h-full flex items-center justify-center ${car.imageUrl ? 'hidden' : ''}`}
                     style={{ display: car.imageUrl ? 'none' : 'flex' }}
                   >
-                    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                 </div>
 
-                {/* Car Info */}
-                <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
-                  </h3>
-                  <p className="text-xs text-gray-500 mb-2">{getCarTypeName(car.carType)} • {car.location}</p>
-
-                  {/* Status Badges */}
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.status)}`}>
-                      {car.status.charAt(0).toUpperCase() + car.status.slice(1)}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.availability)}`}>
-                      {car.availability.charAt(0).toUpperCase() + car.availability.slice(1)}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                      car.source === 'outward' 
-                        ? 'bg-indigo-100 text-indigo-800' 
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}>
-                      {car.source === 'outward' ? 'Outward Car' : 'Inward Car'}
-                    </span>
+                {/* Car Details */}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">
+                        {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-2">
+                        {getCarTypeName(car.carType)} • {car.location}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.status)}`}>
+                        {car.status.charAt(0).toUpperCase() + car.status.slice(1)}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.availability)}`}>
+                        {getAvailabilityName(car.availability)}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        car.source === 'outward' 
+                          ? 'bg-indigo-100 text-indigo-800' 
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {car.source === 'outward' ? 'Outward Car' : 'Inward Car'}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Price and Stats */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold" style={{ color: colors.backgroundTertiary }}>
-                      ₹{car.pricePerDay.toLocaleString()}/day
-                    </span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-600">Price/Day</p>
+                      <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
+                        ₹{car.pricePerDay.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Bookings</p>
+                      <p className="text-sm font-semibold text-gray-900">{car.totalBookings}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Revenue</p>
+                      <p className="text-sm font-semibold text-gray-900">₹{car.totalRevenue.toLocaleString()}</p>
+                    </div>
                     {car.rating > 0 && (
-                      <span className="text-gray-600 flex items-center gap-1">
-                        ⭐ {car.rating}
-                        <button
-                          onClick={() => handleViewReviews(car)}
-                          className="p-1 hover:bg-gray-100 rounded-full transition-colors text-purple-600"
-                          title="View Reviews"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                      </span>
+                      <div>
+                        <p className="text-xs text-gray-600">Rating</p>
+                        <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+                          ⭐ {car.rating}
+                          <button
+                            onClick={() => handleViewReviews(car)}
+                            className="p-1 hover:bg-gray-100 rounded-full transition-colors text-purple-600"
+                            title="View Reviews"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-                    <span>{car.totalBookings} bookings</span>
-                    <span>₹{car.totalRevenue.toLocaleString()} revenue</span>
+                  <div className="text-xs text-gray-600">
+                    <span>Owner: </span>
+                    <span className="font-medium text-gray-900">{car.ownerName}</span>
+                    <span className="mx-2">•</span>
+                    <span>{car.ownerEmail}</span>
                   </div>
-                </div>
-
-                {/* Owner Info */}
-                <div className="mb-4 p-2 bg-gray-50 rounded text-xs">
-                  <span className="text-gray-600">Owner: </span>
-                  <span className="font-medium text-gray-900">{car.ownerName}</span>
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2 md:w-48">
                   <button
                     onClick={() => handleViewCar(car)}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                    className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
                     style={{ backgroundColor: colors.backgroundTertiary }}
                   >
-                    View
+                    View Details
                   </button>
-                  {car.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => handleApprove(car.id)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleReject(car.id)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                  {car.status === 'active' && (
-                    <button
-                      onClick={() => handleSuspend(car.id)}
-                      className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
-                    >
-                      Suspend
-                    </button>
-                  )}
-                  {(car.status === 'suspended' || car.status === 'inactive') && (
-                    <button
-                      onClick={() => handleActivate(car.id)}
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Activate
-                    </button>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* List View */}
-        {viewMode === 'list' && (
-          <div className="space-y-4">
-            {paginatedCars.map((car) => (
-              <Card key={car.id} className="p-4 hover:shadow-lg transition-all">
-                <div className="flex flex-col md:flex-row gap-4">
-                  {/* Car Image */}
-                  <div className="w-full md:w-48 h-32 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                    {car.imageUrl ? (
-                      <img
-                        src={car.imageUrl}
-                        alt={`${car.brand} ${car.model}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to placeholder if image fails to load
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className={`w-full h-full flex items-center justify-center ${car.imageUrl ? 'hidden' : ''}`}
-                      style={{ display: car.imageUrl ? 'none' : 'flex' }}
-                    >
-                      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Car Details */}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">
-                          {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-2">
-                          {getCarTypeName(car.carType)} • {car.location}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.status)}`}>
-                          {car.status.charAt(0).toUpperCase() + car.status.slice(1)}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(car.availability)}`}>
-                          {car.availability.charAt(0).toUpperCase() + car.availability.slice(1)}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                          car.source === 'outward' 
-                            ? 'bg-indigo-100 text-indigo-800' 
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}>
-                          {car.source === 'outward' ? 'Outward Car' : 'Inward Car'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                      <div>
-                        <p className="text-xs text-gray-600">Price/Day</p>
-                        <p className="text-sm font-semibold" style={{ color: colors.backgroundTertiary }}>
-                          ₹{car.pricePerDay.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Bookings</p>
-                        <p className="text-sm font-semibold text-gray-900">{car.totalBookings}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Revenue</p>
-                        <p className="text-sm font-semibold text-gray-900">₹{car.totalRevenue.toLocaleString()}</p>
-                      </div>
-                      {car.rating > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-600">Rating</p>
-                          <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
-                            ⭐ {car.rating}
-                            <button
-                              onClick={() => handleViewReviews(car)}
-                              className="p-1 hover:bg-gray-100 rounded-full transition-colors text-purple-600"
-                              title="View Reviews"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            </button>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-gray-600">
-                      <span>Owner: </span>
-                      <span className="font-medium text-gray-900">{car.ownerName}</span>
-                      <span className="mx-2">•</span>
-                      <span>{car.ownerEmail}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2 md:w-48">
-                    <button
-                      onClick={() => handleViewCar(car)}
-                      className="w-full px-4 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
-                      style={{ backgroundColor: colors.backgroundTertiary }}
-                    >
-                      View Details
-                    </button>
-                    <div className="flex gap-2">
-                      {car.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleApprove(car.id)}
-                            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(car.id)}
-                            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      {car.status === 'active' && (
+                  <div className="flex gap-2">
+                    {car.status === 'pending' && (
+                      <>
                         <button
-                          onClick={() => handleSuspend(car.id)}
-                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                      {(car.status === 'suspended' || car.status === 'inactive') && (
-                        <button
-                          onClick={() => handleActivate(car.id)}
+                          onClick={() => handleApprove(car.id)}
                           className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          Activate
+                          Approve
                         </button>
-                      )}
+                        <button
+                          onClick={() => handleReject(car.id)}
+                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    {car.status === 'active' && (
                       <button
-                        onClick={() => {
-                          if (window.confirm('Are you sure you want to delete this car?')) {
-                            handleDelete(car.id);
-                          }
-                        }}
-                        className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        onClick={() => handleSuspend(car.id)}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
                       >
-                        Delete
+                        Suspend
                       </button>
-                    </div>
+                    )}
+                    {(car.status === 'suspended' || car.status === 'inactive') && (
+                      <button
+                        onClick={() => handleActivate(car.id)}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        Activate
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to delete this car?')) {
+                          handleDelete(car.id);
+                        }
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      Delete
+                    </button>
                   </div>
+                  <button
+                    onClick={() => handleViewRecord(car)}
+                    className="w-full px-4 py-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Record
+                  </button>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
+              </div>
+            </Card>
+          ))}
+        </div>
 
         {filteredCars.length === 0 && (
           <Card className="p-8 text-center">
@@ -992,6 +884,17 @@ const CarListPage = () => {
           onClose={() => {
             setShowReviewsModal(false);
             setReviewsCar(null);
+          }}
+        />
+      )}
+
+      {/* Car Record Modal */}
+      {showRecordModal && recordCar && (
+        <CarRecordModal
+          car={recordCar}
+          onClose={() => {
+            setShowRecordModal(false);
+            setRecordCar(null);
           }}
         />
       )}
@@ -1423,6 +1326,240 @@ const CarReviewsModal = ({ car, onClose }) => {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Car Record & Analytics Modal Component
+ */
+const CarRecordModal = ({ car, onClose }) => {
+  const [loading, setLoading] = useState(true);
+  const [record, setRecord] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchRecord = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await adminService.getCarRecord(car.id);
+        if (response.success && response.data) {
+          setRecord(response.data);
+        } else {
+          setError('Failed to load booking record data');
+        }
+      } catch (err) {
+        console.error('Error fetching car record:', err);
+        setError(err.response?.data?.message || 'Error loading booking records');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (car?.id) {
+      fetchRecord();
+    }
+  }, [car]);
+
+  if (!car) return null;
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const getStatusBadgeClass = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'completed') return 'bg-green-100 text-green-800 border border-green-200';
+    if (s === 'active') return 'bg-blue-100 text-blue-800 border border-blue-200';
+    if (s === 'cancelled') return 'bg-red-100 text-red-800 border border-red-200';
+    return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-150 px-6 py-5 flex items-center justify-between z-10">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded border border-indigo-100 uppercase">
+                {car.source === 'outward' ? 'Outward Car' : 'Inward Car'}
+              </span>
+              <span className="text-sm font-semibold text-gray-500">{car.registrationNumber}</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">
+              Booking Record & Analytics: {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-all active:scale-95 text-gray-400 hover:text-gray-650"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+          {loading ? (
+            <div className="py-20 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <p className="text-gray-500 font-semibold">Fetching booking analytics & records...</p>
+            </div>
+          ) : error ? (
+            <div className="py-16 text-center text-red-600 bg-red-50 rounded-2xl border border-red-100 p-6">
+              <svg className="w-12 h-12 mx-auto mb-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h3 className="font-bold text-lg mb-1 text-red-650">Failed to retrieve data</h3>
+              <p className="text-sm font-medium">{error}</p>
+            </div>
+          ) : !record ? (
+            <div className="py-20 text-center text-gray-450">No record data found.</div>
+          ) : (
+            <>
+              {/* KPIs Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-gradient-to-br from-indigo-50/60 to-purple-50/30 border border-indigo-100 rounded-2xl">
+                  <span className="text-xs font-bold text-indigo-500 uppercase tracking-wider block mb-1">Total Bookings</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-indigo-950">{record.analytics.totalBookings}</span>
+                    <span className="text-xs text-indigo-600 font-bold">overall</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gradient-to-br from-emerald-50/60 to-teal-50/30 border border-emerald-100 rounded-2xl">
+                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-1">Total Revenue</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-emerald-950">₹{record.analytics.totalRevenue.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gradient-to-br from-amber-50/60 to-orange-50/30 border border-amber-100 rounded-2xl">
+                  <span className="text-xs font-bold text-amber-600 uppercase tracking-wider block mb-1">Pending Amount</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-amber-950">₹{record.analytics.pendingAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 border border-gray-150 rounded-2xl">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Trip Breakdown</span>
+                  <div className="flex flex-wrap gap-2 mt-1.5 text-xxs font-bold">
+                    <div className="text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
+                      {record.analytics.completedBookings} Done
+                    </div>
+                    <div className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                      {record.analytics.activeBookings} Live
+                    </div>
+                    <div className="text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
+                      {record.analytics.cancelledBookings} Cancel
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Booking History Table */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-650" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  All Booking Transactions & History
+                </h3>
+
+                {record.bookings.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-250 p-6">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-350" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-gray-500 font-bold text-sm">No bookings recorded for this vehicle yet.</p>
+                    <p className="text-gray-400 text-xs mt-1">Bookings will appear here as customers rent this vehicle.</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-150 rounded-xl overflow-hidden shadow-sm bg-white overflow-x-auto">
+                    <table className="w-full text-sm text-left text-gray-500">
+                      <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-150 font-black">
+                        <tr>
+                          <th className="px-4 py-3">Customer</th>
+                          <th className="px-4 py-3">Booking ID</th>
+                          <th className="px-4 py-3">Rental Period</th>
+                          <th className="px-4 py-3 text-right">Price</th>
+                          <th className="px-4 py-3 text-right">Paid</th>
+                          <th className="px-4 py-3 text-center">Status</th>
+                          <th className="px-4 py-3 text-center">Source</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-150">
+                        {record.bookings.map((booking) => (
+                          <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-gray-900">
+                              <div>{booking.customerName}</div>
+                              <div className="text-xxs text-gray-450 font-medium mt-0.5">
+                                {booking.customerPhone} • {booking.customerEmail}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs font-mono font-bold text-indigo-750">
+                              #{booking.bookingId}
+                            </td>
+                            <td className="px-4 py-3 text-xs font-medium text-gray-700">
+                              <span className="block">{formatDate(booking.fromDate)}</span>
+                              <span className="block text-gray-400 text-xxs font-normal mt-0.5">to {formatDate(booking.toDate)}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-gray-800">
+                              ₹{(booking.totalPrice || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-4 py-3 text-right font-black text-emerald-700">
+                              ₹{(booking.paidAmount || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xxs font-bold uppercase inline-block ${getStatusBadgeClass(booking.status)}`}>
+                                {booking.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded text-xxs font-bold uppercase inline-block ${
+                                booking.source === 'outward' 
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}>
+                                {booking.source}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
 

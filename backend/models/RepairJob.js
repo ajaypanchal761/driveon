@@ -14,12 +14,15 @@ const repairJobSchema = new mongoose.Schema(
         },
         serviceType: {
             type: String, // e.g., "Brake Pad Replacement"
-            required: true,
             trim: true,
         },
         description: {
             type: String,
             trim: true,
+        },
+        issues: {
+            type: [String],
+            default: [],
         },
         status: {
             type: String,

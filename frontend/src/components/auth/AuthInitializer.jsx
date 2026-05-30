@@ -23,6 +23,15 @@ const AuthInitializer = ({ children }) => {
       // Determine context based on URL to enforce strict model separation
       const currentPath = window.location.pathname;
       const isEmployeeApp = currentPath.startsWith('/employee');
+      const isAdminApp = currentPath.startsWith('/admin') || currentPath.startsWith('/crm');
+
+      // Admin and CRM portals are managed separately by AdminContext.jsx
+      // Return early to prevent loading/refreshing customer user profiles on admin pages
+      if (isAdminApp) {
+        console.log('ℹ️ Admin/CRM context detected. Skipping user/staff auth initialization in AuthInitializer.');
+        dispatch(authInitialized());
+        return;
+      }
 
       // Get token from localStorage based on context
       const storedToken = isEmployeeApp

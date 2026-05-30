@@ -980,7 +980,7 @@ const MOCK_ROLES_DATA = [
 ];
 
 const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [formData, setFormData] = useState({ role: '', department: '', description: '', access: 'Basic' });
+  const [formData, setFormData] = useState({ role: '', description: '', access: 'Basic' });
 
   useEffect(() => {
     if (isOpen) {
@@ -998,7 +998,7 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
       if (initialData) {
         setFormData(initialData);
       } else {
-        setFormData({ role: '', department: '', description: '', access: 'Basic' });
+        setFormData({ role: '', description: '', access: 'Basic' });
       }
     }
   }, [isOpen, initialData]);
@@ -1029,14 +1029,7 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             <h3 className="text-xl font-bold mb-4">{initialData ? 'Edit Role' : 'Add New Role'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input required placeholder="Role Name" className="w-full p-2 border rounded-xl" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
-              <input required placeholder="Department" className="w-full p-2 border rounded-xl" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })} />
               <textarea placeholder="Description" className="w-full p-2 border rounded-xl" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-              <ThemedDropdown
-                options={['Basic', 'Intermediate', 'Full Access']}
-                value={formData.access}
-                onChange={(val) => setFormData({ ...formData, access: val })}
-                className="bg-white"
-              />
               <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">
                 {initialData ? 'Update Role' : 'Save Role'}
               </button>
@@ -1244,7 +1237,6 @@ export const RolesPage = () => {
       // Map frontend fields to backend fields
       const payload = {
         roleName: data.role,
-        department: data.department,
         description: data.description,
         accessLevel: data.access,
         category: 'Operations' // Default or add field if needed
@@ -1359,7 +1351,6 @@ export const RolesPage = () => {
               </div>
 
               <h3 className="text-lg font-bold text-gray-900 mb-1">{role.role}</h3>
-              {role.department && <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{role.department}</p>}
               <p className="text-sm text-gray-500 mb-4 h-10 line-clamp-2">{role.description}</p>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
