@@ -1752,6 +1752,25 @@ const CompletePaymentModal = ({ booking, onClose, onConfirm }) => {
   const [cashAmt, setCashAmt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [cashCollectors, setCashCollectors] = useState([]);
+
+  useEffect(() => {
+    const fetchCollectors = async () => {
+      try {
+        const response = await adminService.getSystemSettings();
+        if (response.success && response.data?.settings?.cashCollectors) {
+          const list = response.data.settings.cashCollectors;
+          setCashCollectors(list);
+          if (list.length > 0) {
+            setReceivedBy(list[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching cash collectors:', err);
+      }
+    };
+    fetchCollectors();
+  }, []);
 
   const formatAmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
@@ -1970,13 +1989,23 @@ const CompletePaymentModal = ({ booking, onClose, onConfirm }) => {
                 <span style={{ fontSize: '18px', fontWeight: 800, color: '#16a34a' }}>{formatAmt(remaining)}</span>
               </div>
               <label style={labelStyle}>Received By (Admin/Staff Name) <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span></label>
-              <input
-                required
-                style={{ ...inputStyle, borderColor: errors.receivedBy ? '#ef4444' : (receivedBy.trim() ? '#22c55e' : '#e2e8f0') }}
-                placeholder="e.g. Ravi Sharma (required)"
-                value={receivedBy}
-                onChange={e => setReceivedBy(e.target.value)}
-              />
+              {cashCollectors.length > 0 ? (
+                <select
+                  required
+                  style={{ ...inputStyle, borderColor: errors.receivedBy ? '#ef4444' : (receivedBy.trim() ? '#22c55e' : '#e2e8f0') }}
+                  value={receivedBy}
+                  onChange={e => setReceivedBy(e.target.value)}
+                >
+                  <option value="">-- Select Cash Collector --</option>
+                  {cashCollectors.map((c, i) => (
+                    <option key={i} value={c}>{c}</option>
+                  ))}
+                </select>
+              ) : (
+                <div style={{ ...inputStyle, color: '#ef4444', borderColor: '#ef4444', fontSize: '13px' }}>
+                  ⚠️ No cash collectors defined in System Settings. Please add them first!
+                </div>
+              )}
               {errors.receivedBy && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>⚠ {errors.receivedBy}</p>}
             </div>
           )}
@@ -2002,7 +2031,23 @@ const CompletePaymentModal = ({ booking, onClose, onConfirm }) => {
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Amount</label>
                   <input style={{ ...inputStyle, marginBottom: '8px', padding: '7px 10px', fontSize: '13px' }} type='number' min='0' max={remaining} placeholder='0' value={cashAmt} onChange={e => handleCashAmtChange(e.target.value)} />
                   <label style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Received By <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input required style={{ ...inputStyle, padding: '7px 10px', fontSize: '13px', borderColor: errors.receivedBy ? '#ef4444' : (receivedBy.trim() ? '#22c55e' : '#e2e8f0') }} placeholder='e.g. Ravi Sharma (required)' value={receivedBy} onChange={e => setReceivedBy(e.target.value)} />
+                  {cashCollectors.length > 0 ? (
+                    <select
+                      required
+                      style={{ ...inputStyle, padding: '7px 10px', fontSize: '13px', borderColor: errors.receivedBy ? '#ef4444' : (receivedBy.trim() ? '#22c55e' : '#e2e8f0') }}
+                      value={receivedBy}
+                      onChange={e => setReceivedBy(e.target.value)}
+                    >
+                      <option value="">-- Select Cash Collector --</option>
+                      {cashCollectors.map((c, i) => (
+                        <option key={i} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ ...inputStyle, padding: '7px 10px', fontSize: '11px', color: '#ef4444', borderColor: '#ef4444' }}>
+                      ⚠️ Add cash collectors in Settings!
+                    </div>
+                  )}
                   {errors.receivedBy && <p style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>⚠ {errors.receivedBy}</p>}
                 </div>
               </div>

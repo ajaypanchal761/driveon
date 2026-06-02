@@ -93,24 +93,38 @@ export const getAllCars = async (req, res) => {
     // Get booking stats and revenue dynamically
     const carIds = cars.map(c => c._id);
     const bookingAggregation = await Booking.aggregate([
-      { $match: { car: { $in: carIds } } },
+      { 
+        $match: { 
+          car: { $in: carIds },
+          paymentStatus: { $in: ['paid', 'partial'] }
+        } 
+      },
       {
         $group: {
           _id: '$car',
           count: { $sum: 1 },
           revenue: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $ne: ['$status', 'cancelled'] },
-                    { $ne: ['$status', 'rejected'] }
-                  ]
-                },
-                { $ifNull: ['$paidAmount', 0] },
-                0
-              ]
-            }
+            $sum: { $ifNull: ['$paidAmount', 0] }
+          }
+        }
+      }
+    ]);
+
+    // Also fetch bookings from OutwardBooking collection
+    const carIdStrings = carIds.map(id => id.toString());
+    const outwardBookingAggregation = await OutwardBooking.aggregate([
+      { 
+        $match: { 
+          carId: { $in: carIdStrings },
+          paymentStatus: { $in: ['paid', 'partial'] }
+        } 
+      },
+      {
+        $group: {
+          _id: '$carId',
+          count: { $sum: 1 },
+          revenue: {
+            $sum: { $ifNull: ['$paidAmount', 0] }
           }
         }
       }
@@ -138,6 +152,17 @@ export const getAllCars = async (req, res) => {
           count: stat.count,
           revenue: stat.revenue
         };
+      }
+    });
+
+    outwardBookingAggregation.forEach(stat => {
+      if (stat._id) {
+        const idStr = stat._id.toString();
+        if (!bookingStatsMap[idStr]) {
+          bookingStatsMap[idStr] = { count: 0, revenue: 0 };
+        }
+        bookingStatsMap[idStr].count += stat.count;
+        bookingStatsMap[idStr].revenue += stat.revenue;
       }
     });
 
@@ -958,6 +983,8 @@ export const getCarRecord = async (req, res) => {
     
     let bookings = [];
     let carInfo = null;
+    let standardCarId = null;
+    let outwardCarId = null;
 
     if (car) {
       carInfo = {
@@ -972,57 +999,8 @@ export const getCarRecord = async (req, res) => {
         imageUrl: car.images?.find(img => img.isPrimary)?.url || car.images?.[0]?.url || null,
       };
 
-      // Query standard bookings for this car
-      const rawBookings = await Booking.find({ car: car._id })
-        .populate('user', 'name email phone')
-        .sort({ createdAt: -1 });
-
-      // Transform standard bookings to unified format
-      const standardBookings = rawBookings.map(b => ({
-        id: b._id,
-        bookingId: b.bookingId,
-        customerName: b.user?.name || 'Anonymous',
-        customerPhone: b.user?.phone || 'N/A',
-        customerEmail: b.user?.email || 'N/A',
-        fromDate: b.tripStart?.date ? new Date(b.tripStart.date).toISOString() : b.bookingDate,
-        toDate: b.tripEnd?.date ? new Date(b.tripEnd.date).toISOString() : b.bookingDate,
-        totalPrice: b.pricing?.totalPrice || 0,
-        paidAmount: b.paidAmount || 0,
-        paymentStatus: b.paymentStatus || 'pending',
-        status: b.status,
-        source: 'inward',
-        createdAt: b.createdAt
-      }));
-
-      bookings = [...standardBookings];
-
-      // If it is an outward car, also query OutwardBooking collection
-      if (car.source === 'outward' && car.outwardCarId) {
-        const outwardBookings = await OutwardBooking.find({
-          $or: [
-            { carId: car.outwardCarId },
-            { carId: car._id.toString() }
-          ]
-        }).sort({ createdAt: -1 });
-
-        const formattedOutward = outwardBookings.map(b => ({
-          id: b._id,
-          bookingId: b.originalBookingId || b._id,
-          customerName: b.customerName,
-          customerPhone: b.customerPhone || 'N/A',
-          customerEmail: b.customerEmail || 'N/A',
-          fromDate: b.fromDate,
-          toDate: b.toDate,
-          totalPrice: b.totalPrice,
-          paidAmount: b.paidAmount || 0,
-          paymentStatus: b.paymentStatus,
-          status: b.status,
-          source: 'outward',
-          createdAt: b.createdAt
-        }));
-
-        bookings = [...bookings, ...formattedOutward];
-      }
+      standardCarId = car._id;
+      outwardCarId = car.outwardCarId;
     } else {
       // If not found in standard Car, it might be an outward car. Look in outwardcars collection
       const outwardCar = await mongoose.connection.db.collection('outwardcars').findOne({ 
@@ -1045,30 +1023,13 @@ export const getCarRecord = async (req, res) => {
           imageUrl: outwardCar.image || null,
         };
 
-        // Query OutwardBooking collection
-        const outwardBookings = await OutwardBooking.find({
-          $or: [
-            { carId: carId },
-            { carId: outwardCar.originalOutputId },
-            { carId: outwardCar._id?.toString() }
-          ].filter(Boolean)
-        }).sort({ createdAt: -1 });
-
-        bookings = outwardBookings.map(b => ({
-          id: b._id,
-          bookingId: b.originalBookingId || b._id,
-          customerName: b.customerName,
-          customerPhone: b.customerPhone || 'N/A',
-          customerEmail: b.customerEmail || 'N/A',
-          fromDate: b.fromDate,
-          toDate: b.toDate,
-          totalPrice: b.totalPrice,
-          paidAmount: b.paidAmount || 0,
-          paymentStatus: b.paymentStatus,
-          status: b.status,
-          source: 'outward',
-          createdAt: b.createdAt
-        }));
+        outwardCarId = carInfo.id;
+        
+        // Find shadow car in standard Car collection
+        const shadowCar = await Car.findOne({ outwardCarId: carInfo.id });
+        if (shadowCar) {
+          standardCarId = shadowCar._id;
+        }
       }
     }
 
@@ -1079,7 +1040,69 @@ export const getCarRecord = async (req, res) => {
       });
     }
 
-    // Sort all bookings by createdAt desc
+    // 1. Fetch standard bookings (normal bookings)
+    let standardBookings = [];
+    if (standardCarId) {
+      const rawBookings = await Booking.find({ 
+        car: standardCarId,
+        paymentStatus: { $in: ['paid', 'partial'] }
+      })
+        .populate('user', 'name email phone')
+        .sort({ createdAt: -1 });
+
+      standardBookings = rawBookings.map(b => ({
+        id: b._id,
+        bookingId: b.bookingId,
+        customerName: b.user?.name || 'Anonymous',
+        customerPhone: b.user?.phone || 'N/A',
+        customerEmail: b.user?.email || 'N/A',
+        fromDate: b.tripStart?.date ? new Date(b.tripStart.date).toISOString() : b.bookingDate,
+        toDate: b.tripEnd?.date ? new Date(b.tripEnd.date).toISOString() : b.bookingDate,
+        totalPrice: b.pricing?.totalPrice || 0,
+        paidAmount: b.paidAmount || 0,
+        paymentStatus: b.paymentStatus || 'pending',
+        status: b.status,
+        source: carInfo.source === 'outward' ? 'outward' : 'normal',
+        createdAt: b.createdAt
+      }));
+    }
+
+    // 2. Fetch fleet bookings (inward and/or outward) from OutwardBooking collection
+    let outwardBookings = [];
+    const outwardQuery = [];
+
+    if (outwardCarId) {
+      outwardQuery.push({ carId: outwardCarId });
+    }
+    if (standardCarId) {
+      outwardQuery.push({ carId: standardCarId.toString() });
+    }
+
+    if (outwardQuery.length > 0) {
+      const rawOutwardBookings = await OutwardBooking.find({
+        $or: outwardQuery,
+        paymentStatus: { $in: ['paid', 'partial'] }
+      }).sort({ createdAt: -1 });
+
+      outwardBookings = rawOutwardBookings.map(b => ({
+        id: b._id,
+        bookingId: b.originalBookingId || b._id,
+        customerName: b.customerName,
+        customerPhone: b.customerPhone || 'N/A',
+        customerEmail: b.customerEmail || 'N/A',
+        fromDate: b.fromDate,
+        toDate: b.toDate,
+        totalPrice: b.totalPrice,
+        paidAmount: b.paidAmount || 0,
+        paymentStatus: b.paymentStatus,
+        status: b.status,
+        source: b.carType || (carInfo.source === 'outward' ? 'outward' : 'inward'),
+        createdAt: b.createdAt
+      }));
+    }
+
+    // Combine all bookings and sort by createdAt desc
+    bookings = [...standardBookings, ...outwardBookings];
     bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // Calculate Analytics/Stats
@@ -1088,7 +1111,7 @@ export const getCarRecord = async (req, res) => {
     const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'Active').length;
     const cancelledBookings = bookings.filter(b => b.status === 'cancelled' || b.status === 'Cancelled').length;
     
-    // Total Revenue is sum of paidAmount for completed/active bookings or all paidAmount
+    // Total Revenue is sum of paidAmount for all bookings
     const totalRevenue = bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
     const pendingAmount = bookings.reduce((sum, b) => {
       if (b.status === 'cancelled' || b.status === 'Cancelled') return sum;

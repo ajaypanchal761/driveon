@@ -6,7 +6,7 @@ import { isToday, parseISO, format } from 'date-fns';
 import {
   FiHome, FiUsers, FiCheckSquare, FiUser, FiBell, FiMenu,
   FiClock, FiActivity, FiPhone, FiTarget, FiBriefcase, FiArrowRight,
-  FiCalendar, FiFileText, FiPieChart, FiMapPin
+  FiCalendar, FiFileText, FiPieChart, FiMapPin, FiCheckCircle, FiXCircle
 } from 'react-icons/fi';
 import { BiTask, BiTimeFive } from 'react-icons/bi';
 import { FaUserFriends } from 'react-icons/fa';
@@ -193,7 +193,7 @@ const EmployeeHomePage = () => {
   const roleLower = role.toLowerCase();
   const isDriver = roleLower === 'driver' || roleLower.includes('driver');
   const isTelecaller = roleLower === 'telecaller' || roleLower === 'tellecaller';
-  const isAccountantOrHR = roleLower === 'accountant' || roleLower === 'hr';
+  const isAccountantOrHR = roleLower.includes('account') || roleLower.includes('hr') || roleLower.includes('admin') || roleLower.includes('executive');
 
   const [driverBookingsCount, setDriverBookingsCount] = useState({ total: 0, pending: 0, active: 0, completed: 0 });
 
@@ -217,6 +217,48 @@ const EmployeeHomePage = () => {
       fetchDriverBookings();
     }
   }, [user, isDriver]);
+
+  const [personalAttendanceCounts, setPersonalAttendanceCounts] = useState({
+    present: 0,
+    late: 0,
+    absent: 0,
+    leave: 0
+  });
+
+  useEffect(() => {
+    if (isAccountantOrHR) {
+      const fetchPersonalAttendance = async () => {
+        try {
+          const userId = user?._id || user?.id;
+          if (!userId) return;
+          const response = await api.get(`/crm/attendance?staffId=${userId}`);
+          if (response.data?.success) {
+            const records = response.data.data.records || [];
+            
+            // Filter records for the current month
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            const currentMonthRecords = records.filter(r => {
+              const recordDate = new Date(r.date);
+              return recordDate.getFullYear() === currentYear && recordDate.getMonth() === currentMonth;
+            });
+
+            // Count statuses
+            const present = currentMonthRecords.filter(r => r.status === 'Present').length;
+            const late = currentMonthRecords.filter(r => r.status === 'Late').length;
+            const absent = currentMonthRecords.filter(r => r.status === 'Absent').length;
+            const leave = currentMonthRecords.filter(r => r.status === 'Leave').length;
+
+            setPersonalAttendanceCounts({ present, late, absent, leave });
+          }
+        } catch (error) {
+          console.error('Error fetching personal attendance:', error);
+        }
+      };
+      fetchPersonalAttendance();
+    }
+  }, [user, isAccountantOrHR]);
 
   const formatTime = (date) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -375,7 +417,7 @@ const EmployeeHomePage = () => {
         {/* HEADER SECTION - Curved & Clean */}
         <motion.div
           variants={itemVariants}
-          className="text-white pt-10 pb-24 rounded-b-[40px] relative overflow-hidden shadow-xl"
+          className={`text-white pt-10 ${isDriver ? 'pb-12' : 'pb-24'} rounded-b-[40px] relative overflow-hidden shadow-xl`}
           style={{ background: GRADIENT_HEADER }}
         >
           <div className="px-6 relative z-10 flex justify-between items-start">
@@ -406,141 +448,164 @@ const EmployeeHomePage = () => {
         </motion.div>
 
         {/* OVERLOGGING CARD - "Working Time" Style */}
-        <div className="px-6 -mt-16 relative z-40">
-          <motion.div
-            variants={itemVariants}
-            className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white"
-          >
-            {/* Top Row: Time on Left, Check In/Out Button on Right */}
-            <div className="flex justify-between items-center mb-5 gap-3">
-              <div>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-0.5">Current Time</p>
-                <div className="flex items-baseline gap-1">
-                  <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-                    {formatTime(time).split(' ')[0]}
-                    <span className="text-sm text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
-                  </h2>
+        {!isDriver && (
+          <div className="px-6 -mt-16 relative z-40">
+            <motion.div
+              variants={itemVariants}
+              className="bg-white rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white"
+            >
+              {/* Top Row: Time on Left, Check In/Out Button on Right */}
+              <div className="flex justify-between items-center mb-5 gap-3">
+                <div>
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-0.5">Current Time</p>
+                  <div className="flex items-baseline gap-1">
+                    <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">
+                      {formatTime(time).split(' ')[0]}
+                      <span className="text-sm text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
+                    </h2>
+                  </div>
+                  <p className="text-[11px] text-[#1C205C]/70 font-bold mt-1.5 flex items-center gap-1 tracking-wide">
+                    <FiCalendar className="text-[#1C205C]" size={12} />
+                    {format(time, 'EEEE, d MMMM yyyy')}
+                  </p>
                 </div>
-                <p className="text-[11px] text-[#1C205C]/70 font-bold mt-1.5 flex items-center gap-1 tracking-wide">
-                  <FiCalendar className="text-[#1C205C]" size={12} />
-                  {format(time, 'EEEE, d MMMM yyyy')}
-                </p>
+
+                {/* Clock Out/In Button */}
+                <motion.button
+                  whileTap={checkedOutToday ? undefined : { scale: 0.95 }}
+                  disabled={checkedOutToday}
+                  onClick={handleClockClick}
+                  className={`${checkedOutToday ? 'bg-gray-400 cursor-not-allowed opacity-70' : clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
+                      text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap`}
+                >
+                  <FiClock />
+                  {checkedOutToday ? 'Checked Out' : clockedIn ? 'Check Out' : 'Check In'}
+                </motion.button>
               </div>
 
-              {/* Clock Out/In Button */}
-              <motion.button
-                whileTap={checkedOutToday ? undefined : { scale: 0.95 }}
-                disabled={checkedOutToday}
-                onClick={handleClockClick}
-                className={`${checkedOutToday ? 'bg-gray-400 cursor-not-allowed opacity-70' : clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
-                    text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap`}
-              >
-                <FiClock />
-                {checkedOutToday ? 'Checked Out' : clockedIn ? 'Check Out' : 'Check In'}
-              </motion.button>
-            </div>
+              {/* Bottom Row: Timer & Full-Width Address */}
+              <div className="space-y-3 mb-6 pt-4 border-t border-gray-100">
+                {/* Timer Display */}
+                <div className="px-3 py-1.5 bg-blue-50/80 rounded-lg border border-blue-100 w-fit">
+                  <p className="text-blue-500 text-[9px] font-bold uppercase tracking-wider mb-0 leading-none">Session Timer</p>
+                  <div className="text-lg font-mono font-bold text-blue-700 flex items-center gap-1.5 mt-0.5 leading-none">
+                    <FiActivity className={`${clockedIn ? 'animate-pulse' : ''}`} size={14} />
+                    {formatDuration(elapsedSeconds)}
+                  </div>
+                </div>
 
-            {/* Bottom Row: Timer & Full-Width Address */}
-            <div className="space-y-3 mb-6 pt-4 border-t border-gray-100">
-              {/* Timer Display */}
-              <div className="px-3 py-1.5 bg-blue-50/80 rounded-lg border border-blue-100 w-fit">
-                <p className="text-blue-500 text-[9px] font-bold uppercase tracking-wider mb-0 leading-none">Session Timer</p>
-                <div className="text-lg font-mono font-bold text-blue-700 flex items-center gap-1.5 mt-0.5 leading-none">
-                  <FiActivity className={`${clockedIn ? 'animate-pulse' : ''}`} size={14} />
-                  {formatDuration(elapsedSeconds)}
+                {/* Live Location Full-Width */}
+                <div className="flex items-start gap-2 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50">
+                  <FiMapPin className="text-blue-500 mt-0.5 shrink-0" size={14} />
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-600 font-bold leading-relaxed break-words">{locationState.address}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Live Location Full-Width */}
-              <div className="flex items-start gap-2 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50">
-                <FiMapPin className="text-blue-500 mt-0.5 shrink-0" size={14} />
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-600 font-bold leading-relaxed break-words">{locationState.address}</p>
+              {/* Stats Row within Card */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                <div className="text-center">
+                  <span className="block text-xl font-bold text-gray-800">
+                    {formatTotalHours(accumulatedSeconds + (clockedIn ? elapsedSeconds : 0))}
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">Total Hours</span>
+                </div>
+                <div className="text-center border-l border-gray-100">
+                  <span className={`block text-xl font-bold ${
+                    attendanceStatus === 'Late' ? 'text-amber-500' : 
+                    attendanceStatus === 'Absent' ? 'text-rose-500' : 
+                    attendanceStatus === '—' ? 'text-gray-400' : 'text-emerald-500'
+                  }`}>
+                    {attendanceStatus === 'Late' ? 'Present (Late)' : attendanceStatus}
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">Status</span>
                 </div>
               </div>
-            </div>
-
-             {/* Stats Row within Card */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-              <div className="text-center">
-                <span className="block text-xl font-bold text-gray-800">
-                  {formatTotalHours(accumulatedSeconds + (clockedIn ? elapsedSeconds : 0))}
-                </span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">Total Hours</span>
-              </div>
-              <div className="text-center border-l border-gray-100">
-                <span className={`block text-xl font-bold ${
-                  attendanceStatus === 'Late' ? 'text-amber-500' : 
-                  attendanceStatus === 'Absent' ? 'text-rose-500' : 
-                  attendanceStatus === '—' ? 'text-gray-400' : 'text-emerald-500'
-                }`}>
-                  {attendanceStatus === 'Late' ? 'Present (Late)' : attendanceStatus}
-                </span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">Status</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        )}
       </div>
 
       {/* Dynamic Quick Overview based on role */}
-      {!isAccountantOrHR && (
-        <div className="px-6 mt-8 space-y-8">
-          <motion.div variants={itemVariants}>
-            <h3 className="text-gray-800 font-bold text-lg mb-4">Quick Overview</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {isDriver ? (
-                // Driver Specific Stats
-                [
-                  { id: 1, label: "All Trips", value: driverBookingsCount.total, icon: <FiBriefcase size={20} />, color: "text-indigo-600", bg: "bg-indigo-100", tab: 'All' },
-                  { id: 2, label: "Assigned", value: driverBookingsCount.pending, icon: <FiClock size={20} />, color: "text-blue-600", bg: "bg-blue-100", tab: 'Pending' },
-                  { id: 3, label: "Active", value: driverBookingsCount.active, icon: <FiActivity size={20} />, color: "text-emerald-500", bg: "bg-emerald-100", tab: 'Active' },
-                  { id: 4, label: "Completed", value: driverBookingsCount.completed, icon: <FiCheckSquare size={20} />, color: "text-gray-500", bg: "bg-gray-100", tab: 'Completed' },
-                ].map((stat) => (
-                  <motion.div
-                    whileTap={{ scale: 0.95 }}
-                    key={stat.id}
-                    onClick={() => navigate('/employee/bookings', { state: { activeTab: stat.tab } })}
-                    className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
-                  >
-                    <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                      {stat.icon}
-                    </div>
-                    <div className="text-center">
-                      <span className="block font-bold text-gray-800">{stat.label}</span>
-                      <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
-                    </div>
-                  </motion.div>
-                ))
-              ) : (
-                // Telecaller (or default fallback) Specific Stats
-                employeeData.quickStats.map((stat) => (
-                  <motion.div
-                    whileTap={{ scale: 0.95 }}
-                    key={stat.id}
-                    onClick={() => {
-                      let tab = 'All';
-                      if (stat.label === 'Pending') tab = 'Pending';
-                      if (stat.label === 'Closed') tab = 'Closed';
-                      if (stat.label === 'Converted') tab = 'Converted';
-                      navigate('/employee/enquiries', { state: { activeTab: tab } });
-                    }}
-                    className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
-                  >
-                    <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                      {stat.icon}
-                    </div>
-                    <div className="text-center">
-                      <span className="block font-bold text-gray-800">{stat.label}</span>
-                      <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <div className="px-6 mt-8 space-y-8">
+        <motion.div variants={itemVariants}>
+          <h3 className="text-gray-800 font-bold text-lg mb-4">Quick Overview</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {isDriver ? (
+              // Driver Specific Stats
+              [
+                { id: 1, label: "All Trips", value: driverBookingsCount.total, icon: <FiBriefcase size={20} />, color: "text-indigo-600", bg: "bg-indigo-100", tab: 'All' },
+                { id: 2, label: "Assigned", value: driverBookingsCount.pending, icon: <FiClock size={20} />, color: "text-blue-600", bg: "bg-blue-100", tab: 'Pending' },
+                { id: 3, label: "Active", value: driverBookingsCount.active, icon: <FiActivity size={20} />, color: "text-emerald-500", bg: "bg-emerald-100", tab: 'Active' },
+                { id: 4, label: "Completed", value: driverBookingsCount.completed, icon: <FiCheckSquare size={20} />, color: "text-gray-500", bg: "bg-gray-100", tab: 'Completed' },
+              ].map((stat) => (
+                <motion.div
+                  whileTap={{ scale: 0.95 }}
+                  key={stat.id}
+                  onClick={() => navigate('/employee/bookings', { state: { activeTab: stat.tab } })}
+                  className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
+                >
+                  <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                    {stat.icon}
+                  </div>
+                  <div className="text-center">
+                    <span className="block font-bold text-gray-800">{stat.label}</span>
+                    <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
+                  </div>
+                </motion.div>
+              ))
+            ) : isAccountantOrHR ? (
+              // Accountant / HR Specific Stats: Present (On Time), Present (Late), Absent, On Leave
+              [
+                { id: 1, label: "Present (On Time)", value: personalAttendanceCounts.present, icon: <FiCheckCircle size={20} />, color: "text-emerald-600", bg: "bg-emerald-100" },
+                { id: 2, label: "Present (Late)", value: personalAttendanceCounts.late, icon: <FiClock size={20} />, color: "text-amber-500", bg: "bg-amber-100" },
+                { id: 3, label: "Absent", value: personalAttendanceCounts.absent, icon: <FiXCircle size={20} />, color: "text-rose-500", bg: "bg-rose-100" },
+                { id: 4, label: "On Leave", value: personalAttendanceCounts.leave, icon: <FiCalendar size={20} />, color: "text-indigo-600", bg: "bg-indigo-50" },
+              ].map((stat) => (
+                <motion.div
+                  whileTap={{ scale: 0.95 }}
+                  key={stat.id}
+                  onClick={() => navigate('/employee/attendance')}
+                  className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
+                >
+                  <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                    {stat.icon}
+                  </div>
+                  <div className="text-center">
+                    <span className="block font-bold text-gray-800 text-xs">{stat.label}</span>
+                    <span className={`text-xs font-extrabold ${stat.color}`}>{stat.value}</span>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              // Telecaller (or default fallback) Specific Stats
+              employeeData.quickStats.map((stat) => (
+                <motion.div
+                  whileTap={{ scale: 0.95 }}
+                  key={stat.id}
+                  onClick={() => {
+                    let tab = 'All';
+                    if (stat.label === 'Pending') tab = 'Pending';
+                    if (stat.label === 'Closed') tab = 'Closed';
+                    if (stat.label === 'Converted') tab = 'Converted';
+                    navigate('/employee/enquiries', { state: { activeTab: tab } });
+                  }}
+                  className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
+                >
+                  <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                    {stat.icon}
+                  </div>
+                  <div className="text-center">
+                    <span className="block font-bold text-gray-800">{stat.label}</span>
+                    <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </motion.div>
+      </div>
       </div>
 
       <BottomNav />

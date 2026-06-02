@@ -244,6 +244,7 @@ const CRM_StaffAttendance = lazy(() => import("../crm/pages/staff/StaffSubPages"
 const CRM_StaffSalary = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.SalaryPage })));
 const CRM_StaffAttendanceSettings = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AttendanceSettingsPage })));
 const CRM_StaffDriverAssignment = lazy(() => import("../crm/pages/staff/DriverAssignmentPage"));
+const CRM_StaffDriverRecord = lazy(() => import("../crm/pages/staff/DriverRecordPage"));
 
 
 
@@ -351,10 +352,10 @@ const router = createBrowserRouter([
         path: "staff/attendance-settings",
         element: <CRM_StaffAttendanceSettings />,
       },
-      // {
-      //   path: "staff/salary",
-      //   element: <CRM_StaffSalary />,
-      // },
+      {
+        path: "staff/salary",
+        element: <CRM_StaffSalary />,
+      },
 
 
       // GARAGE ROUTES
@@ -428,8 +429,8 @@ const router = createBrowserRouter([
         element: <CRM_ExpenseCategories />,
       },
       {
-        path: "staff/driver-assignment",
-        element: <CRM_StaffDriverAssignment />,
+        path: "staff/driver-record",
+        element: <CRM_StaffDriverRecord />,
       },
 
 
@@ -664,6 +665,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/bookings/active",
             element: <BookingListPage />,
+          },
+          {
+            path: "/admin/bookings/driver-assignment",
+            element: <CRM_StaffDriverAssignment />,
           },
           {
             path: "/admin/payments",

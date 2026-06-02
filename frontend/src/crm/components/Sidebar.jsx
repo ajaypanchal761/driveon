@@ -60,7 +60,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/staff/roles', name: 'Roles & Designation' },
         { path: '/crm/staff/attendance', name: 'Attendance Tracker' },
         { path: '/crm/staff/attendance-settings', name: 'Attendance Settings' },
-        // { path: '/crm/staff/salary', name: 'Salary' },
+        { path: '/crm/staff/salary', name: 'Salary Management' },
       ]
     },
 
@@ -107,9 +107,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       ]
     },
     {
-      id: 'driver-assignment',
-      path: '/crm/staff/driver-assignment',
-      name: 'Driver Assign',
+      id: 'driver-record',
+      path: '/crm/staff/driver-record',
+      name: 'Driver Record',
       icon: <MdBadge />
     },
   ];

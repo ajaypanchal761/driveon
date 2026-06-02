@@ -29,6 +29,7 @@ const AdminSettingsPage = () => {
     contactEmail: 'driveon721@gmail.com',
     contactPhone: '',
     advancePaymentPercentage: 20,
+    cashCollectors: [],
   });
 
   // Password Change Settings
@@ -56,6 +57,7 @@ const AdminSettingsPage = () => {
             contactEmail: settings.contactEmail || 'driveon721@gmail.com',
             contactPhone: adminUser?.phone || settings.contactPhone || '+91 98765 43210',
             advancePaymentPercentage: settings.advancePaymentPercentage !== undefined ? settings.advancePaymentPercentage : 20,
+            cashCollectors: settings.cashCollectors || [],
           });
         }
       } catch (err) {
@@ -68,6 +70,7 @@ const AdminSettingsPage = () => {
           contactEmail: 'driveon721@gmail.com',
           contactPhone: adminUser?.phone || '+91 98765 43210',
           advancePaymentPercentage: 20,
+          cashCollectors: [],
         });
       } finally {
         setLoading(false);
@@ -103,12 +106,13 @@ const AdminSettingsPage = () => {
         }
       }
 
-      // Update system settings (app name, contact email, contact phone, advance payment percentage)
+      // Update system settings (app name, contact email, contact phone, advance payment percentage, cash collectors)
       const settingsResponse = await adminService.updateSystemSettings({
         appName: generalSettings.appName,
         contactEmail: generalSettings.contactEmail,
         contactPhone: generalSettings.contactPhone,
         advancePaymentPercentage: Number(generalSettings.advancePaymentPercentage),
+        cashCollectors: generalSettings.cashCollectors,
       });
 
       if (!settingsResponse.success) {
@@ -365,6 +369,96 @@ const AdminSettingsPage = () => {
                     <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>
                       Specify the percentage of total rental amount required upfront to confirm a booking.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cash Collection Settings */}
+              <div className="pt-4 border-t" style={{ borderColor: colors.borderMedium }}>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: colors.textPrimary }}>Cash Collectors</h3>
+                <div className="space-y-4">
+                  <div className="flex gap-3 max-w-md">
+                    <input
+                      type="text"
+                      id="newCollectorInput"
+                      placeholder="Enter collector's name"
+                      className="flex-1 px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                      style={{
+                        border: `1px solid ${colors.borderMedium}`,
+                        backgroundColor: colors.backgroundSecondary,
+                        color: colors.textPrimary
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = e.currentTarget.value.trim();
+                          if (val) {
+                            if (generalSettings.cashCollectors.includes(val)) {
+                              toastUtils.error('Name already exists');
+                              return;
+                            }
+                            setGeneralSettings({
+                              ...generalSettings,
+                              cashCollectors: [...generalSettings.cashCollectors, val]
+                            });
+                            e.currentTarget.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('newCollectorInput');
+                        const val = input?.value?.trim();
+                        if (val) {
+                          if (generalSettings.cashCollectors.includes(val)) {
+                            toastUtils.error('Name already exists');
+                            return;
+                          }
+                          setGeneralSettings({
+                            ...generalSettings,
+                            cashCollectors: [...generalSettings.cashCollectors, val]
+                          });
+                          input.value = '';
+                        }
+                      }}
+                      className="px-4 py-2 text-white rounded-lg font-medium transition-colors"
+                      style={{ backgroundColor: colors.backgroundTertiary }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <p className="text-xs" style={{ color: colors.textSecondary }}>
+                    Press Enter or click Add to append a name. These names will be available in the dropdown when completing booking cash collections.
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {(!generalSettings.cashCollectors || generalSettings.cashCollectors.length === 0) ? (
+                      <span className="text-sm italic" style={{ color: colors.textSecondary }}>No collectors defined yet.</span>
+                    ) : (
+                      generalSettings.cashCollectors.map((collector, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 border text-gray-800"
+                          style={{ borderColor: colors.borderMedium }}
+                        >
+                          {collector}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGeneralSettings({
+                                ...generalSettings,
+                                cashCollectors: generalSettings.cashCollectors.filter(c => c !== collector)
+                              });
+                            }}
+                            className="hover:text-red-500 font-bold transition-colors focus:outline-none ml-1 text-sm leading-none"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

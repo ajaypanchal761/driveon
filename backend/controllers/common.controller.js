@@ -514,6 +514,7 @@ export const getPublicSettings = async (req, res) => {
       contactEmail: settingsObj.contactEmail || process.env.CONTACT_EMAIL || 'driveon721@gmail.com',
       contactPhone: settingsObj.contactPhone || process.env.CONTACT_PHONE || '+91 98765 43210',
       advancePaymentPercentage: settingsObj.advancePaymentPercentage !== undefined ? Number(settingsObj.advancePaymentPercentage) : 20,
+      cashCollectors: settingsObj.cashCollectors || [],
     };
 
     res.status(200).json({

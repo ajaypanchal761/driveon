@@ -169,6 +169,9 @@ const DriverAssignmentPage = () => {
     // Hide completed bookings ONLY if they do not have an assigned driver
     if ((b.status === 'completed' || b.tripStatus === 'completed') && !b.assignedDriver) return false;
 
+    // Only show bookings that require a driver (driver count > 0)
+    if (!b.addOnServices || !(b.addOnServices.driver > 0)) return false;
+
     const matchesSearch =
       (b.bookingId && b.bookingId.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (b.user?.name && b.user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -209,7 +212,9 @@ const DriverAssignmentPage = () => {
                   b.status !== 'cancelled' &&
                   b.status !== 'completed' &&
                   b.tripStatus !== 'cancelled' &&
-                  b.tripStatus !== 'completed'
+                  b.tripStatus !== 'completed' &&
+                  b.addOnServices &&
+                  b.addOnServices.driver > 0
                 ).length}
               </span>
             </div>
@@ -508,8 +513,13 @@ const DriverAssignmentPage = () => {
                               {driver.name?.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <h5 className="font-bold text-gray-800 text-xs leading-none mb-1">{driver.name}</h5>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase">{driver.employeeId || 'DRV-NEW'}</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <h5 className="font-bold text-gray-800 text-xs leading-none">{driver.name}</h5>
+                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${driver.salaryMethod === 'Per Trip' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100/50' : 'bg-blue-50 text-blue-700 border border-blue-100/50'}`}>
+                                  {driver.salaryMethod === 'Per Trip' ? 'Per Trip' : 'Monthly'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase leading-none">{driver.employeeId || 'DRV-NEW'}</p>
 
                               {/* conflict warning badge */}
                               {isBusy && (

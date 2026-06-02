@@ -95,7 +95,12 @@ import {
     getAttendanceSettings,
     updateAttendanceSettings,
     getEnquiryAssignments,
-    bulkAssignEnquiries
+    bulkAssignEnquiries,
+    getMonthlyCalculatedPayroll,
+    recordManualSalaryPayment,
+    getHolidays,
+    markHoliday,
+    deleteHoliday
 } from '../controllers/crm.controller.js';
 import { getPolicyByKey, updatePolicy } from '../controllers/policy.controller.js';
 // import { protect, admin } from '../middleware/auth.middleware.js'; // Assuming you have auth middleware
@@ -164,6 +169,8 @@ router.route('/staff/:id')
     .put(handleStaffUploads, updateStaff)
     .delete(deleteStaff);
 
+router.get('/staff/payroll/calculate', getMonthlyCalculatedPayroll);
+router.post('/staff/salary/manual-pay', recordManualSalaryPayment);
 router.get('/staff/:id/payroll', getStaffPayroll);
 router.post('/staff/salary/create-order', createSalaryPaymentOrder);
 router.post('/staff/salary/verify', verifySalaryPayment);
@@ -186,6 +193,13 @@ router.route('/attendance')
 router.route('/attendance/settings')
     .get(getAttendanceSettings)
     .put(updateAttendanceSettings);
+
+router.route('/attendance/holidays')
+    .get(getHolidays)
+    .post(markHoliday);
+
+router.route('/attendance/holidays/:date')
+    .delete(deleteHoliday);
 
 // Payroll Routes
 router.route('/payroll')

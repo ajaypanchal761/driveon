@@ -1206,11 +1206,15 @@ export const getTeamPresence = async (req, res) => {
         // 1. Total Staff (Active) - excluding Resigned if applicable, but for now counting all as per schema defaults
         const totalStaff = await Staff.countDocuments({ status: { $ne: 'Resigned' } });
 
+        // Fetch today's attendance records and populate staff to filter out orphaned/invalid records
+        const todayAttendances = await Attendance.find({ date: today }).populate('staff');
+        const validAttendances = todayAttendances.filter(a => a.staff && a.staff.status !== 'Resigned');
+
         // 2. Present Today (Present or Late)
-        const presentCount = await Attendance.countDocuments({
-            date: today,
-            status: { $in: ['Present', 'Late'] }
-        });
+        const presentCount = validAttendances.filter(a => ['Present', 'Late'].includes(a.status)).length;
+
+        // 2b. Late Today
+        const lateCount = validAttendances.filter(a => a.status === 'Late').length;
 
         // 3. On Leave (Status is 'Leave')
         // Note: Staff status might be 'Leave' regardless of daily attendance check, or we check if there is an attendance logic for leave.
@@ -1219,10 +1223,7 @@ export const getTeamPresence = async (req, res) => {
         const leaveCount = await Staff.countDocuments({ status: 'Leave' });
 
         // 4. Absent (Only count if explicitly marked as 'Absent' in daily attendance)
-        const absentCount = await Attendance.countDocuments({
-            date: today,
-            status: 'Absent'
-        });
+        const absentCount = validAttendances.filter(a => a.status === 'Absent').length;
 
         // 5. Get some avatars of present staff for the UI (limit 5)
         const presentAttendances = await Attendance.find({
@@ -1253,6 +1254,7 @@ export const getTeamPresence = async (req, res) => {
             data: {
                 total: totalStaff,
                 present: presentCount,
+                late: lateCount,
                 absent: absentCount,
                 leave: leaveCount,
                 activeStaff: presentStaffMapped
@@ -2991,7 +2993,30 @@ export const getStaffPayroll = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Staff not found' });
         }
 
-        const baseSalary = staff.salary || 0;
+        let baseSalary = staff.salary || 0;
+        let completedTripsCount = 0;
+
+        const isDriverRole = staff.role && (staff.role.toLowerCase() === 'driver' || staff.role.toLowerCase().includes('driver'));
+
+        if (isDriverRole) {
+            const startOfMonth = new Date(targetYear, targetMonth, 1);
+            const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+            completedTripsCount = await mongoose.model('Booking').countDocuments({
+                assignedDriver: staff._id,
+                $or: [
+                    { status: 'completed' },
+                    { tripStatus: 'completed' }
+                ],
+                $or: [
+                    { completedAt: { $gte: startOfMonth, $lte: endOfMonth } },
+                    { createdAt: { $gte: startOfMonth, $lte: endOfMonth } }
+                ]
+            });
+
+            if (staff.salaryMethod === 'Per Trip') {
+                baseSalary = completedTripsCount * (staff.salary || 0);
+            }
+        }
 
         // Calculate total days in the month
         const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
@@ -3018,6 +3043,16 @@ export const getStaffPayroll = async (req, res) => {
             staff: id,
             date: { $gte: startDate, $lte: endDate }
         });
+
+        // Fetch Holidays
+        const holidaysSetting = await Setting.findOne({ key: 'holidays' });
+        const holidaysList = holidaysSetting ? holidaysSetting.value : [];
+        const holidaysMap = {};
+        if (holidaysList && Array.isArray(holidaysList)) {
+            holidaysList.forEach(h => {
+                holidaysMap[h.date] = h.reason;
+            });
+        }
 
         // Compute days from records
         let presentCount = 0;
@@ -3058,7 +3093,27 @@ export const getStaffPayroll = async (req, res) => {
             let inTime = '-';
             let outTime = '-';
 
-            if (dayOfWeek === 0) {
+            const dateString = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const isHoliday = holidaysMap[dateString];
+
+            if (isHoliday) {
+                computedStatus = 'Holiday';
+                if (record) {
+                    const durationMinutes = parseWorkHours(record.workHours);
+                    workHours = record.workHours || '-';
+                    inTime = record.inTime || '-';
+                    outTime = record.outTime || '-';
+
+                    if (durationMinutes > 540) { // > 9 hours
+                        const extraMinutes = durationMinutes - 540;
+                        totalExtraMinutes += extraMinutes;
+
+                        // Overtime Rate: (Per Day Salary / 9 hours / 60 minutes) per minute
+                        const perMinuteRate = (perDaySalary / 9) / 60;
+                        extraWorkAmount += (extraMinutes * perMinuteRate);
+                    }
+                }
+            } else if (dayOfWeek === 0) {
                 computedStatus = 'Weekend';
             } else {
                 if (record) {
@@ -3129,12 +3184,18 @@ export const getStaffPayroll = async (req, res) => {
                 isWeekend: dayOfWeek === 0,
                 inTime,
                 outTime,
-                workHours
+                workHours,
+                holidayReason: isHoliday || undefined
             });
         }
 
-        const absentDeduction = absentCount * perDaySalary;
-        const halfDayDeduction = halfDayCount * halfDaySalary;
+        let absentDeduction = absentCount * perDaySalary;
+        let halfDayDeduction = halfDayCount * halfDaySalary;
+
+        if (isDriverRole && staff.salaryMethod === 'Per Trip') {
+            absentDeduction = 0;
+            halfDayDeduction = 0;
+        }
 
         const netPayable = baseSalary - absentDeduction - halfDayDeduction + extraWorkAmount;
 
@@ -3255,7 +3316,9 @@ export const verifySalaryPayment = async (req, res) => {
             month,
             year,
             baseSalary,
-            deductions
+            deductions,
+            bonus,
+            note
         } = req.body;
 
         // Verify signature
@@ -3299,6 +3362,9 @@ export const verifySalaryPayment = async (req, res) => {
             payroll.status = 'Paid';
             payroll.paidDate = new Date();
             payroll.netPay = amount;
+            payroll.deductions = deductions || 0;
+            payroll.bonus = bonus || 0;
+            payroll.note = note || '';
             // Push new transaction
             payroll.transactions.push(transactionData);
             await payroll.save();
@@ -3308,6 +3374,8 @@ export const verifySalaryPayment = async (req, res) => {
                 month: monthString,
                 baseSalary: baseSalary || amount,
                 deductions: deductions || 0,
+                bonus: bonus || 0,
+                note: note || '',
                 netPay: amount,
                 status: 'Paid',
                 paidDate: new Date(),
@@ -3336,6 +3404,399 @@ export const verifySalaryPayment = async (req, res) => {
     } catch (error) {
         console.error('Verify Salary Payment Error:', error);
         res.status(500).json({ success: false, message: 'Payment verification failed' });
+    }
+};
+
+/**
+ * @desc    Get Monthly Calculated Payroll for All Active Staff
+ * @route   GET /api/crm/payroll/calculate
+ * @access  Admin
+ */
+export const getMonthlyCalculatedPayroll = async (req, res) => {
+    try {
+        const { month, year } = req.query;
+
+        // Default to current month/year if not provided
+        const now = new Date();
+        const targetMonth = month !== undefined ? parseInt(month) : now.getMonth();
+        const targetYear = year ? parseInt(year) : now.getFullYear();
+
+        // Calculate the end of the target month
+        const endOfMonthDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+        // Get all active/on-duty/leave staff members (exclude resigned/deleted)
+        let staffMembers = await Staff.find({ isDeleted: false, status: { $ne: 'Inactive' } });
+
+        // Filter out employees who joined after the target month
+        staffMembers = staffMembers.filter(staff => {
+            const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt;
+            return joinDate <= endOfMonthDate;
+        });
+
+        // Get global settings for fallback deductions
+        let globalSettings = await Setting.findOne({ key: 'attendance_settings' });
+        const globalAbsentDeduction = globalSettings?.value?.absentDeduction || 0;
+        const globalHalfDayDeduction = globalSettings?.value?.halfDayDeduction || 0;
+        const globalOvertimeRate = globalSettings?.value?.overtimeRate || 0;
+
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+        const monthString = `${monthNames[targetMonth]} ${targetYear}`;
+
+        // Fetch Holidays
+        const holidaysSetting = await Setting.findOne({ key: 'holidays' });
+        const holidaysList = holidaysSetting ? holidaysSetting.value : [];
+        const holidaysMap = {};
+        if (holidaysList && Array.isArray(holidaysList)) {
+            holidaysList.forEach(h => {
+                holidaysMap[h.date] = h.reason;
+            });
+        }
+
+        const parseWorkHours = (str) => {
+            if (!str) return 0;
+            const match = str.match(/(\d+)h\s*(\d+)m/);
+            if (!match) {
+                const hoursMatch = str.match(/(\d+)h/);
+                if (hoursMatch) return parseInt(hoursMatch[1]) * 60;
+                return 0;
+            }
+            return (parseInt(match[1]) * 60) + parseInt(match[2]);
+        };
+
+        const payrolls = [];
+
+        for (const staff of staffMembers) {
+            let baseSalary = staff.salary || 0;
+            let completedTripsCount = 0;
+
+            const isDriverRole = staff.role && (staff.role.toLowerCase() === 'driver' || staff.role.toLowerCase().includes('driver'));
+
+            if (isDriverRole) {
+                const startOfMonth = new Date(targetYear, targetMonth, 1);
+                const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+                completedTripsCount = await mongoose.model('Booking').countDocuments({
+                    assignedDriver: staff._id,
+                    $or: [
+                        { status: 'completed' },
+                        { tripStatus: 'completed' }
+                    ],
+                    $or: [
+                        { completedAt: { $gte: startOfMonth, $lte: endOfMonth } },
+                        { createdAt: { $gte: startOfMonth, $lte: endOfMonth } }
+                    ]
+                });
+
+                if (staff.salaryMethod === 'Per Trip') {
+                    baseSalary = completedTripsCount * (staff.salary || 0);
+                }
+            }
+
+            const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+            // Calculate working days (exclude Sundays)
+            let workingDays = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
+                if (dayOfWeek !== 0) workingDays++;
+            }
+
+            // Calculations
+            const perDaySalary = workingDays > 0 ? (baseSalary / workingDays) : 0;
+            const halfDaySalary = perDaySalary / 2;
+
+            // Fetch Attendance Records
+            const startDate = new Date(targetYear, targetMonth, 1);
+            const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+            const records = await Attendance.find({
+                staff: staff._id,
+                date: { $gte: startDate, $lte: endDate }
+            });
+
+            // Compute days from records
+            let presentCount = 0;
+            let halfDayCount = 0;
+            let absentCount = 0;
+            let leaveCount = 0;
+            let extraWorkAmount = 0;
+            let totalExtraMinutes = 0;
+
+            const recordsMap = {};
+            records.forEach(r => {
+                const day = new Date(r.date).getDate();
+                recordsMap[day] = r;
+            });
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(targetYear, targetMonth, day);
+                const dayOfWeek = date.getDay(); // 0 = Sunday
+                const record = recordsMap[day];
+
+                const dateString = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isHoliday = holidaysMap[dateString];
+
+                if (isHoliday) {
+                    if (record) {
+                        const durationMinutes = parseWorkHours(record.workHours);
+                        if (durationMinutes > 540) { // > 9 hours
+                            const extraMinutes = durationMinutes - 540;
+                            totalExtraMinutes += extraMinutes;
+                            
+                            // Use custom staff overtime rate or proportional
+                            const overtimeRate = staff.overtimeRate || globalOvertimeRate || ((perDaySalary / 9) / 60);
+                            extraWorkAmount += (extraMinutes * overtimeRate);
+                        }
+                    }
+                    continue; // Skip holiday from any absent/half-day deductions!
+                }
+
+                if (dayOfWeek === 0) {
+                    continue; // Skip weekends in calculation
+                }
+
+                if (record) {
+                    const durationMinutes = parseWorkHours(record.workHours);
+                    let status = record.status;
+
+                    if (status !== 'Absent' && durationMinutes > 0) {
+                        if (durationMinutes > 540) { // > 9 hours
+                            const extraMinutes = durationMinutes - 540;
+                            totalExtraMinutes += extraMinutes;
+                            
+                            // Use custom staff overtime rate or proportional
+                            const overtimeRate = staff.overtimeRate || globalOvertimeRate || ((perDaySalary / 9) / 60);
+                            extraWorkAmount += (extraMinutes * overtimeRate);
+                            status = 'Present';
+                        } else if (durationMinutes < 270) {
+                            status = 'Half Day';
+                        } else {
+                            status = 'Present';
+                        }
+                    }
+
+                    if (status === 'Present' || status === 'Late') {
+                        presentCount++;
+                    } else if (status === 'Half Day') {
+                        halfDayCount++;
+                    } else if (status === 'Leave') {
+                        leaveCount++;
+                    } else {
+                        absentCount++;
+                    }
+                } else {
+                    const todayDate = new Date();
+                    todayDate.setHours(0,0,0,0);
+                    const compDate = new Date(targetYear, targetMonth, day);
+                    compDate.setHours(0,0,0,0);
+
+                    // Check if before joining date
+                    const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt || new Date();
+                    const startOfJoin = new Date(joinDate);
+                    startOfJoin.setHours(0,0,0,0);
+
+                    if (compDate >= startOfJoin && compDate < todayDate) {
+                        absentCount++;
+                    }
+                }
+            }
+
+            // Deductions logic
+            const absentRate = staff.absentDeduction || globalAbsentDeduction || perDaySalary;
+            const halfDayRate = staff.halfDayDeduction || globalHalfDayDeduction || halfDaySalary;
+
+            let absentDeduction = absentCount * absentRate;
+            let halfDayDeduction = halfDayCount * halfDayRate;
+
+            if (isDriverRole && staff.salaryMethod === 'Per Trip') {
+                absentDeduction = 0;
+                halfDayDeduction = 0;
+            }
+
+            const totalNetPayable = baseSalary - absentDeduction - halfDayDeduction + extraWorkAmount;
+
+            // Check saved payroll record
+            const salaryRecord = await Salary.findOne({ staff: staff._id, month: monthString });
+
+            let paidAmount = 0;
+            let salaryStatus = 'Pending';
+            let remainingAmount = totalNetPayable;
+            let bonus = 0;
+            let note = '';
+            let paidDate = null;
+            let transactionId = '-';
+            let paymentMethod = '-';
+            let bankName, accountNumber, ifscCode, upiId;
+
+            if (salaryRecord) {
+                paidAmount = salaryRecord.netPay || 0;
+                salaryStatus = salaryRecord.status || 'Pending';
+                bonus = salaryRecord.bonus || 0;
+                note = salaryRecord.note || '';
+                paidDate = salaryRecord.paidDate || null;
+
+                if (salaryRecord.transactions && salaryRecord.transactions.length > 0) {
+                    const successTx = salaryRecord.transactions.find(t => t.status === 'success') || salaryRecord.transactions[0];
+                    transactionId = successTx.transactionId || '-';
+                    paymentMethod = successTx.paymentMethod || '-';
+                    bankName = successTx.bankName;
+                    accountNumber = successTx.accountNumber;
+                    ifscCode = successTx.ifscCode;
+                    upiId = successTx.upiId;
+                }
+
+                if (salaryStatus === 'Paid') {
+                    remainingAmount = Math.max(0, totalNetPayable + bonus - paidAmount);
+                }
+            }
+
+            payrolls.push({
+                staffId: staff._id,
+                name: staff.name,
+                role: staff.role,
+                salaryMethod: staff.salaryMethod || 'Monthly',
+                completedTrips: completedTripsCount,
+                department: staff.department,
+                phone: staff.phone,
+                email: staff.email,
+                baseSalary,
+                daysInMonth,
+                workingDays,
+                presentDays: presentCount,
+                halfDays: halfDayCount,
+                absentDays: absentCount,
+                leaveDays: leaveCount,
+                absentDeduction,
+                halfDayDeduction,
+                extraWorkAmount,
+                totalNetPayable,
+                netPayable: remainingAmount,
+                paidAmount,
+                salaryStatus,
+                month: targetMonth,
+                year: targetYear,
+                monthString,
+                bonus,
+                note,
+                paidDate,
+                transactionId,
+                paymentMethod,
+                bankName,
+                accountNumber,
+                ifscCode,
+                upiId
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: { payrolls }
+        });
+    } catch (error) {
+        console.error('Calculate monthly payrolls error:', error);
+        res.status(500).json({ success: false, message: 'Server error calculating monthly payrolls' });
+    }
+};
+
+/**
+ * @desc    Record Manual Salary Payment
+ * @route   POST /api/crm/staff/salary/manual-pay
+ * @access  Admin
+ */
+export const recordManualSalaryPayment = async (req, res) => {
+    try {
+        const {
+            staffId,
+            amount,
+            month,
+            year,
+            baseSalary,
+            deductions,
+            bonus,
+            note,
+            paymentMethod,
+            bankName,
+            accountNumber,
+            ifscCode,
+            upiId
+        } = req.body;
+
+        if (!staffId || !amount || !month || !year) {
+            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        }
+
+        // Format month string
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"];
+
+        let monthName = month;
+        if (!isNaN(month) && parseInt(month) >= 0 && parseInt(month) <= 11) {
+            monthName = monthNames[parseInt(month)];
+        }
+        const monthString = `${monthName} ${year}`;
+
+        // Create transaction log
+        const transactionId = razorpayService.generateTransactionId('SAL');
+        const transactionData = {
+            transactionId: transactionId,
+            amount: parseFloat(amount),
+            status: 'success',
+            paymentMethod: paymentMethod || 'manual',
+            bankName: bankName || undefined,
+            accountNumber: accountNumber || undefined,
+            ifscCode: ifscCode || undefined,
+            upiId: upiId || undefined,
+            paymentDate: new Date()
+        };
+
+        // Create or Update Salary Record
+        let payroll = await Salary.findOne({ staff: staffId, month: monthString });
+
+        if (payroll) {
+            payroll.status = 'Paid';
+            payroll.paidDate = new Date();
+            payroll.netPay = parseFloat(amount);
+            payroll.deductions = parseFloat(deductions) || 0;
+            payroll.bonus = parseFloat(bonus) || 0;
+            payroll.note = note || '';
+            payroll.transactions.push(transactionData);
+            await payroll.save();
+        } else {
+            payroll = await Salary.create({
+                staff: staffId,
+                month: monthString,
+                baseSalary: parseFloat(baseSalary) || parseFloat(amount),
+                deductions: parseFloat(deductions) || 0,
+                bonus: parseFloat(bonus) || 0,
+                note: note || '',
+                netPay: parseFloat(amount),
+                status: 'Paid',
+                paidDate: new Date(),
+                transactions: [transactionData]
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Manual payment recorded successfully',
+            data: payroll
+        });
+
+        // Send real-time notification to employee (async)
+        createNotification({
+            recipient: staffId,
+            recipientModel: 'Staff',
+            title: '💰 Salary Credited!',
+            message: `Your salary of ₹${parseFloat(amount).toLocaleString('en-IN')} for ${monthString} has been paid via ${paymentMethod || 'manual mode'}.`,
+            type: 'salary_paid',
+            relatedId: payroll._id,
+            relatedModel: 'Salary',
+            sendPush: true
+        }).catch(err => console.error('❌ Failed to send salary notification:', err));
+
+    } catch (error) {
+        console.error('Record Manual Salary Payment Error:', error);
+        res.status(500).json({ success: false, message: 'Server error recording manual payment' });
     }
 };
 
@@ -3741,7 +4202,8 @@ export const getAttendanceSettings = async (req, res) => {
                     officeEndTime: '06:00 PM',
                     halfDayDeduction: 250,
                     absentDeduction: 500,
-                    lateGracePeriod: 15
+                    lateGracePeriod: 15,
+                    overtimeRate: 0
                 }
             };
         }
@@ -3759,7 +4221,7 @@ export const getAttendanceSettings = async (req, res) => {
  */
 export const updateAttendanceSettings = async (req, res) => {
     try {
-        const { officeStartTime, officeEndTime, halfDayDeduction, absentDeduction, lateGracePeriod } = req.body;
+        const { officeStartTime, officeEndTime, halfDayDeduction, absentDeduction, lateGracePeriod, overtimeRate } = req.body;
         
         if (!officeStartTime || !officeEndTime) {
             return res.status(400).json({ success: false, message: 'Office start and end times are required' });
@@ -3770,7 +4232,8 @@ export const updateAttendanceSettings = async (req, res) => {
             officeEndTime,
             halfDayDeduction: Number(halfDayDeduction) || 0,
             absentDeduction: Number(absentDeduction) || 0,
-            lateGracePeriod: lateGracePeriod !== undefined ? Number(lateGracePeriod) : 15
+            lateGracePeriod: lateGracePeriod !== undefined ? Number(lateGracePeriod) : 15,
+            overtimeRate: overtimeRate !== undefined ? Number(overtimeRate) : 0
         };
 
         const setting = await Setting.findOneAndUpdate(
@@ -3912,4 +4375,98 @@ export const bulkAssignEnquiries = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error during bulk assignment', error: error.message });
     }
 };
+
+/**
+ * @desc    Get Holidays List
+ * @route   GET /api/crm/attendance/holidays
+ * @access  Admin/Employee
+ */
+export const getHolidays = async (req, res) => {
+    try {
+        let setting = await Setting.findOne({ key: 'holidays' });
+        if (!setting) {
+            setting = {
+                key: 'holidays',
+                value: []
+            };
+        }
+        res.status(200).json({ success: true, data: setting.value || [] });
+    } catch (error) {
+        console.error('Get Holidays Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching holidays' });
+    }
+};
+
+/**
+ * @desc    Mark/Add Holiday
+ * @route   POST /api/crm/attendance/holidays
+ * @access  Admin
+ */
+export const markHoliday = async (req, res) => {
+    try {
+        const { date, reason } = req.body;
+        if (!date || !reason) {
+            return res.status(400).json({ success: false, message: 'Date and reason are required' });
+        }
+
+        let setting = await Setting.findOne({ key: 'holidays' });
+        let holidays = [];
+        if (setting) {
+            holidays = setting.value || [];
+        }
+
+        // Check if holiday already exists for this date and update it, else add new
+        const existingIdx = holidays.findIndex(h => h.date === date);
+        if (existingIdx !== -1) {
+            holidays[existingIdx].reason = reason;
+        } else {
+            holidays.push({ date, reason });
+        }
+
+        setting = await Setting.findOneAndUpdate(
+            { key: 'holidays' },
+            { key: 'holidays', value: holidays, description: 'List of marked holidays' },
+            { new: true, upsert: true }
+        );
+
+        res.status(200).json({ success: true, message: 'Holiday marked successfully', data: setting.value });
+    } catch (error) {
+        console.error('Mark Holiday Error:', error);
+        res.status(500).json({ success: false, message: 'Server error marking holiday' });
+    }
+};
+
+/**
+ * @desc    Delete/Remove Holiday
+ * @route   DELETE /api/crm/attendance/holidays/:date
+ * @access  Admin
+ */
+export const deleteHoliday = async (req, res) => {
+    try {
+        const { date } = req.params;
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'Date parameter is required' });
+        }
+
+        let setting = await Setting.findOne({ key: 'holidays' });
+        if (!setting) {
+            return res.status(404).json({ success: false, message: 'No holidays configured' });
+        }
+
+        let holidays = setting.value || [];
+        holidays = holidays.filter(h => h.date !== date);
+
+        setting = await Setting.findOneAndUpdate(
+            { key: 'holidays' },
+            { key: 'holidays', value: holidays },
+            { new: true }
+        );
+
+        res.status(200).json({ success: true, message: 'Holiday removed successfully', data: setting.value });
+    } catch (error) {
+        console.error('Delete Holiday Error:', error);
+        res.status(500).json({ success: false, message: 'Server error removing holiday' });
+    }
+};
+
 

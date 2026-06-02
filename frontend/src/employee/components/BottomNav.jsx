@@ -18,7 +18,7 @@ const BottomNav = () => {
   // Determine dynamic tabs based on role
   const isDriver = roleLower === 'driver' || roleLower.includes('driver');
   const isTelecaller = roleLower === 'telecaller' || roleLower === 'tellecaller';
-  const isAccountantOrHR = roleLower === 'accountant' || roleLower === 'hr';
+  const isAccountantOrHR = roleLower.includes('account') || roleLower.includes('hr') || roleLower.includes('admin') || roleLower.includes('executive');
 
   return (
     <motion.div 
@@ -53,12 +53,14 @@ const BottomNav = () => {
         />
       )}
       
-      <NavIcon 
-        icon={<FiClock size={22} />} 
-        label="Attendance" 
-        active={isActive('/employee/attendance')} 
-        onClick={() => navigate('/employee/attendance')}
-      />
+      {!isDriver && (
+        <NavIcon 
+          icon={<FiClock size={22} />} 
+          label="Attendance" 
+          active={isActive('/employee/attendance')} 
+          onClick={() => navigate('/employee/attendance')}
+        />
+      )}
 
       <NavIcon 
         icon={<FiUser size={22} />} 

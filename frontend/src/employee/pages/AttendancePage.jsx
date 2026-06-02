@@ -72,7 +72,11 @@ const AttendancePage = () => {
 
       try {
         setLoading(true);
-        const response = await api.get(`/crm/attendance?staffId=${userId}`);
+        const [response, holidaysRes] = await Promise.all([
+          api.get(`/crm/attendance?staffId=${userId}`),
+          api.get('/crm/attendance/holidays')
+        ]);
+
         if (response.data.success) {
           const records = response.data.data.records || [];
 
@@ -85,12 +89,39 @@ const AttendancePage = () => {
             hours: r.workHours || '-'
           }));
 
-          setAttendanceData(formatted);
+          // Merge holidays
+          const holidaysList = holidaysRes.data?.success ? holidaysRes.data.data : [];
+          const combined = [...formatted];
+          
+          holidaysList.forEach(h => {
+            const hDate = new Date(h.date);
+            const exists = combined.some(r => r.date.toDateString() === hDate.toDateString());
+            if (!exists) {
+              combined.push({
+                date: hDate,
+                status: 'Holiday',
+                checkIn: '--:--',
+                checkOut: '--:--',
+                hours: '-',
+                reason: h.reason
+              });
+            } else {
+              // If it already exists, let's mark it as a holiday (to style it blue) but keep any checked-in details if present
+              const idx = combined.findIndex(r => r.date.toDateString() === hDate.toDateString());
+              combined[idx].status = 'Holiday';
+              combined[idx].reason = h.reason;
+            }
+          });
+
+          // Sort combined list by date descending
+          combined.sort((a, b) => b.date - a.date);
+
+          setAttendanceData(combined);
 
           // Calculate statistics for the current month
           const currentMonth = new Date().getMonth();
           const currentYear = new Date().getFullYear();
-          const currentMonthRecords = formatted.filter(r =>
+          const currentMonthRecords = combined.filter(r =>
             r.date.getMonth() === currentMonth &&
             r.date.getFullYear() === currentYear
           );
@@ -302,16 +333,21 @@ const AttendancePage = () => {
                                   ${record.status === 'Present' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                             record.status === 'Absent' ? 'bg-rose-50 text-rose-500 border-rose-100' :
                               record.status === 'Late' ? 'bg-amber-50 text-amber-500 border-amber-100' :
-                                record.status === 'Leave' || record.status === 'Leaves' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-gray-50 text-gray-400 border-gray-100'}
+                                record.status === 'Leave' || record.status === 'Leaves' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  record.status === 'Holiday' ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200 font-bold animate-pulse' : 'bg-gray-50 text-gray-400 border-gray-100'}
                                 `}>
                           <span className="text-xs uppercase">{record.date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
                           <span className="text-lg leading-none">{record.date.getDate()}</span>
                         </div>
 
-                        <div>
+                        <div className="text-left">
                           <p className="text-[#1C205C] font-bold text-sm mb-0.5">{record.status === 'Late' ? 'Present (Late)' : record.status}</p>
                           <div className="flex items-center gap-3 text-xs text-gray-400 font-medium">
-                            <span className="flex items-center gap-1"><FiClock size={10} /> {record.checkIn} - {record.checkOut}</span>
+                            {record.status === 'Holiday' ? (
+                              <span className="text-red-600 font-extrabold tracking-wide">{record.reason || 'Official Holiday'}</span>
+                            ) : (
+                              <span className="flex items-center gap-1"><FiClock size={10} /> {record.checkIn} - {record.checkOut}</span>
+                            )}
                           </div>
                         </div>
                       </div>

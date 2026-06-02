@@ -1547,7 +1547,9 @@ const CarRecordModal = ({ car, onClose }) => {
                               <span className={`px-2 py-0.5 rounded text-xxs font-bold uppercase inline-block ${
                                 booking.source === 'outward' 
                                   ? 'bg-purple-100 text-purple-800 border border-purple-200' 
-                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : booking.source === 'inward'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : 'bg-blue-100 text-blue-800 border border-blue-200'
                               }`}>
                                 {booking.source}
                               </span>

@@ -19,6 +19,14 @@ const salarySchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        bonus: {
+            type: Number,
+            default: 0,
+        },
+        note: {
+            type: String,
+            default: '',
+        },
         netPay: {
             type: Number,
             required: true,
@@ -63,6 +71,10 @@ const salarySchema = new mongoose.Schema(
                 enum: ['razorpay', 'manual', 'bank_transfer'],
                 default: 'razorpay',
             },
+            bankName: { type: String },
+            accountNumber: { type: String },
+            ifscCode: { type: String },
+            upiId: { type: String },
             paymentDate: {
                 type: Date,
             }

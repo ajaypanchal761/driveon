@@ -1006,6 +1006,7 @@ export const getSystemSettings = async (req, res) => {
       contactEmail: settingsObj.contactEmail || process.env.CONTACT_EMAIL || 'driveon721@gmail.com',
       contactPhone: settingsObj.contactPhone || process.env.CONTACT_PHONE || '+91 98765 43210',
       advancePaymentPercentage: settingsObj.advancePaymentPercentage !== undefined ? Number(settingsObj.advancePaymentPercentage) : 20,
+      cashCollectors: settingsObj.cashCollectors || [],
     };
 
     res.status(200).json({
@@ -1031,7 +1032,7 @@ export const getSystemSettings = async (req, res) => {
  */
 export const updateSystemSettings = async (req, res) => {
   try {
-    const { appName, contactEmail, contactPhone, advancePaymentPercentage } = req.body;
+    const { appName, contactEmail, contactPhone, advancePaymentPercentage, cashCollectors } = req.body;
 
     // Validation
     if (!appName || !contactEmail || !contactPhone) {
@@ -1058,11 +1059,14 @@ export const updateSystemSettings = async (req, res) => {
       });
     }
 
+    const collectorsList = Array.isArray(cashCollectors) ? cashCollectors : [];
+
     const settingsToSave = [
       { key: 'appName', value: appName.trim() },
       { key: 'contactEmail', value: contactEmail.trim().toLowerCase() },
       { key: 'contactPhone', value: contactPhone.trim() },
-      { key: 'advancePaymentPercentage', value: percentage }
+      { key: 'advancePaymentPercentage', value: percentage },
+      { key: 'cashCollectors', value: collectorsList }
     ];
 
     for (const s of settingsToSave) {
@@ -1082,6 +1086,7 @@ export const updateSystemSettings = async (req, res) => {
           contactEmail: contactEmail.trim().toLowerCase(),
           contactPhone: contactPhone.trim(),
           advancePaymentPercentage: percentage,
+          cashCollectors: collectorsList,
         },
       },
     });
