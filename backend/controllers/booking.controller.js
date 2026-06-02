@@ -225,16 +225,9 @@ export const createBooking = async (req, res) => {
 
     if (addOnServices && typeof addOnServices === 'object') {
       try {
-        // Get current prices from database
+        // Get current prices and all services from database
+        const dbServices = await AddOnServices.find();
         const prices = await AddOnServices.getPrices();
-
-        // Validate and calculate add-on services
-        const quantities = {
-          driver: Math.max(0, parseInt(addOnServices.driver) || 0),
-          bodyguard: Math.max(0, parseInt(addOnServices.bodyguard) || 0),
-          gunmen: Math.max(0, parseInt(addOnServices.gunmen) || 0),
-          bouncer: Math.max(0, parseInt(addOnServices.bouncer) || 0),
-        };
 
         // Fallback default pricing if add-on services are unseeded in database
         const defaultPrices = {
@@ -246,26 +239,40 @@ export const createBooking = async (req, res) => {
 
         const getPrice = (key) => {
           const dbPrice = prices[key];
-          return (typeof dbPrice === 'number' && !isNaN(dbPrice)) ? dbPrice : defaultPrices[key];
+          return (typeof dbPrice === 'number' && !isNaN(dbPrice)) ? dbPrice : (defaultPrices[key] || 0);
         };
 
-        // Calculate total for add-on services safely
-        addOnServicesTotal =
-          (quantities.driver * getPrice('driver')) +
-          (quantities.bodyguard * getPrice('bodyguard')) +
-          (quantities.gunmen * getPrice('gunmen')) +
-          (quantities.bouncer * getPrice('bouncer'));
+        // Populate quantities dynamically
+        const quantities = {
+          driver: 0,
+          bodyguard: 0,
+          gunmen: 0,
+          bouncer: 0,
+        };
 
+        let calculatedTotal = 0;
+
+        // Iterate over dynamic services
+        dbServices.forEach(service => {
+          const qty = Math.max(0, parseInt(addOnServices[service.key]) || 0);
+          quantities[service.key] = qty;
+          calculatedTotal += qty * (prices[service.key] !== undefined ? prices[service.key] : service.price);
+        });
+
+        // Ensure legacy keys are initialized if they were not in the dynamic list
+        const legacyKeys = ['driver', 'bodyguard', 'gunmen', 'bouncer'];
+        legacyKeys.forEach(key => {
+          if (quantities[key] === undefined) {
+            quantities[key] = Math.max(0, parseInt(addOnServices[key]) || 0);
+            calculatedTotal += quantities[key] * getPrice(key);
+          }
+        });
+
+        addOnServicesTotal = calculatedTotal;
         addOnServicesData = quantities;
 
         console.log('✅ Add-on services calculated safely:', {
           quantities,
-          prices: {
-            driver: getPrice('driver'),
-            bodyguard: getPrice('bodyguard'),
-            gunmen: getPrice('gunmen'),
-            bouncer: getPrice('bouncer'),
-          },
           total: addOnServicesTotal,
         });
       } catch (addOnError) {

@@ -163,26 +163,32 @@ const bookingSchema = new mongoose.Schema(
 
     // Add-On Services (Optional)
     addOnServices: {
-      driver: {
-        type: Number,
-        default: 0,
-        min: [0, 'Driver quantity cannot be negative'],
-      },
-      bodyguard: {
-        type: Number,
-        default: 0,
-        min: [0, 'Bodyguard quantity cannot be negative'],
-      },
-      gunmen: {
-        type: Number,
-        default: 0,
-        min: [0, 'Gunmen quantity cannot be negative'],
-      },
-      bouncer: {
-        type: Number,
-        default: 0,
-        min: [0, 'Bouncer quantity cannot be negative'],
-      },
+      type: new mongoose.Schema(
+        {
+          driver: {
+            type: Number,
+            default: 0,
+            min: [0, 'Driver quantity cannot be negative'],
+          },
+          bodyguard: {
+            type: Number,
+            default: 0,
+            min: [0, 'Bodyguard quantity cannot be negative'],
+          },
+          gunmen: {
+            type: Number,
+            default: 0,
+            min: [0, 'Gunmen quantity cannot be negative'],
+          },
+          bouncer: {
+            type: Number,
+            default: 0,
+            min: [0, 'Bouncer quantity cannot be negative'],
+          },
+        },
+        { strict: false, _id: false }
+      ),
+      default: {},
     },
 
     // Payment Information

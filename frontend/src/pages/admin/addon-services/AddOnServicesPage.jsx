@@ -16,7 +16,10 @@ const AddOnServicesPage = () => {
 
   // Modals state
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
-  const [newServiceData, setNewServiceData] = useState({ name: '', description: '', price: '' });
+  const [newServiceData, setNewServiceData] = useState({ name: '', description: '', price: '', singleUnitOnly: false });
+
+  const [showEditServiceModal, setShowEditServiceModal] = useState(false);
+  const [editServiceData, setEditServiceData] = useState({ id: '', name: '', description: '', price: '', singleUnitOnly: false });
 
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [showViewProviderModal, setShowViewProviderModal] = useState(false);
@@ -96,17 +99,47 @@ const AddOnServicesPage = () => {
         name: newServiceData.name,
         description: newServiceData.description,
         price: parseFloat(newServiceData.price) || 0,
+        singleUnitOnly: newServiceData.singleUnitOnly,
       });
 
       if (response.success) {
         toastUtils.success('Service created successfully!');
-        setNewServiceData({ name: '', description: '', price: '' });
+        setNewServiceData({ name: '', description: '', price: '', singleUnitOnly: false });
         setShowAddServiceModal(false);
         fetchServices();
       }
     } catch (error) {
       console.error('Error creating service:', error);
       toastUtils.error(error.response?.data?.message || 'Failed to create service');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditService = async (e) => {
+    e.preventDefault();
+    if (!editServiceData.name || !editServiceData.price) {
+      toastUtils.error('Please fill in Name and Price');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await adminService.updateAddOnService(editServiceData.id, {
+        name: editServiceData.name,
+        description: editServiceData.description,
+        price: parseFloat(editServiceData.price) || 0,
+        singleUnitOnly: editServiceData.singleUnitOnly,
+      });
+
+      if (response.success) {
+        toastUtils.success('Service updated successfully!');
+        setShowEditServiceModal(false);
+        fetchServices();
+      }
+    } catch (error) {
+      console.error('Error updating service:', error);
+      toastUtils.error(error.response?.data?.message || 'Failed to update service');
     } finally {
       setLoading(false);
     }
@@ -244,6 +277,11 @@ const AddOnServicesPage = () => {
                     <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: colors.borderMedium, color: colors.textSecondary }}>
                       {service.providers?.length || 0} Providers
                     </span>
+                    {service.singleUnitOnly && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        Single Unit Only
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm mt-0.5" style={{ color: colors.textSecondary }}>{service.description || 'No description provided'}</p>
                 </div>
@@ -290,6 +328,27 @@ const AddOnServicesPage = () => {
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+
+                    {/* Edit Service Button */}
+                    <button
+                      onClick={() => {
+                        setEditServiceData({
+                          id: service._id,
+                          name: service.name,
+                          description: service.description || '',
+                          price: service.price || 0,
+                          singleUnitOnly: service.singleUnitOnly || false,
+                        });
+                        setShowEditServiceModal(true);
+                      }}
+                      title="Edit Service"
+                      className="p-2.5 rounded-xl border transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
+                      style={{ borderColor: colors.borderMedium, color: colors.textSecondary }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
 
@@ -384,6 +443,20 @@ const AddOnServicesPage = () => {
                   />
                 </div>
 
+                <div className="flex items-center gap-2 py-2">
+                  <input
+                    type="checkbox"
+                    id="newSingleUnitOnly"
+                    checked={newServiceData.singleUnitOnly || false}
+                    onChange={(e) => setNewServiceData(prev => ({ ...prev, singleUnitOnly: e.target.checked }))}
+                    className="w-4 h-4 rounded border-2 transition-all cursor-pointer"
+                    style={{ borderColor: colors.backgroundTertiary }}
+                  />
+                  <label htmlFor="newSingleUnitOnly" className="text-sm font-semibold select-none cursor-pointer" style={{ color: colors.textPrimary }}>
+                    Limit to single unit (User can select maximum 1 quantity)
+                  </label>
+                </div>
+
                 <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: colors.borderMedium }}>
                   <button
                     type="button"
@@ -399,6 +472,104 @@ const AddOnServicesPage = () => {
                     style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     Create Service
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================= */}
+        {/* MODAL 1.5: EDIT SERVICE MODAL           */}
+        {/* ======================================= */}
+        {showEditServiceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div
+              className="w-full max-w-md rounded-2xl p-6 shadow-2xl border transition-all animate-in fade-in zoom-in-95 duration-200"
+              style={{ backgroundColor: colors.backgroundSecondary, borderColor: colors.borderMedium }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>Edit Add-on Service</h3>
+                <button
+                  onClick={() => setShowEditServiceModal(false)}
+                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  style={{ color: colors.textSecondary }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleEditService} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: colors.textSecondary }}>Service Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., Guide, Wifi Hotspot"
+                    value={editServiceData.name}
+                    onChange={(e) => setEditServiceData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 focus:border-indigo-500 outline-none transition-colors"
+                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary, backgroundColor: colors.backgroundPrimary }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: colors.textSecondary }}>Description</label>
+                  <textarea
+                    rows="2"
+                    placeholder="Explain the add-on service details..."
+                    value={editServiceData.description}
+                    onChange={(e) => setEditServiceData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 focus:border-indigo-500 outline-none transition-colors resize-none"
+                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary, backgroundColor: colors.backgroundPrimary }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: colors.textSecondary }}>Price (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="500"
+                    value={editServiceData.price}
+                    onChange={(e) => setEditServiceData(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border-2 focus:border-indigo-500 outline-none transition-colors"
+                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary, backgroundColor: colors.backgroundPrimary }}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 py-2">
+                  <input
+                    type="checkbox"
+                    id="editSingleUnitOnly"
+                    checked={editServiceData.singleUnitOnly || false}
+                    onChange={(e) => setEditServiceData(prev => ({ ...prev, singleUnitOnly: e.target.checked }))}
+                    className="w-4 h-4 rounded border-2 transition-all cursor-pointer"
+                    style={{ borderColor: colors.backgroundTertiary }}
+                  />
+                  <label htmlFor="editSingleUnitOnly" className="text-sm font-semibold select-none cursor-pointer" style={{ color: colors.textPrimary }}>
+                    Limit to single unit (User can select maximum 1 quantity)
+                  </label>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: colors.borderMedium }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditServiceModal(false)}
+                    className="px-4 py-2.5 rounded-xl border font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                    style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl font-medium text-white transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ backgroundColor: colors.backgroundTertiary }}
+                  >
+                    Save Changes
                   </button>
                 </div>
               </form>

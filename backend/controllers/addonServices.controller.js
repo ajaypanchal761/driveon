@@ -114,7 +114,7 @@ export const getAddOnServices = async (req, res) => {
  */
 export const createAddOnService = async (req, res) => {
   try {
-    const { name, description, price } = req.body;
+    const { name, description, price, singleUnitOnly } = req.body;
 
     if (!name || price === undefined) {
       return res.status(400).json({
@@ -154,6 +154,7 @@ export const createAddOnService = async (req, res) => {
       key,
       description: description || '',
       price: parsedPrice,
+      singleUnitOnly: singleUnitOnly === undefined ? false : !!singleUnitOnly,
       providers: [],
     });
 
@@ -180,7 +181,7 @@ export const createAddOnService = async (req, res) => {
 export const updateAddOnService = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price } = req.body;
+    const { name, description, price, singleUnitOnly } = req.body;
 
     const service = await AddOnServices.findById(id);
     if (!service) {
@@ -206,6 +207,9 @@ export const updateAddOnService = async (req, res) => {
         });
       }
       service.price = parsedPrice;
+    }
+    if (singleUnitOnly !== undefined) {
+      service.singleUnitOnly = !!singleUnitOnly;
     }
 
     await service.save();

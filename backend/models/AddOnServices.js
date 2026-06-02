@@ -55,6 +55,10 @@ const addOnServicesSchema = new mongoose.Schema(
         },
       },
     ],
+    singleUnitOnly: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -1343,48 +1343,50 @@ const CarDetailsPage = () => {
     fetchUserProfile();
   }, [isAuthenticated, user]);
 
-  // Add-on services with quantities
-  const [addOnServices, setAddOnServices] = useState({
-    driver: 0,
-    bodyguard: 0,
-    gunmen: 0,
-    bouncer: 0,
-  });
-  const [addOnServicesPrices, setAddOnServicesPrices] = useState({
-    driver: 500,
-    bodyguard: 1000,
-    gunmen: 1500,
-    bouncer: 800,
-  });
+  // Dynamic add-on services from database
+  const [allAddOnServices, setAllAddOnServices] = useState([]);
+  const [addOnServices, setAddOnServices] = useState({});
+  const [addOnServicesPrices, setAddOnServicesPrices] = useState({});
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Load add-on services prices from API
+  // Load add-on services from API
   useEffect(() => {
-    const fetchPrices = async () => {
+    const fetchServices = async () => {
       try {
-        const response = await commonService.getAddOnServicesPrices();
+        const response = await commonService.getAddOnServices();
         if (response.success && response.data) {
-          setAddOnServicesPrices({
-            driver: response.data.driver || 500,
-            bodyguard: response.data.bodyguard || 1000,
-            gunmen: response.data.gunmen || 1500,
-            bouncer: response.data.bouncer || 800,
+          const services = response.data;
+          setAllAddOnServices(services);
+          // Build initial quantities & prices maps
+          const initQty = {};
+          const initPrices = {};
+          services.forEach(s => {
+            initQty[s.key] = 0;
+            initPrices[s.key] = s.price;
           });
+          setAddOnServices(initQty);
+          setAddOnServicesPrices(initPrices);
         }
       } catch (error) {
-        console.error('Error fetching add-on services prices:', error);
-        // Fallback to default prices
-        setAddOnServicesPrices({
-          driver: 500,
-          bodyguard: 1000,
-          gunmen: 1500,
-          bouncer: 800,
-        });
+        console.error('Error fetching add-on services:', error);
+        // Fallback defaults
+        const fallback = [
+          { _id: 'driver', key: 'driver', name: 'Driver', description: 'Professional driver service', price: 500 },
+          { _id: 'bodyguard', key: 'bodyguard', name: 'Bodyguard', description: 'Security personnel', price: 1000 },
+          { _id: 'gunmen', key: 'gunmen', name: 'Gun men', description: 'Armed security personnel', price: 1500 },
+          { _id: 'bouncer', key: 'bouncer', name: 'Bouncer', description: 'Event security personnel', price: 800 },
+        ];
+        setAllAddOnServices(fallback);
+        const initQty = {};
+        const initPrices = {};
+        fallback.forEach(s => { initQty[s.key] = 0; initPrices[s.key] = s.price; });
+        setAddOnServices(initQty);
+        setAddOnServicesPrices(initPrices);
       }
     };
 
-    fetchPrices();
+    fetchServices();
   }, []);
 
   // Booking confirmation modal state
@@ -1482,11 +1484,9 @@ const CarDetailsPage = () => {
   // Memoize price calculation to update when dependencies change
   const priceDetails = useMemo(() => {
     // Calculate add-on services total FIRST (even if dates not set)
-    const addOnServicesTotal =
-      (addOnServices.driver * (addOnServicesPrices.driver || 0)) +
-      (addOnServices.bodyguard * (addOnServicesPrices.bodyguard || 0)) +
-      (addOnServices.gunmen * (addOnServicesPrices.gunmen || 0)) +
-      (addOnServices.bouncer * (addOnServicesPrices.bouncer || 0));
+    const addOnServicesTotal = Object.entries(addOnServices).reduce((total, [key, qty]) => {
+      return total + (qty * (addOnServicesPrices[key] || 0));
+    }, 0);
 
     if (!pickupDate || !dropDate || !car) {
       return {
@@ -1539,14 +1539,8 @@ const CarDetailsPage = () => {
     pickupDate,
     dropDate,
     car,
-    addOnServices.driver,
-    addOnServices.bodyguard,
-    addOnServices.gunmen,
-    addOnServices.bouncer,
-    addOnServicesPrices.driver,
-    addOnServicesPrices.bodyguard,
-    addOnServicesPrices.gunmen,
-    addOnServicesPrices.bouncer,
+    addOnServices,
+    addOnServicesPrices,
     couponDiscount,
     paymentOption,
     advancePercentage,
@@ -2750,197 +2744,87 @@ const CarDetailsPage = () => {
                     />
                   </div>
                 </div>
-
               </div>
-
               {/* Add-on Services Section */}
               <div className="space-y-4">
                 <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Add-on Services (Optional)</h3>
 
                 <div className="space-y-3">
-                  {/* Driver */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Driver</p>
-                        <p className="text-xs" style={{ color: colors.textSecondary }}>Professional driver service</p>
-                        <p className="text-xs font-medium mt-0.5" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServicesPrices.driver} per unit
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {addOnServices.driver > 0 && (
-                        <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServices.driver * addOnServicesPrices.driver}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, driver: Math.max(0, prev.driver - 1) }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        </svg>
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.driver}</span>
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, driver: prev.driver + 1 }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                  {allAddOnServices.map((service) => {
+                    const qty = addOnServices[service.key] || 0;
+                    const price = addOnServicesPrices[service.key] || service.price || 0;
+                    const isSingleUnit = service.singleUnitOnly;
 
-                  {/* Bodyguard */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
+                    return (
+                      <div key={service._id || service.key} className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
+                            <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>{service.name}</p>
+                            <p className="text-xs" style={{ color: colors.textSecondary }}>{service.description || `Professional ${service.name} service`}</p>
+                            <p className="text-xs font-medium mt-0.5" style={{ color: colors.backgroundTertiary }}>
+                              ₹{price} per unit
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {isSingleUnit ? (
+                          /* Render checkbox if singleUnitOnly is true */
+                          <div className="flex items-center gap-3">
+                            {qty > 0 && (
+                              <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
+                                ₹{price}
+                              </span>
+                            )}
+                            <input
+                              type="checkbox"
+                              checked={qty > 0}
+                              onChange={(e) => {
+                                const newQty = e.target.checked ? 1 : 0;
+                                setAddOnServices(prev => ({ ...prev, [service.key]: newQty }));
+                              }}
+                              className="w-5 h-5 rounded border-2 cursor-pointer transition-all"
+                              style={{ borderColor: qty > 0 ? colors.backgroundTertiary : colors.borderCheckbox }}
+                            />
+                          </div>
+                        ) : (
+                          /* Render increment/decrement counter if singleUnitOnly is false */
+                          <div className="flex items-center gap-2">
+                            {qty > 0 && (
+                              <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
+                                ₹{qty * price}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setAddOnServices(prev => ({ ...prev, [service.key]: Math.max(0, qty - 1) }))}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                              style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                              </svg>
+                            </button>
+                            <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{qty}</span>
+                            <button
+                              type="button"
+                              onClick={() => setAddOnServices(prev => ({ ...prev, [service.key]: qty + 1 }))}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                              style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Bodyguard</p>
-                        <p className="text-xs" style={{ color: colors.textSecondary }}>Security personnel</p>
-                        <p className="text-xs font-medium mt-0.5" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServicesPrices.bodyguard} per unit
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {addOnServices.bodyguard > 0 && (
-                        <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServices.bodyguard * addOnServicesPrices.bodyguard}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, bodyguard: Math.max(0, prev.bodyguard - 1) }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        </svg>
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.bodyguard}</span>
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, bodyguard: prev.bodyguard + 1 }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Gun men */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Gun men</p>
-                        <p className="text-xs" style={{ color: colors.textSecondary }}>Armed security personnel</p>
-                        <p className="text-xs font-medium mt-0.5" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServicesPrices.gunmen} per unit
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {addOnServices.gunmen > 0 && (
-                        <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServices.gunmen * addOnServicesPrices.gunmen}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, gunmen: Math.max(0, prev.gunmen - 1) }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        </svg>
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.gunmen}</span>
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, gunmen: prev.gunmen + 1 }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bouncer */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${colors.backgroundTertiary}15` }}>
-                        <svg className="w-5 h-5" style={{ color: colors.backgroundTertiary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Bouncer</p>
-                        <p className="text-xs" style={{ color: colors.textSecondary }}>Event security personnel</p>
-                        <p className="text-xs font-medium mt-0.5" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServicesPrices.bouncer} per unit
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {addOnServices.bouncer > 0 && (
-                        <span className="text-xs font-semibold mr-2" style={{ color: colors.backgroundTertiary }}>
-                          ₹{addOnServices.bouncer * addOnServicesPrices.bouncer}
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, bouncer: Math.max(0, prev.bouncer - 1) }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        </svg>
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold" style={{ color: colors.textPrimary }}>{addOnServices.bouncer}</span>
-                      <button
-                        type="button"
-                        onClick={() => setAddOnServices(prev => ({ ...prev, bouncer: prev.bouncer + 1 }))}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                        style={{ borderColor: colors.borderMedium, color: colors.textPrimary }}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 

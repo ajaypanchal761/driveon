@@ -1516,70 +1516,95 @@ const BookNowPage = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    {(serviceQuantities[service.key] || 0) > 0 && (
-                      <span
-                        className="text-xs font-semibold mr-2"
-                        style={{ color: colors.backgroundTertiary }}
-                      >
-                        ₹{(serviceQuantities[service.key] || 0) * service.price}
-                      </span>
+                    {service.singleUnitOnly ? (
+                      <div className="flex items-center gap-3">
+                        {(serviceQuantities[service.key] || 0) > 0 && (
+                          <span
+                            className="text-xs font-semibold mr-2"
+                            style={{ color: colors.backgroundTertiary }}
+                          >
+                            ₹{service.price}
+                          </span>
+                        )}
+                        <input
+                          type="checkbox"
+                          checked={(serviceQuantities[service.key] || 0) > 0}
+                          onChange={(e) => {
+                            const newQty = e.target.checked ? 1 : 0;
+                            handleServiceQtyChange(service.key, newQty);
+                          }}
+                          className="w-5 h-5 rounded border-2 transition-all cursor-pointer"
+                          style={{ borderColor: (serviceQuantities[service.key] || 0) > 0 ? colors.backgroundTertiary : colors.borderCheckbox }}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        {(serviceQuantities[service.key] || 0) > 0 && (
+                          <span
+                            className="text-xs font-semibold mr-2"
+                            style={{ color: colors.backgroundTertiary }}
+                          >
+                            ₹{(serviceQuantities[service.key] || 0) * service.price}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
+                          }
+                          className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                          style={{
+                            borderColor: colors.borderMedium,
+                            color: colors.textPrimary,
+                          }}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M20 12H4"
+                            />
+                          </svg>
+                        </button>
+                        <span
+                          className="w-8 text-center text-sm font-semibold"
+                          style={{ color: colors.textPrimary }}
+                        >
+                          {serviceQuantities[service.key] || 0}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
+                          }
+                          className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                          style={{
+                            borderColor: colors.borderMedium,
+                            color: colors.textPrimary,
+                          }}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                        </button>
+                      </>
                     )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
-                      }
-                      className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                      style={{
-                        borderColor: colors.borderMedium,
-                        color: colors.textPrimary,
-                      }}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M20 12H4"
-                        />
-                      </svg>
-                    </button>
-                    <span
-                      className="w-8 text-center text-sm font-semibold"
-                      style={{ color: colors.textPrimary }}
-                    >
-                      {serviceQuantities[service.key] || 0}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
-                      }
-                      className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                      style={{
-                        borderColor: colors.borderMedium,
-                        color: colors.textPrimary,
-                      }}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 4v16m8-8H4"
-                        />
-                      </svg>
-                    </button>
                   </div>
                 </div>
               ))}

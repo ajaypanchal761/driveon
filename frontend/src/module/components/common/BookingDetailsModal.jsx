@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { colors } from '../../theme/colors';
 import { generateBookingPDF } from '../../../utils/pdfGenerator';
+import { commonService } from '../../../services/common.service';
 
 /**
  * BookingDetailsModal Component
@@ -8,6 +9,32 @@ import { generateBookingPDF } from '../../../utils/pdfGenerator';
  * Based on document.txt booking schema requirements
  */
 const BookingDetailsModal = ({ booking, onClose }) => {
+  const [addOnPrices, setAddOnPrices] = useState({
+    driver: 500,
+    bodyguard: 1000,
+    gunmen: 1500,
+    bouncer: 800
+  });
+
+  // Fetch dynamic add-on prices on mount
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const response = await commonService.getAddOnServices();
+        if (response.success && response.data) {
+          const pricesMap = {};
+          response.data.forEach(service => {
+            pricesMap[service.key] = service.price;
+          });
+          setAddOnPrices(prev => ({ ...prev, ...pricesMap }));
+        }
+      } catch (err) {
+        console.error('Error fetching add-on prices in modal:', err);
+      }
+    };
+    fetchPrices();
+  }, []);
+
   // Prevent body scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -471,20 +498,14 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                         gunmen: 'Gun Man',
                         bouncer: 'Bouncer'
                       };
-                      const priceMap = {
-                        driver: 500,
-                        bodyguard: 1000,
-                        gunmen: 1500,
-                        bouncer: 800
-                      };
                       const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
-                      const unitPrice = priceMap[key] || 0;
+                      const unitPrice = addOnPrices[key] || 0;
                       const addOnTotal = qty * unitPrice;
 
                       return (
                         <div key={key} className="flex items-center justify-between text-xs">
                           <p style={{ color: colors.textSecondary }}>
-                            {label} ({qty} × ₹{unitPrice})
+                            {label} ({qty} × ₹{unitPrice.toLocaleString('en-IN')})
                           </p>
                           <p className="font-semibold" style={{ color: colors.textPrimary }}>
                             ₹{addOnTotal.toLocaleString('en-IN')}

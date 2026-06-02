@@ -75,6 +75,31 @@ const BookingListPage = () => {
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [paymentDetailsBooking, setPaymentDetailsBooking] = useState(null);
   const [globalStats, setGlobalStats] = useState(null);
+  const [addOnPrices, setAddOnPrices] = useState({
+    driver: 500,
+    bodyguard: 1000,
+    gunmen: 1500,
+    bouncer: 800
+  });
+
+  // Fetch dynamic add-on prices on mount
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const response = await adminService.getAddOnServices();
+        if (response.success && response.data) {
+          const pricesMap = {};
+          response.data.forEach(service => {
+            pricesMap[service.key] = service.price;
+          });
+          setAddOnPrices(prev => ({ ...prev, ...pricesMap }));
+        }
+      } catch (err) {
+        console.error('Error fetching add-on prices in booking list page:', err);
+      }
+    };
+    fetchPrices();
+  }, []);
 
   // For Mark as Complete flow
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -1333,14 +1358,8 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                                 gunmen: 'Gun Man',
                                 bouncer: 'Bouncer'
                               };
-                              const priceMap = {
-                                driver: 500,
-                                bodyguard: 1000,
-                                gunmen: 1500,
-                                bouncer: 800
-                              };
                               const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
-                              const unitPrice = priceMap[key] || 0;
+                              const unitPrice = addOnPrices[key] || 0;
                               const addOnTotal = qty * unitPrice;
                               return (
                                 <div key={key} className="flex justify-between text-xs pl-2">
@@ -1391,14 +1410,8 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                           gunmen: 'Gun Man',
                           bouncer: 'Bouncer'
                         };
-                        const priceMap = {
-                          driver: 500,
-                          bodyguard: 1000,
-                          gunmen: 1500,
-                          bouncer: 800
-                        };
                         const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
-                        const unitPrice = priceMap[key] || 0;
+                        const unitPrice = addOnPrices[key] || 0;
                         const totalAddOn = qty * unitPrice;
                         return (
                           <span key={key} className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-purple-100 text-purple-700 border border-purple-200">
