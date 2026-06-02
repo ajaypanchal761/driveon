@@ -50,6 +50,8 @@ import { rgba } from 'polished';
 
 import ThemedDropdown from '../../components/ThemedDropdown';
 import api from '../../../services/api';
+import AssignCallerModal from './AssignCallerModal';
+
 
 // --- Shared Components for Analytics ---
 const ReportCard = ({ title, subtitle, children, delay = 0, className = "" }) => (
@@ -107,13 +109,6 @@ const StatWidget = ({ title, value, change, isPositive, color, icon: Icon, delay
     </div>
   </motion.div>
 );
-const MOCK_ENQUIRIES = [
-  { id: 1, name: "Rahul Kumar", phone: "+91 98765 43210", email: "rahul@example.com", car: "Toyota Innova Crysta", status: "New", date: "27 Dec 2025", source: "Website", image: "https://i.pravatar.cc/150?u=11" },
-  { id: 2, name: "Priya Singh", phone: "+91 99887 76655", email: "priya@example.com", car: "Maruti Swift Dzire", status: "Follow-up", date: "26 Dec 2025", source: "Referral", image: "https://i.pravatar.cc/150?u=5" },
-  { id: 3, name: "Amit Sharma", phone: "+91 91234 56789", email: "amit@example.com", car: "Mahindra Thar", status: "Converted", date: "25 Dec 2025", source: "Walk-in", image: "https://i.pravatar.cc/150?u=12" },
-  { id: 4, name: "Sneha Gupta", phone: "+91 98989 89898", email: "sneha@example.com", car: "Honda City", status: "Closed", date: "24 Dec 2025", source: "Phone", image: "https://i.pravatar.cc/150?u=9" },
-  { id: 5, name: "Vikram Malhotra", phone: "+91 95544 33221", email: "vikram@example.com", car: "Hyundai Creta", status: "In Progress", date: "24 Dec 2025", source: "Website", image: "https://i.pravatar.cc/150?u=13" },
-];
 
 /**
  * Generic Placeholder for Enquiries Sub-Pages
@@ -155,10 +150,28 @@ export const AllEnquiriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEnquiry, setEditingEnquiry] = useState(null);
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [staffList, setStaffList] = useState([]);
+  const [callerFilter, setCallerFilter] = useState('All');
+
+  // Fetch all staff members for filtering
+  const fetchStaff = async () => {
+    try {
+      const res = await api.get('/crm/staff');
+      if (res.data.success) {
+        setStaffList(res.data.data.staff || res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Fetch staff error:', e);
+    }
+  };
 
   // Fetch all enquiries from backend
   React.useEffect(() => {
     fetchEnquiries();
+    fetchStaff();
   }, []);
 
   const fetchEnquiries = async () => {
@@ -177,7 +190,8 @@ export const AllEnquiriesPage = () => {
           status: enq.status,
           email: enq.email || '',
           note: enq.note || enq.notes || '',
-          car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified'))
+          car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : (enq.carInterested?._id || 'Not Specified')),
+          assignedTo: enq.assignedTo || null,
         }));
         setEnquiriesList(mappedData);
       }
@@ -212,12 +226,37 @@ export const AllEnquiriesPage = () => {
   };
 
   const handleEditClick = (enquiry) => {
-    // Transform data for modal
-    setEditingEnquiry({
-      ...enquiry,
-      interest: enquiry.interest || enquiry.car
-    });
+    setEditingEnquiry({ ...enquiry, interest: enquiry.interest || enquiry.car });
     setIsModalOpen(true);
+  };
+
+  // Multi-select handlers
+  const toggleSelectAll = (filtered) => {
+    if (selectedIds.length === filtered.length) setSelectedIds([]);
+    else setSelectedIds(filtered.map(e => e.id));
+  };
+  const toggleSelectOne = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const handleAssignSuccess = () => {
+    setSelectedIds([]);
+    setShowAssignModal(false);
+    fetchEnquiries();
+  };
+  const handleUnassignBulk = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      setLoading(true);
+      const res = await api.post('/crm/enquiries/bulk-assign', { enquiryIds: selectedIds, staffId: null });
+      if (res.data.success) {
+        setSelectedIds([]);
+        await fetchEnquiries();
+      }
+    } catch (e) {
+      console.error('Bulk unassign error:', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Filter Logic
@@ -262,7 +301,17 @@ export const AllEnquiriesPage = () => {
       }
     }
 
-    return matchesSearch && matchesStatus && matchesDate;
+    // Caller Filter
+    let matchesCaller = true;
+    if (callerFilter !== 'All') {
+      if (callerFilter === 'Unassigned') {
+        matchesCaller = !enquiry.assignedTo;
+      } else {
+        matchesCaller = enquiry.assignedTo && (enquiry.assignedTo._id === callerFilter || enquiry.assignedTo === callerFilter);
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDate && matchesCaller;
   });
 
   // Status Badge Helper
@@ -281,6 +330,14 @@ export const AllEnquiriesPage = () => {
     );
   };
 
+  const filteredForSelect = enquiriesList.filter(enquiry => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = (enquiry.name || '').toLowerCase().includes(searchLower) || (enquiry.phone || '').includes(searchTerm) || (enquiry.car || '').toLowerCase().includes(searchLower);
+    const statusVal = statusFilter.replace('Status: ', '');
+    const matchesStatus = statusFilter === 'Status: All' || enquiry.status === statusVal;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,25 +353,73 @@ export const AllEnquiriesPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">All Enquiries</h1>
           <p className="text-gray-500 text-sm">Manage and track all customer leads.</p>
         </div>
+
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search by Name, Phone..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col xl:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col lg:flex-row gap-4 items-center w-full xl:w-auto flex-1 min-w-0">
+          <div className="relative w-full lg:w-72 shrink-0">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search by Name, Phone..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Telecaller chips container */}
+          <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-hide w-full lg:w-auto max-w-full">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1">Caller:</span>
+            <button
+              onClick={() => setCallerFilter('All')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${callerFilter === 'All'
+                  ? 'bg-[#1C205C] text-white shadow-md shadow-indigo-900/10'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setCallerFilter('Unassigned')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${callerFilter === 'Unassigned'
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/10'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                }`}
+            >
+              Unassigned
+            </button>
+            {staffList.map(staff => {
+              const isSelected = callerFilter === staff._id;
+              return (
+                <button
+                  key={staff._id}
+                  onClick={() => setCallerFilter(staff._id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${isSelected
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/10'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-[8px] font-black text-white shrink-0 overflow-hidden">
+                    {staff.avatar ? (
+                      <img src={staff.avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      staff.name?.charAt(0) || '?'
+                    )}
+                  </div>
+                  <span>{staff.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex gap-3 w-full md:w-auto">
           <div className="relative min-w-[140px]">
             <ThemedDropdown
-              options={['Status: All', 'New', 'In Progress', 'Follow-up', 'Converted', 'Closed']}
+              options={['Status: All', 'New', 'In Progress', 'Converted', 'Closed']}
               value={statusFilter}
               onChange={(val) => setStatusFilter(val)}
               className="bg-white text-sm"
@@ -395,18 +500,22 @@ export const AllEnquiriesPage = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                <th className="p-4 w-10">
+                  <input type="checkbox" checked={selectedIds.length === filteredEnquiries.length && filteredEnquiries.length > 0} onChange={() => toggleSelectAll(filteredEnquiries)} className="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+                </th>
                 <th className="p-4">Name / Contact</th>
                 <th className="p-4">Car Interested</th>
                 <th className="p-4">Source</th>
                 <th className="p-4">Date</th>
                 <th className="p-4">Status</th>
+                <th className="p-4">Assigned To</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                  <td colSpan="8" className="p-8 text-center text-gray-500">
                     <div className="flex items-center justify-center gap-2">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
                       Loading enquiries...
@@ -417,8 +526,11 @@ export const AllEnquiriesPage = () => {
                 filteredEnquiries.map((enquiry) => (
                   <tr
                     key={enquiry.id}
-                    className="hover:bg-gray-50/50 transition-colors group"
+                    className={`hover:bg-gray-50/50 transition-colors group ${selectedIds.includes(enquiry.id) ? 'bg-indigo-50/60' : ''}`}
                   >
+                    <td className="p-4">
+                      <input type="checkbox" checked={selectedIds.includes(enquiry.id)} onChange={() => toggleSelectOne(enquiry.id)} className="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+                    </td>
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{enquiry.name}</div>
                       <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
@@ -428,13 +540,21 @@ export const AllEnquiriesPage = () => {
                     <td className="p-4 font-medium">{enquiry.car}</td>
                     <td className="p-4 text-gray-500">{enquiry.source}</td>
                     <td className="p-4 text-gray-500">
-                      {new Date(enquiry.date).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
+                      {new Date(enquiry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="p-4">{getStatusBadge(enquiry.status)}</td>
+                    <td className="p-4">
+                      {enquiry.assignedTo ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-black shrink-0">
+                            {enquiry.assignedTo.name?.charAt(0) || '?'}
+                          </div>
+                          <span className="text-xs font-semibold text-gray-700 truncate max-w-[90px]">{enquiry.assignedTo.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Unassigned</span>
+                      )}
+                    </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -450,7 +570,7 @@ export const AllEnquiriesPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-gray-500">
+                  <td colSpan="8" className="p-8 text-center text-gray-500">
                     No enquiries found matching your criteria.
                   </td>
                 </tr>
@@ -470,24 +590,53 @@ export const AllEnquiriesPage = () => {
         onSave={handleSaveEnquiry}
         initialData={editingEnquiry}
       />
+
+      {/* Assign Caller Modal */}
+      <AssignCallerModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        enquiryIds={selectedIds}
+        onSuccess={handleAssignSuccess}
+      />
+
+      {/* Floating Multi-Select Action Bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+          >
+            <div className="flex items-center gap-3 bg-[#1C205C] text-white px-6 py-3.5 rounded-2xl shadow-2xl shadow-indigo-900/40 border border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">{selectedIds.length}</div>
+                <span className="font-semibold text-sm">enquiri{selectedIds.length === 1 ? 'y' : 'ies'} selected</span>
+              </div>
+              <div className="w-px h-5 bg-white/20" />
+              <button
+                onClick={() => setShowAssignModal(true)}
+                className="flex items-center gap-2 px-4 py-1.5 bg-white text-[#1C205C] rounded-xl text-sm font-bold hover:bg-indigo-50 transition-colors"
+              >
+                <MdPersonAdd size={16} /> Assign to Caller
+              </button>
+              <button
+                onClick={handleUnassignBulk}
+                className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-red-500/20"
+              >
+                <MdClose size={16} /> Unassign
+              </button>
+              <button onClick={() => setSelectedIds([])} className="text-white/60 hover:text-white transition-colors text-sm font-medium">
+                Clear
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-// Mock Data for New Enquiries
-// Helper to get consistent dates
-const getToday = () => new Date();
-const getYesterday = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d;
-};
-
-const MOCK_NEW_ENQUIRIES = [
-  { id: 1, name: "Vikram Malhotra", phone: "+91 95544 33221", interest: "Hyundai Creta", time: "10 mins ago", status: "New", source: "Website", date: getToday().toISOString() },
-  { id: 2, name: "Anjali Dubey", phone: "+91 98877 66554", interest: "Mahindra Thar", time: "1 hour ago", status: "New", source: "Facebook", date: getToday().toISOString() },
-  { id: 3, name: "Rohan Singhania", phone: "+91 99112 23344", interest: "Toyota Innova", time: "2 hours ago", status: "New", source: "Referral", date: getYesterday().toISOString() },
-  { id: 4, name: "Meera Iyer", phone: "+91 91234 56780", interest: "Swift Dzire", time: "5 hours ago", status: "New", source: "Website", date: getYesterday().toISOString() },
-];
 
 
 
@@ -665,19 +814,6 @@ const CreateEnquiryModal = ({ isOpen, onClose, onSave, initialData = null }) => 
 
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">Status</label>
-                <div className="relative">
-                  <ThemedDropdown
-                    options={['New', 'In Progress', 'Follow-up', 'Converted', 'Closed']}
-                    value={formData.status}
-                    onChange={(val) => setFormData({ ...formData, status: val })}
-                    className="bg-gray-50"
-                    width="w-full"
-                  />
-
-                </div>
-              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -726,10 +862,28 @@ export const NewEnquiriesPage = () => {
   const [editingEnquiry, setEditingEnquiry] = useState(null);
   const [enquiriesList, setEnquiriesList] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [staffList, setStaffList] = useState([]);
+  const [callerFilter, setCallerFilter] = useState('All');
+
+  // Fetch all staff members for filtering
+  const fetchStaff = async () => {
+    try {
+      const res = await api.get('/crm/staff');
+      if (res.data.success) {
+        setStaffList(res.data.data.staff || res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Fetch staff error:', e);
+    }
+  };
 
   // Fetch enquiries from backend
   React.useEffect(() => {
     fetchEnquiries();
+    fetchStaff();
   }, []);
 
   const fetchEnquiries = async () => {
@@ -748,12 +902,42 @@ export const NewEnquiriesPage = () => {
           date: enq.createdAt,
           status: enq.status,
           email: enq.email || '',
-          note: enq.note || enq.notes || ''
+          note: enq.note || enq.notes || '',
+          assignedTo: enq.assignedTo || null,
         }));
         setEnquiriesList(mappedData);
       }
     } catch (error) {
       console.error('Error fetching enquiries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Multi-select handlers
+  const toggleSelectAll = (filtered) => {
+    if (selectedIds.length === filtered.length) setSelectedIds([]);
+    else setSelectedIds(filtered.map(e => e.id));
+  };
+  const toggleSelectOne = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const handleAssignSuccess = () => {
+    setSelectedIds([]);
+    setShowAssignModal(false);
+    fetchEnquiries();
+  };
+  const handleUnassignBulk = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      setLoading(true);
+      const res = await api.post('/crm/enquiries/bulk-assign', { enquiryIds: selectedIds, staffId: null });
+      if (res.data.success) {
+        setSelectedIds([]);
+        await fetchEnquiries();
+      }
+    } catch (e) {
+      console.error('Bulk unassign error:', e);
     } finally {
       setLoading(false);
     }
@@ -808,7 +992,17 @@ export const NewEnquiriesPage = () => {
       }
     }
 
-    return matchesSearch && matchesDate;
+    // Caller Filter
+    let matchesCaller = true;
+    if (callerFilter !== 'All') {
+      if (callerFilter === 'Unassigned') {
+        matchesCaller = !enquiry.assignedTo;
+      } else {
+        matchesCaller = enquiry.assignedTo && (enquiry.assignedTo._id === callerFilter || enquiry.assignedTo === callerFilter);
+      }
+    }
+
+    return matchesSearch && matchesDate && matchesCaller;
   });
 
   const handleSaveEnquiry = async (data) => {
@@ -889,16 +1083,18 @@ export const NewEnquiriesPage = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search Name or Phone..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col xl:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col lg:flex-row gap-4 items-center w-full xl:w-auto flex-1 min-w-0">
+          <div className="relative w-full lg:w-72 shrink-0">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search Name or Phone..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
 
@@ -948,17 +1144,21 @@ export const NewEnquiriesPage = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-red-50/30 border-b border-red-100 text-xs uppercase tracking-wider text-red-700 font-bold">
+              <th className="p-4 w-10">
+                <input type="checkbox" checked={selectedIds.length === filteredEnquiries.length && filteredEnquiries.length > 0} onChange={() => toggleSelectAll(filteredEnquiries)} className="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+              </th>
               <th className="p-4">Name / Contact</th>
               <th className="p-4">Interest</th>
               <th className="p-4">Received</th>
               <th className="p-4">Source</th>
+              <th className="p-4">Assigned To</th>
               <th className="p-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm">
             {loading ? (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500">
+                <td colSpan="7" className="p-8 text-center text-gray-500">
                   <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
                     Loading enquiries...
@@ -967,7 +1167,10 @@ export const NewEnquiriesPage = () => {
               </tr>
             ) : filteredEnquiries.length > 0 ? (
               filteredEnquiries.map((enquiry) => (
-                <tr key={enquiry.id} className="hover:bg-gray-50 transition-colors group">
+                <tr key={enquiry.id} className={`hover:bg-gray-50 transition-colors group ${selectedIds.includes(enquiry.id) ? 'bg-indigo-50/60' : ''}`}>
+                  <td className="p-4">
+                    <input type="checkbox" checked={selectedIds.includes(enquiry.id)} onChange={() => toggleSelectOne(enquiry.id)} className="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+                  </td>
                   <td className="p-4">
                     <div className="font-bold text-gray-900">{enquiry.name}</div>
                     <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
@@ -981,6 +1184,18 @@ export const NewEnquiriesPage = () => {
                     </span>
                   </td>
                   <td className="p-4 text-gray-500">{enquiry.source}</td>
+                  <td className="p-4">
+                    {enquiry.assignedTo ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[10px] font-black shrink-0">
+                          {enquiry.assignedTo.name?.charAt(0) || '?'}
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700 truncate max-w-[90px]">{enquiry.assignedTo.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">Unassigned</span>
+                    )}
+                  </td>
                   <td className="p-4 text-right">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEditClick(enquiry); }}
@@ -994,7 +1209,7 @@ export const NewEnquiriesPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-500">
+                <td colSpan="7" className="p-8 text-center text-gray-500">
                   No new enquiries found matching your criteria.
                 </td>
               </tr>
@@ -1006,15 +1221,53 @@ export const NewEnquiriesPage = () => {
           Showing {filteredEnquiries.length} of {enquiriesList.length} new enquiries
         </div>
       </div>
+
+      {/* Assign Caller Modal */}
+      <AssignCallerModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        enquiryIds={selectedIds}
+        onSuccess={handleAssignSuccess}
+      />
+
+      {/* Floating Multi-Select Action Bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+          >
+            <div className="flex items-center gap-3 bg-[#1C205C] text-white px-6 py-3.5 rounded-2xl shadow-2xl shadow-indigo-900/40 border border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">{selectedIds.length}</div>
+                <span className="font-semibold text-sm">enquiri{selectedIds.length === 1 ? 'y' : 'ies'} selected</span>
+              </div>
+              <div className="w-px h-5 bg-white/20" />
+              <button
+                onClick={() => setShowAssignModal(true)}
+                className="flex items-center gap-2 px-4 py-1.5 bg-white text-[#1C205C] rounded-xl text-sm font-bold hover:bg-indigo-50 transition-colors"
+              >
+                <MdPersonAdd size={16} /> Assign to Caller
+              </button>
+              <button
+                onClick={handleUnassignBulk}
+                className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-red-500/20"
+              >
+                <MdClose size={16} /> Unassign
+              </button>
+              <button onClick={() => setSelectedIds([])} className="text-white/60 hover:text-white transition-colors text-sm font-medium">
+                Clear
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-// Mock Data for In Progress Enquiries
-const MOCK_IN_PROGRESS = [
-  { id: 1, name: "Amit Kumar", phone: "+91 98765 43210", interest: "Mahindra Thar 4x4", stage: "Negotiation", assignedTo: "Rajesh (Sales)", lastUpdate: "2 hours ago" },
-  { id: 2, name: "Sneha Roy", phone: "+91 99887 76655", interest: "Innova Crysta", stage: "Doc Verification", assignedTo: "Priya (Admin)", lastUpdate: "1 day ago" },
-  { id: 3, name: "Karan Johar", phone: "+91 91234 56789", interest: "Swift Dzire", stage: "Test Drive Done", assignedTo: "Vikram (Driver)", lastUpdate: "3 hours ago" },
-];
 
 export const InProgressEnquiriesPage = () => {
   const navigate = useNavigate();
@@ -1157,13 +1410,12 @@ export const InProgressEnquiriesPage = () => {
                 <th className="p-4">Interest</th>
                 <th className="p-4">Current Stage</th>
                 <th className="p-4">Assigned To</th>
-                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                  <td colSpan="4" className="p-8 text-center text-gray-500">
                     <div className="flex items-center justify-center gap-2">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
                       Loading leads...
@@ -1189,22 +1441,11 @@ export const InProgressEnquiriesPage = () => {
                     <td className="p-4 text-gray-700 font-medium">
                       {enquiry.assignedTo}
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditClick(enquiry); }}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Edit Details"
-                        >
-                          <MdEdit size={18} />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-gray-500">
+                  <td colSpan="4" className="p-8 text-center text-gray-500">
                     No enquiries found.
                   </td>
                 </tr>
@@ -1226,12 +1467,6 @@ export const InProgressEnquiriesPage = () => {
     </div>
   );
 };
-// Mock Data for Follow-up Enquiries
-const MOCK_FOLLOW_UPS = [
-  { id: 1, name: "Simran Kaur", phone: "+91 99880 00011", car: "Baleno", dueDate: "Yesterday", time: "-", note: "Ask for Aadhaar copy", status: "Overdue" },
-  { id: 2, name: "Priya Singh", phone: "+91 99887 76655", car: "Swift Dzire", dueDate: "Today", time: "2:00 PM", note: "Call regarding loan approval", status: "Due Today" },
-  { id: 3, name: "Rahul Kumar", phone: "+91 98765 43210", car: "Innova Crysta", dueDate: "Tomorrow", time: "10:00 AM", note: "Confirm Test Drive slot", status: "Upcoming" },
-];
 
 export const FollowUpsEnquiriesPage = () => {
   const navigate = useNavigate();
@@ -1413,7 +1648,7 @@ export const FollowUpsEnquiriesPage = () => {
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{item.name}</div>
                       <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
-                        {item.car} • {item.phone}
+                        {item.car} â€¢ {item.phone}
                       </div>
                     </td>
                     <td className="p-4">
@@ -1465,12 +1700,6 @@ export const FollowUpsEnquiriesPage = () => {
     </div>
   );
 };
-// Mock Data for Converted Enquiries
-const MOCK_CONVERTED_ENQUIRIES = [
-  { id: 1, name: "Rohit Sharma", bookingId: "BK-2025-001", car: "Innova Crysta", amount: "₹ 15,000", convertedBy: "Rajesh (Sales)", date: "20 Dec 2025" },
-  { id: 2, name: "Ankita Patel", bookingId: "BK-2025-002", car: "Swift Dzire", amount: "₹ 8,500", convertedBy: "Priya (Admin)", date: "18 Dec 2025" },
-  { id: 3, name: "Suresh Raina", bookingId: "BK-2025-003", car: "Mahindra Thar", amount: "₹ 22,000", convertedBy: "Rajesh (Sales)", date: "15 Dec 2025" },
-];
 
 export const ConvertedEnquiriesPage = () => {
   const navigate = useNavigate();
@@ -1501,7 +1730,7 @@ export const ConvertedEnquiriesPage = () => {
           car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (enq.carInterested || 'Not Specified'),
           bookingId: enq.bookingId || 'N/A',
           amount: enq.revenue ? `₹ ${enq.revenue.toLocaleString()}` : (enq.amount || '₹ 0'),
-          convertedBy: 'System',
+          convertedBy: enq.assignedTo?.name || enq.assignedTo || 'System',
           date: new Date(enq.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           rawDate: new Date(enq.updatedAt),
           email: enq.email || '',
@@ -1548,22 +1777,30 @@ export const ConvertedEnquiriesPage = () => {
       item.bookingId.toLowerCase().includes(searchTerm.toLowerCase());
 
     let matchesDate = true;
-    const itemDate = item.rawDate;
-    const now = new Date();
+    if (dateFilter !== 'Date: All Time') {
+      const itemDate = item.rawDate;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    if (dateFilter === 'Date: This Month') {
-      matchesDate = itemDate.getMonth() === now.getMonth() &&
-        itemDate.getFullYear() === now.getFullYear();
-    } else if (dateFilter === 'Last Month') {
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      matchesDate = itemDate.getMonth() === lastMonth.getMonth() &&
-        itemDate.getFullYear() === lastMonth.getFullYear();
-    } else if (dateFilter !== 'Date: All Time' && customDateFrom) {
-      const from = new Date(customDateFrom);
-      from.setHours(0, 0, 0, 0);
-      const to = customDateTo ? new Date(customDateTo) : new Date(customDateFrom);
-      to.setHours(23, 59, 59, 999);
-      matchesDate = itemDate >= from && itemDate <= to;
+      if (dateFilter === 'Date: Today') {
+        matchesDate = itemDate.toDateString() === today.toDateString();
+      } else if (dateFilter === 'Date: Yesterday') {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        matchesDate = itemDate.toDateString() === yesterday.toDateString();
+      } else if (dateFilter === 'Date: Last 7 Days') {
+        const last7 = new Date(today);
+        last7.setDate(last7.getDate() - 7);
+        matchesDate = itemDate >= last7;
+      } else if (dateFilter === 'Date: This Month') {
+        matchesDate = itemDate.getMonth() === today.getMonth() && itemDate.getFullYear() === today.getFullYear();
+      } else if (customDateFrom) {
+        const from = new Date(customDateFrom);
+        from.setHours(0, 0, 0, 0);
+        const to = customDateTo ? new Date(customDateTo) : new Date(customDateFrom);
+        to.setHours(23, 59, 59, 999);
+        matchesDate = itemDate >= from && itemDate <= to;
+      }
     }
 
     return matchesSearch && matchesDate;
@@ -1648,13 +1885,12 @@ export const ConvertedEnquiriesPage = () => {
                 <th className="p-4">Customer Details</th>
                 <th className="p-4">Booking Info</th>
                 <th className="p-4">Converted By</th>
-                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-gray-500">
+                  <td colSpan="3" className="p-8 text-center text-gray-500">
                     <div className="flex items-center justify-center gap-2">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
                       Loading conversions...
@@ -1666,7 +1902,10 @@ export const ConvertedEnquiriesPage = () => {
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{item.name}</div>
-                      <div className="text-gray-500 text-xs mt-0.5">{item.date}</div>
+                      <div className="text-gray-500 text-xs flex items-center gap-2 mt-0.5">
+                        <MdPhone size={10} /> {item.phone}
+                      </div>
+                      <div className="text-gray-400 text-[10px] mt-0.5">{item.date}</div>
                     </td>
                     <td className="p-4">
                       <div className="font-medium text-gray-800">{item.car}</div>
@@ -1679,22 +1918,11 @@ export const ConvertedEnquiriesPage = () => {
                         {item.convertedBy}
                       </span>
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Edit Details"
-                        >
-                          <MdEdit size={18} />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center text-gray-500">
+                  <td colSpan="3" className="p-8 text-center text-gray-500">
                     No converted enquiries found.
                   </td>
                 </tr>
@@ -1716,12 +1944,6 @@ export const ConvertedEnquiriesPage = () => {
     </div>
   );
 };
-// Mock Data for Closed Enquiries
-const MOCK_CLOSED_ENQUIRIES = [
-  { id: 1, name: "Kavita R.", phone: "+91 98989 89898", reason: "Price Too High", date: "10 Dec 2025", note: "Wanted 20% discount" },
-  { id: 2, name: "John Doe", phone: "+91 91122 33445", reason: "Booked w/ Competitor", date: "05 Dec 2025", note: "Found cheaper rate elsewhere" },
-  { id: 3, name: "Alice Smith", phone: "+91 77788 99900", reason: "Plan Cancelled", date: "01 Dec 2025", note: "Trip cancelled due to emergency" },
-];
 
 export const ClosedEnquiriesPage = () => {
   const navigate = useNavigate();
@@ -1746,8 +1968,10 @@ export const ClosedEnquiriesPage = () => {
           id: enq._id,
           name: enq.name,
           phone: enq.phone,
-          reason: enq.lostReason || 'Closed',
+          reason: enq.reasonForClosing || 'Closed',
+          closedBy: enq.assignedTo?.name || enq.assignedTo || 'System',
           date: new Date(enq.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          time: new Date(enq.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           note: enq.notes || '',
           email: enq.email || '',
           car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (enq.carInterested || 'Not Specified'),
@@ -1850,7 +2074,7 @@ export const ClosedEnquiriesPage = () => {
                 <th className="p-4">Lead Details</th>
                 <th className="p-4">Lost Reason</th>
                 <th className="p-4">Date Closed</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4">Closed By</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
@@ -1878,19 +2102,17 @@ export const ClosedEnquiriesPage = () => {
                       </span>
                       {item.note && <p className="text-gray-400 text-xs mt-1 italic line-clamp-1">"{item.note}"</p>}
                     </td>
-                    <td className="p-4 text-gray-600 font-medium">
-                      {item.date}
+                    <td className="p-4">
+                      <div className="font-medium text-gray-600">{item.date}</div>
+                      <div className="text-gray-400 text-xs mt-0.5">{item.time}</div>
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditClick(item); }}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Edit Details"
-                        >
-                          <MdEdit size={18} />
-                        </button>
-                      </div>
+                    <td className="p-4">
+                      <span className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
+                          {item.closedBy?.charAt(0)}
+                        </span>
+                        {item.closedBy}
+                      </span>
                     </td>
                   </tr>
                 ))

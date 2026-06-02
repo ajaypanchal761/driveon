@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Staff from '../models/Staff.js';
 import OTP from '../models/OTP.js';
+import CRMRole from '../models/CRMRole.js';
 import { generateOTP, getOTPExpiry, isOTPExpired, sendOTP } from '../utils/otp.service.js';
 import { generateToken, generateRefreshToken } from '../utils/generateToken.js';
 import { processReferralSignup } from './referral.controller.js';
@@ -740,6 +741,21 @@ export const staffLogin = async (req, res) => {
       console.log(`❌❌❌ NO FCM TOKEN RECEIVED FROM STAFF FRONTEND: ${staff.name} ❌❌❌`);
     }
 
+    // Fetch permissions associated with this role
+    let permissions = [];
+    try {
+      if (staff.role) {
+        const crmRole = await CRMRole.findOne({
+          roleName: { $regex: new RegExp(`^${staff.role}$`, 'i') }
+        });
+        if (crmRole) {
+          permissions = crmRole.permissions || [];
+        }
+      }
+    } catch (roleError) {
+      console.error('Error fetching role permissions:', roleError);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -751,6 +767,7 @@ export const staffLogin = async (req, res) => {
           name: staff.name,
           email: staff.email,
           role: staff.role,
+          permissions,
           employeeId: staff.employeeId,
           phone: staff.phone,
           department: staff.department,
@@ -787,6 +804,21 @@ export const getStaffProfile = async (req, res) => {
       });
     }
 
+    // Fetch permissions associated with this role
+    let permissions = [];
+    try {
+      if (staff.role) {
+        const crmRole = await CRMRole.findOne({
+          roleName: { $regex: new RegExp(`^${staff.role}$`, 'i') }
+        });
+        if (crmRole) {
+          permissions = crmRole.permissions || [];
+        }
+      }
+    } catch (roleError) {
+      console.error('Error fetching role permissions:', roleError);
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -795,6 +827,7 @@ export const getStaffProfile = async (req, res) => {
           name: staff.name,
           email: staff.email,
           role: staff.role,
+          permissions,
           employeeId: staff.employeeId,
           phone: staff.phone,
           department: staff.department,

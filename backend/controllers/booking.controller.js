@@ -864,18 +864,19 @@ export const startTrip = async (req, res) => {
 
     // Check permissions
     const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
-    if (bookingUserId !== userId.toString() && req.user.role !== 'admin') {
+    const isAssignedDriver = booking.assignedDriver && booking.assignedDriver.toString() === userId.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin' && !isAssignedDriver) {
       return res.status(403).json({
         success: false,
         message: 'Access denied',
       });
     }
 
-    // Validate booking status
-    if (booking.status !== 'confirmed' && booking.status !== 'active') {
+    // Validate booking status — allow confirmed, active, or pending bookings
+    if (booking.status !== 'confirmed' && booking.status !== 'active' && booking.status !== 'pending') {
       return res.status(400).json({
         success: false,
-        message: 'Booking must be confirmed to start trip',
+        message: 'Booking must be confirmed or pending to start trip',
       });
     }
 
@@ -925,6 +926,126 @@ export const startTrip = async (req, res) => {
 };
 
 /**
+ * @desc    Pickup customer
+ * @route   POST /api/bookings/:id/pickup
+ * @access  Private
+ */
+export const pickupCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const booking = await Booking.findById(id).populate('user');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check permissions
+    const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+    const isAssignedDriver = booking.assignedDriver && booking.assignedDriver.toString() === userId.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin' && !isAssignedDriver) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+    }
+
+    // Update booking
+    booking.tripStatus = 'picked_up';
+    await booking.save();
+
+    // Send Notification
+    if (booking.user) {
+      const uId = booking.user._id || booking.user;
+      const title = "Customer Picked Up";
+      const body = "You have been picked up by the driver.";
+      // Send to Web
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, false);
+      // Send to Mobile
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, true);
+    }
+
+    res.json({
+      success: true,
+      message: 'Customer picked up successfully',
+      data: {
+        booking,
+      },
+    });
+  } catch (error) {
+    console.error('Pickup customer error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record customer pickup',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * @desc    Start ongoing trip
+ * @route   POST /api/bookings/:id/ongoing
+ * @access  Private
+ */
+export const startOngoing = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const booking = await Booking.findById(id).populate('user');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Check permissions
+    const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+    const isAssignedDriver = booking.assignedDriver && booking.assignedDriver.toString() === userId.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin' && !isAssignedDriver) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+    }
+
+    // Update booking
+    booking.tripStatus = 'ongoing';
+    await booking.save();
+
+    // Send Notification
+    if (booking.user) {
+      const uId = booking.user._id || booking.user;
+      const title = "Trip Ongoing";
+      const body = "Your trip is now ongoing.";
+      // Send to Web
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, false);
+      // Send to Mobile
+      sendPushNotification(uId, title, body, { bookingId: booking.bookingId || id }, true);
+    }
+
+    res.json({
+      success: true,
+      message: 'Trip set to ongoing successfully',
+      data: {
+        booking,
+      },
+    });
+  } catch (error) {
+    console.error('Start ongoing error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to set trip to ongoing',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
  * @desc    End trip (disable tracking)
  * @route   POST /api/bookings/:id/end
  * @access  Private
@@ -944,7 +1065,8 @@ export const endTrip = async (req, res) => {
 
     // Check permissions
     const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
-    if (bookingUserId !== userId.toString() && req.user.role !== 'admin') {
+    const isAssignedDriver = booking.assignedDriver && booking.assignedDriver.toString() === userId.toString();
+    if (bookingUserId !== userId.toString() && req.user.role !== 'admin' && !isAssignedDriver) {
       return res.status(403).json({
         success: false,
         message: 'Access denied',
@@ -956,8 +1078,6 @@ export const endTrip = async (req, res) => {
     booking.isTrackingActive = false;
     booking.trackingEndedAt = new Date();
     booking.tripEndedAt = new Date();
-    booking.status = 'completed';
-    booking.completedAt = new Date();
 
     await booking.save();
 
@@ -1067,4 +1187,56 @@ export const updateBookingLocation = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get bookings assigned to a driver
+ * @route   GET /api/bookings/driver/assigned
+ * @access  Private (Staff/Driver)
+ */
+export const getDriverAssignedBookings = async (req, res) => {
+  try {
+    const driverId = req.user._id;
+    const { status } = req.query;
+
+    const query = { assignedDriver: driverId };
+    
+    // Filter unpaid/cancelled similar to user bookings
+    const filterConditions = [
+      { status: { $ne: 'unpaid' } },
+      {
+        $or: [
+          { status: { $ne: 'cancelled' } },
+          { paidAmount: { $gt: 0 } },
+          { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+        ]
+      }
+    ];
+
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    query.$and = filterConditions;
+
+    const bookings = await Booking.find(query)
+      .populate('car', 'brand model year color registrationNumber images pricePerDay')
+      .populate('user', 'name phone email')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        bookings,
+      },
+    });
+  } catch (error) {
+    console.error('Get driver assigned bookings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch assigned bookings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 

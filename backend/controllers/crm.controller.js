@@ -23,7 +23,9 @@ import VendorHistory from '../models/VendorHistory.js';
 import Transaction from '../models/Transaction.js';
 import Invoice from '../models/Invoice.js';
 import ExpenseCategory from '../models/ExpenseCategory.js';
+import Expense from '../models/Expense.js';
 import City from '../models/City.js';
+import Setting from '../models/Setting.js';
 import { uploadImage } from '../services/cloudinary.service.js';
 import razorpayService from '../services/razorpay.service.js';
 import { createNotification } from './notification.controller.js';
@@ -36,11 +38,15 @@ import { sendAdminNotification, sendStaffPushNotification } from '../services/fi
  */
 export const getEnquiries = async (req, res) => {
     try {
-        const { status, search, startDate, endDate } = req.query;
+        const { status, search, startDate, endDate, assignedTo } = req.query;
         let query = {};
 
         if (status && status !== 'Status: All' && status !== 'Show: All') {
             query.status = status;
+        }
+
+        if (assignedTo) {
+            query.assignedTo = assignedTo;
         }
 
         if (search) {
@@ -77,7 +83,7 @@ export const getEnquiries = async (req, res) => {
         }
 
         let enquiries = await Enquiry.find(query)
-            .populate('assignedTo', 'name email')
+            .populate('assignedTo', 'name email avatar')
             .sort({ createdAt: -1 })
             .lean();
 
@@ -213,7 +219,7 @@ export const updateEnquiry = async (req, res) => {
 export const getEnquiryDetails = async (req, res) => {
     try {
         let enquiry = await Enquiry.findById(req.params.id)
-            .populate('assignedTo', 'name email')
+            .populate('assignedTo', 'name email avatar')
             .lean();
 
         if (enquiry && enquiry.carInterested && mongoose.Types.ObjectId.isValid(enquiry.carInterested)) {
@@ -759,10 +765,26 @@ export const createStaff = async (req, res) => {
     try {
         let staffData = { ...req.body };
 
-        // Handle Avatar Upload if file is present
+        // Handle File Uploads via req.files (multiple fields)
+        if (req.files) {
+            if (req.files['avatar'] && req.files['avatar'][0]) {
+                const uploadResult = await uploadImage(req.files['avatar'][0], { folder: 'crm/staff' });
+                staffData.avatar = uploadResult.secure_url;
+            }
+            if (req.files['aadharCard'] && req.files['aadharCard'][0]) {
+                const uploadResult = await uploadImage(req.files['aadharCard'][0], { folder: 'crm/staff/aadhar' });
+                staffData.aadharCard = uploadResult.secure_url;
+            }
+        }
+
+        // Handle Avatar Upload fallback if single file present via req.file
         if (req.file) {
             const uploadResult = await uploadImage(req.file, { folder: 'crm/staff' });
             staffData.avatar = uploadResult.secure_url;
+        }
+
+        if (staffData.password) {
+            staffData.plainTextPassword = staffData.password;
         }
 
         // Generate employeeId if not present (Simple generation: STF- + last 4 digits of timestamp + random)
@@ -800,7 +822,19 @@ export const updateStaff = async (req, res) => {
 
         const updateData = { ...req.body };
 
-        // Handle Avatar Upload if file is present
+        // Handle File Uploads via req.files (multiple fields)
+        if (req.files) {
+            if (req.files['avatar'] && req.files['avatar'][0]) {
+                const uploadResult = await uploadImage(req.files['avatar'][0], { folder: 'crm/staff' });
+                staff.avatar = uploadResult.secure_url;
+            }
+            if (req.files['aadharCard'] && req.files['aadharCard'][0]) {
+                const uploadResult = await uploadImage(req.files['aadharCard'][0], { folder: 'crm/staff/aadhar' });
+                staff.aadharCard = uploadResult.secure_url;
+            }
+        }
+
+        // Handle Avatar Upload fallback if single file present via req.file
         if (req.file) {
             const uploadResult = await uploadImage(req.file, { folder: 'crm/staff' });
             staff.avatar = uploadResult.secure_url;
@@ -810,8 +844,9 @@ export const updateStaff = async (req, res) => {
         Object.keys(updateData).forEach((key) => {
             // Skip password if it's empty string (from frontend placeholder)
             if (key === 'password') {
-                if (updateData[key] && updateData[key].trim() !== '') {
+                if (updateData[key] && updateData[key].trim() !== '' && updateData[key] !== '********') {
                     staff[key] = updateData[key];
+                    staff.plainTextPassword = updateData[key];
                 }
             } else if (key !== '_id' && key !== 'employeeId' && key !== 'createdAt' && key !== 'updatedAt') {
                 // Prevent updating immutable fields
@@ -1031,9 +1066,60 @@ export const markAttendance = async (req, res) => {
         const { staffId, date, status, inTime, outTime, workHours } = req.body;
         const targetDate = new Date(date || Date.now());
         const searchDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
-        let calculatedWorkHours = workHours;
 
-        if (inTime && outTime) {
+        const ensure12HourFormat = (timeStr) => {
+            if (!timeStr || timeStr === '-') return timeStr;
+            if (timeStr.toLowerCase().includes('am') || timeStr.toLowerCase().includes('pm')) {
+                return timeStr;
+            }
+            const parts = timeStr.split(':');
+            if (parts.length >= 2) {
+                let hours = parseInt(parts[0], 10);
+                const minutes = parseInt(parts[1], 10);
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // 0 hour should be 12
+                const minutesStr = minutes.toString().padStart(2, '0');
+                const hoursStr = hours.toString().padStart(2, '0');
+                return `${hoursStr}:${minutesStr} ${ampm}`;
+            }
+            return timeStr;
+        };
+
+        // Fetch existing record
+        const existingRecord = await Attendance.findOne({ staff: staffId, date: searchDate });
+
+        let finalStatus = status;
+        if (!finalStatus || finalStatus === '—') {
+            finalStatus = existingRecord?.status || 'Present';
+        }
+
+        let finalInTime = inTime ? ensure12HourFormat(inTime) : undefined;
+        let finalOutTime = outTime ? ensure12HourFormat(outTime) : undefined;
+
+        if (finalStatus === 'Present' || finalStatus === 'Late') {
+            if (!finalInTime) {
+                finalInTime = existingRecord?.inTime || (finalStatus === 'Present' ? '09:00 AM' : '10:00 AM');
+            }
+            if (outTime === undefined) {
+                finalOutTime = undefined; // Only clear outTime if it was not provided in the request
+            } else {
+                finalOutTime = ensure12HourFormat(outTime);
+            }
+        } else if (finalStatus === 'Half Day') {
+            if (!finalInTime) {
+                finalInTime = existingRecord?.inTime || '09:00 AM';
+            }
+            if (!finalOutTime) {
+                finalOutTime = existingRecord?.outTime || '01:30 PM';
+            }
+        } else if (finalStatus === 'Absent' || finalStatus === 'Leave') {
+            finalInTime = undefined;
+            finalOutTime = undefined;
+        }
+
+        let calculatedWorkHours = workHours;
+        if (finalInTime && finalOutTime) {
             // Helper to parse time strings like "09:00 AM" or "14:30"
             const parseToDate = (timeStr) => {
                 const [time, modifier] = timeStr.split(' ');
@@ -1048,9 +1134,8 @@ export const markAttendance = async (req, res) => {
             };
 
             try {
-                const start = parseToDate(inTime);
-                const end = parseToDate(outTime);
-                // Handle cases where shift ends after midnight (if applicable)
+                const start = parseToDate(finalInTime);
+                const end = parseToDate(finalOutTime);
                 if (end < start) end.setDate(end.getDate() + 1);
 
                 const diffMs = end - start;
@@ -1063,16 +1148,34 @@ export const markAttendance = async (req, res) => {
             }
         }
 
+        const updateDoc = {
+            $set: { status: finalStatus }
+        };
+
+        if (finalInTime) {
+            updateDoc.$set.inTime = finalInTime;
+        } else {
+            updateDoc.$unset = updateDoc.$unset || {};
+            updateDoc.$unset.inTime = "";
+        }
+
+        if (finalOutTime) {
+            updateDoc.$set.outTime = finalOutTime;
+        } else {
+            updateDoc.$unset = updateDoc.$unset || {};
+            updateDoc.$unset.outTime = "";
+        }
+
+        if (calculatedWorkHours) {
+            updateDoc.$set.workHours = calculatedWorkHours;
+        } else {
+            updateDoc.$unset = updateDoc.$unset || {};
+            updateDoc.$unset.workHours = "";
+        }
+
         let attendance = await Attendance.findOneAndUpdate(
             { staff: staffId, date: searchDate },
-            {
-                $set: {
-                    status,
-                    ...(inTime && { inTime }),
-                    ...(outTime && { outTime }),
-                    ...(calculatedWorkHours && { workHours: calculatedWorkHours })
-                }
-            },
+            updateDoc,
             { upsert: true, new: true }
         );
 
@@ -1115,9 +1218,11 @@ export const getTeamPresence = async (req, res) => {
         // However, given the schema has Staff status 'Leave', we'll rely on that for "On Leave" count.
         const leaveCount = await Staff.countDocuments({ status: 'Leave' });
 
-        // 4. Absent (Total - Present - Leave)
-        // This logic assumes everyone else is absent.
-        const absentCount = Math.max(0, totalStaff - presentCount - leaveCount);
+        // 4. Absent (Only count if explicitly marked as 'Absent' in daily attendance)
+        const absentCount = await Attendance.countDocuments({
+            date: today,
+            status: 'Absent'
+        });
 
         // 5. Get some avatars of present staff for the UI (limit 5)
         const presentAttendances = await Attendance.find({
@@ -2653,19 +2758,36 @@ export const getAnnualReport = async (req, res) => {
  */
 export const getExpenseCategories = async (req, res) => {
     try {
-        const categories = await ExpenseCategory.find();
+        let categories = await ExpenseCategory.find();
+
+        // Seed default categories if none exist
+        if (categories.length === 0) {
+            const defaultCategories = [
+                { name: 'Electricity bill', icon: 'electricity', description: 'Monthly electricity bill' },
+                { name: 'Petrol/Diesel', icon: 'fuel', description: 'Fuel expenses' },
+                { name: 'Water', icon: 'water', description: 'Water supplier bills' },
+                { name: 'Repair', icon: 'repair', description: 'Maintenance and repairs' },
+                { name: 'Rent', icon: 'rent', description: 'Office/Garage rent' },
+                { name: 'Chai/Coffee', icon: 'coffee', description: 'Pantry chai/coffee expenses' },
+                { name: 'Food', icon: 'food', description: 'Staff meals or client food' }
+            ];
+            await ExpenseCategory.insertMany(defaultCategories);
+            categories = await ExpenseCategory.find();
+        }
 
         // Populate transaction counts for each category
         const categoriesWithStats = await Promise.all(categories.map(async (cat) => {
             const count = await Transaction.countDocuments({ category: cat.name });
+            const adminCount = await Expense.countDocuments({ category: cat.name });
             return {
                 ...cat._doc,
-                transactionCount: count
+                transactionCount: count + adminCount
             };
         }));
 
         res.json({ success: true, data: { categories: categoriesWithStats } });
     } catch (error) {
+        console.error('getExpenseCategories error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
@@ -2687,6 +2809,31 @@ export const deleteExpenseCategory = async (req, res) => {
         await ExpenseCategory.findByIdAndDelete(req.params.id);
         res.json({ success: true, message: 'Category deleted' });
     } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+export const updateExpenseCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description } = req.body;
+
+        const category = await ExpenseCategory.findByIdAndUpdate(
+            id,
+            { name, description },
+            { new: true, runValidators: true }
+        );
+
+        if (!category) {
+            return res.status(404).json({ success: false, message: 'Category not found' });
+        }
+
+        res.json({ success: true, data: { category } });
+    } catch (error) {
+        console.error('Update Category Error:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({ success: false, message: 'Category name already exists' });
+        }
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
@@ -2876,6 +3023,7 @@ export const getStaffPayroll = async (req, res) => {
         let presentCount = 0;
         let halfDayCount = 0;
         let absentCount = 0;
+        let leaveCount = 0;
         let extraWorkAmount = 0;
         let totalExtraMinutes = 0;
 
@@ -2898,51 +3046,91 @@ export const getStaffPayroll = async (req, res) => {
             recordsMap[day] = r;
         });
 
+        const dailyLogs = [];
+
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(targetYear, targetMonth, day);
             const dayOfWeek = date.getDay(); // 0 = Sunday
             const record = recordsMap[day];
 
+            let computedStatus = 'Absent';
+            let workHours = '-';
+            let inTime = '-';
+            let outTime = '-';
+
             if (dayOfWeek === 0) {
-                // Sunday is a Holiday - Skip (not counted as present or absent)
-                continue;
-            }
+                computedStatus = 'Weekend';
+            } else {
+                if (record) {
+                    const durationMinutes = parseWorkHours(record.workHours);
+                    let status = record.status;
+                    workHours = record.workHours || '-';
+                    inTime = record.inTime || '-';
+                    outTime = record.outTime || '-';
 
-            if (record) {
-                const durationMinutes = parseWorkHours(record.workHours);
-                let status = record.status;
+                    // Dynamic Status & Overtime Calculation
+                    if (status !== 'Absent' && durationMinutes > 0) {
+                        if (durationMinutes > 540) { // > 9 hours
+                            // Overtime logic
+                            const extraMinutes = durationMinutes - 540;
+                            totalExtraMinutes += extraMinutes;
 
-                // Dynamic Status & Overtime Calculation
-                if (status !== 'Absent' && durationMinutes > 0) {
-                    if (durationMinutes > 540) { // > 9 hours
-                        // Overtime logic
-                        const extraMinutes = durationMinutes - 540;
-                        totalExtraMinutes += extraMinutes;
+                            // Overtime Rate: (Per Day Salary / 9 hours / 60 minutes) per minute
+                            const perMinuteRate = (perDaySalary / 9) / 60;
+                            extraWorkAmount += (extraMinutes * perMinuteRate);
 
-                        // Overtime Rate: (Per Day Salary / 9 hours / 60 minutes) per minute
-                        const perMinuteRate = (perDaySalary / 9) / 60;
-                        extraWorkAmount += (extraMinutes * perMinuteRate);
+                            status = 'Present';
+                        } else if (durationMinutes < 270) { // < 4.5 hours
+                            status = 'Half Day';
+                        } else {
+                            status = 'Present';
+                        }
+                    }
 
-                        status = 'Present';
-                    } else if (durationMinutes < 270) { // < 4.5 hours
-                        status = 'Half Day';
+                    if (status === 'Present' || status === 'Late') {
+                        presentCount++;
+                        computedStatus = status;
+                    } else if (status === 'Half Day') {
+                        halfDayCount++;
+                        computedStatus = 'Half Day';
+                    } else if (status === 'Leave') {
+                        leaveCount++;
+                        computedStatus = 'Leave';
                     } else {
-                        status = 'Present';
+                        absentCount++;
+                        computedStatus = 'Absent';
+                    }
+                } else {
+                    // Not a Sunday and no record = Absent (if past day) or Pending (if future/today)
+                    const todayDate = new Date();
+                    todayDate.setHours(0,0,0,0);
+                    const compDate = new Date(targetYear, targetMonth, day);
+                    compDate.setHours(0,0,0,0);
+
+                    // Check if before joining date
+                    const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt || new Date();
+                    const startOfJoin = new Date(joinDate);
+                    startOfJoin.setHours(0,0,0,0);
+
+                    if (compDate < startOfJoin) {
+                        computedStatus = 'Not Joined';
+                    } else if (compDate < todayDate) {
+                        absentCount++;
+                        computedStatus = 'Absent';
+                    } else {
+                        computedStatus = 'Pending';
                     }
                 }
-
-                if (status === 'Present' || status === 'Late') {
-                    presentCount++;
-                } else if (status === 'Half Day') {
-                    halfDayCount++;
-                } else {
-                    absentCount++;
-                }
-            } else {
-                // Not a Sunday and no record = Absent
-                // (Only for past days or full month calculation)
-                absentCount++;
             }
+
+            dailyLogs.push({
+                day,
+                status: computedStatus,
+                isWeekend: dayOfWeek === 0,
+                inTime,
+                outTime,
+                workHours
+            });
         }
 
         const absentDeduction = absentCount * perDaySalary;
@@ -2974,10 +3162,12 @@ export const getStaffPayroll = async (req, res) => {
             success: true,
             data: {
                 baseSalary,
-                daysInMonth: workingDays,
+                daysInMonth: daysInMonth, // actual days of the month (e.g. 31)
+                workingDays: workingDays, // working days (excluding Sundays, e.g. 26)
                 presentDays: presentCount,
                 halfDays: halfDayCount,
                 absentDays: absentCount,
+                leaveDays: leaveCount,
                 perDaySalary,
                 halfDaySalary,
                 absentDeduction,
@@ -2989,7 +3179,8 @@ export const getStaffPayroll = async (req, res) => {
                 salaryStatus,
                 month: targetMonth,
                 year: targetYear,
-                totalExtraMinutes // Debugging/Info
+                totalExtraMinutes,
+                dailyLogs
             }
         });
     } catch (error) {
@@ -3438,3 +3629,287 @@ export const recordVendorPayment = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error recording payment' });
     }
 };
+
+/**
+ * @desc    Get Administrative Expenses (with optional filters)
+ * @route   GET /api/crm/expenses
+ * @access  Admin
+ */
+export const getExpenses = async (req, res) => {
+    try {
+        const { category, month, year, search } = req.query;
+        let query = {};
+
+        if (category && category !== 'All' && category !== '') {
+            query.category = category;
+        }
+
+        if (month && month !== 'All' && month !== '' && year && year !== 'All' && year !== '') {
+            query.month = `${month} ${year}`;
+        } else if (month && month !== 'All' && month !== '') {
+            query.month = { $regex: `^${month}`, $options: 'i' };
+        } else if (year && year !== 'All' && year !== '') {
+            query.year = Number(year);
+        }
+
+        if (search) {
+            query.description = { $regex: search, $options: 'i' };
+        }
+
+        const expenses = await Expense.find(query).sort({ date: -1 });
+        
+        // Find unique months and years for filters
+        const allExpenses = await Expense.find({});
+        
+        const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const uniqueMonths = [...new Set(allExpenses.map(e => e.month.split(' ')[0]))].sort((a, b) => {
+            return monthsList.indexOf(a) - monthsList.indexOf(b);
+        });
+        
+        const uniqueYears = [...new Set(allExpenses.map(e => e.year))].sort((a, b) => b - a);
+
+        res.json({
+            success: true,
+            data: {
+                expenses,
+                uniqueMonths,
+                uniqueYears
+            }
+        });
+    } catch (error) {
+        console.error('Get Expenses Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching expenses' });
+    }
+};
+
+/**
+ * @desc    Create a new Administrative Expense
+ * @route   POST /api/crm/expenses
+ * @access  Admin
+ */
+export const createExpense = async (req, res) => {
+    try {
+        const { category, amount, date, description } = req.body;
+
+        if (!category || !amount) {
+            return res.status(400).json({ success: false, message: 'Category and amount are required' });
+        }
+
+        const expense = await Expense.create({
+            category,
+            amount: Number(amount),
+            date: date ? new Date(date) : new Date(),
+            description: description?.trim()
+        });
+
+        res.status(201).json({ success: true, data: { expense } });
+    } catch (error) {
+        console.error('Create Expense Error:', error);
+        res.status(500).json({ success: false, message: 'Server error creating expense' });
+    }
+};
+
+/**
+ * @desc    Delete an Administrative Expense
+ * @route   DELETE /api/crm/expenses/:id
+ * @access  Admin
+ */
+export const deleteExpense = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Expense.findByIdAndDelete(id);
+        res.json({ success: true, message: 'Expense deleted successfully' });
+    } catch (error) {
+        console.error('Delete Expense Error:', error);
+        res.status(500).json({ success: false, message: 'Server error deleting expense' });
+    }
+};
+
+/**
+ * @desc    Get Attendance Settings
+ * @route   GET /api/crm/attendance/settings
+ * @access  Admin
+ */
+export const getAttendanceSettings = async (req, res) => {
+    try {
+        let setting = await Setting.findOne({ key: 'attendance_settings' });
+        if (!setting) {
+            setting = {
+                key: 'attendance_settings',
+                value: {
+                    officeStartTime: '09:00 AM',
+                    officeEndTime: '06:00 PM',
+                    halfDayDeduction: 250,
+                    absentDeduction: 500,
+                    lateGracePeriod: 15
+                }
+            };
+        }
+        res.status(200).json({ success: true, data: setting.value });
+    } catch (error) {
+        console.error('Get Attendance Settings Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching attendance settings' });
+    }
+};
+
+/**
+ * @desc    Update Attendance Settings
+ * @route   PUT /api/crm/attendance/settings
+ * @access  Admin
+ */
+export const updateAttendanceSettings = async (req, res) => {
+    try {
+        const { officeStartTime, officeEndTime, halfDayDeduction, absentDeduction, lateGracePeriod } = req.body;
+        
+        if (!officeStartTime || !officeEndTime) {
+            return res.status(400).json({ success: false, message: 'Office start and end times are required' });
+        }
+
+        const value = {
+            officeStartTime,
+            officeEndTime,
+            halfDayDeduction: Number(halfDayDeduction) || 0,
+            absentDeduction: Number(absentDeduction) || 0,
+            lateGracePeriod: lateGracePeriod !== undefined ? Number(lateGracePeriod) : 15
+        };
+
+        const setting = await Setting.findOneAndUpdate(
+            { key: 'attendance_settings' },
+            { key: 'attendance_settings', value, description: 'Office timing and attendance payroll deductions config' },
+            { new: true, upsert: true }
+        );
+
+        res.status(200).json({ success: true, message: 'Attendance settings updated successfully', data: setting.value });
+    } catch (error) {
+        console.error('Update Attendance Settings Error:', error);
+        res.status(500).json({ success: false, message: 'Server error updating attendance settings' });
+    }
+};
+
+/**
+ * @desc    Get Enquiries Grouped by Assigned Caller (Staff)
+ * @route   GET /api/crm/enquiries/assignments
+ * @access  Admin/CRM
+ */
+export const getEnquiryAssignments = async (req, res) => {
+    try {
+        // Get all enquiries with staff populated
+        const allEnquiries = await Enquiry.find({})
+            .populate('assignedTo', 'name phone email role department avatar employeeId')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // Manually populate carInterested for ObjectId refs
+        const carIdsToFetch = allEnquiries
+            .filter(enq => enq.carInterested && mongoose.Types.ObjectId.isValid(enq.carInterested))
+            .map(enq => enq.carInterested);
+
+        let carMap = {};
+        if (carIdsToFetch.length > 0) {
+            const cars = await mongoose.model('Car').find({ _id: { $in: carIdsToFetch } }).select('brand model').lean();
+            carMap = cars.reduce((acc, car) => {
+                acc[car._id.toString()] = car;
+                return acc;
+            }, {});
+        }
+
+        const enrichedEnquiries = allEnquiries.map(enq => {
+            let carName = 'Not Specified';
+            if (enq.carInterested) {
+                if (mongoose.Types.ObjectId.isValid(enq.carInterested)) {
+                    const car = carMap[enq.carInterested.toString()];
+                    if (car) carName = `${car.brand} ${car.model}`;
+                } else if (typeof enq.carInterested === 'string') {
+                    carName = enq.carInterested;
+                } else if (enq.carInterested.brand) {
+                    carName = `${enq.carInterested.brand} ${enq.carInterested.model}`;
+                }
+            }
+            return { ...enq, carName };
+        });
+
+        // Separate assigned and unassigned
+        const unassigned = enrichedEnquiries.filter(enq => !enq.assignedTo);
+        const assigned = enrichedEnquiries.filter(enq => enq.assignedTo);
+
+        // Group assigned enquiries by caller
+        const callerMap = {};
+        assigned.forEach(enq => {
+            const callerId = enq.assignedTo._id.toString();
+            if (!callerMap[callerId]) {
+                callerMap[callerId] = {
+                    caller: enq.assignedTo,
+                    enquiries: [],
+                    count: 0
+                };
+            }
+            callerMap[callerId].enquiries.push(enq);
+            callerMap[callerId].count++;
+        });
+
+        const callerGroups = Object.values(callerMap).sort((a, b) => b.count - a.count);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                callerGroups,
+                unassigned,
+                totalAssigned: assigned.length,
+                totalUnassigned: unassigned.length
+            }
+        });
+    } catch (error) {
+        console.error('Get Enquiry Assignments Error:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching assignments', error: error.message });
+    }
+};
+
+/**
+ * @desc    Bulk Assign Enquiries to a Caller (Staff) — pass staffId: null to unassign
+ * @route   POST /api/crm/enquiries/bulk-assign
+ * @access  Admin/CRM
+ */
+export const bulkAssignEnquiries = async (req, res) => {
+    try {
+        const { enquiryIds, staffId } = req.body;
+
+        if (!enquiryIds || !Array.isArray(enquiryIds) || enquiryIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'enquiryIds array is required' });
+        }
+
+        const updatePayload = staffId
+            ? { assignedTo: new mongoose.Types.ObjectId(staffId) }
+            : { $unset: { assignedTo: 1 } };
+
+        await Enquiry.updateMany({ _id: { $in: enquiryIds } }, updatePayload);
+
+        // Send notification to the newly assigned staff member
+        if (staffId) {
+            const staffMember = await Staff.findById(staffId).select('name').lean();
+            try {
+                await createNotification({
+                    recipient: staffId,
+                    recipientModel: 'Staff',
+                    title: 'Enquiries Assigned to You',
+                    message: `${enquiryIds.length} enquir${enquiryIds.length === 1 ? 'y has' : 'ies have'} been assigned to you.`,
+                    type: 'enquiry_assigned',
+                });
+            } catch (notifErr) {
+                // Non-fatal — don't fail the whole request
+                console.warn('Notification error (non-fatal):', notifErr.message);
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: staffId
+                ? `${enquiryIds.length} enquir${enquiryIds.length === 1 ? 'y' : 'ies'} assigned successfully`
+                : `${enquiryIds.length} enquir${enquiryIds.length === 1 ? 'y' : 'ies'} unassigned successfully`,
+            data: { updatedCount: enquiryIds.length }
+        });
+    } catch (error) {
+        console.error('Bulk Assign Enquiries Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during bulk assignment', error: error.message });
+    }
+};
+

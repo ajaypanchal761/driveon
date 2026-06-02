@@ -211,7 +211,7 @@ const StaffPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-end gap-4">
          <div>
             <h1 className="text-2xl font-bold text-gray-900">Staff Operations</h1>
-            <p className="text-gray-500 text-sm">Attendance, Salary & Performance</p>
+            <p className="text-gray-500 text-sm">Attendance & Salary</p>
          </div>
 
          {/* Navigation Tabs */}

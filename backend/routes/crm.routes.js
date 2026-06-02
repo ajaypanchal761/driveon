@@ -79,7 +79,11 @@ import {
     getAnnualReport,
     getExpenseCategories,
     createExpenseCategory,
+    updateExpenseCategory,
     deleteExpenseCategory,
+    getExpenses,
+    createExpense,
+    deleteExpense,
     getCities,
     createCity,
     updateCity,
@@ -87,8 +91,13 @@ import {
     getDashboardAlerts,
     getStaffPayroll,
     createSalaryPaymentOrder,
-    verifySalaryPayment
+    verifySalaryPayment,
+    getAttendanceSettings,
+    updateAttendanceSettings,
+    getEnquiryAssignments,
+    bulkAssignEnquiries
 } from '../controllers/crm.controller.js';
+import { getPolicyByKey, updatePolicy } from '../controllers/policy.controller.js';
 // import { protect, admin } from '../middleware/auth.middleware.js'; // Assuming you have auth middleware
 
 const router = express.Router();
@@ -111,10 +120,28 @@ const handleFileUpload = (fieldName, isMultiple = false) => (req, res, next) => 
     }
 };
 
+// Middleware to handle staff file fields (avatar and aadharCard)
+const handleStaffUploads = (req, res, next) => {
+    const upload = req.app.locals.upload;
+    if (!upload) return next();
+
+    upload.fields([
+        { name: 'avatar', maxCount: 1 },
+        { name: 'aadharCard', maxCount: 1 }
+    ])(req, res, (err) => {
+        if (err) return res.status(400).json({ success: false, message: err.message });
+        next();
+    });
+};
+
 // Enquiries Routes
 router.route('/enquiries')
     .get(getEnquiries)
     .post(createEnquiry);
+
+// NOTE: /assignments and /bulk-assign MUST come before /:id
+router.get('/enquiries/assignments', getEnquiryAssignments);
+router.post('/enquiries/bulk-assign', bulkAssignEnquiries);
 
 router.route('/enquiries/:id')
     .get(getEnquiryDetails)
@@ -131,10 +158,10 @@ router.route('/tasks/:id')
 // Staff Routes
 router.route('/staff')
     .get(getStaff)
-    .post(handleFileUpload('avatar'), createStaff);
+    .post(handleStaffUploads, createStaff);
 
 router.route('/staff/:id')
-    .put(handleFileUpload('avatar'), updateStaff)
+    .put(handleStaffUploads, updateStaff)
     .delete(deleteStaff);
 
 router.get('/staff/:id/payroll', getStaffPayroll);
@@ -155,6 +182,10 @@ router.get('/team-presence', getTeamPresence);
 router.route('/attendance')
     .get(getAttendance)
     .post(markAttendance);
+
+router.route('/attendance/settings')
+    .get(getAttendanceSettings)
+    .put(updateAttendanceSettings);
 
 // Payroll Routes
 router.route('/payroll')
@@ -226,7 +257,7 @@ router.route('/garages/:id')
     .put(updateGarage)
     .delete(deleteGarage);
 
-router.post('/expenses', createCarExpense);
+router.post('/car-expenses', createCarExpense);
 
 // Repair Job Routes
 router.get('/repairs/active', getActiveRepairs);
@@ -276,7 +307,15 @@ router.get('/reports/annual-review', getAnnualReport);
 router.route('/finance/categories')
     .get(getExpenseCategories)
     .post(createExpenseCategory);
-router.delete('/finance/categories/:id', deleteExpenseCategory);
+router.route('/finance/categories/:id')
+    .put(updateExpenseCategory)
+    .delete(deleteExpenseCategory);
+
+// Administrative Expenses
+router.route('/expenses')
+    .get(getExpenses)
+    .post(createExpense);
+router.delete('/expenses/:id', deleteExpense);
 
 // Settings - Cities & Locations
 router.route('/settings/cities')
@@ -295,5 +334,10 @@ router.get('/bookings/upcoming', getUpcomingBookings);
 
 // Analytics Route
 router.get('/analytics', getCRMAnalytics);
+
+// App Policies Routes
+router.route('/policies/:key')
+    .get(getPolicyByKey)
+    .put(updatePolicy);
 
 export default router;

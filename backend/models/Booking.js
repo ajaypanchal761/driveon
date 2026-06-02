@@ -31,6 +31,12 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    assignedDriver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Staff',
+      default: null,
+      index: true,
+    },
 
     // Trip Details
     tripStart: {
@@ -272,7 +278,7 @@ const bookingSchema = new mongoose.Schema(
     // Trip Status
     tripStatus: {
       type: String,
-      enum: ['not_started', 'started', 'in_progress', 'completed', 'cancelled'],
+      enum: ['not_started', 'started', 'picked_up', 'ongoing', 'in_progress', 'completed', 'cancelled'],
       default: 'not_started',
       index: true,
     },

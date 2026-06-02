@@ -7,6 +7,7 @@ import AdminCustomSelect from '../../../components/admin/common/AdminCustomSelec
 import { generateBookingPDF, generateAllBookingsPDF } from '../../../utils/pdfGenerator';
 import toastUtils from '../../../config/toast';
 import { onMessageListener } from "../../../services/firebase";
+import api from '../../../services/api';
 
 /**
  * Format user ID to USER001 format
@@ -147,6 +148,8 @@ const BookingListPage = () => {
           rating: booking.rating,
           transactions: booking.transactions || [],
           remainingAmount: booking.remainingAmount || 0,
+          assignedDriver: booking.assignedDriver || null,
+          addOnServices: booking.addOnServices || {},
         })) || [];
 
         setBookings(transformedBookings);
@@ -815,6 +818,27 @@ const BookingListPage = () => {
                       )}
                     </div>
                   </div>
+                  
+                  {booking.addOnServices && Object.values(booking.addOnServices).some(qty => qty > 0) && (
+                    <div className="mt-2 flex flex-wrap gap-2 items-center bg-purple-50/50 border border-purple-100 p-2.5 rounded-xl mb-3">
+                      <span className="text-xs font-bold text-purple-900 uppercase tracking-wide">Add-ons:</span>
+                      {Object.entries(booking.addOnServices).map(([key, qty]) => {
+                        if (!qty || qty <= 0) return null;
+                        const labelMap = {
+                          driver: 'Driver',
+                          bodyguard: 'Body Guard',
+                          gunmen: 'Gun Man',
+                          bouncer: 'Bouncer'
+                        };
+                        const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+                        return (
+                          <span key={key} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-purple-100 text-purple-700 border border-purple-200">
+                            {label}: {qty}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Additional Info */}
                   <div className="flex flex-wrap gap-4 text-xs text-gray-600">
@@ -853,15 +877,6 @@ const BookingListPage = () => {
                     </button>
                   )}
 
-                  {booking.status === 'active' && (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/admin/bookings/${booking.id}/tracking`)}
-                      className="w-full px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Live Tracking
-                    </button>
-                  )}
 
                   {booking.status === 'pending' && (
                     <>
@@ -1021,6 +1036,58 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
   const [guarantorPoints, setGuarantorPoints] = useState(null);
   const [loadingGuarantorPoints, setLoadingGuarantorPoints] = useState(false);
 
+  // Driver Assignment States
+  const [drivers, setDrivers] = useState([]);
+  const [selectedDriverId, setSelectedDriverId] = useState(
+    booking.assignedDriver?._id || 
+    (typeof booking.assignedDriver === 'string' ? booking.assignedDriver : '')
+  );
+  const [isAssigningDriver, setIsAssigningDriver] = useState(false);
+
+  // Fetch Drivers
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      try {
+        const res = await api.get('/crm/staff');
+        if (res.data?.success && res.data?.data?.staff) {
+          const driverStaff = res.data.data.staff.filter(s => 
+            s.role && (
+              s.role.toLowerCase() === 'driver' || 
+              s.role.toLowerCase().includes('driver')
+            )
+          );
+          setDrivers(driverStaff);
+        }
+      } catch (err) {
+        console.error('Error fetching drivers:', err);
+      }
+    };
+    fetchDrivers();
+  }, []);
+
+  const handleAssignDriver = async (driverId) => {
+    try {
+      setIsAssigningDriver(true);
+      const res = await adminService.updateBooking(booking.id, {
+        assignedDriver: driverId || null
+      });
+      if (res.success) {
+        setSelectedDriverId(driverId);
+        toastUtils.success('Driver assigned successfully!');
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      } else {
+        toastUtils.error('Failed to assign driver');
+      }
+    } catch (err) {
+      console.error('Error assigning driver:', err);
+      toastUtils.error(err.response?.data?.message || 'Failed to assign driver');
+    } finally {
+      setIsAssigningDriver(false);
+    }
+  };
+
   // Update payment status when booking prop changes
   useEffect(() => {
     setPaymentStatus(booking.paymentStatus || 'pending');
@@ -1143,6 +1210,47 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
           <div>
             {activeTab === 'details' && (
               <div className="space-y-6">
+                {/* Driver Assignment */}
+                <div className="bg-purple-50/40 p-4 rounded-xl border border-purple-100 shadow-sm">
+                  <h3 className="text-sm font-black text-purple-900 mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                    🚗 Driver Assignment
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 block mb-1">Select Driver</label>
+                      <select
+                        value={selectedDriverId}
+                        onChange={(e) => handleAssignDriver(e.target.value)}
+                        disabled={isAssigningDriver}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-xs bg-white font-bold text-gray-700 shadow-sm"
+                      >
+                        <option value="">No Driver Assigned (Self Drive)</option>
+                        {drivers.map(d => (
+                          <option key={d._id || d.id} value={d._id || d.id}>
+                            {d.name} ({d.role}) - {d.status || 'Active'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {selectedDriverId && (
+                      <div className="bg-white p-3 rounded-lg border border-purple-100/70 text-[11px] shadow-sm">
+                        {(() => {
+                          const currentDriver = drivers.find(d => (d._id || d.id) === selectedDriverId) || booking.assignedDriver;
+                          if (!currentDriver || typeof currentDriver !== 'object') return <span className="text-gray-400 font-medium">Loading driver details...</span>;
+                          return (
+                            <div className="space-y-1 text-purple-950 font-semibold">
+                              <p className="font-extrabold text-xs text-purple-950">{currentDriver.name}</p>
+                              <p>📞 Phone: {currentDriver.phone || 'N/A'}</p>
+                              <p>📧 Email: {currentDriver.email || 'N/A'}</p>
+                              <p>🆔 ID: {currentDriver.employeeId || 'N/A'}</p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Car Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Car Information</h3>
@@ -1188,27 +1296,119 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
                 </div>
 
                 {/* Pricing Breakdown */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing Breakdown</h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-600">Price per day</span>
-                      <span className="text-sm text-gray-900">₹{(booking.totalAmount / booking.days).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-600">Days</span>
-                      <span className="text-sm text-gray-900">{booking.days}</span>
-                    </div>
-                    <div className="border-t border-gray-300 pt-2 mt-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-semibold text-gray-900">Total Amount</span>
-                        <span className="text-sm font-bold" style={{ color: colors.backgroundTertiary }}>
-                          ₹{booking.totalAmount.toLocaleString()}
-                        </span>
+                {(() => {
+                  const dbBasePrice = booking.originalData?.pricing?.basePrice;
+                  const addOnServicesTotal = booking.originalData?.pricing?.addOnServicesTotal || 0;
+                  const calculatedCarTotal = booking.totalAmount - addOnServicesTotal + (booking.originalData?.pricing?.discount || 0);
+                  const basePrice = dbBasePrice || Math.max(0, Math.round(calculatedCarTotal / (booking.days || 1)));
+                  const discount = booking.originalData?.pricing?.discount || 0;
+
+                  return (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing Breakdown</h3>
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                        {/* Car rental daily rate and days */}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Car Rental Rate</span>
+                          <span className="text-gray-900 font-medium">₹{basePrice.toLocaleString()} / day</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Rental Duration</span>
+                          <span className="text-gray-900 font-medium">{booking.days} {booking.days === 1 ? 'day' : 'days'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm pb-2 border-b border-gray-200">
+                          <span className="text-gray-600">Car Rental Total</span>
+                          <span className="text-gray-900 font-semibold">₹{(basePrice * booking.days).toLocaleString()}</span>
+                        </div>
+
+                        {/* Add-on Services details */}
+                        {booking.addOnServices && Object.values(booking.addOnServices).some(qty => qty > 0) && (
+                          <div className="py-2 border-b border-gray-200 space-y-1">
+                            <span className="text-xs font-bold text-gray-500 block uppercase tracking-wider mb-1">Add-on Services Breakdown</span>
+                            {Object.entries(booking.addOnServices).map(([key, qty]) => {
+                              if (!qty || qty <= 0) return null;
+                              const labelMap = {
+                                driver: 'Driver',
+                                bodyguard: 'Body Guard',
+                                gunmen: 'Gun Man',
+                                bouncer: 'Bouncer'
+                              };
+                              const priceMap = {
+                                driver: 500,
+                                bodyguard: 1000,
+                                gunmen: 1500,
+                                bouncer: 800
+                              };
+                              const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+                              const unitPrice = priceMap[key] || 0;
+                              const addOnTotal = qty * unitPrice;
+                              return (
+                                <div key={key} className="flex justify-between text-xs pl-2">
+                                  <span className="text-gray-600">{label} ({qty} × ₹{unitPrice.toLocaleString()})</span>
+                                  <span className="text-gray-900 font-medium">₹{addOnTotal.toLocaleString()}</span>
+                                </div>
+                              );
+                            })}
+                            <div className="flex justify-between text-xs font-bold pt-1 pl-2">
+                              <span className="text-gray-700">Add-on Services Total</span>
+                              <span className="text-gray-900">₹{addOnServicesTotal.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Discounts if any */}
+                        {discount > 0 && (
+                          <div className="flex justify-between text-sm text-green-600 py-1 border-b border-gray-200">
+                            <span>Discount ({booking.originalData?.pricing?.couponCode || booking.originalData?.pricing?.offerCode || 'Coupon/Offer'})</span>
+                            <span className="font-semibold">-₹{discount.toLocaleString()}</span>
+                          </div>
+                        )}
+
+                        {/* Total Amount */}
+                        <div className="pt-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm font-bold text-gray-900">Total Amount</span>
+                            <span className="text-base font-black" style={{ color: colors.backgroundTertiary }}>
+                              ₹{booking.totalAmount.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  );
+                })()}
+
+                {/* Add-On Services */}
+                {booking.addOnServices && Object.values(booking.addOnServices).some(qty => qty > 0) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Add-On Services</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 flex flex-wrap gap-3">
+                      {Object.entries(booking.addOnServices).map(([key, qty]) => {
+                        if (!qty || qty <= 0) return null;
+                        const labelMap = {
+                          driver: 'Driver',
+                          bodyguard: 'Body Guard',
+                          gunmen: 'Gun Man',
+                          bouncer: 'Bouncer'
+                        };
+                        const priceMap = {
+                          driver: 500,
+                          bodyguard: 1000,
+                          gunmen: 1500,
+                          bouncer: 800
+                        };
+                        const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+                        const unitPrice = priceMap[key] || 0;
+                        const totalAddOn = qty * unitPrice;
+                        return (
+                          <span key={key} className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                            {label}: {qty} Unit(s) (₹{unitPrice.toLocaleString()} × {qty} = ₹{totalAddOn.toLocaleString()})
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

@@ -13,6 +13,7 @@ import {
   MdPhone,
   MdEmail,
   MdVisibility,
+  MdVisibilityOff,
   MdMoreVert,
   MdEdit,
   MdDelete,
@@ -23,7 +24,6 @@ import {
   MdDateRange,
   MdAttachMoney,
   MdReceipt,
-  MdStar,
   MdAssignment,
   MdFlag,
   MdCheckCircle,
@@ -108,25 +108,6 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
         >
           <MdDelete size={16} /> Delete Staff
         </button>
-
-        <div className="border-t border-gray-50 my-1"></div>
-        <div className="px-4 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Change Status</div>
-
-        {statuses.map(status => (
-          <button
-            key={status}
-            onClick={() => { onChangeStatus(staff.id, status); onClose(); }}
-            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors font-medium
-                            ${staff.status === status ? 'text-[#212c40] bg-[#212c40]/10' : 'text-gray-600 hover:bg-gray-50'}
-                        `}
-          >
-            <div className={`w-2 h-2 rounded-full ${status === 'Active' ? 'bg-green-500' :
-              status === 'On Duty' ? 'bg-blue-500' : 'bg-red-500'
-              }`} />
-            {status}
-            {staff.status === status && <MdCheck className="ml-auto" size={14} />}
-          </button>
-        ))}
       </motion.div>
     </div>
   );
@@ -139,6 +120,19 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
   const [step, setStep] = useState(1);
   const modalScrollRef = useRef(null);
   const [salaryMethod, setSalaryMethod] = useState('Monthly');
+  const [aadharFile, setAadharFile] = useState(null);
+  const [aadharPreview, setAadharPreview] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const formatLocalDate = (dateVal) => {
+    if (!dateVal) return '';
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -158,7 +152,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     email: '',
     password: '',
     joiningDate: new Date().toISOString().split('T')[0],
-    employmentType: '',
+    employmentType: 'Full Time',
     salary: '',
     workingDays: '26',
     absentDeduction: '',
@@ -187,6 +181,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
 
   useEffect(() => {
     if (isOpen) {
+      setShowPassword(false);
       if (editingStaff) {
         setFormData({
           name: editingStaff.name || '',
@@ -194,9 +189,9 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           status: editingStaff.status || 'Active',
           phone: editingStaff.phone ? editingStaff.phone.replace(/^\+91\s*/, '') : '',
           email: editingStaff.email || '',
-          password: '',
-          joiningDate: editingStaff.joinDate ? new Date(editingStaff.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          employmentType: editingStaff.employmentType || '',
+          password: editingStaff.plainTextPassword || '********',
+          joiningDate: formatLocalDate(editingStaff.joiningDate || editingStaff.joinDate) || formatLocalDate(new Date()),
+          employmentType: editingStaff.employmentType || 'Full Time',
           salary: editingStaff.salary || '',
           workingDays: editingStaff.workingDays || '26',
           absentDeduction: editingStaff.absentDeduction || '',
@@ -205,6 +200,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
         });
         setStep(1);
         setSalaryMethod(editingStaff.salaryMethod || 'Monthly');
+        setAadharFile(null);
+        setAadharPreview(editingStaff.aadharCard || '');
         setErrors({});
       } else {
         setFormData({
@@ -214,8 +211,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           phone: '',
           email: '',
           password: '',
-          joiningDate: new Date().toISOString().split('T')[0],
-          employmentType: '',
+          joiningDate: formatLocalDate(new Date()),
+          employmentType: 'Full Time',
           salary: '',
           workingDays: '26',
           absentDeduction: '',
@@ -224,6 +221,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
         });
         setStep(1);
         setSalaryMethod('Monthly');
+        setAadharFile(null);
+        setAadharPreview('');
         setErrors({});
       }
     }
@@ -252,7 +251,6 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     let newErrors = {};
     if (salaryMethod === 'Monthly') {
       if (!formData.salary) newErrors.salary = "Base salary is required for monthly staff";
-      if (!formData.workingDays) newErrors.workingDays = "Working days are required";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -279,7 +277,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     const submitData = {
       ...formData,
       phone: `+91 ${formData.phone}`,
-      salaryMethod
+      salaryMethod,
+      aadharFile
     };
     onSubmit(submitData);
     onClose();
@@ -361,12 +360,17 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               </div>
 
               <div className="col-span-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Status</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Employment</label>
                 <ThemedDropdown
-                  options={['Active', 'On Duty', 'Leave']}
-                  value={formData.status}
-                  onChange={(val) => setFormData({ ...formData, status: val })}
-                  placeholder="Select Status"
+                  options={['Full Time', 'Part Time', 'Contract', 'Intern']}
+                  value={formData.employmentType}
+                  onChange={(val) => setFormData({ ...formData, employmentType: val })}
+                  placeholder="Select..."
+                  onOpen={() => {
+                    if (modalScrollRef.current) {
+                      modalScrollRef.current.scrollBy({ top: 150, behavior: 'smooth' });
+                    }
+                  }}
                 />
               </div>
 
@@ -405,16 +409,25 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
 
               <div className="col-span-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Password {editingStaff ? '(Optional)' : '*'}</label>
-                <input
-                  type="text"
-                  value={formData.password}
-                  onChange={(e) => {
-                    setFormData({ ...formData, password: e.target.value });
-                    if (errors.password) setErrors({ ...errors, password: null });
-                  }}
-                  className={`w-full px-4 py-3 bg-white border ${errors.password ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all text-gray-800`}
-                  placeholder={editingStaff ? "Leave blank to keep current" : "Set login password"}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      if (errors.password) setErrors({ ...errors, password: null });
+                    }}
+                    className={`w-full pl-4 pr-10 py-3 bg-white border ${errors.password ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all text-gray-800`}
+                    placeholder={editingStaff ? "Leave blank to keep current" : "Set login password"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                  </button>
+                </div>
                 {errors.password && <p className="text-red-500 text-xs mt-1 font-medium">{errors.password}</p>}
               </div>
 
@@ -429,82 +442,60 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               </div>
 
               <div className="col-span-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Employment</label>
-                <ThemedDropdown
-                  options={['Full Time', 'Part Time', 'Contract', 'Intern']}
-                  value={formData.employmentType}
-                  onChange={(val) => setFormData({ ...formData, employmentType: val })}
-                  placeholder="Select..."
-                  onOpen={() => {
-                    if (modalScrollRef.current) {
-                      modalScrollRef.current.scrollBy({ top: 150, behavior: 'smooth' });
-                    }
-                  }}
-                />
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Aadhar Card Image</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="aadhar-upload"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setAadharFile(file);
+                        setAadharPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="aadhar-upload"
+                    className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl hover:border-indigo-500 cursor-pointer transition-all text-sm font-medium text-gray-700"
+                  >
+                    <span className="truncate max-w-[150px]">
+                      {aadharFile ? aadharFile.name : "Upload Aadhar..."}
+                    </span>
+                    <span className="text-indigo-600 font-bold hover:underline shrink-0">Browse</span>
+                  </label>
+                </div>
+                {aadharPreview && (
+                  <div className="mt-2 relative w-20 h-12 rounded-lg border overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <img src={aadharPreview} alt="Aadhar Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
 
           {step === 2 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-              <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
-                <label className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-3 block">Salary Method</label>
-                <div className="grid grid-cols-3 gap-4">
-                  {['Monthly', 'Daily', 'Per Trip'].map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setSalaryMethod(method)}
-                      className={`
-                        py-3 px-4 rounded-xl font-bold text-sm transition-all shadow-sm
-                        ${salaryMethod === method
-                          ? 'bg-[#1C205C] text-white shadow-indigo-200 transform scale-[1.02]'
-                          : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}
-                      `}
-                    >
-                      {method}
-                    </button>
-                  ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="col-span-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Base Monthly Salary (₹) *</label>
+                  <input
+                    type="number"
+                    value={formData.salary}
+                    onChange={(e) => {
+                      setFormData({ ...formData, salary: e.target.value });
+                      if (errors.salary) setErrors({ ...errors, salary: null });
+                    }}
+                    className={`w-full px-4 py-3 bg-white border ${errors.salary ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
+                    placeholder="45000"
+                  />
+                  {errors.salary && <p className="text-red-500 text-xs mt-1 font-medium">{errors.salary}</p>}
                 </div>
               </div>
 
-              {salaryMethod === 'Monthly' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Base Monthly Salary (₹) *</label>
-                    <input
-                      type="number"
-                      value={formData.salary}
-                      onChange={(e) => {
-                        setFormData({ ...formData, salary: e.target.value });
-                        if (errors.salary) setErrors({ ...errors, salary: null });
-                      }}
-                      className={`w-full px-4 py-3 bg-white border ${errors.salary ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
-                      placeholder="45000"
-                    />
-                    {errors.salary && <p className="text-red-500 text-xs mt-1 font-medium">{errors.salary}</p>}
-                  </div>
-                  <div className="col-span-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Working Days *</label>
-                    <input
-                      type="number"
-                      value={formData.workingDays}
-                      onChange={(e) => {
-                        setFormData({ ...formData, workingDays: e.target.value });
-                        if (errors.workingDays) setErrors({ ...errors, workingDays: null });
-                      }}
-                      className={`w-full px-4 py-3 bg-white border ${errors.workingDays ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-indigo-500/20'} rounded-xl focus:ring-2 focus:border-indigo-500 outline-none transition-all font-bold text-lg text-gray-900`}
-                      placeholder="26"
-                    />
-                    {errors.workingDays && <p className="text-red-500 text-xs mt-1 font-medium">{errors.workingDays}</p>}
-                  </div>
-                </div>
-              )}
 
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 text-sm text-blue-800">
-                <MdVisibility className="shrink-0 mt-0.5" size={18} />
-                <p><strong>NB:</strong> These rules will be locked and used to auto-calculate salary every month. Manual editing of salary is disabled to ensure accuracy.</p>
-              </div>
             </motion.div>
           )}
 
@@ -661,6 +652,27 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
                 <p className="font-medium">{staff.joinDate || 'N/A'}</p>
               </div>
             </div>
+            {staff.aadharCard && (
+              <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-[#212c40]/10 flex items-center justify-center text-[#212c40]">
+                  <MdVisibility size={18} />
+                </div>
+                <div className="flex-1 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-gray-400 font-bold">Aadhar Card</p>
+                    <p className="font-medium text-xs text-indigo-600">Document Uploaded</p>
+                  </div>
+                  <a
+                    href={staff.aadharCard}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-indigo-600 hover:underline bg-indigo-50 px-2.5 py-1 rounded-lg"
+                  >
+                    View Card
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -738,15 +750,37 @@ export const StaffDirectoryPage = () => {
         platform: 'web'
       };
 
+      // Construct FormData if there is a file to upload
+      let requestData = payload;
+      let config = {};
+
+      if (newStaff.aadharFile) {
+        const formDataObj = new FormData();
+        // Append all text fields
+        Object.keys(payload).forEach(key => {
+          if (key !== 'aadharFile') {
+            formDataObj.append(key, payload[key]);
+          }
+        });
+        // Append file
+        formDataObj.append('aadharCard', newStaff.aadharFile);
+        requestData = formDataObj;
+        config = {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        };
+      }
+
       if (editingStaff) {
-        const response = await api.put(`/crm/staff/${editingStaff.id}`, payload);
+        const response = await api.put(`/crm/staff/${editingStaff.id}`, requestData, config);
         if (response.data.success) {
           fetchStaff();
           setEditingStaff(null);
           toast.success('Staff updated successfully');
         }
       } else {
-        const response = await api.post('/crm/staff', payload);
+        const response = await api.post('/crm/staff', requestData, config);
         if (response.data.success) {
           fetchStaff();
           toast.success('Staff created successfully');
@@ -886,7 +920,7 @@ export const StaffDirectoryPage = () => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-bold">
                 <th className="p-4">Staff Name</th>
-                <th className="p-4">Role & Dept</th>
+                <th className="p-4">Role</th>
                 <th className="p-4">Contact</th>
                 <th className="p-4">Joined</th>
                 <th className="p-4">Salary</th>
@@ -903,9 +937,6 @@ export const StaffDirectoryPage = () => {
                   </td>
                   <td className="p-4">
                     <div className="font-medium text-gray-800">{staff.role}</div>
-                    <div className="text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded w-fit mt-0.5 font-semibold">
-                      {staff.department}
-                    </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1.5 text-gray-600">
@@ -979,8 +1010,35 @@ const MOCK_ROLES_DATA = [
   { id: 5, role: "Accountant", access: "Finance, Salary, Invoices", count: 1, description: "Manages expenses, income, and staff payroll." },
 ];
 
+// Premium Permission Groups Config
+const PERMISSION_GROUPS = {
+  attendance: {
+    title: 'Attendance',
+    permissions: [
+      { key: 'attendance.manage', label: 'View & Mark Attendance' }
+    ]
+  },
+  enquiries: {
+    title: 'Enquiries',
+    permissions: [
+      { key: 'enquiries.view', label: 'View Enquiries' }
+    ]
+  },
+  bookings: {
+    title: 'Bookings',
+    permissions: [
+      { key: 'bookings.view', label: 'View Assigned Bookings' }
+    ]
+  }
+};
+
 const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [formData, setFormData] = useState({ role: '', description: '', access: 'Basic' });
+  const [formData, setFormData] = useState({ 
+    role: '', 
+    description: '', 
+    access: 'Custom',
+    permissions: [] 
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -996,18 +1054,72 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setFormData(initialData);
+        setFormData({
+          role: initialData.role || '',
+          description: initialData.description || '',
+          access: initialData.access || 'Custom',
+          permissions: initialData.permissions || []
+        });
       } else {
-        setFormData({ role: '', description: '', access: 'Basic' });
+        setFormData({ 
+          role: '', 
+          description: '', 
+          access: 'Custom',
+          permissions: [] 
+        });
       }
     }
   }, [isOpen, initialData]);
+
+  const handlePermissionToggle = (key) => {
+    setFormData(prev => {
+      const current = prev.permissions || [];
+      const updated = current.includes(key)
+        ? current.filter(k => k !== key)
+        : [...current, key];
+      return { ...prev, permissions: updated };
+    });
+  };
+
+  const handleSectionToggle = (sectionPermissions) => {
+    setFormData(prev => {
+      const current = prev.permissions || [];
+      const groupKeys = sectionPermissions.map(p => p.key);
+      const allSelected = groupKeys.every(k => current.includes(k));
+      
+      let updated;
+      if (allSelected) {
+        // Deselect all in this section
+        updated = current.filter(k => !groupKeys.includes(k));
+      } else {
+        // Select all in this section (prevent duplicates)
+        updated = Array.from(new Set([...current, ...groupKeys]));
+      }
+      return { ...prev, permissions: updated };
+    });
+  };
+
+  const handleGlobalToggle = () => {
+    setFormData(prev => {
+      const current = prev.permissions || [];
+      const allKeys = Object.values(PERMISSION_GROUPS).flatMap(g => g.permissions.map(p => p.key));
+      const allSelected = allKeys.every(k => current.includes(k));
+      
+      return {
+        ...prev,
+        permissions: allSelected ? [] : allKeys
+      };
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
     onClose();
   };
+
+  const allPermissionsList = Object.values(PERMISSION_GROUPS).flatMap(g => g.permissions.map(p => p.key));
+  const isAllGlobalSelected = allPermissionsList.every(k => (formData.permissions || []).includes(k));
 
   return createPortal(
     <AnimatePresence>
@@ -1018,21 +1130,134 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#0f172a]/40 backdrop-blur-sm"
           />
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col border border-gray-100"
           >
-            <h3 className="text-xl font-bold mb-4">{initialData ? 'Edit Role' : 'Add New Role'}</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input required placeholder="Role Name" className="w-full p-2 border rounded-xl" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
-              <textarea placeholder="Description" className="w-full p-2 border rounded-xl" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-              <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700">
-                {initialData ? 'Update Role' : 'Save Role'}
-              </button>
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
+                <div>
+                  <h3 className="text-xl font-extrabold text-gray-900">{initialData ? 'Edit Role & Permissions' : 'Add New Role'}</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Configure access privileges and platform powers for this role.</p>
+                </div>
+                <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <MdClose size={20} className="text-gray-500" />
+                </button>
+              </div>
+
+              {/* Scrollable Form Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                {/* Row 1: Role Name & Description */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 ml-1">Role Name *</label>
+                    <input 
+                      required 
+                      placeholder="e.g. Telecaller, Driver, HR" 
+                      className="w-full mt-1.5 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-[#1C205C] bg-gray-50/50 font-semibold text-gray-800 transition-all" 
+                      value={formData.role} 
+                      onChange={e => setFormData({ ...formData, role: e.target.value })} 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 ml-1">Short Description</label>
+                    <input 
+                      placeholder="Describe role responsibilities..." 
+                      className="w-full mt-1.5 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-[#1C205C] bg-gray-50/50 font-semibold text-gray-800 transition-all" 
+                      value={formData.description} 
+                      onChange={e => setFormData({ ...formData, description: e.target.value })} 
+                    />
+                  </div>
+                </div>
+
+                {/* Permissions Checklist Area */}
+                <div className="border-t border-gray-100 pt-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <div>
+                      <h4 className="text-sm font-extrabold text-gray-900">Module-wise Access Permissions</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">Toggle checkboxes to enable or disable operations for this role.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGlobalToggle}
+                      className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 active:scale-95 transition-all shrink-0 w-fit"
+                    >
+                      {isAllGlobalSelected ? 'Deselect All' : 'Select All Permissions'}
+                    </button>
+                  </div>
+
+                  {/* Grid of Permission Groups */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) => {
+                      const groupKeys = group.permissions.map(p => p.key);
+                      const allSelected = groupKeys.every(k => (formData.permissions || []).includes(k));
+                      
+                      return (
+                        <div key={groupKey} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col">
+                          {/* Section Header */}
+                          <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-50">
+                            <h5 className="text-xs font-black text-[#1C205C] tracking-wide uppercase">{group.title}</h5>
+                            <button
+                              type="button"
+                              onClick={() => handleSectionToggle(group.permissions)}
+                              className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
+                            >
+                              {allSelected ? 'None' : 'All'}
+                            </button>
+                          </div>
+
+                          {/* List of Checkboxes */}
+                          <div className="space-y-2 flex-1">
+                            {group.permissions.map(p => {
+                              const isChecked = (formData.permissions || []).includes(p.key);
+                              return (
+                                <label
+                                  key={p.key}
+                                  className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none
+                                    ${isChecked 
+                                      ? 'bg-indigo-50/40 border-indigo-100 text-indigo-900 shadow-sm shadow-indigo-50' 
+                                      : 'bg-white border-gray-100 text-gray-600 hover:bg-gray-50/50 hover:border-gray-200'}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handlePermissionToggle(p.key)}
+                                    className="rounded text-[#1C205C] focus:ring-indigo-500 border-gray-300 w-4 h-4"
+                                  />
+                                  <span className="text-xs font-bold">{p.label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons (Sticky Footer) */}
+              <div className="border-t border-gray-100 p-6 flex items-center justify-end gap-3 bg-gray-50/50 shrink-0">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#1C205C] hover:bg-[#2a3550] text-white font-extrabold rounded-xl text-sm transition-all shadow-lg active:scale-95"
+                  style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+                >
+                  {initialData ? 'Update Role' : 'Save Role'}
+                </button>
+              </div>
             </form>
           </motion.div>
         </div>
@@ -1044,12 +1269,6 @@ const AddRoleModal = ({ isOpen, onClose, onSubmit, initialData }) => {
 
 const RoleDetails = ({ role, staffList = [], onBack }) => {
   const navigate = useNavigate();
-  // Mock Permissions based on access level
-  const permissions = role.access === 'Full Access'
-    ? ['Create/Edit/Delete Staff', 'Manage Roles', 'View Financial Reports', 'Manage Bookings', 'Edit Content']
-    : role.access === 'Intermediate'
-      ? ['View Staff Directory', 'Manage Bookings', 'View Basic Reports']
-      : ['View Assigned Tasks', 'Mark Attendance'];
 
   // Find assigned staff - exact match (case-insensitive)
   const assignedStaff = staffList.filter(s =>
@@ -1068,7 +1287,7 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{role.role}</h1>
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Roles</span> <span>/</span> <span className="text-indigo-600 font-medium">Details</span>
+            <span>Roles</span> <span>/</span> <span className="text-[#1C205C] font-semibold">Details</span>
           </div>
         </div>
       </div>
@@ -1079,12 +1298,12 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
         <div className="relative z-10 flex flex-col md:flex-row gap-6 md:items-start justify-between">
           <div>
             <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold tracking-wide uppercase mb-3 inline-block">
-              {role.access} Access
+              {role.access || 'Custom'} Access
             </span>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">{role.role}</h2>
-            <p className="text-gray-600 max-w-2xl text-lg leading-relaxed">{role.description}</p>
+            <p className="text-gray-600 max-w-2xl text-lg leading-relaxed">{role.description || 'No description provided.'}</p>
           </div>
-          <div className="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl border border-gray-100">
+          <div className="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl border border-gray-100 shrink-0">
             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-sm border border-gray-100">
               <MdGroup size={24} />
             </div>
@@ -1117,16 +1336,41 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
       {/* Tab Content */}
       <div className="min-h-[300px]">
         {activeTab === 'permissions' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {permissions.map((perm, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                <MdCheckCircle className="text-green-500" size={20} />
-                <span className="font-medium text-gray-700">{perm}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-100 rounded-xl border-dashed">
-              <span className="text-gray-400 font-medium italic text-sm">+ Add more specific permissions in Settings</span>
-            </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(PERMISSION_GROUPS).map(([groupKey, group]) => {
+              const groupPermissions = group.permissions;
+              const activeCount = groupPermissions.filter(p => (role.permissions || []).includes(p.key)).length;
+              
+              return (
+                <div key={groupKey} className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm">
+                  <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-50">
+                    <h4 className="text-xs font-black text-gray-900 tracking-wide uppercase">{group.title}</h4>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md">
+                      {activeCount} / {groupPermissions.length} Active
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {groupPermissions.map(p => {
+                      const isEnabled = (role.permissions || []).includes(p.key);
+                      return (
+                        <div key={p.key} className="flex items-center justify-between p-2.5 rounded-xl border border-gray-50/50 hover:bg-gray-50/50 transition-colors">
+                          <span className={`text-xs font-semibold ${isEnabled ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{p.label}</span>
+                          {isEnabled ? (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                              <MdCheck size={12} /> Enabled
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                              <MdClose size={12} /> Disabled
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </motion.div>
         )}
 
@@ -1139,15 +1383,15 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
                     <th className="p-4">Name</th>
                     <th className="p-4">Staff ID</th>
                     <th className="p-4">Status</th>
-
+                    <th className="p-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {assignedStaff.map(staff => (
                     <tr key={staff.id} className="hover:bg-gray-50/50">
                       <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs">
-                          {staff.name.charAt(0)}
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">
+                          {staff.name ? staff.name.charAt(0) : 'S'}
                         </div>
                         {staff.name}
                       </td>
@@ -1220,10 +1464,17 @@ export const RolesPage = () => {
             role: role.roleName,
             department: role.department,
             access: role.accessLevel,
-            count: count
+            count: count,
+            permissions: role.permissions || []
           };
         });
         setRolesList(roles);
+        
+        // Update selectedRole in details if currently open to ensure live changes refresh
+        if (selectedRole) {
+          const updated = roles.find(r => r.id === selectedRole.id);
+          if (updated) setSelectedRole(updated);
+        }
       }
     } catch (error) {
       console.error("Error fetching roles/staff:", error);
@@ -1238,8 +1489,9 @@ export const RolesPage = () => {
       const payload = {
         roleName: data.role,
         description: data.description,
-        accessLevel: data.access,
-        category: 'Operations' // Default or add field if needed
+        accessLevel: data.access || 'Custom',
+        category: 'Operations', // Default category
+        permissions: data.permissions || []
       };
 
       if (editingRole) {
@@ -1321,26 +1573,26 @@ export const RolesPage = () => {
       </div>
 
       {/* Roles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 animate-fadeIn">
         {loading ? (
-          <div className="col-span-3 flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#212c40]"></div>
+          <div className="col-span-full flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1C205C]"></div>
           </div>
         ) : (
           rolesList.map((role) => (
             <div
               key={role.id}
               onClick={() => setSelectedRole(role)}
-              className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer relative group hover:-translate-y-1"
+              className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-lg transition-all cursor-pointer relative group hover:-translate-y-1"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-[#212c40]/10 text-[#212c40] rounded-xl">
+                <div className="p-3 bg-[#1C205C]/10 text-[#1C205C] rounded-xl">
                   <MdSecurity size={24} />
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => handleEdit(e, role)}
-                    className="p-1.5 text-gray-400 hover:text-[#212c40] hover:bg-[#212c40]/10 rounded-lg"
+                    className="p-1.5 text-gray-400 hover:text-[#1C205C] hover:bg-[#1C205C]/10 rounded-lg"
                   >
                     <MdEdit size={18} />
                   </button>
@@ -1351,12 +1603,12 @@ export const RolesPage = () => {
               </div>
 
               <h3 className="text-lg font-bold text-gray-900 mb-1">{role.role}</h3>
-              <p className="text-sm text-gray-500 mb-4 h-10 line-clamp-2">{role.description}</p>
+              <p className="text-sm text-gray-500 mb-4 h-10 line-clamp-2">{role.description || 'No description provided.'}</p>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                <span className="text-xs font-semibold px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                  {role.access}
-                </span>
+                <div className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  {role.permissions?.length || 0} Powers
+                </div>
                 <div className="flex items-center gap-1.5 text-gray-500 text-sm font-medium">
                   <MdGroup size={16} /> {role.count} Staff
                 </div>
@@ -1557,6 +1809,74 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [payroll, setPayroll] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [updatingDay, setUpdatingDay] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [customTime, setCustomTime] = useState('');
+
+  const formatTime12h = (t24) => {
+    if (!t24) return undefined;
+    const [h, m] = t24.split(':');
+    const d = new Date();
+    d.setHours(parseInt(h));
+    d.setMinutes(parseInt(m));
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const parseTime12hTo24h = (t12) => {
+    if (!t12 || t12 === '-') return '';
+    const [time, modifier] = t12.split(' ');
+    if (!modifier) return t12; // already HH:MM
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') hours = '00';
+    if (modifier === 'PM') hours = String(parseInt(hours) + 12).padStart(2, '0');
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  const handleOptionClick = (value) => {
+    if (value === 'Present' || value === 'Late') {
+      setSelectedStatus(value);
+      const existingIn = updatingDay.inTime && updatingDay.inTime !== '-' ? parseTime12hTo24h(updatingDay.inTime) : '';
+      setCustomTime(existingIn || (value === 'Present' ? '09:00' : '10:00'));
+    } else if (value === 'Half Day') {
+      setSelectedStatus(value);
+      const existingOut = updatingDay.outTime && updatingDay.outTime !== '-' ? parseTime12hTo24h(updatingDay.outTime) : '';
+      setCustomTime(existingOut || '13:30');
+    } else {
+      handleUpdateStatus(value);
+    }
+  };
+
+  const handleUpdateStatus = async (statusValue, timeString = null) => {
+    if (!updatingDay || !staff?.id) return;
+    
+    try {
+      let formattedTimeStr = undefined;
+      if (timeString) {
+        formattedTimeStr = formatTime12h(timeString);
+      }
+
+      const payload = {
+        staffId: staff.id,
+        date: new Date(selectedYear, selectedMonth, updatingDay.day, 12, 0, 0).toISOString(),
+        status: statusValue,
+        ...((statusValue === 'Present' || statusValue === 'Late') && formattedTimeStr && { inTime: formattedTimeStr }),
+        ...(statusValue === 'Half Day' && formattedTimeStr && { outTime: formattedTimeStr })
+      };
+      
+      const res = await api.post('/crm/attendance', payload);
+      if (res.data.success) {
+        toast.success(`Attendance updated to ${statusValue}`);
+        fetchPayroll(); // Refresh stats cards and calendar grid immediately!
+      }
+    } catch (error) {
+      console.error("Error updating day attendance:", error);
+      toast.error("Failed to update attendance");
+    } finally {
+      setUpdatingDay(null);
+      setSelectedStatus(null);
+      setCustomTime('');
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -1568,6 +1888,31 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && staff) {
+      const now = new Date();
+      let initMonth = now.getMonth();
+      let initYear = now.getFullYear();
+      
+      const joinDate = staff.joiningDate ? new Date(staff.joiningDate) : null;
+      if (joinDate) {
+        const joinYear = joinDate.getFullYear();
+        const joinMonth = joinDate.getMonth();
+        
+        if (initYear < joinYear || (initYear === joinYear && initMonth < joinMonth)) {
+          setSelectedYear(joinYear);
+          setSelectedMonth(joinMonth);
+        } else {
+          setSelectedYear(initYear);
+          setSelectedMonth(initMonth);
+        }
+      } else {
+        setSelectedYear(initYear);
+        setSelectedMonth(initMonth);
+      }
+    }
+  }, [isOpen, staff?.id]);
 
   useEffect(() => {
     if (isOpen && staff?.id) {
@@ -1647,10 +1992,15 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
   // Add actual days
   for (let i = 1; i <= daysInMonth; i++) {
     const date = new Date(selectedYear, selectedMonth, i);
+    const log = payroll?.dailyLogs?.find(l => l.day === i);
     calendarGrid.push({
       day: i,
       isWeekend: date.getDay() === 0, // Sunday
-      isEmpty: false
+      isEmpty: false,
+      status: log?.status || (date.getDay() === 0 ? 'Weekend' : 'Pending'),
+      inTime: log?.inTime || '-',
+      outTime: log?.outTime || '-',
+      workHours: log?.workHours || '-'
     });
   }
 
@@ -1667,12 +2017,12 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl rounded-3xl shadow-2xl bg-white overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-4xl rounded-3xl shadow-2xl bg-white overflow-hidden flex flex-col max-h-[90vh] relative"
       >
         {/* Header */}
         <div className="bg-white px-8 py-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Monthly Attendance & Payroll</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Monthly Attendance</h2>
             <p className="text-gray-500 text-sm">Detailed view for <span className="font-bold text-[#1C205C]">{staff.name}</span></p>
           </div>
           <div className="flex items-center gap-2">
@@ -1681,16 +2031,42 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
             >
-              {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              {months.map((m, i) => {
+                const joinDate = staff?.joiningDate ? new Date(staff.joiningDate) : null;
+                const joinYear = joinDate ? joinDate.getFullYear() : null;
+                const joinMonth = joinDate ? joinDate.getMonth() : null;
+                const disabled = joinYear && selectedYear === joinYear ? i < joinMonth : false;
+                return (
+                  <option key={i} value={i} disabled={disabled}>
+                    {m}
+                  </option>
+                );
+              })}
             </select>
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              onChange={(e) => {
+                const year = parseInt(e.target.value);
+                setSelectedYear(year);
+                const joinDate = staff?.joiningDate ? new Date(staff.joiningDate) : null;
+                const joinYear = joinDate ? joinDate.getFullYear() : null;
+                const joinMonth = joinDate ? joinDate.getMonth() : null;
+                if (joinYear && joinMonth !== null && year === joinYear && selectedMonth < joinMonth) {
+                  setSelectedMonth(joinMonth);
+                }
+              }}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
             >
-              <option value={2024}>2024</option>
-              <option value={2025}>2025</option>
-              <option value={2026}>2026</option>
+              {[2024, 2025, 2026].map(yr => {
+                const joinDate = staff?.joiningDate ? new Date(staff.joiningDate) : null;
+                const joinYear = joinDate ? joinDate.getFullYear() : null;
+                const disabled = joinYear ? yr < joinYear : false;
+                return (
+                  <option key={yr} value={yr} disabled={disabled}>
+                    {yr}
+                  </option>
+                );
+              })}
             </select>
             <button
               onClick={onClose}
@@ -1708,7 +2084,7 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
         ) : (
           <div className="p-8 overflow-y-auto custom-scrollbar">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                 <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Total Days</p>
                 <h3 className="text-2xl font-bold text-blue-900">{payroll.daysInMonth}</h3>
@@ -1724,34 +2100,74 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
                 <h3 className="text-2xl font-bold text-red-900">{payroll.absentDays} <span className="text-sm font-medium text-red-600">Days</span></h3>
                 <p className="text-xs text-red-600 font-medium">Unpaid</p>
               </div>
-              <div className="bg-[#1C205C] p-4 rounded-2xl border border-[#1C205C] text-white overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-10"><MdAttachMoney size={48} /></div>
-                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1">Est. Salary</p>
-                <h3 className="text-2xl font-bold">₹ {payroll.netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-                <p className="text-xs text-indigo-300 font-medium">Base: ₹ {payroll.baseSalary.toLocaleString()}</p>
+              <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Leave</p>
+                <h3 className="text-2xl font-bold text-indigo-900">{payroll.leaveDays || 0} <span className="text-sm font-medium text-indigo-600">Days</span></h3>
+                <p className="text-xs text-indigo-600 font-medium">Approved Leave</p>
               </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex justify-center">
               {/* Calendar Grid (Simplified View) */}
-              <div className="flex-1">
-                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdDateRange /> Daily Log (Overview)</h4>
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                  <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-gray-400 uppercase">
+              <div className="w-full max-w-md">
+                <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm"><MdDateRange /> Daily Log (Overview)</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3">
+                  <div className="grid grid-cols-7 gap-1.5 mb-2 text-center text-[10px] font-bold text-gray-400 uppercase">
                     <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {/* Note: Simplified grid, real daily status logic would require daily data map */}
+                  <div className="grid grid-cols-7 gap-1.5">
                     {calendarGrid.map((item, index) => (
                       <div
                         key={index}
+                        onClick={() => {
+                          if (!item.isEmpty && item.status !== 'Not Joined') {
+                            setUpdatingDay(item);
+                          }
+                        }}
                         className={`
-                            aspect-square rounded-xl flex flex-col items-center justify-center border text-xs font-bold relative group transition-all
+                            aspect-square rounded-lg flex flex-col items-center justify-center border text-xs font-bold relative group transition-all
                             ${item.isEmpty ? 'bg-transparent border-transparent cursor-default' :
-                            item.isWeekend ? 'bg-red-50 border-red-100 text-red-500' : 'bg-white border-gray-100 text-gray-600 hover:scale-105 cursor-pointer'}
+                            item.status === 'Present' || item.status === 'Late' ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm hover:scale-105 cursor-pointer' :
+                            item.status === 'Half Day' ? 'bg-amber-500 border-amber-500 text-white shadow-sm hover:scale-105 cursor-pointer' :
+                            item.status === 'Absent' ? 'bg-rose-50 border-rose-100 text-rose-500 hover:scale-105 cursor-pointer' :
+                            item.status === 'Leave' ? 'bg-indigo-500 border-indigo-500 text-white shadow-sm hover:scale-105 cursor-pointer' :
+                            item.status === 'Not Joined' ? 'bg-gray-100 border-gray-200 text-gray-400 hover:scale-105 cursor-default' :
+                            item.isWeekend ? 'bg-red-50 border-red-100 text-red-500 hover:scale-105 cursor-pointer' :
+                            'bg-white border-gray-100 text-gray-600 hover:scale-105 cursor-pointer'}
                           `}
                       >
-                        {item.day}
+                        {!item.isEmpty && (
+                          <>
+                            <span>{item.day}</span>
+                            {/* Premium Interactive Hover Tooltip */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-44 bg-[#212c40] text-white text-[10px] rounded-xl p-2.5 opacity-0 pointer-events-none group-hover:opacity-100 transition-all z-20 shadow-xl border border-gray-700">
+                              <div className="font-bold border-b border-gray-700 pb-1 mb-1 text-center">
+                                {months[selectedMonth]} {item.day}, {selectedYear}
+                              </div>
+                              <div className="space-y-1 text-left">
+                                <p className="flex justify-between">
+                                  <span className="text-gray-400">Status:</span>
+                                  <span className={`font-extrabold ${
+                                    item.status === 'Present' || item.status === 'Late' ? 'text-emerald-400' :
+                                    item.status === 'Half Day' ? 'text-amber-400' :
+                                    item.status === 'Absent' ? 'text-rose-400' :
+                                    item.status === 'Leave' ? 'text-blue-400' :
+                                    item.status === 'Not Joined' ? 'text-gray-400' :
+                                    item.isWeekend ? 'text-red-400' : 'text-gray-400'
+                                  }`}>{item.status === 'Late' ? 'Present (Late)' : item.status}</span>
+                                </p>
+                                {(item.status === 'Present' || item.status === 'Late' || item.status === 'Half Day') && (
+                                  <>
+                                    <p className="flex justify-between"><span className="text-gray-400">In Time:</span> <span className="font-medium text-gray-200">{item.inTime}</span></p>
+                                    <p className="flex justify-between"><span className="text-gray-400">Out Time:</span> <span className="font-medium text-gray-200">{item.outTime}</span></p>
+                                    <p className="flex justify-between"><span className="text-gray-400">Duration:</span> <span className="font-medium text-gray-200">{item.workHours}</span></p>
+                                  </>
+                                )}
+                              </div>
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#212c40]"></div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1759,74 +2175,128 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
                 </div>
               </div>
 
-              {/* Salary Breakdown Details */}
-              <div className="w-full lg:w-80">
-                <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MdReceipt /> Salary Breakdown</h4>
-                <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 shadow-sm">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Base Salary</span>
-                    <span className="font-bold text-gray-900">₹ {payroll.baseSalary.toLocaleString()}</span>
-                  </div>
-                  <div className="w-full h-px bg-gray-100"></div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Total Days</span>
-                    <span className="font-bold text-gray-900">{payroll.daysInMonth}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Per Day Salary</span>
-                    <span className="font-bold text-gray-900">₹ {payroll.perDaySalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
 
-                  {/* Deductions */}
-                  <div className="bg-red-50 p-3 rounded-xl space-y-2 mt-2 border border-red-100">
-                    <div className="flex justify-between items-center text-xs text-red-600 font-medium">
-                      <span>Absent Deduction ({payroll.absentDays})</span>
-                      <span>- ₹ {payroll.absentDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                    {payroll.halfDays > 0 && (
-                      <div className="flex justify-between items-center text-xs text-orange-600 font-medium">
-                        <span>Half Day Deduction ({payroll.halfDays})</span>
-                        <span>- ₹ {payroll.halfDayDeduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Extra Work / Overtime */}
-                  {payroll.extraWorkAmount > 0 && (
-                    <div className="bg-green-50 p-3 rounded-xl space-y-2 mt-2 border border-green-100">
-                      <div className="flex justify-between items-center text-xs text-green-600 font-medium">
-                        <span>Extra Work Amount</span>
-                        <span>+ ₹ {payroll.extraWorkAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="w-full h-px bg-gray-100"></div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-800 font-bold">Net Payable</span>
-                    <span className="font-bold text-xl text-[#1C205C]">₹ {payroll.netPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  {payroll.paidAmount > 0 && (
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-green-600 font-semibold text-sm">Paid Amount</span>
-                      <span className="font-bold text-green-600">₹ {payroll.paidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                  {payroll.salaryStatus === 'Paid' && payroll.netPayable <= 0 ? (
-                    <div className="w-full py-3 mt-2 bg-green-500 text-white rounded-xl font-bold text-center">
-                      ✅ Salary Paid
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleProcessSalary}
-                      className="w-full py-3 mt-2 bg-[#1C205C] text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-[#2a3550] transition-colors"
-                    >
-                      {payroll.paidAmount > 0 ? 'Pay Remaining' : 'Process Salary'}
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
+          </div>
+        )}
+
+        {/* Day Status Update Overlay Popover */}
+        {updatingDay && (
+          <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 transition-all">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 flex flex-col"
+            >
+              {!selectedStatus ? (
+                <>
+                  <div className="flex justify-between items-center mb-5">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Update Attendance</h3>
+                      <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                        For {months[selectedMonth]} {updatingDay.day}, {selectedYear}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setUpdatingDay(null)}
+                      className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <MdClose size={20} className="text-gray-400" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {[
+                      { value: 'Present', label: 'Present', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100', activeClass: 'bg-emerald-500 text-white border-emerald-500' },
+                      { value: 'Late', label: 'Present (Late)', color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100', activeClass: 'bg-amber-500 text-white border-amber-500' },
+                      { value: 'Absent', label: 'Absent', color: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100', activeClass: 'bg-rose-500 text-white border-rose-500' },
+                      { value: 'Half Day', label: 'Half Day', color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100', activeClass: 'bg-orange-500 text-white border-orange-500' },
+                      { value: 'Leave', label: 'Leave', color: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100', activeClass: 'bg-indigo-500 text-white border-indigo-500', spanFull: true },
+                    ].map((option) => {
+                      const isSelected = updatingDay.status === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => handleOptionClick(option.value)}
+                          className={`
+                            py-3 px-4 rounded-2xl font-bold border text-sm transition-all flex flex-col items-center justify-center gap-1.5 shadow-sm hover:scale-[1.02]
+                            ${option.spanFull ? 'col-span-2' : ''}
+                            ${isSelected ? option.activeClass : option.color}
+                          `}
+                        >
+                          <span className="text-sm font-extrabold">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setUpdatingDay(null)}
+                      className="flex-1 py-3 border border-gray-200 rounded-2xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center mb-5">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {selectedStatus === 'Half Day' ? 'Enter Out-Time' : 'Enter In-Time'}
+                      </h3>
+                      <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                        Setting status to <span className="font-extrabold text-[#1C205C]">{selectedStatus === 'Late' ? 'Present (Late)' : selectedStatus}</span> for {months[selectedMonth]} {updatingDay.day}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setSelectedStatus(null);
+                        setCustomTime('');
+                      }}
+                      className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <MdArrowBack size={20} className="text-gray-400" />
+                    </button>
+                  </div>
+
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-6 flex flex-col items-center gap-4">
+                    <MdAccessTime size={36} className="text-indigo-500" />
+                    <div className="w-full">
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-2 text-center">
+                        Select Time (HH:MM)
+                      </label>
+                      <input
+                        type="time"
+                        value={customTime}
+                        onChange={(e) => setCustomTime(e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl font-bold text-center text-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedStatus(null);
+                        setCustomTime('');
+                      }}
+                      className="flex-1 py-3 border border-gray-200 rounded-2xl text-xs font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(selectedStatus, customTime)}
+                      className="flex-1 py-3 bg-[#1C205C] text-white rounded-2xl text-xs font-bold hover:bg-[#2a3550] shadow-sm transition-all"
+                    >
+                      Save Status
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
           </div>
         )}
       </motion.div>
@@ -1874,7 +2344,8 @@ export const AttendancePage = () => {
           department: s.department,
           email: s.email,
           phone: s.phone,
-          location: s.location
+          location: s.location,
+          joiningDate: s.joiningDate || s.joinDate || s.createdAt
         }));
         setStaffInfoList(staffData);
       }
@@ -1920,7 +2391,8 @@ export const AttendancePage = () => {
           status: status,
           workHours: latestRecord?.workHours || (presentDays > 0 ? `${presentDays} day(s)` : '-'),
           recordId: latestRecord?._id,
-          location: liveLoc
+          location: liveLoc,
+          joiningDate: staff.joiningDate
         };
       });
       setAttendanceList(mergedData);
@@ -1950,7 +2422,8 @@ export const AttendancePage = () => {
           department: s.department,
           email: s.email,
           phone: s.phone,
-          location: s.location
+          location: s.location,
+          joiningDate: s.joiningDate || s.joinDate || s.createdAt
         }));
         setStaffInfoList(staffData);
       }
@@ -1965,68 +2438,69 @@ export const AttendancePage = () => {
       const mergedData = staffData.map((staff, index) => {
         const record = records.find(r => (r.staff?._id || r.staff) === staff.id);
 
-          // Live Location Data
-          let liveLoc = { status: 'Offline', address: 'Location Unavailable', lat: 0, lng: 0 };
+        // Live Location Data
+        let liveLoc = { status: 'Offline', address: 'Location Unavailable', lat: 0, lng: 0 };
 
-          if (staff.location && staff.location.latitude) {
-            const lastUpdate = new Date(staff.location.lastLocationUpdate);
-            const now = new Date();
-            const diffMins = (now - lastUpdate) / (1000 * 60);
-            // Consider "Online" if location was updated within the last 15 minutes
-            const isOnline = diffMins < 15;
+        if (staff.location && staff.location.latitude) {
+          const lastUpdate = new Date(staff.location.lastLocationUpdate);
+          const now = new Date();
+          const diffMins = (now - lastUpdate) / (1000 * 60);
+          // Consider "Online" if location was updated within the last 15 minutes
+          const isOnline = diffMins < 15;
 
-            liveLoc = {
-              status: isOnline ? 'Online' : 'Offline',
-              address: staff.location.address || 'Address Unavailable',
-              lat: staff.location.latitude,
-              lng: staff.location.longitude,
-              lastUpdate: lastUpdate
-            };
-          }
-
-          // Fallback for "Offline" but with known location (show as Offline with address)
-          if (liveLoc.status === 'Offline' && staff.location?.address) {
-            liveLoc.address = `Last seen: ${staff.location.address}`;
-          }
-
-          const mockLoc = liveLoc;
-
-          // Determine attendance status:
-          // 1. If attendance record exists in DB, use that status
-          // 2. If no record but location is Live (online), mark as Late (checked in but no DB record yet)
-          let attendanceStatus = 'Absent';
-          if (record?.status) {
-            attendanceStatus = record.status;
-          } else if (liveLoc.status === 'Online') {
-            // Staff is live/online but no attendance record - they are present (likely checked in from employee app before fix)
-            attendanceStatus = 'Late';
-          }
-
-          // Determine work hours display
-          let displayWorkHours = '-';
-          if (record?.workHours) {
-            displayWorkHours = record.workHours;
-          } else if (record?.inTime && !record?.outTime) {
-            // Checked in but not checked out - show Running
-            displayWorkHours = 'Running';
-          } else if (liveLoc.status === 'Online' && !record) {
-            displayWorkHours = 'Running';
-          }
-
-          return {
-            id: staff.id,
-            staffId: staff.id,
-            name: staff.name,
-            role: staff.role,
-            inTime: record?.inTime || (liveLoc.status === 'Online' && !record ? 'Active' : '-'),
-            outTime: record?.outTime || '-',
-            status: attendanceStatus,
-            workHours: displayWorkHours,
-            recordId: record?._id,
-            location: mockLoc
+          liveLoc = {
+            status: isOnline ? 'Online' : 'Offline',
+            address: staff.location.address || 'Address Unavailable',
+            lat: staff.location.latitude,
+            lng: staff.location.longitude,
+            lastUpdate: lastUpdate
           };
-        });
-        setAttendanceList(mergedData);
+        }
+
+        // Fallback for "Offline" but with known location (show as Offline with address)
+        if (liveLoc.status === 'Offline' && staff.location?.address) {
+          liveLoc.address = `Last seen: ${staff.location.address}`;
+        }
+
+        const mockLoc = liveLoc;
+
+        // Determine attendance status:
+        // 1. If attendance record exists in DB, use that status
+        // 2. If they have clocked out, show 'Checked Out'
+        // 3. If no record, show as 'No Status'
+        let attendanceStatus = 'No Status';
+        if (record?.status) {
+          if (record.inTime && record.outTime && record.outTime !== '-') {
+            attendanceStatus = 'Checked Out';
+          } else {
+            attendanceStatus = record.status;
+          }
+        }
+
+        // Determine work hours display
+        let displayWorkHours = '-';
+        if (record?.workHours) {
+          displayWorkHours = record.workHours;
+        } else if (record?.inTime && !record?.outTime) {
+          // Checked in but not checked out - show Running
+          displayWorkHours = 'Running';
+        }
+
+        return {
+          id: staff.id,
+          staffId: staff.id,
+          name: staff.name,
+          role: staff.role,
+          inTime: record?.inTime || (liveLoc.status === 'Online' && !record ? 'Active' : '-'),
+          outTime: record?.outTime || '-',
+          status: attendanceStatus,
+          workHours: displayWorkHours,
+          recordId: record?._id,
+          location: mockLoc,
+          joiningDate: staff.joiningDate
+        };
+      });
+      setAttendanceList(mergedData);
     } catch (error) {
       console.error("Error fetching attendance data:", error);
     } finally {
@@ -2292,7 +2766,7 @@ export const AttendancePage = () => {
           />
         </div>
         <div className="text-sm text-gray-500 font-medium">
-          Total Present: <span className="text-green-600 font-bold">{filteredAttendance.filter(i => i.status === 'Present' || i.status === 'Late').length}</span> / <span className="text-gray-800">{filteredAttendance.length}</span>
+          Total Present: <span className="text-green-600 font-bold">{filteredAttendance.filter(i => ['Present', 'Late', 'Checked Out'].includes(i.status)).length}</span> / <span className="text-gray-800">{filteredAttendance.length}</span>
         </div>
       </div>
 
@@ -2332,7 +2806,11 @@ export const AttendancePage = () => {
                     <td className="p-4">
                       {item.status === 'Present' && <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-100">Present</span>}
                       {item.status === 'Absent' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Absent</span>}
-                      {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Late</span>}
+                      {item.status === 'Late' && <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded text-xs font-bold border border-amber-100">Present (Late)</span>}
+                      {item.status === 'Half Day' && <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-bold border border-orange-100">Half Day</span>}
+                      {item.status === 'Leave' && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold border border-blue-100">Leave</span>}
+                      {item.status === 'Checked Out' && <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-bold border border-indigo-100">Checked Out</span>}
+                      {item.status === 'No Status' && <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-bold border border-gray-200">No Status</span>}
                     </td>
                     <td className="p-4">
                       {item.location?.lat ? (
@@ -2363,12 +2841,6 @@ export const AttendancePage = () => {
                           className="text-[#1C205C] hover:text-[#2a3550] text-xs font-bold bg-[#1C205C]/5 hover:bg-[#1C205C]/10 px-2.5 py-1.5 rounded-lg transition-colors border border-[#1C205C]/10"
                         >
                           Monthly View
-                        </button>
-                        <button
-                          onClick={() => handleEditClick(item)}
-                          className="text-gray-600 hover:text-[#1C205C] text-xs font-bold bg-gray-50 hover:bg-gray-100 px-2.5 py-1.5 rounded-lg transition-colors border border-gray-200"
-                        >
-                          Edit
                         </button>
                       </div>
                     </td>
@@ -2690,527 +3162,126 @@ export const SalaryPage = () => {
   );
 };
 
-// Mock Data for Performance - Removed for Backend Integration
-// const MOCK_PERFORMANCE_DATA = [...];
 
-const AddReviewModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
-  const [formData, setFormData] = useState({ staffId: '', rating: '5', summary: '' });
-  const [staffSearch, setStaffSearch] = useState('');
-  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
 
-  // Reset when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setStaffSearch('');
-      setShowStaffDropdown(false);
-      if (staffList.length > 0 && !formData.staffId) {
-        setFormData(prev => ({ ...prev, staffId: staffList[0].id }));
-        setStaffSearch(staffList[0].name);
-      }
-    }
-  }, [isOpen, staffList]);
-
-  // Filter staff based on search
-  const filteredStaff = staffList.filter(s =>
-    s.name.toLowerCase().includes(staffSearch.toLowerCase())
-  );
-
-  const handleSelectStaff = (staff) => {
-    setFormData({ ...formData, staffId: staff.id });
-    setStaffSearch(staff.name);
-    setShowStaffDropdown(false);
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
-          >
-            <h3 className="text-xl font-bold mb-4">New Performance Review</h3>
-            <div className="space-y-4">
-              {/* Searchable Staff Dropdown */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search employee name..."
-                  value={staffSearch}
-                  onChange={(e) => {
-                    setStaffSearch(e.target.value);
-                    setShowStaffDropdown(true);
-                  }}
-                  onFocus={() => setShowStaffDropdown(true)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm font-medium"
-                />
-                {showStaffDropdown && filteredStaff.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50">
-                    {filteredStaff.map(staff => (
-                      <button
-                        key={staff.id}
-                        onClick={() => handleSelectStaff(staff)}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition-colors flex items-center justify-between ${formData.staffId === staff.id ? 'bg-indigo-50 font-bold text-indigo-700' : 'text-gray-700'}`}
-                      >
-                        <span>{staff.name}</span>
-                        {staff.role && <span className="text-xs text-gray-400">{staff.role}</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {showStaffDropdown && staffSearch && filteredStaff.length === 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-50">
-                    <p className="text-sm text-gray-400 text-center">No staff found</p>
-                  </div>
-                )}
-              </div>
-
-              <ThemedDropdown
-                options={[
-                  { value: '5', label: '5 - Excellent' },
-                  { value: '4', label: '4 - Very Good' },
-                  { value: '3', label: '3 - Good' },
-                  { value: '2', label: '2 - Needs Improvement' },
-                  { value: '1', label: '1 - Poor' }
-                ]}
-                value={formData.rating}
-                onChange={(val) => setFormData({ ...formData, rating: val })}
-                className="bg-white"
-              />
-              <textarea
-                placeholder="Feedback Summary..."
-                className="w-full p-2 border rounded-xl h-24"
-                value={formData.summary}
-                onChange={e => setFormData({ ...formData, summary: e.target.value })}
-              />
-              <button
-                onClick={() => {
-                  if (!formData.staffId) {
-                    alert('Please select a staff member');
-                    return;
-                  }
-                  onSubmit(formData);
-                  onClose();
-                  setFormData({ staffId: '', rating: '5', summary: '' });
-                  setStaffSearch('');
-                }}
-                className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
-              >
-                Submit Review
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-export const PerformancePage = () => {
+/**
+ * @desc Attendance Settings Page Component
+ */
+export const AttendanceSettingsPage = () => {
   const navigate = useNavigate();
-  const [performanceList, setPerformanceList] = useState([]);
-  const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [staffFilter, setStaffFilter] = useState('Staff: All');
-  const [yearFilter, setYearFilter] = useState(`Year: ${new Date().getFullYear()}`);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [perfRes, staffRes] = await Promise.all([
-        api.get('/crm/performance'),
-        api.get('/crm/staff')
-      ]);
-
-      if (staffRes.data.success) {
-        setStaffList(staffRes.data.data.staff.map(s => ({
-          id: s._id,
-          name: s.name,
-          role: s.role
-        })));
-      }
-
-      if (perfRes.data.success) {
-        const formatted = perfRes.data.data.reviews.map(review => ({
-          id: review._id,
-          name: review.staff?.name || 'Unknown Staff',
-          role: review.staff?.role || '-',
-          rating: review.rating,
-          date: new Date(review.reviewDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-          summary: review.feedback,
-          reviewer: review.reviewedBy || 'Admin'
-        }));
-        setPerformanceList(formatted);
-      }
-
-    } catch (error) {
-      console.error("Error fetching performance reviews:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddReview = async (data) => {
-    try {
-      const payload = {
-        staff: data.staffId,
-        rating: parseInt(data.rating),
-        feedback: data.summary,
-        reviewedBy: 'Admin',
-        reviewDate: new Date()
-      };
-      const response = await api.post('/crm/performance', payload);
-      if (response.data.success) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error adding review:", error);
-    }
-  };
-
-  const handleDeleteReview = async (reviewId) => {
-    try {
-      const response = await api.delete(`/crm/performance/${reviewId}`);
-      if (response.data.success) {
-        setPerformanceList(prev => prev.filter(item => item.id !== reviewId));
-      }
-    } catch (error) {
-      console.error("Error deleting review:", error);
-    }
-  };
-
-  const filteredPerformance = performanceList.filter(item => {
-    // Role filter
-    if (staffFilter !== 'Staff: All') {
-      if (!item.role.toLowerCase().includes(staffFilter.toLowerCase())) return false;
-    }
-    // Year filter
-    if (yearFilter && yearFilter.startsWith('Year:')) {
-      const filterYear = yearFilter.replace('Year: ', '').trim();
-      if (item.date && !item.date.includes(filterYear)) return false;
-    }
-    return true;
+  const [saving, setSaving] = useState(false);
+  
+  // State for attendance settings
+  const [settings, setSettings] = useState({
+    officeStartTime: '09:00 AM',
+    officeEndTime: '06:00 PM',
+    halfDayDeduction: 250,
+    absentDeduction: 500,
+    lateGracePeriod: 15,
   });
 
-  return (
-    <div className="space-y-6">
-      <AddReviewModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddReview} staffList={staffList} />
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/enquiries/all')}>Home</span>
-            <span>/</span>
-            <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
-            <span>/</span>
-            <span className="text-gray-800 font-medium">Performance</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Performance Review</h1>
-          <p className="text-gray-500 text-sm">Staff ratings and feedback history.</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-          style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-        >
-          <MdAdd size={20} />
-          New Review
-        </button>
-      </div>
+  // Convert 12h to 24h for time input value
+  const convert12to24 = (time12h) => {
+    if (!time12h) return "09:00";
+    try {
+      const parts = time12h.split(' ');
+      if (parts.length !== 2) return "09:00";
+      const [time, modifier] = parts;
+      const [hours, minutes] = time.split(':');
+      let hr = parseInt(hours, 10);
+      if (modifier === 'PM' && hr < 12) {
+        hr += 12;
+      }
+      if (modifier === 'AM' && hr === 12) {
+        hr = 0;
+      }
+      return `${String(hr).padStart(2, '0')}:${minutes}`;
+    } catch (e) {
+      return "09:00";
+    }
+  };
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex gap-3 w-full md:w-auto">
-          <ThemedDropdown
-            options={['Staff: All', ...([...new Set(staffList.map(s => s.role))].filter(r => r && r !== '-'))]}
-            value={staffFilter}
-            onChange={(val) => setStaffFilter(val)}
-            className="bg-white text-sm"
-            width="w-40"
-          />
-          <ThemedDropdown
-            options={(() => {
-              const currentYear = new Date().getFullYear();
-              return [`Year: ${currentYear}`, `Year: ${currentYear - 1}`, `Year: ${currentYear - 2}`];
-            })()}
-            value={yearFilter}
-            onChange={(val) => setYearFilter(val)}
-            className="bg-white text-sm"
-            width="w-40"
-          />
-        </div>
-      </div>
+  // Convert 24h to 12h for saving to database
+  const convert24to12 = (time24h) => {
+    if (!time24h) return "09:00 AM";
+    try {
+      const [hours, minutes] = time24h.split(':');
+      let hr = parseInt(hours, 10);
+      const modifier = hr >= 12 ? 'PM' : 'AM';
+      hr = hr % 12;
+      hr = hr ? hr : 12; // the hour '0' should be '12'
+      return `${String(hr).padStart(2, '0')}:${minutes} ${modifier}`;
+    } catch (e) {
+      return "09:00 AM";
+    }
+  };
 
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center p-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          </div>
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-purple-50/30 border-b border-purple-100 text-xs uppercase tracking-wider text-purple-800 font-bold">
-                <th className="p-4">Staff Member</th>
-                <th className="p-4">Rating</th>
-                <th className="p-4">Review Date</th>
-                <th className="p-4">Feedback Summary</th>
-                <th className="p-4">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
-              {filteredPerformance.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-900">{item.name}</div>
-                    <div className="text-xs text-gray-500">{item.role}</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1 text-amber-400">
-                      {[...Array(5)].map((_, i) => (
-                        <MdStar key={i} size={16} className={i < item.rating ? "text-amber-400" : "text-gray-200"} />
-                      ))}
-                      <span className="text-gray-600 text-xs font-bold ml-1">({item.rating}/5)</span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-600 font-medium">
-                    {item.date}
-                    <div className="text-xs text-gray-400">by {item.reviewer}</div>
-                  </td>
-                  <td className="p-4 text-gray-600 italic">
-                    "{item.summary}"
-                  </td>
-                  <td className="p-4">
-                    <button
-                      onClick={() => handleDeleteReview(item.id)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete Review"
-                    >
-                      <MdDelete size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-};
-// Mock Data for Tasks
-// Mock Data for Tasks - Removed for Backend Integration
-// const MOCK_TASKS_DATA = [...];
-
-const AddTaskModal = ({ isOpen, onClose, onSubmit, staffList = [] }) => {
-  const [formData, setFormData] = useState({ title: '', assignedTo: '', priority: '' });
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
-          >
-            <h3 className="text-xl font-bold mb-4">Assign New Task</h3>
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Task Title"
-                className="w-full p-2 border rounded-xl"
-                value={formData.title}
-                onChange={e => setFormData({ ...formData, title: e.target.value })}
-              />
-              <ThemedDropdown
-                options={staffList.map(staff => ({ value: staff.id, label: `${staff.name} (${staff.role})` }))}
-                value={formData.assignedTo}
-                onChange={(val) => setFormData({ ...formData, assignedTo: val })}
-                placeholder="Select Employee"
-                className="bg-white"
-              />
-              <ThemedDropdown
-                options={['Low', 'Medium', 'High', 'Critical'].map(p => ({ value: p, label: p }))}
-                value={formData.priority}
-                onChange={(val) => setFormData({ ...formData, priority: val })}
-                placeholder="Select Priority"
-                className="bg-white"
-              />
-              <button
-                onClick={() => {
-                  if (!formData.assignedTo || !formData.priority) {
-                    alert("Please select both Employee and Priority");
-                    return;
-                  }
-                  onSubmit(formData);
-                  onClose();
-                  setFormData({ title: '', assignedTo: '', priority: '' });
-                }}
-                className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700"
-              >
-                Assign Task
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
-
-export const StaffTasksPage = () => {
-  const navigate = useNavigate();
-  const [tasksList, setTasksList] = useState([]);
-  const [staffList, setStaffList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [assignedToFilter, setAssignedToFilter] = useState('Assigned To: All');
-  const [statusFilter, setStatusFilter] = useState('All');
-
+  // Fetch current settings on component mount
   useEffect(() => {
-    fetchData();
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/crm/attendance/settings');
+        if (response.data && response.data.success) {
+          setSettings({
+            officeStartTime: response.data.data.officeStartTime || '09:00 AM',
+            officeEndTime: response.data.data.officeEndTime || '06:00 PM',
+            halfDayDeduction: response.data.data.halfDayDeduction !== undefined ? response.data.data.halfDayDeduction : 250,
+            absentDeduction: response.data.data.absentDeduction !== undefined ? response.data.data.absentDeduction : 500,
+            lateGracePeriod: response.data.data.lateGracePeriod !== undefined ? response.data.data.lateGracePeriod : 15,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching attendance settings:', error);
+        toast.error('Failed to load attendance settings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const handleSave = async (e) => {
+    e.preventDefault();
     try {
-      const [tasksRes, staffRes] = await Promise.all([
-        api.get('/crm/staff-tasks'),
-        api.get('/crm/staff')
-      ]);
-
-      if (staffRes.data.success) {
-        setStaffList(staffRes.data.data.staff.map(s => ({
-          id: s._id,
-          name: s.name,
-          role: s.role
-        })));
+      setSaving(true);
+      
+      // Perform simple validation
+      const start24 = convert12to24(settings.officeStartTime);
+      const end24 = convert12to24(settings.officeEndTime);
+      
+      if (start24 >= end24) {
+        toast.error('Office end time must be after start time');
+        setSaving(false);
+        return;
       }
 
-      if (tasksRes.data.success) {
-        const formatted = tasksRes.data.data.tasks.map(task => ({
-          id: task._id,
-          title: task.title,
-          assignedTo: task.assignedTo ? `${task.assignedTo.name} (${task.assignedTo.role})` : 'Unassigned',
-          dueDate: new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-          priority: task.priority,
-          status: task.status
-        }));
-        setTasksList(formatted);
-      }
-
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddTask = async (data) => {
-    try {
-      // Set due date to today by default
-      const dueDate = new Date();
-      dueDate.setHours(23, 59, 59, 999); // Default to end of today
-
-      const payload = {
-        title: data.title,
-        assignedTo: data.assignedTo,
-        priority: data.priority,
-        dueDate: dueDate,
-        status: 'Pending'
-      };
-      const response = await api.post('/crm/staff-tasks', payload);
-      if (response.data.success) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error adding task:", error);
-    }
-  };
-
-  const handleMarkDone = async (id) => {
-    try {
-      const response = await api.put(`/crm/staff-tasks/${id}`, { status: 'Done' });
-      if (response.data.success) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Error marking task done:", error);
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'Critical': return 'text-red-700 bg-red-100 border-red-200';
-      case 'High': return 'text-orange-700 bg-orange-100 border-orange-200';
-      case 'Medium': return 'text-blue-700 bg-blue-100 border-blue-200';
-      default: return 'text-gray-600 bg-gray-100 border-gray-200';
-    }
-  };
-
-  const getFilteredTasks = () => {
-    let data = [...tasksList];
-
-    // Filter by Search Term
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      data = data.filter(item =>
-        item.title.toLowerCase().includes(lowerSearch) ||
-        item.assignedTo.toLowerCase().includes(lowerSearch)
-      );
-    }
-
-    // Filter by Assigned To
-    if (assignedToFilter !== 'Assigned To: All') {
-      const filterVal = assignedToFilter.toLowerCase();
-      if (filterVal === 'sales') {
-        data = data.filter(item => item.assignedTo.toLowerCase().includes('sales'));
-      } else if (filterVal === 'garage') {
-        data = data.filter(item => item.assignedTo.toLowerCase().includes('mechanic'));
+      const response = await api.put('/crm/attendance/settings', settings);
+      if (response.data && response.data.success) {
+        toast.success('Attendance settings saved successfully!');
       } else {
-        // Individual staff name match
-        data = data.filter(item => item.assignedTo.includes(assignedToFilter));
+        toast.error(response.data.message || 'Failed to save settings');
       }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Server error saving settings');
+    } finally {
+      setSaving(false);
     }
-
-    // Filter by Status
-    if (statusFilter !== 'All') {
-      const status = statusFilter === 'Status: Pending' ? 'Pending' : 'Done';
-      data = data.filter(item => item.status === status);
-    }
-
-    return data;
   };
 
-  const filteredTasksList = getFilteredTasks();
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <AddTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleAddTask} staffList={staffList} />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
@@ -3219,111 +3290,172 @@ export const StaffTasksPage = () => {
             <span>/</span>
             <span className="hover:text-indigo-600 cursor-pointer transition-colors" onClick={() => navigate('/crm/staff/directory')}>Staff</span>
             <span>/</span>
-            <span className="text-gray-800 font-medium">Tasks</span>
+            <span className="text-gray-800 font-medium">Settings</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
-          <p className="text-gray-500 text-sm">Assign and track work allocation.</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-          style={{ backgroundColor: premiumColors.primary.DEFAULT }}
-        >
-          <MdAssignment size={20} />
-          Assign New Task
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-80">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search tasks or staff..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <ThemedDropdown
-            options={['Assigned To: All', 'Sales', 'Garage', ...staffList.map(s => s.name)]}
-            value={assignedToFilter}
-            onChange={(val) => setAssignedToFilter(val)}
-            className="bg-white text-sm"
-            width="w-52"
-          />
-          <ThemedDropdown
-            options={['All', 'Status: Pending', 'Completed']}
-            value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
-            className="bg-white text-sm"
-            width="w-40"
-          />
+          <h1 className="text-2xl font-bold text-gray-900">Attendance Settings</h1>
+          <p className="text-gray-500 text-sm">Configure global work shift timings and salary deduction multipliers.</p>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center p-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <form onSubmit={handleSave} className="max-w-4xl space-y-6">
+        {/* Core Settings Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Card 1: Shift & Office Timings */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                <MdAccessTime size={22} />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Office Timings</h3>
+                <p className="text-xs text-gray-500">Define office hours for lateness and attendance tracking.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Office Start Time</label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium text-gray-800"
+                    value={convert12to24(settings.officeStartTime)}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      officeStartTime: convert24to12(e.target.value)
+                    })}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Currently configured: <span className="font-semibold text-indigo-600">{settings.officeStartTime}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Office End Time (Chutti Time)</label>
+                <div className="relative">
+                  <input
+                    type="time"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium text-gray-800"
+                    value={convert12to24(settings.officeEndTime)}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      officeEndTime: convert24to12(e.target.value)
+                    })}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Currently configured: <span className="font-semibold text-indigo-600">{settings.officeEndTime}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Late Grace Period (Minutes)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-medium text-gray-800"
+                    value={settings.lateGracePeriod}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      lateGracePeriod: parseInt(e.target.value, 10) || 0
+                    })}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Late status is triggered if check-in is after Office Start Time + Grace Period.</p>
+              </div>
+            </div>
           </div>
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-indigo-50/30 border-b border-indigo-100 text-xs uppercase tracking-wider text-indigo-800 font-bold">
-                <th className="p-4">Task Details</th>
-                <th className="p-4">Assigned To</th>
-                <th className="p-4">Due Date</th>
-                <th className="p-4">Priority</th>
-                <th className="p-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
-              {filteredTasksList.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="p-4">
-                    <div className="font-bold text-gray-900">{item.title}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">ID: {item.id.substring(item.id.length - 6).toUpperCase()}</div>
-                  </td>
-                  <td className="p-4 font-medium text-gray-700">
-                    {item.assignedTo}
-                  </td>
-                  <td className="p-4">
-                    <span className={`font-semibold ${item.dueDate.includes('Overdue') ? 'text-red-600' : 'text-gray-700'}`}>
-                      {item.dueDate}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span className={`flex items-center gap-1 w-fit px-2 py-1 rounded text-xs font-bold border ${getPriorityColor(item.priority)}`}>
-                      <MdFlag size={12} /> {item.priority}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    {item.status === 'Pending' ? (
-                      <button
-                        onClick={() => handleMarkDone(item.id)}
-                        className="flex items-center gap-1 ml-auto px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-bold hover:bg-green-100 transition-colors"
-                      >
-                        <MdCheckCircle size={14} /> Mark Done
-                      </button>
-                    ) : (
-                      <span className="text-gray-400 text-xs font-medium italic">Completed</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
 
-        {!loading && filteredTasksList.length === 0 && (
-          <div className="p-10 text-center text-gray-500">No tasks found.</div>
-        )}
-      </div>
+          {/* Card 2: Payroll Deduction Configurations */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-5">
+            <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
+              <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
+                <MdAttachMoney size={22} />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Salary Deductions</h3>
+                <p className="text-xs text-gray-500">Specify flat salary penalties for late/leave instances.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Half-Day Absence Deduction (₹)</label>
+                <div className="relative rounded-xl shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm font-medium">₹</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-semibold text-gray-800"
+                    placeholder="Enter half-day deduction"
+                    value={settings.halfDayDeduction}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      halfDayDeduction: Number(e.target.value) || 0
+                    })}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Charged when staff clocks in late or registers a half-day shift.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Absent / Leave Deduction (₹)</label>
+                <div className="relative rounded-xl shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm font-medium">₹</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-semibold text-gray-800"
+                    placeholder="Enter full-day deduction"
+                    value={settings.absentDeduction}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      absentDeduction: Number(e.target.value) || 0
+                    })}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Charged for unauthorized leaves or fully marked absent days.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Action Panel */}
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+          <span className="text-sm text-gray-500 font-medium">
+            Changes will take effect instantly for all future payroll computations.
+          </span>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: premiumColors.primary.DEFAULT }}
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <MdCheckCircle size={20} />
+                Save Settings
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
+
 

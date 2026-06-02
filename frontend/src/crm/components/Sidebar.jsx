@@ -47,10 +47,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/enquiries/all', name: 'All Enquiries' },
         { path: '/crm/enquiries/new', name: 'New' },
         { path: '/crm/enquiries/in-progress', name: 'In Progress' },
-        { path: '/crm/enquiries/follow-ups', name: 'Follow-ups' },
         { path: '/crm/enquiries/converted', name: 'Converted' },
         { path: '/crm/enquiries/closed', name: 'Closed' },
-
       ]
     },
     {
@@ -61,10 +59,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/crm/staff/directory', name: 'Staff Directory' },
         { path: '/crm/staff/roles', name: 'Roles & Designation' },
         { path: '/crm/staff/attendance', name: 'Attendance Tracker' },
+        { path: '/crm/staff/attendance-settings', name: 'Attendance Settings' },
         // { path: '/crm/staff/salary', name: 'Salary' },
-
-        { path: '/crm/staff/performance', name: 'Performance' },
-        { path: '/crm/staff/tasks', name: 'Staff Tasks' },
       ]
     },
 
@@ -91,6 +87,30 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         // { path: '/crm/vendors/history', name: 'Vendor History' },
 
       ]
+    },
+    {
+      name: 'App Policies',
+      icon: <MdSettings />,
+      id: 'Policies',
+      subItems: [
+        { path: '/crm/policies/privacy', name: 'Employee Privacy Policy' },
+        { path: '/crm/policies/terms', name: 'Employee Terms' },
+      ]
+    },
+    {
+      name: 'Expense Tracker',
+      icon: <MdAttachMoney />,
+      id: 'Expenses',
+      subItems: [
+        { path: '/crm/expenses/track', name: 'Track Expenses' },
+        { path: '/crm/expenses/categories', name: 'Categories' },
+      ]
+    },
+    {
+      id: 'driver-assignment',
+      path: '/crm/staff/driver-assignment',
+      name: 'Driver Assign',
+      icon: <MdBadge />
     },
   ];
 

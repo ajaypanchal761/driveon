@@ -65,7 +65,12 @@ const EmployeeLoginPage = () => {
         navigate('/employee');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      // Avoid printing technical red stack traces for expected validation/credential failures
+      if (error.response?.status === 401 || error.response?.status === 400) {
+        console.warn('Login failed: Invalid credentials');
+      } else {
+        console.error('Login error:', error);
+      }
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);

@@ -1,13 +1,24 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiHome, FiUsers, FiCheckSquare, FiUser, FiClock } from 'react-icons/fi';
+import { FiHome, FiUsers, FiClock, FiUser, FiBriefcase } from 'react-icons/fi';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Retrieve logged-in user details from Redux
+  const user = useSelector(state => state.user.user);
+  const role = user?.role || 'Employee';
+  const roleLower = role.toLowerCase();
+
   const isActive = (path) => location.pathname === path;
+
+  // Determine dynamic tabs based on role
+  const isDriver = roleLower === 'driver' || roleLower.includes('driver');
+  const isTelecaller = roleLower === 'telecaller' || roleLower === 'tellecaller';
+  const isAccountantOrHR = roleLower === 'accountant' || roleLower === 'hr';
 
   return (
     <motion.div 
@@ -22,32 +33,33 @@ const BottomNav = () => {
         active={isActive('/employee')} 
         onClick={() => navigate('/employee')}
       />
-      <NavIcon 
-        icon={<FiUsers size={22} />} 
-        label="Enquiries" 
-        active={isActive('/employee/enquiries')} 
-        onClick={() => navigate('/employee/enquiries')}
-      />
-      
-      {/* Floating Center Button (Attendance) */}
-      <div className="relative -top-8">
-         <motion.button 
-           whileTap={{ scale: 0.9 }}
-           whileHover={{ scale: 1.1 }}
-           onClick={() => navigate('/employee/attendance')}
-           className="w-16 h-16 rounded-full bg-[#1C205C] text-white flex items-center justify-center shadow-xl shadow-blue-900/40 transform transition-all ring-4 ring-[#F5F7FA]"
-         >
-           <FiClock size={28} />
-         </motion.button>
-         <span className={`absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-[10px] font-bold ${isActive('/employee/attendance') ? 'text-[#1C205C]' : 'text-gray-400'}`}>Attendance</span>
-      </div>
 
+      {/* Driver gets 'Bookings', Telecaller gets 'Enquiries', HR/Accountant gets nothing here */}
+      {isDriver && (
+        <NavIcon 
+          icon={<FiBriefcase size={22} />} 
+          label="Bookings" 
+          active={isActive('/employee/bookings')} 
+          onClick={() => navigate('/employee/bookings')}
+        />
+      )}
+
+      {isTelecaller && (
+        <NavIcon 
+          icon={<FiUsers size={22} />} 
+          label="Enquiries" 
+          active={isActive('/employee/enquiries')} 
+          onClick={() => navigate('/employee/enquiries')}
+        />
+      )}
+      
       <NavIcon 
-        icon={<FiCheckSquare size={22} />} 
-        label="Tasks" 
-        active={isActive('/employee/tasks')} 
-        onClick={() => navigate('/employee/tasks')}
+        icon={<FiClock size={22} />} 
+        label="Attendance" 
+        active={isActive('/employee/attendance')} 
+        onClick={() => navigate('/employee/attendance')}
       />
+
       <NavIcon 
         icon={<FiUser size={22} />} 
         label="Profile" 

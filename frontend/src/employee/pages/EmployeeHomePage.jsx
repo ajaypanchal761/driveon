@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { isToday, parseISO, format } from 'date-fns';
 import {
   FiHome, FiUsers, FiCheckSquare, FiUser, FiBell, FiMenu,
@@ -48,9 +48,20 @@ const EmployeeHomePage = () => {
     formatTotalHours,
     unreadCount,
     fetchUnreadCount,
-    setUnreadCount
+    setUnreadCount,
+    checkedOutToday
   } = useEmployee();
   const [time, setTime] = useState(new Date());
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+
+  const handleClockClick = () => {
+    if (checkedOutToday) return;
+    if (clockedIn) {
+      setShowCheckoutConfirm(true);
+    } else {
+      handleClockToggle();
+    }
+  };
 
   // Get user data from Redux
   const { user, isInitializing } = useSelector(state => ({
@@ -65,7 +76,7 @@ const EmployeeHomePage = () => {
     address: "Fetching Live Location..."
   });
 
-  const [quickStatsCounts, setQuickStatsCounts] = useState({ enquiries: 0, pending: 0, closed: 0 });
+  const [quickStatsCounts, setQuickStatsCounts] = useState({ enquiries: 0, pending: 0, closed: 0, converted: 0 });
   const [teamPresenceData, setTeamPresenceData] = useState({
     total: 0,
     present: 0,
@@ -138,23 +149,28 @@ const EmployeeHomePage = () => {
   // Fetch Enquiry Stats
   useEffect(() => {
     const fetchStats = async () => {
+      const userId = user?._id || user?.id;
+      if (!userId) return;
       try {
-        const response = await api.get('/crm/enquiries');
+        const response = await api.get(`/crm/enquiries?assignedTo=${userId}`);
         if (response.data.success) {
           const allEnquiries = response.data.data.enquiries;
           const total = allEnquiries.length;
-          const pending = allEnquiries.filter(e => e.status === 'Pending').length;
+          const pending = allEnquiries.filter(e => ['New', 'In Progress', 'Follow-up'].includes(e.status)).length;
           const closed = allEnquiries.filter(e => e.status === 'Closed').length;
+          const converted = allEnquiries.filter(e => e.status === 'Converted').length;
 
-          setQuickStatsCounts({ enquiries: total, pending, closed });
+          setQuickStatsCounts({ enquiries: total, pending, closed, converted });
         }
       } catch (error) {
         console.error('Error fetching enquiry stats:', error);
       }
     };
-    fetchStats();
+    if (user) {
+      fetchStats();
+    }
     fetchTeamPresence(); // Fetch team presence
-  }, []);
+  }, [user]);
 
   const fetchTeamPresence = async () => {
     try {
@@ -171,6 +187,36 @@ const EmployeeHomePage = () => {
   useEffect(() => {
     // Logic moved to context for global real-time updates
   }, [user]);
+
+  // Role Checker Flags
+  const role = user?.role || '';
+  const roleLower = role.toLowerCase();
+  const isDriver = roleLower === 'driver' || roleLower.includes('driver');
+  const isTelecaller = roleLower === 'telecaller' || roleLower === 'tellecaller';
+  const isAccountantOrHR = roleLower === 'accountant' || roleLower === 'hr';
+
+  const [driverBookingsCount, setDriverBookingsCount] = useState({ total: 0, pending: 0, active: 0, completed: 0 });
+
+  useEffect(() => {
+    if (isDriver) {
+      const fetchDriverBookings = async () => {
+        try {
+          const res = await api.get('/bookings/driver/assigned');
+          if (res.data?.success) {
+            const bookingsList = res.data.data.bookings || [];
+            const total = bookingsList.length;
+            const pending = bookingsList.filter(b => (b.status === 'confirmed' || b.status === 'pending') && (b.tripStatus === 'not_started' || !b.tripStatus)).length;
+            const active = bookingsList.filter(b => (b.status === 'active' || ['started', 'picked_up', 'ongoing'].includes(b.tripStatus)) && b.tripStatus !== 'completed').length;
+            const completed = bookingsList.filter(b => b.status === 'completed' || b.tripStatus === 'completed').length;
+            setDriverBookingsCount({ total, pending, active, completed });
+          }
+        } catch (e) {
+          console.error('Error fetching driver bookings on home:', e);
+        }
+      };
+      fetchDriverBookings();
+    }
+  }, [user, isDriver]);
 
   const formatTime = (date) => {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -292,7 +338,8 @@ const EmployeeHomePage = () => {
     quickStats: [
       { id: 1, label: "Enquiries", value: quickStatsCounts.enquiries, icon: <FaUserFriends size={20} />, color: "text-green-600", bg: "bg-green-100" },
       { id: 2, label: "Pending", value: quickStatsCounts.pending, icon: <BiTask size={20} />, color: "text-blue-600", bg: "bg-blue-100" },
-      { id: 3, label: "Closed", value: quickStatsCounts.closed, icon: <FiBell size={20} />, color: "text-orange-500", bg: "bg-orange-100" },
+      { id: 3, label: "Converted", value: quickStatsCounts.converted, icon: <FiCheckSquare size={20} />, color: "text-emerald-500", bg: "bg-emerald-100" },
+      { id: 4, label: "Closed", value: quickStatsCounts.closed, icon: <FiBell size={20} />, color: "text-orange-500", bg: "bg-orange-100" },
     ],
     // Remove hardcoded teamPresence, we now use teamPresenceData state
     projects: [
@@ -321,10 +368,10 @@ const EmployeeHomePage = () => {
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="min-h-screen bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100"
+      className="h-screen w-screen overflow-hidden flex flex-col bg-[#F5F7FA] font-sans selection:bg-blue-100"
     >
-
-      <div className="relative z-30">
+      <div className="flex-1 overflow-y-auto pb-32 scrollbar-hide">
+        <div className="relative z-30">
         {/* HEADER SECTION - Curved & Clean */}
         <motion.div
           variants={itemVariants}
@@ -337,12 +384,6 @@ const EmployeeHomePage = () => {
               <h1 className="text-3xl font-bold tracking-tight">{employeeData.name}</h1>
               <div className="flex items-center gap-2 mt-2 opacity-90 text-xs font-medium">
                 <span className="bg-white/10 px-2 py-0.5 rounded-md backdrop-blur-sm border border-white/10">{employeeData.role}</span>
-                {employeeData.department && (
-                  <>
-                    <span className="opacity-50">•</span>
-                    <span className="bg-white/10 px-2 py-0.5 rounded-md backdrop-blur-sm border border-white/10">{employeeData.department}</span>
-                  </>
-                )}
               </div>
             </div>
             <div className="flex gap-3">
@@ -380,17 +421,22 @@ const EmployeeHomePage = () => {
                     <span className="text-sm text-gray-400 font-medium ml-1">{formatTime(time).split(' ')[1]}</span>
                   </h2>
                 </div>
+                <p className="text-[11px] text-[#1C205C]/70 font-bold mt-1.5 flex items-center gap-1 tracking-wide">
+                  <FiCalendar className="text-[#1C205C]" size={12} />
+                  {format(time, 'EEEE, d MMMM yyyy')}
+                </p>
               </div>
 
               {/* Clock Out/In Button */}
               <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={handleClockToggle}
-                className={`${clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
+                whileTap={checkedOutToday ? undefined : { scale: 0.95 }}
+                disabled={checkedOutToday}
+                onClick={handleClockClick}
+                className={`${checkedOutToday ? 'bg-gray-400 cursor-not-allowed opacity-70' : clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
                     text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap`}
               >
                 <FiClock />
-                {clockedIn ? 'Check Out' : 'Check In'}
+                {checkedOutToday ? 'Checked Out' : clockedIn ? 'Check Out' : 'Check In'}
               </motion.button>
             </div>
 
@@ -414,8 +460,8 @@ const EmployeeHomePage = () => {
               </div>
             </div>
 
-            {/* Stats Row within Card */}
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+             {/* Stats Row within Card */}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
               <div className="text-center">
                 <span className="block text-xl font-bold text-gray-800">
                   {formatTotalHours(accumulatedSeconds + (clockedIn ? elapsedSeconds : 0))}
@@ -423,233 +469,130 @@ const EmployeeHomePage = () => {
                 <span className="text-[10px] text-gray-400 font-bold uppercase">Total Hours</span>
               </div>
               <div className="text-center border-l border-gray-100">
-                <span className={`block text-xl font-bold ${attendanceStatus === 'Late' ? 'text-red-500' : 'text-green-500'}`}>
-                  {attendanceStatus}
+                <span className={`block text-xl font-bold ${
+                  attendanceStatus === 'Late' ? 'text-amber-500' : 
+                  attendanceStatus === 'Absent' ? 'text-rose-500' : 
+                  attendanceStatus === '—' ? 'text-gray-400' : 'text-emerald-500'
+                }`}>
+                  {attendanceStatus === 'Late' ? 'Present (Late)' : attendanceStatus}
                 </span>
                 <span className="text-[10px] text-gray-400 font-bold uppercase">Status</span>
-              </div>
-              <div className="text-center border-l border-gray-100">
-                <span className="block text-xl font-bold text-blue-500">{attendanceDays}</span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">Days</span>
               </div>
             </div>
           </motion.div>
         </div>
       </div>
 
-      <div className="px-6 mt-8 space-y-8">
-
-        {/* QUICK REQUESTS - Circular Icons (Ref Image 2) */}
-        <motion.div variants={itemVariants}>
-          <h3 className="text-gray-800 font-bold text-lg mb-4">Quick Overview</h3>
-          <div className="grid grid-cols-3 gap-3">
-            {employeeData.quickStats.map((stat) => (
-              <motion.div
-                whileTap={{ scale: 0.95 }}
-                key={stat.id}
-                onClick={() => {
-                  let tab = 'All';
-                  if (stat.label === 'Pending') tab = 'Pending';
-                  if (stat.label === 'Closed') tab = 'Closed';
-                  navigate('/employee/enquiries', { state: { activeTab: tab } });
-                }}
-                className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
-              >
-                <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                  {stat.icon}
-                </div>
-                <div className="text-center">
-                  <span className="block font-bold text-gray-800">{stat.label}</span>
-                  <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* TEAM PRESENCE SECTION (ADDED) */}
-        <motion.div variants={itemVariants}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-gray-800 font-bold text-lg">Team Presence</h3>
-            <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-md">
-              {teamPresenceData.total} Total Staff
-            </span>
-          </div>
-
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex -space-x-3">
-                {teamPresenceData.activeStaff && teamPresenceData.activeStaff.length > 0 ? (
-                  teamPresenceData.activeStaff.slice(0, 4).map((staff, i) => (
-                    <div 
-                      key={staff.id || i} 
-                      style={{ zIndex: 10 - i }}
-                      className={`w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white shadow-sm bg-gradient-to-br ${i % 2 === 0 ? 'from-blue-400 to-blue-600' : 'from-indigo-400 to-indigo-600'} relative`}
-                    >
-                      {staff.avatar ? (
-                        <img src={staff.avatar} alt={staff.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        getInitials(staff.name)
-                      )}
+      {/* Dynamic Quick Overview based on role */}
+      {!isAccountantOrHR && (
+        <div className="px-6 mt-8 space-y-8">
+          <motion.div variants={itemVariants}>
+            <h3 className="text-gray-800 font-bold text-lg mb-4">Quick Overview</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {isDriver ? (
+                // Driver Specific Stats
+                [
+                  { id: 1, label: "All Trips", value: driverBookingsCount.total, icon: <FiBriefcase size={20} />, color: "text-indigo-600", bg: "bg-indigo-100", tab: 'All' },
+                  { id: 2, label: "Assigned", value: driverBookingsCount.pending, icon: <FiClock size={20} />, color: "text-blue-600", bg: "bg-blue-100", tab: 'Pending' },
+                  { id: 3, label: "Active", value: driverBookingsCount.active, icon: <FiActivity size={20} />, color: "text-emerald-500", bg: "bg-emerald-100", tab: 'Active' },
+                  { id: 4, label: "Completed", value: driverBookingsCount.completed, icon: <FiCheckSquare size={20} />, color: "text-gray-500", bg: "bg-gray-100", tab: 'Completed' },
+                ].map((stat) => (
+                  <motion.div
+                    whileTap={{ scale: 0.95 }}
+                    key={stat.id}
+                    onClick={() => navigate('/employee/bookings', { state: { activeTab: stat.tab } })}
+                    className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
+                  >
+                    <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                      {stat.icon}
                     </div>
-                  ))
-                ) : (
-                  <div className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-gray-400 bg-gray-100">
-                    --
-                  </div>
-                )}
-                {/* Count Badge */}
-                {teamPresenceData.activeStaff && teamPresenceData.activeStaff.length > 4 && (
-                  <div className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white shadow-sm bg-gradient-to-br from-gray-700 to-gray-900 z-0 relative">
-                    +{teamPresenceData.activeStaff.length - 4}
-                  </div>
-                )}
-              </div>
-              <button onClick={() => navigate('/employee/directory')} className="text-xs font-bold text-[#1C205C] flex items-center gap-1 hover:underline">
-                View Directory <FiArrowRight />
-              </button>
+                    <div className="text-center">
+                      <span className="block font-bold text-gray-800">{stat.label}</span>
+                      <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                // Telecaller (or default fallback) Specific Stats
+                employeeData.quickStats.map((stat) => (
+                  <motion.div
+                    whileTap={{ scale: 0.95 }}
+                    key={stat.id}
+                    onClick={() => {
+                      let tab = 'All';
+                      if (stat.label === 'Pending') tab = 'Pending';
+                      if (stat.label === 'Closed') tab = 'Closed';
+                      if (stat.label === 'Converted') tab = 'Converted';
+                      navigate('/employee/enquiries', { state: { activeTab: tab } });
+                    }}
+                    className="bg-white p-2.5 rounded-2xl flex flex-col items-center justify-center gap-2 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-all"
+                  >
+                    <div className={`w-12 h-12 rounded-full ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                      {stat.icon}
+                    </div>
+                    <div className="text-center">
+                      <span className="block font-bold text-gray-800">{stat.label}</span>
+                      <span className={`text-xs font-bold ${stat.color}`}>{stat.value}</span>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                <span className="block text-xl font-black text-emerald-600">{teamPresenceData.present}</span>
-                <span className="text-[10px] font-bold text-emerald-400 uppercase">Present</span>
-              </div>
-              <div className="bg-rose-50 rounded-xl p-3 text-center">
-                <span className="block text-xl font-black text-rose-500">{teamPresenceData.absent}</span>
-                <span className="text-[10px] font-bold text-rose-400 uppercase">Absent</span>
-              </div>
-              <div className="bg-amber-50 rounded-xl p-3 text-center">
-                <span className="block text-xl font-black text-amber-500">{teamPresenceData.leave}</span>
-                <span className="text-[10px] font-bold text-amber-400 uppercase">On Leave</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* PROJECTS / TARGETS - Card Grid (Ref Image 1) */}
-        <motion.div variants={itemVariants}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-gray-800 font-bold text-lg">Your Targets</h3>
-            <span className="text-blue-600 text-xs font-bold bg-blue-50 px-3 py-1 rounded-full">Score: {employeeData.targets.score}%</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Custom Target Cards */}
-            <motion.div
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/employee/tasks')}
-              className="bg-blue-50 p-4 rounded-3xl relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-[0.08] pointer-events-none"><FiPhone className="text-blue-600 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
-              <p className="text-gray-500 text-xs font-semibold mb-1">Tasks Target</p>
-              <h4 className="text-gray-800 font-bold text-lg mb-6">Daily Goal</h4>
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="text-blue-600 font-bold text-2xl">{employeeData.targets.calls.current}</span>
-                  <span className="text-gray-400 text-xs"> /{employeeData.targets.calls.total}</span>
-                </div>
-                <span className="bg-white/60 p-2 rounded-full text-blue-600"><FiArrowRight /></span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/employee/enquiries', { state: { activeTab: 'Pending' } })}
-              className="bg-indigo-50 p-4 rounded-3xl relative overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all"
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-[0.08] pointer-events-none"><FiActivity className="text-indigo-600 text-6xl transform rotate-12 -mr-4 -mt-4" /></div>
-              <p className="text-gray-500 text-xs font-semibold mb-1">Follow-ups</p>
-              <h4 className="text-gray-800 font-bold text-lg mb-6">High Priority</h4>
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="text-indigo-600 font-bold text-2xl">{employeeData.targets.followUps.current}</span>
-                  <span className="text-gray-400 text-xs"> /{employeeData.targets.followUps.total}</span>
-                </div>
-                <span className="bg-white/60 p-2 rounded-full text-indigo-600"><FiArrowRight /></span>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* ONGOING TASK - Large Card (Ref Image 1/2) */}
-        <motion.div variants={itemVariants}>
-          <h3 className="text-gray-800 font-bold text-lg mb-4">Ongoing Priority</h3>
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex items-center justify-between min-h-[140px]">
-            {ongoingTask ? (
-              <>
-                <div>
-                  <div className={`w-1.5 h-10 rounded-full absolute left-6 ${ongoingTask.priority === 'High' ? 'bg-red-500' : 'bg-blue-600'}`}></div> {/* Left accent */}
-                  <span className={`text-xs font-bold uppercase mb-1 block pl-3 ${ongoingTask.priority === 'High' ? 'text-red-500' : 'text-blue-600'}`}>{ongoingTask.priority} Priority Task</span>
-                  <h4 className="font-bold text-gray-800 text-base mb-1 pl-3 line-clamp-2">{ongoingTask.title}</h4>
-                  <div className="flex items-center gap-3 pl-3 mt-3">
-                    <div className="flex -space-x-2">
-                      {/* Reuse team avatars for decoration if available, else static placeholders */}
-                      {teamPresenceData.activeStaff && teamPresenceData.activeStaff.slice(0, 3).map((staff, i) => (
-                        <div 
-                          key={i} 
-                          style={{ zIndex: 10 - i }}
-                          className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm bg-gradient-to-br from-indigo-400 to-purple-600 overflow-hidden"
-                        >
-                          {staff.avatar ? (
-                            <img src={staff.avatar} alt="Staff avatar" className="w-full h-full object-cover" />
-                          ) : (
-                            getInitials(staff.name)
-                          )}
-                        </div>
-                      ))}
-                      {(!teamPresenceData.activeStaff || teamPresenceData.activeStaff.length === 0) && (
-                        <>
-                          <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white"></div>
-                          <div className="w-8 h-8 rounded-full bg-gray-300 border-2 border-white"></div>
-                        </>
-                      )}
-                      <div className="w-8 h-8 rounded-full bg-[#1C205C] text-white flex items-center justify-center text-xs font-bold border-2 border-white">+3</div>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      <span className="block">Due Date</span>
-                      <span className="text-gray-600 font-semibold">
-                        {format(new Date(ongoingTask.dueDate), 'MMM d, h:mm a')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Simple Circular Progress Area - Static 60% for "Ongoing" visuals or random? Keeping static to avoid complexity with no real subtasks */}
-                <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0 ml-2">
-                  <svg className="w-full h-full" viewBox="0 0 36 36">
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none"
-                      stroke="#E5E7EB"
-                      strokeWidth="3"
-                    />
-                    <path
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831"
-                      fill="none"
-                      stroke={ongoingTask.priority === 'High' ? "#EF4444" : "#4F46E5"}
-                      strokeWidth="3"
-                      strokeDasharray="60, 100" // Static 60% representing "Ongoing"
-                    />
-                  </svg>
-                  <span className={`absolute text-xs font-bold ${ongoingTask.priority === 'High' ? 'text-red-500' : 'text-blue-600'}`}>60%</span>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center w-full text-center py-4">
-                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
-                  <FiCheckSquare size={24} />
-                </div>
-                <h4 className="font-bold text-gray-800">All Caught Up!</h4>
-                <p className="text-xs text-gray-500">No pending priority tasks assigned.</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
+          </motion.div>
+        </div>
+      )}
       </div>
 
       <BottomNav />
+
+      {/* Checkout Confirmation Modal */}
+      <AnimatePresence>
+        {showCheckoutConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCheckoutConfirm(false)}
+              className="absolute inset-0 bg-[#1C205C]/40 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl relative z-10"
+            >
+              <div className="p-8 text-center">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FiClock className="text-amber-500" size={36} />
+                </div>
+                <h3 className="text-2xl font-black text-[#1C205C] mb-3">Check Out?</h3>
+                <p className="text-gray-500 text-sm leading-relaxed mb-8">
+                  Are you sure you want to end your shift? Your session timer will be saved to your attendance logs.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      handleClockToggle();
+                      setShowCheckoutConfirm(false);
+                    }}
+                    className="w-full bg-[#1C205C] text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    Confirm Check Out
+                  </button>
+                  <button
+                    onClick={() => setShowCheckoutConfirm(false)}
+                    className="w-full bg-gray-50 text-gray-500 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

@@ -12,12 +12,14 @@ export const formatCurrency = (amount, currency = 'INR') => {
   }).format(amount);
 };
 
-/**
- * Format date
- */
 export const formatDate = (date, format = 'dd/MM/yyyy') => {
-  // Will use date-fns later
-  return new Date(date).toLocaleDateString('en-IN');
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 /**

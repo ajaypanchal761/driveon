@@ -496,6 +496,9 @@ export const changePassword = async (req, res) => {
 
     // Update password (will be hashed by pre-save hook)
     user.password = newPassword;
+    if (isStaff) {
+      user.plainTextPassword = newPassword;
+    }
     await user.save();
 
     res.status(200).json({

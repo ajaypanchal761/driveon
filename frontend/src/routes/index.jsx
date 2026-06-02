@@ -64,6 +64,7 @@ const ModuleFavoritesPage = lazy(() => import("../module/pages/ModuleFavoritesPa
 const PublicSupportPage = lazy(() => import("../module/pages/PublicSupportPage"));
 
 const EmployeeHomePage = lazy(() => import("../employee/pages/EmployeeHomePage"));
+const EmployeeBookingsPage = lazy(() => import("../employee/pages/BookingsPage"));
 const EnquiriesListPage = lazy(() => import("../employee/pages/EnquiriesListPage"));
 const EnquiryDetailsPage = lazy(() => import("../employee/pages/EnquiryDetailsPage"));
 const AttendancePage = lazy(() => import("../employee/pages/AttendancePage"));
@@ -233,6 +234,7 @@ const CRM_EnquiryClosed = lazy(() => import("../crm/pages/enquiries/EnquirySubPa
 
 const CRM_EnquiryDetails = lazy(() => import("../crm/pages/enquiries/EnquirySubPages").then(module => ({ default: module.EnquiryDetailsPage })));
 
+
 const CRM_StaffPage = lazy(() => import("../crm/pages/StaffPage"));
 
 // Import Staff Subpages
@@ -240,9 +242,8 @@ const CRM_StaffDirectory = lazy(() => import("../crm/pages/staff/StaffSubPages")
 const CRM_StaffRoles = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.RolesPage })));
 const CRM_StaffAttendance = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AttendancePage })));
 const CRM_StaffSalary = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.SalaryPage })));
-
-const CRM_StaffPerformance = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.PerformancePage })));
-const CRM_StaffTasks = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.StaffTasksPage })));
+const CRM_StaffAttendanceSettings = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AttendanceSettingsPage })));
+const CRM_StaffDriverAssignment = lazy(() => import("../crm/pages/staff/DriverAssignmentPage"));
 
 
 
@@ -272,6 +273,11 @@ const CRM_VendorHistory = lazy(() => import("../crm/pages/vendors/VendorSubPages
 // Import Setting Subpages
 const CRM_SettingsOverview = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.SettingsOverviewPage })));
 const CRM_Locations = lazy(() => import("../crm/pages/settings/SettingsSubPages").then(module => ({ default: module.LocationsPage })));
+const CRM_PolicyEditor = lazy(() => import("../crm/pages/settings/CRMPolicyEditorPage"));
+
+// Import Expense Pages
+const CRM_TrackExpenses = lazy(() => import("../crm/pages/expenses/TrackExpensesPage"));
+const CRM_ExpenseCategories = lazy(() => import("../crm/pages/expenses/ExpenseCategoriesPage"));
 
 
 
@@ -318,6 +324,8 @@ const router = createBrowserRouter([
         element: <CRM_EnquiryClosed />,
       },
 
+
+
       {
         path: "enquiries/:id",
         element: <CRM_EnquiryDetails />,
@@ -339,19 +347,14 @@ const router = createBrowserRouter([
         path: "staff/attendance",
         element: <CRM_StaffAttendance />,
       },
+      {
+        path: "staff/attendance-settings",
+        element: <CRM_StaffAttendanceSettings />,
+      },
       // {
       //   path: "staff/salary",
       //   element: <CRM_StaffSalary />,
       // },
-
-      {
-        path: "staff/performance",
-        element: <CRM_StaffPerformance />,
-      },
-      {
-        path: "staff/tasks",
-        element: <CRM_StaffTasks />,
-      },
 
 
       // GARAGE ROUTES
@@ -402,6 +405,31 @@ const router = createBrowserRouter([
       {
         path: "settings/locations",
         element: <CRM_Locations />,
+      },
+      {
+        path: "policies/privacy",
+        element: <CRM_PolicyEditor policyKey="employee_privacy_policy" />,
+      },
+      {
+        path: "policies/terms",
+        element: <CRM_PolicyEditor policyKey="employee_terms_conditions" />,
+      },
+      // EXPENSE ROUTES
+      {
+        path: "expenses",
+        element: <Navigate to="track" replace />,
+      },
+      {
+        path: "expenses/track",
+        element: <CRM_TrackExpenses />,
+      },
+      {
+        path: "expenses/categories",
+        element: <CRM_ExpenseCategories />,
+      },
+      {
+        path: "staff/driver-assignment",
+        element: <CRM_StaffDriverAssignment />,
       },
 
 
@@ -725,6 +753,10 @@ const router = createBrowserRouter([
       {
         path: "/employee",
         element: <EmployeeHomePage />,
+      },
+      {
+        path: "/employee/bookings",
+        element: <EmployeeBookingsPage />,
       },
       {
         path: "/employee/enquiries",

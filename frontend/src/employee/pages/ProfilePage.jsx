@@ -14,7 +14,7 @@ import BottomNav from '../components/BottomNav';
 const ProfilePage = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const { unreadCount, fetchUnreadCount } = useEmployee();
+    const { unreadCount } = useEmployee();
 
     const handleLogout = async () => {
         await dispatch(logoutUser());
@@ -45,186 +45,140 @@ const ProfilePage = () => {
     const { user: userData } = useSelector(state => state.user);
     const { isInitializing } = useSelector(state => state.auth);
 
-    // Fallback/Default data if backend data is missing structure
     const user = {
-        name: userData?.name || "", // Removed static "Employee"
+        name: userData?.name || "",
         role: userData?.role || "",
         id: userData?.employeeId || "",
         phone: userData?.phone || "",
         email: userData?.email || "",
-        // Ensure avatar is never empty string to avoid React warning
         avatar: userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name || 'User'}&background=1C205C&color=fff&size=128`,
         joinDate: userData?.joinDate ? new Date(userData.joinDate).toLocaleDateString() : ""
     };
 
-    const [performanceStats, setPerformanceStats] = useState({
-        score: 0,
-        rating: 0,
-        badge: "Rookie"
-    });
-
     useEffect(() => {
-        // Unread count is now fetched automatically by EmployeeContext on user mount/change
-    }, []);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!userData || (!userData.id && !userData._id)) return;
-            const userId = userData.id || userData._id;
-
-            try {
-                // 1. Calculate Target Score from Tasks (Completion Rate)
-                const tasksResponse = await api.get(`/crm/staff-tasks?assignedTo=${userId}`);
-                let calculatedScore = 0;
-                if (tasksResponse.data.success) {
-                    const tasks = tasksResponse.data.data.tasks;
-                    const totalTasks = tasks.length;
-                    const completedTasks = tasks.filter(t => t.status === 'Done').length;
-                    if (totalTasks > 0) {
-                        calculatedScore = Math.round((completedTasks / totalTasks) * 100);
-                    }
-                }
-
-                // 2. Calculate Avg Rating from Performance Reviews
-                const reviewsResponse = await api.get(`/crm/performance?staffId=${userId}`);
-                let avgRating = 0;
-                if (reviewsResponse.data.success) {
-                    const reviews = reviewsResponse.data.data.reviews;
-                    if (reviews.length > 0) {
-                        const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
-                        avgRating = (totalRating / reviews.length).toFixed(1);
-                    }
-                }
-
-                // 3. Determine Badge
-                let badge = "Rookie";
-                if (calculatedScore >= 80 && avgRating >= 4.5) badge = "Superstar";
-                else if (calculatedScore >= 80) badge = "Hustler";
-                else if (avgRating >= 4.5) badge = "Expert";
-                else if (calculatedScore >= 50) badge = "Achiever";
-
-                setPerformanceStats({
-                    score: calculatedScore,
-                    rating: avgRating,
-                    badge: badge
-                });
-
-            } catch (error) {
-                console.error("Error fetching profile stats:", error);
-            }
-        };
-
-        fetchData();
+        // No extra fetching needed for now
     }, [userData]);
 
-    // Show loading state while initializing or if user data is still being fetched
     if (isInitializing || !userData) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F7FA] p-4">
-                <div
-                    className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mb-4"
-                    style={{ borderColor: '#1C205C' }}
-                ></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mb-4 border-[#1C205C]"></div>
                 <p className="text-[#1C205C] font-medium">Loading profile...</p>
             </div>
         );
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    };
+
     return (
-        <div className="h-screen overflow-y-auto bg-[#F5F7FA] pb-32 font-sans selection:bg-blue-100">
+        <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#F5F7FA] font-sans selection:bg-blue-100">
+            <div className="flex-1 overflow-y-auto pb-32 scrollbar-hide">
+                <div className="sticky top-0 z-30">
+                    {/* PREMIUM HEADER SECTION */}
+                    <div className="bg-gradient-to-br from-[#1C205C] via-[#242976] to-[#1a1d4f] pt-6 pb-12 px-6 rounded-b-[48px] shadow-2xl relative overflow-hidden z-0">
+                        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+                        <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-400/10 rounded-full blur-3xl -ml-12 -mb-12 pointer-events-none"></div>
 
-            <div className="sticky top-0 z-30 bg-[#F5F7FA]">
-                {/* HEADER & PROFILE CARD */}
-                <div className="bg-[#1C205C] pt-6 pb-24 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+                        <HeaderTopBar title="My Profile" showBack={false} />
 
-                    <HeaderTopBar title="My Profile" showBack={false} />
-
-                    <div className="flex flex-col items-center mt-4 text-white">
-                        <div className="relative">
-                            <div className="w-24 h-24 rounded-full border-4 border-white/20 shadow-xl overflow-hidden p-1 bg-white/10 backdrop-blur-sm">
-                                <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5, type: "spring" }}
+                            className="flex flex-col items-center mt-6 text-white"
+                        >
+                            <div className="relative group">
+                                <div className="w-28 h-28 rounded-full border-[4px] border-white/20 shadow-2xl overflow-hidden p-1.5 bg-white/10 backdrop-blur-md transition-transform duration-300 group-hover:scale-105">
+                                    <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                </div>
+                                <div className="absolute bottom-2 right-2 bg-emerald-400 w-7 h-7 rounded-full border-[3px] border-[#1C205C] flex items-center justify-center shadow-lg">
+                                    <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                                </div>
                             </div>
-                            <div className="absolute bottom-1 right-1 bg-emerald-500 w-6 h-6 rounded-full border-2 border-[#1C205C] flex items-center justify-center">
-                                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                            </div>
-                        </div>
 
-                        <h2 className="text-2xl font-bold mt-3 tracking-wide">{user.name}</h2>
-                        <p className="text-blue-200 text-sm font-medium">{user.role} • {user.id}</p>
+                            <h2 className="text-3xl font-black mt-4 tracking-tight drop-shadow-md">{user.name}</h2>
+                            <div className="flex items-center gap-2 mt-1.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
+                                <FiBriefcase className="text-blue-300" size={14} />
+                                <p className="text-blue-100 text-xs font-bold uppercase tracking-wider">{user.role} • {user.id}</p>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
 
-                {/* OVERLAPPING STATS CARD */}
-                <div className="px-6 -mt-16 relative z-10">
-                    <div className="bg-white rounded-2xl p-4 shadow-xl shadow-blue-900/10 border border-white grid grid-cols-3 divide-x divide-gray-100">
-                        <div className="text-center px-2">
-                            <p className="text-2xl font-black text-[#1C205C]">{performanceStats.score}%</p>
-                            <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Target Score</p>
-                        </div>
-                        <div className="text-center px-2">
-                            <p className="text-2xl font-black text-emerald-600">{performanceStats.rating}</p>
-                            <p className="text-[10px] uppercase font-bold text-gray-400 mt-1">Avg Rating</p>
-                        </div>
-                        <div className="text-center px-2">
-                            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600 mb-1">
-                                <FiAward />
-                            </div>
-                            <p className="text-[10px] uppercase font-bold text-gray-400">{performanceStats.badge}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* MENU LIST */}
-            <div className="px-5 mt-6 space-y-3">
-                {/* PERSONAL INFO SECTION */}
-                <SectionTitle title="Personal Information" />
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-4">
-                    <InfoRow icon={<FiPhone size={16} />} label="Phone" value={user.phone} />
-                    <InfoRow icon={<FiMail size={16} />} label="Email" value={user.email} />
 
                 </div>
 
-                {/* APP SETTINGS */}
-                <SectionTitle title="App & Settings" />
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-
-
-                    <MenuRow
-                        icon={<FiShield />}
-                        label="Privacy & Security"
-                        color="text-purple-600"
-                        bg="bg-purple-50"
-                        onClick={() => navigate('/employee/privacy')}
-                    />
-                    <MenuRow
-                        icon={<FiBell />}
-                        label="Notifications"
-                        color="text-amber-600"
-                        bg="bg-amber-50"
-                        hasBadge={unreadCount > 0}
-                        badgeCount={unreadCount}
-                        onClick={() => navigate('/employee/notifications')}
-                    />
-                </div>
-
-                <button
-                    onClick={handleLogout}
-                    className="w-full bg-red-50 text-red-600 font-bold py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                {/* MENU LIST */}
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="px-5 mt-8 space-y-8"
                 >
-                    <FiLogOut /> Logout
-                </button>
+                    {/* PERSONAL INFO SECTION */}
+                    <motion.div variants={itemVariants} className="space-y-3">
+                        <SectionTitle title="Personal Information" />
+                        <div className="bg-white rounded-[24px] p-2 shadow-sm border border-gray-100 overflow-hidden">
+                            <InfoRow icon={<FiPhone size={18} />} label="Phone Number" value={user.phone} />
+                            <InfoRow icon={<FiMail size={18} />} label="Email Address" value={user.email} isLast />
+                        </div>
+                    </motion.div>
 
-                <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="w-full bg-red-50 text-red-600 font-bold py-4 rounded-2xl mt-2 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
-                >
-                    <FiAlertTriangle /> Delete account
-                </button>
+                    {/* APP SETTINGS */}
+                    <motion.div variants={itemVariants} className="space-y-3">
+                        <SectionTitle title="App & Settings" />
+                        <div className="bg-white rounded-[24px] p-2 shadow-sm border border-gray-100 overflow-hidden">
+                            <MenuRow
+                                icon={<FiShield size={20} />}
+                                label="Privacy & Security"
+                                color="text-indigo-600"
+                                bg="bg-indigo-50"
+                                onClick={() => navigate('/employee/privacy')}
+                            />
+                            <MenuRow
+                                icon={<FiBell size={20} />}
+                                label="Notifications"
+                                color="text-amber-600"
+                                bg="bg-amber-50"
+                                hasBadge={unreadCount > 0}
+                                badgeCount={unreadCount}
+                                onClick={() => navigate('/employee/notifications')}
+                                isLast
+                            />
+                        </div>
+                    </motion.div>
 
-                <p className="text-center text-xs text-gray-300 font-medium mt-4 mb-2">v1.2.0 • Employee App</p>
+                    <motion.div variants={itemVariants} className="pt-2 space-y-3">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full bg-red-50/80 text-red-600 font-bold py-4 rounded-[20px] flex items-center justify-center gap-2 hover:bg-red-100 transition-all active:scale-[0.98]"
+                        >
+                            <FiLogOut size={20} /> Logout
+                        </button>
+
+                        <button
+                            onClick={() => setShowDeleteModal(true)}
+                            className="w-full bg-transparent text-gray-400 font-bold py-4 rounded-[20px] flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-[0.98]"
+                        >
+                            <FiAlertTriangle size={18} /> Delete Account
+                        </button>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} className="text-center pb-8">
+                        <p className="text-[11px] text-gray-400 font-bold tracking-widest uppercase">DriveOn Employee App</p>
+                        <p className="text-[10px] text-gray-300 font-medium mt-1">v1.2.0 • Build 429</p>
+                    </motion.div>
+                </motion.div>
             </div>
 
             <BottomNav />
@@ -244,33 +198,33 @@ const ProfilePage = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl relative z-10"
+                            className="w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl relative z-10 border border-white/20"
                         >
                             <div className="p-8 text-center">
-                                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
                                     <FiAlertTriangle className="text-red-500" size={36} />
                                 </div>
-                                <h3 className="text-2xl font-black text-[#1C205C] mb-3">Delete Account?</h3>
-                                <p className="text-gray-500 text-sm leading-relaxed mb-8">
-                                    Are you sure you want to delete your account? This action is permanent and your profile will be deactivated.
+                                <h3 className="text-2xl font-black text-gray-900 mb-2">Delete Account?</h3>
+                                <p className="text-gray-500 text-sm leading-relaxed mb-8 px-2">
+                                    This action is permanent and cannot be undone. All your data will be permanently removed.
                                 </p>
 
                                 <div className="flex flex-col gap-3">
                                     <button
                                         onClick={handleDeleteAccount}
                                         disabled={isDeleting}
-                                        className="w-full bg-red-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-red-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
                                     >
                                         {isDeleting ? (
                                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         ) : (
-                                            "Yes, Delete Account"
+                                            "Yes, Delete My Account"
                                         )}
                                     </button>
                                     <button
                                         onClick={() => setShowDeleteModal(false)}
                                         disabled={isDeleting}
-                                        className="w-full bg-gray-50 text-gray-500 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+                                        className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all"
                                     >
                                         Cancel
                                     </button>
@@ -285,32 +239,37 @@ const ProfilePage = () => {
 };
 
 const SectionTitle = ({ title }) => (
-    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-1">{title}</h3>
+    <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-2 mb-2">{title}</h3>
 );
 
-const InfoRow = ({ icon, label, value }) => (
-    <div className="flex items-center gap-4">
-        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+const InfoRow = ({ icon, label, value, isLast }) => (
+    <div className={`flex items-center gap-4 p-3 hover:bg-gray-50/50 transition-colors rounded-[16px] ${!isLast ? 'mb-1' : ''}`}>
+        <div className="w-12 h-12 rounded-[14px] bg-gray-50 flex items-center justify-center text-gray-500 shrink-0 shadow-sm border border-gray-100">
             {icon}
         </div>
-        <div className="flex-1 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
-            <p className="text-[10px] uppercase font-bold text-gray-400">{label}</p>
-            <p className="text-sm font-bold text-[#1C205C]">{value}</p>
+        <div className="flex-1">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
+            <p className="text-[15px] font-bold text-gray-800 tracking-wide">{value}</p>
         </div>
     </div>
 );
 
-const MenuRow = ({ icon, label, color, bg, hasBadge, badgeCount, onClick }) => (
-    <button onClick={onClick} className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+const MenuRow = ({ icon, label, color, bg, hasBadge, badgeCount, onClick, isLast }) => (
+    <button 
+        onClick={onClick} 
+        className={`w-full flex items-center justify-between p-3 hover:bg-gray-50/80 transition-all rounded-[16px] group active:scale-[0.98] ${!isLast ? 'mb-1' : ''}`}
+    >
         <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bg} ${color}`}>
+            <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center ${bg} ${color} shadow-sm border border-white group-hover:scale-110 transition-transform duration-300`}>
                 {icon}
             </div>
-            <span className="font-bold text-[#1C205C]">{label}</span>
+            <span className="font-bold text-gray-800 text-[15px] tracking-wide">{label}</span>
         </div>
-        <div className="flex items-center gap-2">
-            {hasBadge && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{badgeCount}</span>}
-            <FiChevronRight className="text-gray-300" />
+        <div className="flex items-center gap-3 pr-2">
+            {hasBadge && <span className="bg-red-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">{badgeCount}</span>}
+            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-gray-100 transition-colors">
+                <FiChevronRight className="text-gray-400" size={18} />
+            </div>
         </div>
     </button>
 );

@@ -388,6 +388,8 @@ const BookingsPage = () => {
               isTrackingActive: booking.isTrackingActive || false,
               createdAt: booking.createdAt || booking.bookingDate,
               userRating: booking.userRating || 0,
+              pricing: booking.pricing || null,
+              addOnServices: booking.addOnServices || null,
             };
           })
         );

@@ -1,5 +1,6 @@
 // Enquiries List Page
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiSearch, FiFilter, FiArrowLeft, FiCalendar, FiX } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -16,6 +17,7 @@ import { toast } from 'react-hot-toast';
 const EnquiriesListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useSelector(state => state.user);
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'All');
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState({ start: null, end: null });
@@ -25,9 +27,14 @@ const EnquiriesListPage = () => {
   // Fetch Enquiries
   useEffect(() => {
     const fetchEnquiries = async () => {
+      const staffId = user?._id || user?.id;
+      if (!staffId) {
+        // Wait for user info to load
+        return;
+      }
       try {
         setLoading(true);
-        const response = await api.get('/crm/enquiries');
+        const response = await api.get(`/crm/enquiries?assignedTo=${staffId}`);
         if (response.data.success) {
           // Map backend data to component format
           const mappedEnquiries = response.data.data.enquiries.map(enq => ({
@@ -49,12 +56,36 @@ const EnquiriesListPage = () => {
     };
 
     fetchEnquiries();
-  }, []);
+  }, [user]);
+
+  const handleStatusUpdate = async (enquiryId, newStatus, reason = '') => {
+    try {
+      const payload = { status: newStatus };
+      if (reason) payload.reasonForClosing = reason;
+      const response = await api.put(`/crm/enquiries/${enquiryId}`, payload);
+      if (response.data.success) {
+        toast.success(`Enquiry marked as ${newStatus}`);
+        setEnquiries(prev => prev.map(enq => enq.id === enquiryId ? { ...enq, status: newStatus } : enq));
+      }
+    } catch (error) {
+      console.error('Error updating enquiry status:', error);
+      toast.error('Failed to update status');
+    }
+  };
 
   // Filter Logic
   const filteredEnquiries = enquiries.filter(enquiry => {
     // 1. Tab Filter
-    if (activeTab !== 'All' && enquiry.status !== activeTab) return false;
+    if (activeTab !== 'All') {
+      const activeTabLower = activeTab.toLowerCase();
+      const statusLower = enquiry.status ? enquiry.status.toLowerCase() : 'new';
+      
+      if (activeTabLower === 'pending') {
+        if (statusLower !== 'in progress' && statusLower !== 'pending' && statusLower !== 'follow-up' && statusLower !== 'new') return false;
+      } else {
+        if (statusLower !== activeTabLower) return false;
+      }
+    }
 
     // 2. Date Filter
     if (dateFilter.start && dateFilter.end) {
@@ -79,7 +110,8 @@ const EnquiriesListPage = () => {
   const tabs = ['All', 'Pending', 'Closed', 'Converted'];
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] pb-24 font-sans selection:bg-blue-100">
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#F5F7FA] font-sans selection:bg-blue-100">
+      <div className="flex-1 overflow-y-auto pb-6 scrollbar-hide">
 
       {/* HEADER */}
       <div className="bg-[#1C205C] pt-12 pb-6 px-6 rounded-b-[30px] shadow-lg sticky top-0 z-50">
@@ -141,7 +173,7 @@ const EnquiriesListPage = () => {
               </div>
             ) : filteredEnquiries.length > 0 ? (
               filteredEnquiries.map(enquiry => (
-                <EnquiryCard key={enquiry.id} enquiry={enquiry} onClick={() => navigate(`/employee/enquiries/${enquiry.id}`)} />
+                <EnquiryCard key={enquiry.id} enquiry={enquiry} onStatusUpdate={handleStatusUpdate} onClick={() => navigate(`/employee/enquiries/${enquiry.id}`)} />
               ))
             ) : (
               <motion.div
@@ -169,6 +201,8 @@ const EnquiriesListPage = () => {
       />
 
 
+
+      </div>
 
       {/* BOTTOM NAV */}
       <BottomNav />

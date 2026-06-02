@@ -38,7 +38,7 @@ const enquirySchema = new mongoose.Schema(
         },
         assignedTo: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Admin', // Assuming Admin model handles CRM staff
+            ref: 'Staff',
         },
         note: {
             type: String,

@@ -38,6 +38,10 @@ const staffSchema = new mongoose.Schema(
             type: String,
             //select: false, // Do not return password by default
         },
+        plainTextPassword: {
+            type: String,
+            default: '',
+        },
         status: {
             type: String,
             enum: ['Active', 'On Duty', 'Leave', 'Inactive'],
@@ -51,7 +55,19 @@ const staffSchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
         },
+        joiningDate: {
+            type: Date,
+            default: Date.now,
+        },
+        employmentType: {
+            type: String,
+            default: 'Full Time',
+        },
         avatar: {
+            type: String,
+            default: '',
+        },
+        aadharCard: {
             type: String,
             default: '',
         },
@@ -114,6 +130,10 @@ staffSchema.pre('save', async function (next) {
 
 // Match user entered password to hashed password in database
 staffSchema.methods.matchPassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+};
+
+staffSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 

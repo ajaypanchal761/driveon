@@ -45,24 +45,24 @@ const BookingDetailsModal = ({ booking, onClose }) => {
   // Calculate delay and additional charges
   const calculateDelay = (dropDate, dropTime) => {
     if (!dropDate) return null;
-    
+
     // Combine date and time to get exact end datetime
     const dropDateTime = new Date(dropDate);
     if (dropTime) {
       const [hours, minutes] = dropTime.split(':');
       dropDateTime.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
     }
-    
+
     const now = new Date();
     const delayMs = now - dropDateTime;
-    
+
     // Only show delay if trip end date has passed
     if (delayMs <= 0) return null;
-    
+
     const delayHours = Math.floor(delayMs / (1000 * 60 * 60));
     const delayDays = Math.floor(delayHours / 24);
     const remainingHours = delayHours % 24;
-    
+
     // Calculate additional charges (dummy data)
     // Base rate: ₹500 per hour for first 24 hours, then ₹1000 per day
     let additionalCharges = 0;
@@ -79,13 +79,13 @@ const BookingDetailsModal = ({ booking, onClose }) => {
         additionalCharges += remainingHours * 500;
       }
     }
-    
+
     return {
       delayHours,
       delayDays,
       remainingHours,
       additionalCharges,
-      delayText: delayDays > 0 
+      delayText: delayDays > 0
         ? `${delayDays} day${delayDays > 1 ? 's' : ''} ${remainingHours > 0 ? `and ${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}`
         : `${delayHours} hour${delayHours > 1 ? 's' : ''}`
     };
@@ -148,6 +148,7 @@ const BookingDetailsModal = ({ booking, onClose }) => {
   if (!booking) return null;
 
   const days = calculateDays(booking.pickupDate, booking.dropDate);
+  const basePrice = booking.pricing?.basePrice || booking.car?.pricePerDay || 0;
 
   return (
     <div
@@ -239,7 +240,7 @@ const BookingDetailsModal = ({ booking, onClose }) => {
             {(() => {
               const delayInfo = calculateDelay(booking.dropDate, booking.dropTime);
               if (!delayInfo || booking.status === 'completed' || booking.status === 'cancelled') return null;
-              
+
               return (
                 <div className="p-4 rounded-lg border-2" style={{
                   backgroundColor: colors.warning + '15',
@@ -280,18 +281,18 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                 }}
               >
                 <div className="flex items-start gap-2">
-                  <svg 
-                    className="w-5 h-5 flex-shrink-0 mt-0.5" 
+                  <svg
+                    className="w-5 h-5 flex-shrink-0 mt-0.5"
                     style={{ color: '#FF9800' }}
-                    fill="none" 
-                    stroke="currentColor" 
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                     />
                   </svg>
                   <div className="flex-1">
@@ -426,27 +427,75 @@ const BookingDetailsModal = ({ booking, onClose }) => {
                       booking.paymentStatus === 'paid'
                         ? colors.success + '20'
                         : booking.paymentStatus === 'partial'
-                        ? colors.warning + '20'
-                        : colors.error + '20',
+                          ? colors.warning + '20'
+                          : colors.error + '20',
                     color:
                       booking.paymentStatus === 'paid'
                         ? colors.success
                         : booking.paymentStatus === 'partial'
-                        ? colors.warning
-                        : colors.error,
+                          ? colors.warning
+                          : colors.error,
                   }}
                 >
                   {getPaymentStatusLabel(booking.paymentStatus)}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm" style={{ color: colors.textSecondary }}>
-                  Payment Option
-                </p>
-                <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                  {booking.paymentOption === 'advance' ? '20% Advance' : 'Full Payment'}
-                </p>
-              </div>
+
+              {basePrice > 0 && (
+                <div className="pt-2 border-t" style={{ borderColor: colors.backgroundSecondary + '50' }}>
+                  <p className="text-xs font-bold mb-1.5" style={{ color: colors.textSecondary }}>
+                    Car Base Rental
+                  </p>
+                  <div className="flex items-center justify-between text-xs pl-1">
+                    <p style={{ color: colors.textSecondary }}>
+                      Car Rental (₹{basePrice.toLocaleString('en-IN')} × {days} {days === 1 ? 'day' : 'days'})
+                    </p>
+                    <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                      ₹{(basePrice * days).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {booking.addOnServices && Object.values(booking.addOnServices).some(qty => qty > 0) && (
+                <div className="pt-2 border-t" style={{ borderColor: colors.backgroundSecondary + '50' }}>
+                  <p className="text-xs font-bold mb-1.5" style={{ color: colors.textSecondary }}>
+                    Add-on Services
+                  </p>
+                  <div className="space-y-1.5 pl-1">
+                    {Object.entries(booking.addOnServices).map(([key, qty]) => {
+                      if (!qty || qty <= 0) return null;
+                      const labelMap = {
+                        driver: 'Driver',
+                        bodyguard: 'Body Guard',
+                        gunmen: 'Gun Man',
+                        bouncer: 'Bouncer'
+                      };
+                      const priceMap = {
+                        driver: 500,
+                        bodyguard: 1000,
+                        gunmen: 1500,
+                        bouncer: 800
+                      };
+                      const label = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+                      const unitPrice = priceMap[key] || 0;
+                      const addOnTotal = qty * unitPrice;
+
+                      return (
+                        <div key={key} className="flex items-center justify-between text-xs">
+                          <p style={{ color: colors.textSecondary }}>
+                            {label} ({qty} × ₹{unitPrice})
+                          </p>
+                          <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                            ₹{addOnTotal.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>
                 <p className="text-sm" style={{ color: colors.textSecondary }}>
                   Total Amount
@@ -626,29 +675,29 @@ const BookingDetailsModal = ({ booking, onClose }) => {
 
         {/* Footer */}
         <div className="sticky bottom-0 p-4 border-t flex gap-3" style={{ borderColor: colors.backgroundPrimary, backgroundColor: colors.backgroundSecondary }}>
-            {['pending', 'confirmed', 'completed', 'active'].includes(booking.status) && (
-              <button
-                onClick={() => generateBookingPDF(booking)}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-                style={{
-                  backgroundColor: colors.backgroundSecondary,
-                  color: colors.textPrimary,
-                  border: `1px solid ${colors.borderMedium}`
-                }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Receipt
-              </button>
-            )}
+          {['pending', 'confirmed', 'completed', 'active'].includes(booking.status) && (
             <button
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-              style={{ backgroundColor: colors.backgroundTertiary }}
+              onClick={() => generateBookingPDF(booking)}
+              className="flex-1 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+              style={{
+                backgroundColor: colors.backgroundSecondary,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.borderMedium}`
+              }}
             >
-              Close
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Receipt
             </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
+            style={{ backgroundColor: colors.backgroundTertiary }}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

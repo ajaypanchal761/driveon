@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiLock, FiShield, FiEye, FiEyeOff, FiSmartphone, FiGlobe, FiFileText } from 'react-icons/fi';
+import { FiLock, FiEye, FiEyeOff, FiFileText } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
@@ -16,24 +16,6 @@ const PrivacySecurityPage = () => {
     newPassword: ''
   });
   const [updating, setUpdating] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(() => {
-    return localStorage.getItem('biometric_enabled') !== 'false'; // Default true
-  });
-  const [locationAccess, setLocationAccess] = useState(() => {
-    return localStorage.getItem('location_access_enabled') !== 'false'; // Default true
-  });
-
-  const toggleBiometric = () => {
-    const newVal = !biometricEnabled;
-    setBiometricEnabled(newVal);
-    localStorage.setItem('biometric_enabled', newVal.toString());
-  };
-
-  const toggleLocation = () => {
-    const newVal = !locationAccess;
-    setLocationAccess(newVal);
-    localStorage.setItem('location_access_enabled', newVal.toString());
-  };
 
   const handleUpdatePassword = async () => {
     if (!passwords.currentPassword || !passwords.newPassword) {
@@ -54,7 +36,7 @@ const PrivacySecurityPage = () => {
       });
 
       if (response.success) {
-        toast.success(response.message || 'Password updated successfuly');
+        toast.success(response.message || 'Password updated successfully');
         setPasswords({ currentPassword: '', newPassword: '' });
       }
     } catch (error) {
@@ -106,33 +88,11 @@ const PrivacySecurityPage = () => {
           </div>
         </SectionContainer>
 
-        {/* APP SECURITY */}
-        <SectionContainer title="App Security" icon={<FiShield />}>
-          <div className="space-y-1">
-            <ToggleRow
-              label="Biometric Login"
-              description="Use fingerprint or face ID to log in"
-              active={biometricEnabled}
-              onToggle={toggleBiometric}
-              icon={<FiSmartphone />}
-            />
-            <div className="border-t border-gray-50 my-2"></div>
-            <ToggleRow
-              label="Location Access"
-              description="Allow app to access your location"
-              active={locationAccess}
-              onToggle={toggleLocation}
-              icon={<FiGlobe />}
-            />
-          </div>
-        </SectionContainer>
-
         {/* LEGAL */}
         <SectionContainer title="Legal & Compliance" icon={<FiFileText />}>
           <div className="space-y-2">
             <LinkRow label="Privacy Policy" onClick={() => navigate('/employee/privacy-policy')} />
             <LinkRow label="Terms of Service" onClick={() => navigate('/employee/terms-of-service')} />
-            <LinkRow label="Third-Party Licenses" onClick={() => navigate('/employee/licenses')} />
           </div>
         </SectionContainer>
 
@@ -176,31 +136,6 @@ const PasswordInput = ({ label, placeholder, show, onToggle, value, onChange }) 
       >
         {show ? <FiEyeOff size={18} /> : <FiEye size={18} />}
       </button>
-    </div>
-  </div>
-);
-
-const ToggleRow = ({ label, description, active, onToggle, icon }) => (
-  <div className="flex items-center justify-between py-3.5 group">
-    <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 transition-all duration-300 group-hover:bg-blue-50 group-hover:text-[#1C205C]">
-        {icon}
-      </div>
-      <div>
-        <h4 className="font-bold text-[#1C205C] text-sm tracking-tight">{label}</h4>
-        <p className="text-[10px] text-gray-400 font-semibold leading-tight">{description}</p>
-      </div>
-    </div>
-    <div
-      onClick={onToggle}
-      className={`relative w-12 h-7 rounded-full cursor-pointer transition-colors duration-300 flex-shrink-0 ${active ? 'bg-[#1C205C]' : 'bg-gray-200'} hover:opacity-90`}
-    >
-      <motion.div
-        initial={false}
-        animate={{ x: active ? 24 : 4 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="absolute top-1 w-5 h-5 bg-white rounded-full shadow-md"
-      />
     </div>
   </div>
 );

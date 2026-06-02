@@ -24,13 +24,19 @@ export const EmployeeProvider = ({ children }) => {
   });
 
   const [attendanceStatus, setAttendanceStatus] = useState(() => {
-    return localStorage.getItem('emp_attendance_status') || 'Absent';
+    return localStorage.getItem('emp_attendance_status') || '—';
   });
 
   const [attendanceDays, setAttendanceDays] = useState(() => {
     // Dynamic days in current month
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  });
+
+  const [checkedOutToday, setCheckedOutToday] = useState(() => {
+    const savedDate = localStorage.getItem('emp_checked_out_date');
+    const todayStr = new Date().toDateString();
+    return savedDate === todayStr;
   });
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -96,32 +102,127 @@ export const EmployeeProvider = ({ children }) => {
     }
     localStorage.setItem('emp_accumulated_seconds', accumulatedSeconds.toString());
     localStorage.setItem('emp_attendance_status', attendanceStatus);
-  }, [clockedIn, startTime, accumulatedSeconds, attendanceStatus, attendanceDays]);
+    if (checkedOutToday) {
+      localStorage.setItem('emp_checked_out_date', new Date().toDateString());
+    } else {
+      localStorage.removeItem('emp_checked_out_date');
+    }
+  }, [clockedIn, startTime, accumulatedSeconds, attendanceStatus, attendanceDays, checkedOutToday]);
 
-  // Sync attendance to backend when app loads and employee is already clocked in
-  useEffect(() => {
-    const syncAttendanceToBackend = async () => {
-      const staffId = user?._id || user?.id;
-      if (!staffId || !clockedIn || !startTime) return;
-
-      try {
-        const clockInTime = new Date(startTime);
-        const inTime = `${clockInTime.getHours().toString().padStart(2, '0')}:${clockInTime.getMinutes().toString().padStart(2, '0')}`;
-
-        await api.post('/crm/attendance', {
-          staffId,
-          date: new Date().toISOString(),
-          status: attendanceStatus === 'Absent' ? 'Late' : attendanceStatus,
-          inTime,
-        });
-        console.log('✅ Attendance synced to backend on app load');
-      } catch (error) {
-        console.error('❌ Error syncing attendance on load:', error);
+  // Sync attendance to backend when app loads and restore state dynamically
+  const syncTodayAttendanceStatus = async (staffId) => {
+    if (!staffId) return;
+    try {
+      // 1. Fetch current settings first
+      const settingsRes = await api.get('/crm/attendance/settings');
+      let officeEndTimeStr = '06:00 PM';
+      if (settingsRes.data && settingsRes.data.success) {
+        officeEndTimeStr = settingsRes.data.data.officeEndTime || '06:00 PM';
       }
-    };
 
-    syncAttendanceToBackend();
+      // 2. Fetch today's attendance records for this staff
+      const response = await api.get(`/crm/attendance?staffId=${staffId}`);
+      if (response.data && response.data.success) {
+        const records = response.data.data.records || [];
+        const todayStr = new Date().toDateString();
+        
+        // Find if there is a record for today
+        const todayRecord = records.find(r => new Date(r.date).toDateString() === todayStr);
+
+        if (todayRecord) {
+          // User has checked in / has a record today
+          setAttendanceStatus(todayRecord.status);
+          
+          // Sync clockedIn state with database record: if inTime is present and outTime is not, they are clocked in!
+          if (todayRecord.inTime && (!todayRecord.outTime || todayRecord.outTime === '-')) {
+            setClockedIn(true);
+            setCheckedOutToday(false);
+            // Parse inTime and set startTime
+            const [timeStr, modifier] = todayRecord.inTime.split(' ');
+            let [hours, minutes] = timeStr.split(':');
+            let hr = parseInt(hours, 10);
+            const mins = parseInt(minutes, 10);
+            if (modifier === 'PM' && hr < 12) hr += 12;
+            if (modifier === 'AM' && hr === 12) hr = 0;
+            const inDate = new Date();
+            inDate.setHours(hr, mins, 0, 0);
+            setStartTime(inDate.getTime());
+          } else if (todayRecord.inTime && todayRecord.outTime && todayRecord.outTime !== '-') {
+            setClockedIn(false);
+            setCheckedOutToday(true);
+            setStartTime(null);
+          } else {
+            setClockedIn(false);
+            setCheckedOutToday(false);
+            setStartTime(null);
+          }
+        } else {
+          // No record today - check if current time is past office end time
+          const now = new Date();
+          
+          // Parse officeEndTime, e.g. "06:00 PM"
+          const parts = officeEndTimeStr.split(' ');
+          let endHr = 18;
+          let endMin = 0;
+          if (parts.length === 2) {
+            const [timeStr, modifier] = parts;
+            let [hours, minutes] = timeStr.split(':');
+            endHr = parseInt(hours, 10);
+            endMin = parseInt(minutes, 10);
+            if (modifier === 'PM' && endHr < 12) endHr += 12;
+            if (modifier === 'AM' && endHr === 12) endHr = 0;
+          }
+          
+          const shiftEnd = new Date();
+          shiftEnd.setHours(endHr, endMin, 0, 0);
+
+          if (now > shiftEnd) {
+            setAttendanceStatus('Absent');
+          } else {
+            setAttendanceStatus('—'); // Shows black "—" before check-in or end time
+          }
+          
+          setClockedIn(false);
+          setCheckedOutToday(false);
+          setStartTime(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing today attendance status:', error);
+    }
+  };
+
+  useEffect(() => {
+    const staffId = user?._id || user?.id;
+    if (staffId) {
+      syncTodayAttendanceStatus(staffId);
+    }
   }, [user]); // Run when user data becomes available
+
+  // Handle automatic midnight transition and day changes
+  useEffect(() => {
+    let lastCheckedDate = new Date().toDateString();
+    
+    const interval = setInterval(() => {
+      const todayStr = new Date().toDateString();
+      if (todayStr !== lastCheckedDate) {
+        console.log("📅 Day transitioned to a new day. Resetting checkedOutToday.");
+        lastCheckedDate = todayStr;
+        setCheckedOutToday(false);
+        setClockedIn(false);
+        setStartTime(null);
+        setElapsedSeconds(0);
+        
+        // Fetch new day status
+        const staffId = user?._id || user?.id;
+        if (staffId) {
+          syncTodayAttendanceStatus(staffId);
+        }
+      }
+    }, 30000); // Check every 30 seconds for quick transition
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Timer logic
   useEffect(() => {
@@ -142,11 +243,16 @@ export const EmployeeProvider = ({ children }) => {
   }, [clockedIn, startTime]);
 
   const handleClockToggle = async () => {
+    if (checkedOutToday) {
+      console.log("Already checked out today, action disabled");
+      return;
+    }
     const staffId = user?._id || user?.id;
 
     if (clockedIn) {
       // Clock Out
       setClockedIn(false);
+      setCheckedOutToday(true);
       // Add current session time to accumulated total
       const sessionSeconds = elapsedSeconds;
       setAccumulatedSeconds(prev => prev + sessionSeconds);
@@ -178,20 +284,47 @@ export const EmployeeProvider = ({ children }) => {
     } else {
       // Clock In
       setClockedIn(true);
+      setCheckedOutToday(false);
       setStartTime(Date.now());
       setElapsedSeconds(0);
 
       // Determine attendance status
       let newStatus = 'Present';
       const now = new Date();
-      const shiftStart = new Date();
-      shiftStart.setHours(10, 0, 0, 0); // 10:00 AM
 
-      if (now > shiftStart) {
-        newStatus = 'Late';
+      try {
+        const settingsRes = await api.get('/crm/attendance/settings');
+        if (settingsRes.data && settingsRes.data.success) {
+          const { officeStartTime, lateGracePeriod = 15 } = settingsRes.data.data;
+          const parts = officeStartTime.split(' ');
+          if (parts.length === 2) {
+            const [timeStr, modifier] = parts;
+            let [hours, minutes] = timeStr.split(':');
+            let hr = parseInt(hours, 10);
+            const mins = parseInt(minutes, 10);
+
+            if (modifier === 'PM' && hr < 12) hr += 12;
+            if (modifier === 'AM' && hr === 12) hr = 0;
+
+            const shiftStart = new Date();
+            shiftStart.setHours(hr, mins, 0, 0);
+
+            const graceThreshold = new Date(shiftStart.getTime() + (Number(lateGracePeriod) || 0) * 60000);
+            if (now > graceThreshold) {
+              newStatus = 'Late';
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings for late detection, falling back to 10:00 AM:", err);
+        const shiftStart = new Date();
+        shiftStart.setHours(10, 0, 0, 0); // 10:00 AM
+        if (now > shiftStart) {
+          newStatus = 'Late';
+        }
       }
 
-      if (attendanceStatus === 'Absent') {
+      if (attendanceStatus === 'Absent' || attendanceStatus === '—') {
         setAttendanceStatus(newStatus);
       }
 
@@ -236,6 +369,7 @@ export const EmployeeProvider = ({ children }) => {
       attendanceStatus,
       attendanceDays,
       unreadCount,
+      checkedOutToday,
       setUnreadCount,
       fetchUnreadCount,
       handleClockToggle,

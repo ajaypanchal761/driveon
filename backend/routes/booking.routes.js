@@ -5,8 +5,11 @@ import {
   getBookingById,
   updateBookingStatus,
   startTrip,
+  pickupCustomer,
+  startOngoing,
   endTrip,
   updateBookingLocation,
+  getDriverAssignedBookings,
 } from '../controllers/booking.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
@@ -21,6 +24,9 @@ router.post('/', createBooking);
 // Get user bookings
 router.get('/', getUserBookings);
 
+// Get bookings assigned to current driver
+router.get('/driver/assigned', getDriverAssignedBookings);
+
 // Get booking by ID
 router.get('/:id', getBookingById);
 
@@ -29,6 +35,12 @@ router.patch('/:id/status', updateBookingStatus);
 
 // Start trip
 router.post('/:id/start', startTrip);
+
+// Pickup customer
+router.post('/:id/pickup', pickupCustomer);
+
+// Start ongoing trip
+router.post('/:id/ongoing', startOngoing);
 
 // End trip
 router.post('/:id/end', endTrip);

@@ -78,7 +78,7 @@ const OnlineCarsPage = () => {
 
     return validBookings.map((b) => {
       let mappedStatus = "completed";
-      if (b.tripStatus === "in_progress" || b.status === "active") {
+      if (b.tripStatus === "in_progress" || ["started", "picked_up", "ongoing"].includes(b.tripStatus) || b.status === "active") {
         mappedStatus = "running";
       } else if (b.status === "confirmed" && b.tripStatus === "not_started") {
         mappedStatus = "booked";

@@ -311,7 +311,7 @@ const DashboardPage = () => {
               { label: 'Staff Directory', icon: <MdPeople />, color: 'bg-purple-50 text-purple-600', path: '/crm/staff/directory' },
               { label: 'Vendors', icon: <MdArrowForward />, color: 'bg-orange-50 text-orange-600', path: '/crm/vendors/all' },
               { label: 'Performance', icon: <MdShowChart />, color: 'bg-emerald-50 text-emerald-600', path: '/crm/staff/performance' },
-              { label: 'Staff Tasks', icon: <MdArrowForward />, color: 'bg-blue-50 text-blue-600', path: '/crm/staff/tasks' },
+              { label: 'Attendance', icon: <MdEventAvailable />, color: 'bg-blue-50 text-blue-600', path: '/crm/staff/attendance' },
               { label: 'Garages', icon: <MdBuild />, color: 'bg-rose-50 text-rose-600', path: '/crm/garage/all' },
             ].map((item, idx) => (
               <button

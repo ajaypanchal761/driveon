@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MdMenu, MdNotifications, MdSearch, MdDoneAll, MdInfo, MdWarning, MdError, MdCheckCircle } from 'react-icons/md';
+import { MdMenu, MdNotifications, MdDoneAll, MdInfo, MdWarning, MdError, MdCheckCircle } from 'react-icons/md';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { premiumColors } from '../../theme/colors';
 import { notificationService } from '../../services/notification.service';
@@ -120,16 +120,6 @@ const Topbar = ({ toggleSidebar }) => {
             <span className="hidden sm:inline">CRM Panel</span>
             <span className="sm:hidden">CRM</span>
           </button>
-        </div>
-
-        {/* Search Bar - Hidden on small mobile */}
-        <div className="hidden lg:flex items-center bg-gray-100 rounded-lg px-3 py-2 w-48 xl:w-64 focus-within:ring-2 ring-blue-500/20 transition-all">
-          <MdSearch className="text-gray-500 text-xl" />
-          <input
-            type="text"
-            placeholder="Search bookings, cars, staff..."
-            className="bg-transparent border-none outline-none text-sm ml-2 w-full text-gray-700 placeholder-gray-400"
-          />
         </div>
       </div>
 
