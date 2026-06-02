@@ -17,6 +17,10 @@ import {
   getAllReferrals,
   updateReferralPoints,
   sendNotification,
+  getSubAdmins,
+  createSubAdmin,
+  updateSubAdmin,
+  deleteSubAdmin,
 } from '../controllers/admin.controller.js';
 import {
   getAllCars,
@@ -426,6 +430,14 @@ router.post('/send-notification', sendNotification);
 router.get('/policies', authenticateAdmin, getPolicies);
 router.get('/policies/:key', authenticateAdmin, getPolicyByKey);
 router.put('/policies/:key', authenticateAdmin, updatePolicy);
+
+// ============================================
+// SUB-ADMIN MANAGEMENT ROUTES - PROTECTED
+// ============================================
+router.get('/subadmins', authenticateAdmin, getSubAdmins);
+router.post('/subadmins', authenticateAdmin, createSubAdmin);
+router.put('/subadmins/:id', authenticateAdmin, updateSubAdmin);
+router.delete('/subadmins/:id', authenticateAdmin, deleteSubAdmin);
 
 export default router;
 

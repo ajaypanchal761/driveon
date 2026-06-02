@@ -340,26 +340,28 @@ const AdminProfilePage = () => {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <div className="p-4">
-              <h3 className="font-semibold mb-3" style={{ color: colors.textPrimary }}>
-                Account Settings
-              </h3>
-              <button
-                onClick={() => navigate('/admin/settings')}
-                className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-between"
-              >
-                <span className="text-sm" style={{ color: colors.textSecondary }}>
-                  System Settings
-                </span>
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </Card>
-        </div>
+        {(displayUser.role === 'admin' || displayUser.role === 'super_admin') && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <div className="p-4">
+                <h3 className="font-semibold mb-3" style={{ color: colors.textPrimary }}>
+                  Account Settings
+                </h3>
+                <button
+                  onClick={() => navigate('/admin/sub-admins')}
+                  className="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-between"
+                >
+                  <span className="text-sm" style={{ color: colors.textSecondary }}>
+                    Sub-Admin Management
+                  </span>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

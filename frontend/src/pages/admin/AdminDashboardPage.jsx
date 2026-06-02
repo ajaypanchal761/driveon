@@ -64,6 +64,7 @@ const AdminDashboardPage = () => {
     revenueTrend: [],
     bookingTrends: [],
     userGrowth: [],
+    topCars: [],
   });
 
   // Listen for notifications
@@ -114,6 +115,7 @@ const AdminDashboardPage = () => {
             pendingKYC: statsResponse.data.pendingKYC || [],
             recentPayments: statsResponse.data.recentPayments || [],
             bookingTrends: statsResponse.data.bookingTrends || { monthly: [], yearly: [] },
+            topCars: statsResponse.data.topCars || [],
           }));
         } else {
           setDashboardData(prev => ({ ...prev, loading: false }));
@@ -127,11 +129,19 @@ const AdminDashboardPage = () => {
     fetchDashboardData();
   }, [selectedYear]);
 
+  // Helper to render value or skeleton
+  const renderStatValue = (val, width = 'w-12') => {
+    if (dashboardData.loading) {
+      return <span className={`animate-pulse bg-gray-200 h-6 ${width} rounded inline-block align-middle`}></span>;
+    }
+    return val;
+  };
+
   // Overview Statistics Cards
   const statsCards = [
     {
       title: 'Total Users',
-      value: dashboardData.stats.totalUsers.toLocaleString(),
+      value: renderStatValue(dashboardData.stats.totalUsers.toLocaleString(), 'w-12'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -144,7 +154,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Total Cars',
-      value: dashboardData.stats.totalCars.toLocaleString(),
+      value: renderStatValue(dashboardData.stats.totalCars.toLocaleString(), 'w-12'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -158,7 +168,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Total Bookings',
-      value: dashboardData.stats.totalBookings.toString(),
+      value: renderStatValue(dashboardData.stats.totalBookings.toString(), 'w-10'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -169,10 +179,9 @@ const AdminDashboardPage = () => {
       changeType: 'neutral',
       onClick: () => navigate('/admin/bookings'),
     },
-
     {
       title: "Today's Revenue",
-      value: formatCurrency(dashboardData.stats.todayRevenue),
+      value: renderStatValue(formatCurrency(dashboardData.stats.todayRevenue), 'w-16'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -185,7 +194,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Active Trips',
-      value: dashboardData.stats.activeTrips.toString(),
+      value: renderStatValue(dashboardData.stats.activeTrips.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -199,7 +208,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Total Outward Cars',
-      value: dashboardData.stats.totalOutwardCars.toString(),
+      value: renderStatValue(dashboardData.stats.totalOutwardCars.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -212,7 +221,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Pending Bookings',
-      value: dashboardData.stats.pendingBookings.toString(),
+      value: renderStatValue(dashboardData.stats.pendingBookings.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -225,7 +234,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Total Inward Bookings',
-      value: dashboardData.stats.totalInwardBookings.toString(),
+      value: renderStatValue(dashboardData.stats.totalInwardBookings.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -238,7 +247,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Total Outward Bookings',
-      value: dashboardData.stats.totalOutwardBookings.toString(),
+      value: renderStatValue(dashboardData.stats.totalOutwardBookings.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -251,7 +260,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Active Offers',
-      value: dashboardData.stats.activeOffers.toString(),
+      value: renderStatValue(dashboardData.stats.activeOffers.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -264,7 +273,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Active Add-on Services',
-      value: dashboardData.stats.totalAddonServices.toString(),
+      value: renderStatValue(dashboardData.stats.totalAddonServices.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -278,7 +287,7 @@ const AdminDashboardPage = () => {
     },
     {
       title: 'Active Coupons',
-      value: dashboardData.stats.activeCoupons.toString(),
+      value: renderStatValue(dashboardData.stats.activeCoupons.toString(), 'w-8'),
       icon: (
         <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -290,8 +299,6 @@ const AdminDashboardPage = () => {
       onClick: () => navigate('/admin/coupons'),
     },
   ];
-
-
 
   const getStatusColor = (status) => {
     const statusColors = {
@@ -306,23 +313,6 @@ const AdminDashboardPage = () => {
     };
     return statusColors[status] || colors.textSecondary;
   };
-
-  if (dashboardData.loading) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: colors.backgroundPrimary }}
-      >
-        <div className="text-center">
-          <div
-            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-            style={{ borderBottomColor: colors.backgroundTertiary }}
-          ></div>
-          <p style={{ color: colors.textSecondary }}>Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -380,127 +370,210 @@ const AdminDashboardPage = () => {
           ))}
         </div>
 
-        {/* Booking Trends Chart */}
-        <Card className="p-4 md:p-6 mb-6 md:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div>
-              <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
-                Booking Trends & Analytics
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Real-time booking and reservation charts derived from database bookings.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Month/Year View Toggle */}
-              <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
-                <button
-                  onClick={() => setChartView('monthly')}
-                  className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    chartView === 'monthly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                  style={chartView === 'monthly' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setChartView('yearly')}
-                  className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    chartView === 'yearly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                  style={chartView === 'yearly' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  Yearly
-                </button>
+        {/* Booking Trends & Top Cars Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 md:mb-8">
+          {/* Left Column: Booking Trends Chart */}
+          <Card className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div>
+                <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
+                  Booking Trends & Analytics
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Real-time booking and reservation charts derived from database bookings.
+                </p>
               </div>
 
-              {/* Year Selector (Only active in Monthly View) */}
-              {chartView === 'monthly' && (
+              <div className="flex items-center gap-3">
+                {/* Month/Year View Toggle */}
                 <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
-                  {[2024, 2025, 2026].map((yr) => (
-                    <button
-                      key={yr}
-                      onClick={() => setSelectedYear(yr)}
-                      className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        selectedYear === yr ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                      style={selectedYear === yr ? { backgroundColor: colors.backgroundTertiary } : {}}
-                    >
-                      {yr}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setChartView('monthly')}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      chartView === 'monthly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    style={chartView === 'monthly' ? { backgroundColor: colors.backgroundTertiary } : {}}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setChartView('yearly')}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      chartView === 'yearly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    style={chartView === 'yearly' ? { backgroundColor: colors.backgroundTertiary } : {}}
+                  >
+                    Yearly
+                  </button>
                 </div>
+
+                {/* Year Selector (Only active in Monthly View) */}
+                {chartView === 'monthly' && (
+                  <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
+                    {[2024, 2025, 2026].map((yr) => (
+                      <button
+                        key={yr}
+                        onClick={() => setSelectedYear(yr)}
+                        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          selectedYear === yr ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        style={selectedYear === yr ? { backgroundColor: colors.backgroundTertiary } : {}}
+                      >
+                        {yr}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ height: '350px', width: '100%' }}>
+              {dashboardData.loading ? (
+                <div className="h-full w-full bg-gray-50 animate-pulse rounded-2xl flex items-center justify-center">
+                  <span className="text-sm font-semibold text-gray-400">Loading booking trends...</span>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartView === 'monthly' ? (
+                    <AreaChart
+                      data={dashboardData.bookingTrends?.monthly || []}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
+                      <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={36} iconType="circle" />
+                      <Area
+                        name="Bookings"
+                        type="monotone"
+                        dataKey="bookings"
+                        stroke={colors.backgroundTertiary || '#7C3AED'}
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#colorBookings)"
+                      />
+                    </AreaChart>
+                  ) : (
+                    <BarChart
+                      data={dashboardData.bookingTrends?.yearly || []}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
+                      <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={36} iconType="circle" />
+                      <Bar
+                        name="Bookings"
+                        dataKey="bookings"
+                        fill={colors.backgroundTertiary || '#7C3AED'}
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={45}
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
               )}
             </div>
-          </div>
+          </Card>
 
-          <div style={{ height: '350px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              {chartView === 'monthly' ? (
-                <AreaChart
-                  data={dashboardData.bookingTrends?.monthly || []}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
-                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Legend verticalAlign="top" height={36} iconType="circle" />
-                  <Area
-                    name="Bookings"
-                    type="monotone"
-                    dataKey="bookings"
-                    stroke={colors.backgroundTertiary || '#7C3AED'}
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorBookings)"
-                  />
-                </AreaChart>
-              ) : (
-                <BarChart
-                  data={dashboardData.bookingTrends?.yearly || []}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
-                  <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Legend verticalAlign="top" height={36} iconType="circle" />
-                  <Bar
-                    name="Bookings"
-                    dataKey="bookings"
-                    fill={colors.backgroundTertiary || '#7C3AED'}
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={45}
-                  />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </Card>
+          {/* Right Column: Top 5 Cars by Revenue */}
+          <Card className="p-4 md:p-6 flex flex-col justify-between">
+            <div>
+              <div className="mb-6">
+                <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
+                  Top Revenue Cars
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Top 5 cars generating the highest booking revenue.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {dashboardData.loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                      <div key={idx} className="h-12 bg-gray-50 rounded animate-pulse w-full"></div>
+                    ))}
+                  </div>
+                ) : dashboardData.topCars && dashboardData.topCars.length > 0 ? (
+                  dashboardData.topCars.map((car, index) => (
+                    <div key={index} className="flex flex-col gap-1.5 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                      <div className="flex items-center justify-between gap-4">
+                        {/* Car Details */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Rank Circle Badge */}
+                          <div 
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                            style={{
+                              backgroundColor: index === 0 ? '#FEF3C7' : index === 1 ? '#F3F4F6' : index === 2 ? '#FFEDD5' : '#F3F4F6',
+                              color: index === 0 ? '#D97706' : index === 1 ? '#4B5563' : index === 2 ? '#EA580C' : '#9CA3AF',
+                            }}
+                          >
+                            #{index + 1}
+                          </div>
+
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-semibold truncate" style={{ color: colors.textPrimary }}>
+                              {car.name || 'Unknown Car'}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
+                                {car.registrationNumber || 'N/A'}
+                              </span>
+                              <span 
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase"
+                                style={{
+                                  backgroundColor: car.source === 'outward' ? '#DBEAFE' : '#E8F5E9',
+                                  color: car.source === 'outward' ? '#1D4ED8' : '#1B5E20'
+                                }}
+                              >
+                                {car.source || 'inward'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Revenue Amount */}
+                        <div className="text-right flex-shrink-0">
+                          <span className="text-sm font-bold" style={{ color: colors.success }}>
+                            ₹{(car.revenue || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-64 flex items-center justify-center">
+                    <p className="text-sm" style={{ color: colors.textSecondary }}>No revenue data available yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* Recent Activities Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -517,7 +590,13 @@ const AdminDashboardPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {dashboardData.recentBookings.length > 0 ? (
+              {dashboardData.loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((idx) => (
+                    <div key={idx} className="h-16 bg-gray-50 rounded animate-pulse w-full"></div>
+                  ))}
+                </div>
+              ) : dashboardData.recentBookings.length > 0 ? (
                 dashboardData.recentBookings.slice(0, 5).map((booking) => (
                   <div
                     key={booking.id}
@@ -567,7 +646,13 @@ const AdminDashboardPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {dashboardData.recentPayments.length > 0 ? (
+              {dashboardData.loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((idx) => (
+                    <div key={idx} className="h-16 bg-gray-50 rounded animate-pulse w-full"></div>
+                  ))}
+                </div>
+              ) : dashboardData.recentPayments.length > 0 ? (
                 dashboardData.recentPayments.map((payment) => (
                   <div
                     key={payment.id}

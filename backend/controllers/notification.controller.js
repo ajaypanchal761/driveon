@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Notification from '../models/Notification.js';
 import { sendStaffPushNotification, sendPushNotification } from '../services/firebase.service.js';
 
@@ -14,7 +15,7 @@ export const getMyNotifications = async (req, res) => {
         let recipientModel = 'Staff';
         if (userRole === 'user') {
             recipientModel = 'User';
-        } else if (userRole === 'admin' || userRole === 'super_admin') {
+        } else if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'subadmin') {
             recipientModel = 'Admin';
         }
 
@@ -185,5 +186,62 @@ export const createNotification = async ({
         console.error('Create notification error:', error);
         // We typically don't throw here to prevent blocking main flow (e.g. Enquiry creation)
         return null;
+    }
+};
+
+/**
+ * @desc    Create Notification for all active Admins/Subadmins (Internal Helper)
+ * @param   {Object} params
+ */
+export const createAdminNotification = async ({
+    title,
+    message,
+    type = 'info',
+    relatedId = null,
+    relatedModel = null,
+    sendPush = true
+}) => {
+    try {
+        const Admin = mongoose.model('Admin');
+        const admins = await Admin.find({ isActive: true });
+        
+        const notifications = [];
+        for (const admin of admins) {
+            // 1. Save to DB
+            const notification = await Notification.create({
+                recipient: admin._id,
+                recipientModel: 'Admin',
+                title,
+                message,
+                type,
+                relatedId,
+                relatedModel,
+                isSent: sendPush
+            });
+            notifications.push(notification);
+
+            // 2. Send Push Notification if FCM token is registered
+            if (sendPush) {
+                const token = admin.fcmToken || admin.fcmTokenMobile;
+                if (token) {
+                    const payload = {
+                        notification: {
+                            title,
+                            body: message
+                        },
+                        data: {
+                            type,
+                            id: relatedId ? relatedId.toString() : '',
+                            click_action: 'FLUTTER_NOTIFICATION_CLICK'
+                        }
+                    };
+                    await sendPushNotification(token, payload, !!admin.fcmTokenMobile);
+                }
+            }
+        }
+        return notifications;
+    } catch (error) {
+        console.error('Create admin notification error:', error);
+        return [];
     }
 };

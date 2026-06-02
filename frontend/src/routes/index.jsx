@@ -136,6 +136,9 @@ const AdminSettingsPage = lazy(() =>
 const AdminProfilePage = lazy(() =>
   import("../pages/admin/profile/AdminProfilePage")
 );
+const SubAdminsPage = lazy(() =>
+  import("../pages/admin/profile/SubAdminsPage")
+);
 const AdminSupportPage = lazy(() =>
   import("../pages/admin/support/AdminSupportPage")
 );
@@ -741,6 +744,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/profile",
             element: <AdminProfilePage />,
+          },
+          {
+            path: "/admin/sub-admins",
+            element: <SubAdminsPage />,
           },
           {
             path: "/admin/policies/:policyKey",

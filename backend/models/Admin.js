@@ -31,26 +31,12 @@ const adminSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'super_admin'],
+      enum: ['admin', 'super_admin', 'subadmin'],
       default: 'admin',
     },
     permissions: {
       type: [String],
       default: [],
-      enum: [
-        'users.manage',
-        'users.view',
-        'cars.manage',
-        'cars.view',
-        'bookings.manage',
-        'bookings.view',
-        'payments.manage',
-        'payments.view',
-        'kyc.manage',
-        'kyc.view',
-        'reports.view',
-        'settings.manage',
-      ],
     },
     isActive: {
       type: Boolean,

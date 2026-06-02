@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { colors } from '../../../module/theme/colors';
+import { useAdminAuth } from '../../../context/AdminContext';
 
 /**
  * Admin Sidebar Component
@@ -10,6 +11,7 @@ import { colors } from '../../../module/theme/colors';
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { adminUser } = useAdminAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Menu items based on ADMIN_PANEL_PLAN.md
@@ -251,6 +253,13 @@ const AdminSidebar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  const filteredMenuItems = adminUser?.role === 'subadmin'
+    ? menuItems.filter(item => {
+        const key = `admin:${item.id}`;
+        return adminUser.permissions?.includes(key);
+      })
+    : menuItems;
+
   return (
     <>
       {/* Mobile Menu Button */}
@@ -295,7 +304,7 @@ const AdminSidebar = () => {
         {/* Navigation Menu */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 min-h-0">
           <div className="space-y-1">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const active = isActive(item.path);
               return (
                 <button

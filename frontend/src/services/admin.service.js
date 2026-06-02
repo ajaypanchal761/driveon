@@ -780,6 +780,66 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Get All Sub-Admins
+   * @returns {Promise}
+   */
+  getSubAdmins: async () => {
+    try {
+      const response = await api.get('/admin/subadmins');
+      return response.data;
+    } catch (error) {
+      console.error('Get subadmins error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create Sub-Admin
+   * @param {Object} data - Subadmin data (name, email, phone, password, permissions)
+   * @returns {Promise}
+   */
+  createSubAdmin: async (data) => {
+    try {
+      const response = await api.post('/admin/subadmins', data);
+      return response.data;
+    } catch (error) {
+      console.error('Create subadmin error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update Sub-Admin
+   * @param {String} id - Subadmin ID
+   * @param {Object} data - Updated fields (name, email, phone, password, permissions, isActive)
+   * @returns {Promise}
+   */
+  updateSubAdmin: async (id, data) => {
+    try {
+      const response = await api.put(`/admin/subadmins/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Update subadmin error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete Sub-Admin
+   * @param {String} id - Subadmin ID
+   * @returns {Promise}
+   */
+  deleteSubAdmin: async (id) => {
+    try {
+      const response = await api.delete(`/admin/subadmins/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete subadmin error:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;

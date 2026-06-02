@@ -19,9 +19,11 @@ import {
 } from 'react-icons/md';
 import { premiumColors } from '../../theme/colors';
 import { rgba } from 'polished';
+import { useAdminAuth } from '../../context/AdminContext';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
+  const { adminUser } = useAdminAuth();
   const [expandedMenus, setExpandedMenus] = useState(['Enquiries', 'Staff Operations', 'Garage', 'Vendors']); // Default expand all dropdown submenus
 
   const toggleSubmenu = (name) => {
@@ -114,6 +116,54 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     },
   ];
 
+  const filterCRMMenuItems = (items, user) => {
+    if (!user || user.role !== 'subadmin') return items;
+    const permissions = user.permissions || [];
+
+    return items
+      .map(item => {
+        if (item.subItems) {
+          const filteredSub = item.subItems.filter(sub => {
+            const keyMap = {
+              '/crm/enquiries/all': 'crm:enquiries-all',
+              '/crm/enquiries/new': 'crm:enquiries-new',
+              '/crm/enquiries/in-progress': 'crm:enquiries-in-progress',
+              '/crm/enquiries/converted': 'crm:enquiries-converted',
+              '/crm/enquiries/closed': 'crm:enquiries-closed',
+              '/crm/staff/directory': 'crm:staff-directory',
+              '/crm/staff/roles': 'crm:staff-roles',
+              '/crm/staff/attendance': 'crm:staff-attendance',
+              '/crm/staff/attendance-settings': 'crm:staff-attendance-settings',
+              '/crm/staff/salary': 'crm:staff-salary',
+              '/crm/garage/all': 'crm:garage-all',
+              '/crm/garage/active': 'crm:garage-active',
+              '/crm/vendors/all': 'crm:vendors-all',
+              '/crm/policies/privacy': 'crm:policies-privacy',
+              '/crm/policies/terms': 'crm:policies-terms',
+              '/crm/expenses/track': 'crm:expenses-track',
+              '/crm/expenses/categories': 'crm:expenses-categories',
+            };
+            const key = keyMap[sub.path];
+            return key ? permissions.includes(key) : false;
+          });
+
+          if (filteredSub.length === 0) return null;
+          return { ...item, subItems: filteredSub };
+        } else {
+          const keyMap = {
+            '/crm/dashboard': 'crm:dashboard',
+            '/crm/staff/driver-record': 'crm:driver-record',
+          };
+          const key = keyMap[item.path || item.id];
+          const hasAccess = key ? permissions.includes(key) : false;
+          return hasAccess ? item : null;
+        }
+      })
+      .filter(Boolean);
+  };
+
+  const filteredMenuItems = filterCRMMenuItems(menuItems, adminUser);
+
   return (
     <aside
       className={`fixed top-0 left-0 z-30 h-screen transition-all duration-300 transform bg-white border-r border-gray-200
@@ -130,7 +180,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 scrollbar-hide">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             // Check if any child is active to highlight parent
             const isChildActive = item.subItems?.some(sub => location.pathname === sub.path);
             const isExpanded = expandedMenus.includes(item.name);

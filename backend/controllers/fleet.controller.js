@@ -7,6 +7,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { uploadImage, isConfigured } from '../services/cloudinary.service.js';
 import quickekycService from '../services/quickekyc.service.js';
+import { createAdminNotification } from './notification.controller.js';
 
 // Initialize Razorpay instance if keys are available
 const getRazorpayInstance = () => {
@@ -445,6 +446,19 @@ export const createOutwardBooking = async (req, res) => {
             panVerified: bookingData.panVerified || false,
             status: bookingData.status || 'active'
         });
+
+        // Notify admins about new outward booking
+        try {
+            await createAdminNotification({
+                title: 'New Outward Booking',
+                message: `A new outward booking (${newBooking.originalBookingId || newBooking._id}) has been created for ${newBooking.customerName || 'Customer'} on car ${newBooking.carName}.`,
+                type: 'info',
+                relatedId: newBooking._id,
+                relatedModel: 'Booking'
+            });
+        } catch (err) {
+            console.error('Error sending admin notification for new outward booking:', err);
+        }
 
         // Format backend to frontend expected structure
         const formattedSaved = {

@@ -1,7 +1,10 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import { colors } from '../../../module/theme/colors';
+import { useAdminAuth } from '../../../context/AdminContext';
+import { checkPathPermission } from '../../../utils/permissions';
+import AccessDenied from '../../common/AccessDenied';
 
 /**
  * Admin Layout Component
@@ -11,6 +14,9 @@ import { colors } from '../../../module/theme/colors';
  * Updated to use new module theme
  */
 const AdminLayout = () => {
+  const location = useLocation();
+  const { adminUser } = useAdminAuth();
+  const hasAccess = checkPathPermission(location.pathname, adminUser?.role, adminUser?.permissions);
   return (
     <>
       {/* Global Styles for Admin Panel Select/Dropdown Elements */}
@@ -122,7 +128,7 @@ div.admin - panel select: active,
           {/* Page Content */}
           <main className="pt-16 min-h-screen overflow-x-hidden max-w-full">
             <div className="w-full max-w-full overflow-x-hidden">
-              <Outlet />
+              {hasAccess ? <Outlet /> : <AccessDenied />}
             </div>
           </main>
         </div>

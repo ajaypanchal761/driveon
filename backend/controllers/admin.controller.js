@@ -8,6 +8,7 @@ import OutwardBooking from '../models/OutwardBooking.js';
 import Offer from '../models/Offer.js';
 import Coupon from '../models/Coupon.js';
 import AddOnServices from '../models/AddOnServices.js';
+import mongoose from 'mongoose';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 import { sendPushNotification, sendPushToToken } from '../services/firebase.service.js';
 
@@ -646,66 +647,203 @@ export const getDashboardStats = async (req, res) => {
   try {
     const selectedYear = parseInt(req.query.year) || new Date().getFullYear();
 
-    // Get total users count
-    const totalUsers = await User.countDocuments();
-
-    // Get total cars count
-    const totalCars = await Car.countDocuments();
-
-    // Get active cars count
-    const activeCars = await Car.countDocuments({ status: 'active' });
-
-    // Get pending KYC count (users with unverified email or phone)
-    let pendingKYC = await User.countDocuments({
-      isKYCVerified: false,
-      $or: [
-        { 'kycDetails.aadhaar.number': { $exists: true, $ne: '' } },
-        { 'kycDetails.pan.number': { $exists: true, $ne: '' } },
-        { 'kycDetails.dl.number': { $exists: true, $ne: '' } },
-        { rcDocument: { $exists: true, $ne: '' } }
-      ]
-    });
-
-    if (pendingKYC === 0) {
-      // Fallback to original count: users with unverified email or phone or isKYCVerified false
-      pendingKYC = await User.countDocuments({
-        $or: [
-          { isPhoneVerified: false },
-          { isEmailVerified: false },
-          { isKYCVerified: false }
-        ]
-      });
-    }
-
-    // Get active bookings count (bookings with status 'confirmed' or 'active')
-    const activeBookings = await Booking.countDocuments({
-      status: { $in: ['confirmed', 'active'] }
-    });
-
-    // Get total bookings count (all bookings that are not unpaid, excluding unpaid cancelled checkout attempts)
-    const totalBookings = await Booking.countDocuments({
-      status: { $ne: 'unpaid' },
-      $or: [
-        { status: { $ne: 'cancelled' } },
-        { paidAmount: { $gt: 0 } },
-        { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
-      ]
-    });
-
-    // Get today's revenue (sum of successful payments today)
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
-    // Sum successful transaction amounts that took place today
-    let todayRevenue = 0;
-    const bookingsWithTodayTxns = await Booking.find({
-      'transactions.status': 'success',
-      'transactions.paymentDate': { $gte: startOfToday, $lte: endOfToday }
-    });
+    const [
+      totalUsers,
+      totalCars,
+      activeCars,
+      pendingKYCCountRaw,
+      pendingKYCCountFallback,
+      activeBookings,
+      totalBookings,
+      bookingsWithTodayTxns,
+      bookingsTodayFallback,
+      activeTrips,
+      totalActiveUsers,
+      totalPendingCars,
+      totalSuspendedCars,
+      totalOutwardCars,
+      pendingBookings,
+      totalInwardBookings,
+      totalOutwardBookings,
+      activeOffers,
+      activeCoupons,
+      totalAddonServices,
+      recentBookingsList,
+      pendingKYCListRaw,
+      pendingKYCListFallback,
+      bookingsWithTxns,
+      bookingsWithPaidAmountFallback,
+      monthlyBookings,
+      yearlyBookings,
+      standardRevenue,
+      outwardRevenue,
+      dbCars,
+      outwardCars
+    ] = await Promise.all([
+      User.countDocuments(),
+      Car.countDocuments(),
+      Car.countDocuments({ status: 'active' }),
+      User.countDocuments({
+        isKYCVerified: false,
+        $or: [
+          { 'kycDetails.aadhaar.number': { $exists: true, $ne: '' } },
+          { 'kycDetails.pan.number': { $exists: true, $ne: '' } },
+          { 'kycDetails.dl.number': { $exists: true, $ne: '' } },
+          { rcDocument: { $exists: true, $ne: '' } }
+        ]
+      }),
+      User.countDocuments({
+        $or: [
+          { isPhoneVerified: false },
+          { isEmailVerified: false },
+          { isKYCVerified: false }
+        ]
+      }),
+      Booking.countDocuments({
+        status: { $in: ['confirmed', 'active'] }
+      }),
+      Booking.countDocuments({
+        status: { $ne: 'unpaid' },
+        $or: [
+          { status: { $ne: 'cancelled' } },
+          { paidAmount: { $gt: 0 } },
+          { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+        ]
+      }),
+      Booking.find({
+        'transactions.status': 'success',
+        'transactions.paymentDate': { $gte: startOfToday, $lte: endOfToday }
+      }),
+      Booking.find({
+        createdAt: { $gte: startOfToday, $lte: endOfToday },
+        status: { $ne: 'unpaid' },
+        paidAmount: { $gt: 0 }
+      }),
+      Booking.countDocuments({
+        $or: [
+          { status: { $in: ['confirmed', 'active'] } },
+          { tripStatus: { $in: ['started', 'in_progress'] } }
+        ]
+      }),
+      User.countDocuments({
+        isActive: true,
+        accountStatus: 'active',
+      }),
+      Car.countDocuments({ status: 'pending' }),
+      Car.countDocuments({ status: 'suspended' }),
+      OutwardCar.countDocuments(),
+      Booking.countDocuments({ status: 'pending' }),
+      OutwardBooking.countDocuments({ carType: 'inward' }),
+      OutwardBooking.countDocuments({ $or: [{ carType: 'outward' }, { carType: { $exists: false } }] }),
+      Offer.countDocuments({ isActive: true }),
+      Coupon.countDocuments({ isActive: true }),
+      AddOnServices.countDocuments(),
+      Booking.find({
+        status: { $ne: 'unpaid' },
+        $or: [
+          { status: { $ne: 'cancelled' } },
+          { paidAmount: { $gt: 0 } },
+          { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+        ]
+      })
+        .populate('user', 'name phone email')
+        .populate('car', 'brand model year')
+        .sort({ createdAt: -1 })
+        .limit(5),
+      User.find({
+        isKYCVerified: false,
+        $or: [
+          { 'kycDetails.aadhaar.number': { $exists: true, $ne: '' } },
+          { 'kycDetails.pan.number': { $exists: true, $ne: '' } },
+          { 'kycDetails.dl.number': { $exists: true, $ne: '' } },
+          { rcDocument: { $exists: true, $ne: '' } }
+        ]
+      })
+        .sort({ updatedAt: -1 })
+        .limit(5),
+      User.find({ isKYCVerified: false })
+        .sort({ createdAt: -1 })
+        .limit(5),
+      Booking.find({
+        'transactions.status': 'success'
+      })
+        .populate('user', 'name phone email')
+        .sort({ 'transactions.paymentDate': -1 })
+        .limit(10),
+      Booking.find({
+        paidAmount: { $gt: 0 },
+        status: { $ne: 'unpaid' }
+      })
+        .populate('user', 'name phone email')
+        .sort({ createdAt: -1 })
+        .limit(5),
+      Booking.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: new Date(`${selectedYear}-01-01T00:00:00.000Z`),
+              $lte: new Date(`${selectedYear}-12-31T23:59:59.999Z`)
+            },
+            status: { $ne: 'unpaid' }
+          }
+        },
+        {
+          $group: {
+            _id: { $month: '$createdAt' },
+            bookings: { $sum: 1 },
+            revenue: { $sum: '$paidAmount' }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      Booking.aggregate([
+        {
+          $match: {
+            status: { $ne: 'unpaid' }
+          }
+        },
+        {
+          $group: {
+            _id: { $year: '$createdAt' },
+            bookings: { $sum: 1 },
+            revenue: { $sum: '$paidAmount' }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      Booking.aggregate([
+        { $match: { paymentStatus: { $in: ['paid', 'partial'] } } },
+        {
+          $group: {
+            _id: '$car',
+            revenue: { $sum: { $ifNull: ['$paidAmount', 0] } }
+          }
+        }
+      ]),
+      OutwardBooking.aggregate([
+        { $match: { paymentStatus: { $in: ['paid', 'partial'] } } },
+        {
+          $group: {
+            _id: '$carId',
+            revenue: { $sum: { $ifNull: ['$paidAmount', 0] } }
+          }
+        }
+      ]),
+      Car.find({}),
+      mongoose.connection.db.collection('outwardcars').find({}).toArray()
+    ]);
 
+    // 1. Process Pending KYC Count
+    const pendingKYC = pendingKYCCountRaw > 0 ? pendingKYCCountRaw : pendingKYCCountFallback;
+
+    // 2. Process Today's Revenue
+    let todayRevenue = 0;
     bookingsWithTodayTxns.forEach(booking => {
       booking.transactions.forEach(txn => {
         if (txn.status === 'success' && txn.paymentDate >= startOfToday && txn.paymentDate <= endOfToday) {
@@ -714,56 +852,18 @@ export const getDashboardStats = async (req, res) => {
       });
     });
 
-    // Fallback to sum of paidAmount for bookings created today
     if (todayRevenue === 0) {
-      const bookingsToday = await Booking.find({
-        createdAt: { $gte: startOfToday, $lte: endOfToday },
-        status: { $ne: 'unpaid' },
-        paidAmount: { $gt: 0 }
-      });
-      todayRevenue = bookingsToday.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
+      todayRevenue = bookingsTodayFallback.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
     }
 
-    // Get active trips (bookings with status 'active', 'confirmed' or trip status 'started' or 'in_progress')
-    const activeTrips = await Booking.countDocuments({
-      $or: [
-        { status: { $in: ['confirmed', 'active'] } },
-        { tripStatus: { $in: ['started', 'in_progress'] } }
-      ]
-    });
+    // Helper functions for formatting
+    const formatUserId = (id) => {
+      if (!id) return '';
+      const str = id.toString();
+      return str.length > 8 ? `...${str.substring(str.length - 8)}` : str;
+    };
 
-    // Get additional stats
-    const totalActiveUsers = await User.countDocuments({
-      isActive: true,
-      accountStatus: 'active',
-    });
-
-    const totalPendingCars = await Car.countDocuments({ status: 'pending' });
-
-    const totalSuspendedCars = await Car.countDocuments({ status: 'suspended' });
-
-    const totalOutwardCars = await OutwardCar.countDocuments();
-    const pendingBookings = await Booking.countDocuments({ status: 'pending' });
-    const totalInwardBookings = await OutwardBooking.countDocuments({ carType: 'inward' });
-    const totalOutwardBookings = await OutwardBooking.countDocuments({ $or: [{ carType: 'outward' }, { carType: { $exists: false } }] });
-    const activeOffers = await Offer.countDocuments({ isActive: true });
-    const activeCoupons = await Coupon.countDocuments({ isActive: true });
-    const totalAddonServices = await AddOnServices.countDocuments();
-
-    // Fetch Recent Bookings List
-    const recentBookingsList = await Booking.find({
-      status: { $ne: 'unpaid' },
-      $or: [
-        { status: { $ne: 'cancelled' } },
-        { paidAmount: { $gt: 0 } },
-        { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
-      ]
-    })
-      .populate('user', 'name phone email')
-      .populate('car', 'brand model year')
-      .sort({ createdAt: -1 })
-      .limit(5);
-
+    // 3. Process Recent Bookings List
     const recentBookings = recentBookingsList.map(b => ({
       id: b._id,
       userId: b.user ? (b.user.name || formatUserId(b.user._id)) : 'Unknown',
@@ -780,26 +880,8 @@ export const getDashboardStats = async (req, res) => {
       status: b.status === 'confirmed' ? 'confirmed' : b.status === 'active' ? 'active' : b.status
     }));
 
-    // Fetch Pending KYC List
-    const pendingKYCList = await User.find({
-      isKYCVerified: false,
-      $or: [
-        { 'kycDetails.aadhaar.number': { $exists: true, $ne: '' } },
-        { 'kycDetails.pan.number': { $exists: true, $ne: '' } },
-        { 'kycDetails.dl.number': { $exists: true, $ne: '' } },
-        { rcDocument: { $exists: true, $ne: '' } }
-      ]
-    })
-      .sort({ updatedAt: -1 })
-      .limit(5);
-
-    let kycList = pendingKYCList;
-    if (kycList.length === 0) {
-      kycList = await User.find({ isKYCVerified: false })
-        .sort({ createdAt: -1 })
-        .limit(5);
-    }
-
+    // 4. Process Pending KYC List
+    const kycList = pendingKYCListRaw.length > 0 ? pendingKYCListRaw : pendingKYCListFallback;
     const pendingKYCData = kycList.map(u => {
       const docs = [];
       if (u.kycDetails?.aadhaar?.number) docs.push('Aadhaar');
@@ -823,14 +905,7 @@ export const getDashboardStats = async (req, res) => {
       };
     });
 
-    // Fetch Recent Payments List
-    const bookingsWithTxns = await Booking.find({
-      'transactions.status': 'success'
-    })
-      .populate('user', 'name phone email')
-      .sort({ 'transactions.paymentDate': -1 })
-      .limit(10);
-
+    // 5. Process Recent Payments List
     const recentPaymentsList = [];
     bookingsWithTxns.forEach(b => {
       b.transactions.forEach(txn => {
@@ -859,15 +934,7 @@ export const getDashboardStats = async (req, res) => {
     let recentPayments = recentPaymentsList.slice(0, 5);
 
     if (recentPayments.length === 0) {
-      const bookingsWithPaidAmount = await Booking.find({
-        paidAmount: { $gt: 0 },
-        status: { $ne: 'unpaid' }
-      })
-        .populate('user', 'name phone email')
-        .sort({ createdAt: -1 })
-        .limit(5);
-
-      bookingsWithPaidAmount.forEach(b => {
+      bookingsWithPaidAmountFallback.forEach(b => {
         recentPayments.push({
           id: b._id,
           bookingId: b.bookingId || b._id.toString(),
@@ -886,27 +953,7 @@ export const getDashboardStats = async (req, res) => {
       });
     }
 
-    // Fetch Monthly Booking Trends for Selected Year
-    const monthlyBookings = await Booking.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: new Date(`${selectedYear}-01-01T00:00:00.000Z`),
-            $lte: new Date(`${selectedYear}-12-31T23:59:59.999Z`)
-          },
-          status: { $ne: 'unpaid' }
-        }
-      },
-      {
-        $group: {
-          _id: { $month: '$createdAt' },
-          bookings: { $sum: 1 },
-          revenue: { $sum: '$paidAmount' }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
+    // 6. Process Monthly Booking Trends
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const formattedMonthlyData = monthNames.map((name, index) => {
       const monthNum = index + 1;
@@ -918,23 +965,7 @@ export const getDashboardStats = async (req, res) => {
       };
     });
 
-    // Fetch Yearly Booking Trends
-    const yearlyBookings = await Booking.aggregate([
-      {
-        $match: {
-          status: { $ne: 'unpaid' }
-        }
-      },
-      {
-        $group: {
-          _id: { $year: '$createdAt' },
-          bookings: { $sum: 1 },
-          revenue: { $sum: '$paidAmount' }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
+    // 7. Process Yearly Booking Trends
     const recentYears = [2022, 2023, 2024, 2025, 2026];
     const formattedYearlyData = recentYears.map(yr => {
       const dbData = yearlyBookings.find(item => item._id === yr);
@@ -944,6 +975,66 @@ export const getDashboardStats = async (req, res) => {
         revenue: dbData ? dbData.revenue : 0
       };
     });
+
+    // 8. Process Top 5 Cars by Revenue
+    let topCars = [];
+    try {
+      const carMap = {};
+
+      dbCars.forEach(c => {
+        const info = {
+          name: `${c.brand} ${c.model}`,
+          registrationNumber: c.registrationNumber,
+          source: c.source || 'inward',
+          revenue: 0
+        };
+        carMap[c._id.toString()] = info;
+        if (c.outwardCarId) {
+          carMap[c.outwardCarId] = info;
+        }
+      });
+
+      outwardCars.forEach(oc => {
+        const idStr = (oc.originalOutputId || oc._id).toString();
+        if (!carMap[idStr]) {
+          carMap[idStr] = {
+            name: `${oc.brand || ''} ${oc.model || ''}`.trim() || oc.name || 'Outward Car',
+            registrationNumber: oc.carNumber || oc.registrationNumber || '',
+            source: 'outward',
+            revenue: 0
+          };
+        }
+      });
+
+      standardRevenue.forEach(stat => {
+        if (stat._id) {
+          const idStr = stat._id.toString();
+          if (carMap[idStr]) {
+            carMap[idStr].revenue += stat.revenue;
+          }
+        }
+      });
+
+      outwardRevenue.forEach(stat => {
+        if (stat._id) {
+          const idStr = stat._id.toString();
+          if (carMap[idStr]) {
+            carMap[idStr].revenue += stat.revenue;
+          }
+        }
+      });
+
+      const uniqueCarsList = Array.from(new Set(Object.values(carMap)));
+      uniqueCarsList.sort((a, b) => b.revenue - a.revenue);
+      topCars = uniqueCarsList.slice(0, 5).map(c => ({
+        name: c.name,
+        registrationNumber: c.registrationNumber,
+        source: c.source,
+        revenue: c.revenue
+      }));
+    } catch (err) {
+      console.error('Error computing top cars for dashboard:', err);
+    }
 
     res.status(200).json({
       success: true,
@@ -974,7 +1065,8 @@ export const getDashboardStats = async (req, res) => {
         bookingTrends: {
           monthly: formattedMonthlyData,
           yearly: formattedYearlyData
-        }
+        },
+        topCars
       },
     });
   } catch (error) {
@@ -1694,5 +1786,216 @@ export const sendNotification = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get All Sub-Admins
+ * @route   GET /api/admin/subadmins
+ * @access  Private (Admin/SuperAdmin)
+ */
+export const getSubAdmins = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only admin or super_admin can view subadmins'
+      });
+    }
+
+    const subadmins = await Admin.find({ role: 'subadmin' }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        subadmins: subadmins.map(s => ({
+          id: s._id,
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          role: s.role,
+          permissions: s.permissions,
+          isActive: s.isActive,
+          createdAt: s.createdAt,
+          lastLogin: s.lastLogin
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Get subadmins error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching subadmins',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Create a New Sub-Admin
+ * @route   POST /api/admin/subadmins
+ * @access  Private (Admin/SuperAdmin)
+ */
+export const createSubAdmin = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only admin or super_admin can create subadmins'
+      });
+    }
+
+    const { name, email, phone, password, permissions } = req.body;
+
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, phone, and password are required'
+      });
+    }
+
+    const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin with this email already exists'
+      });
+    }
+
+    const subadmin = await Admin.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      password, // hashed by pre-save hook
+      role: 'subadmin',
+      permissions: permissions || [],
+      isActive: true,
+      createdBy: req.user._id
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Subadmin created successfully',
+      data: {
+        subadmin: {
+          id: subadmin._id,
+          name: subadmin.name,
+          email: subadmin.email,
+          phone: subadmin.phone,
+          role: subadmin.role,
+          permissions: subadmin.permissions,
+          isActive: subadmin.isActive,
+          createdAt: subadmin.createdAt
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Create subadmin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error creating subadmin',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Update Sub-Admin
+ * @route   PUT /api/admin/subadmins/:id
+ * @access  Private (Admin/SuperAdmin)
+ */
+export const updateSubAdmin = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only admin or super_admin can update subadmins'
+      });
+    }
+
+    const { id } = req.params;
+    const { name, email, phone, password, permissions, isActive } = req.body;
+
+    const subadmin = await Admin.findById(id);
+    if (!subadmin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subadmin not found'
+      });
+    }
+
+    if (name !== undefined) subadmin.name = name.trim();
+    if (email !== undefined) subadmin.email = email.toLowerCase().trim();
+    if (phone !== undefined) subadmin.phone = phone.trim();
+    if (permissions !== undefined) subadmin.permissions = permissions;
+    if (isActive !== undefined) subadmin.isActive = isActive;
+
+    if (password && password.trim() !== '') {
+      subadmin.password = password; // hashed by pre-save hook
+    }
+
+    await subadmin.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Subadmin updated successfully',
+      data: {
+        subadmin: {
+          id: subadmin._id,
+          name: subadmin.name,
+          email: subadmin.email,
+          phone: subadmin.phone,
+          role: subadmin.role,
+          permissions: subadmin.permissions,
+          isActive: subadmin.isActive
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update subadmin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating subadmin',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Delete Sub-Admin
+ * @route   DELETE /api/admin/subadmins/:id
+ * @access  Private (Admin/SuperAdmin)
+ */
+export const deleteSubAdmin = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only admin or super_admin can delete subadmins'
+      });
+    }
+
+    const { id } = req.params;
+    const subadmin = await Admin.findByIdAndDelete(id);
+
+    if (!subadmin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subadmin not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Subadmin deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete subadmin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error deleting subadmin',
+      error: error.message
+    });
+  }
+};
+
 
 

@@ -18,6 +18,7 @@ import CarExpense from '../models/CarExpense.js';
 import RepairJob from '../models/RepairJob.js';
 import InventoryItem from '../models/InventoryItem.js';
 import Vendor from '../models/Vendor.js';
+import OutwardCar from '../models/OutwardCar.js';
 import VendorTransaction from '../models/VendorTransaction.js';
 import VendorHistory from '../models/VendorHistory.js';
 import Transaction from '../models/Transaction.js';
@@ -28,7 +29,7 @@ import City from '../models/City.js';
 import Setting from '../models/Setting.js';
 import { uploadImage } from '../services/cloudinary.service.js';
 import razorpayService from '../services/razorpay.service.js';
-import { createNotification } from './notification.controller.js';
+import { createNotification, createAdminNotification } from './notification.controller.js';
 import { sendAdminNotification, sendStaffPushNotification } from '../services/firebase.service.js';
 
 /**
@@ -177,12 +178,46 @@ export const updateEnquiry = async (req, res) => {
             });
         }
 
+        const oldStatus = enquiry.status;
         const oldAssignedTo = enquiry.assignedTo ? enquiry.assignedTo.toString() : null;
 
         enquiry = await Enquiry.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
         });
+
+        // Check for conversion status change
+        if (req.body.status === 'Converted' && oldStatus !== 'Converted') {
+            // Notify CRM admins
+            try {
+                await createAdminNotification({
+                    title: 'Enquiry Converted',
+                    message: `Enquiry for ${enquiry.name} has been successfully converted!`,
+                    type: 'success',
+                    relatedId: enquiry._id,
+                    relatedModel: 'Enquiry'
+                });
+            } catch (err) {
+                console.error('Error sending admin notification for converted enquiry:', err);
+            }
+
+            // Also notify the assigned staff member if they are assigned
+            if (enquiry.assignedTo) {
+                try {
+                    await createNotification({
+                        recipient: enquiry.assignedTo,
+                        recipientModel: 'Staff',
+                        title: 'Enquiry Converted',
+                        message: `Enquiry for ${enquiry.name} has been successfully converted!`,
+                        type: 'success',
+                        relatedId: enquiry._id,
+                        relatedModel: 'Enquiry'
+                    });
+                } catch (err) {
+                    console.error('Error sending staff notification for converted enquiry:', err);
+                }
+            }
+        }
 
         // Check for assignment change
         if (req.body.assignedTo && req.body.assignedTo !== oldAssignedTo) {
@@ -582,8 +617,6 @@ export const getUpcomingBookings = async (req, res) => {
 
 /**
  * @desc    Get CRM Dashboard Analytics
- * @route   GET /api/crm/analytics
- * @access  Admin
  */
 export const getCRMAnalytics = async (req, res) => {
     try {
@@ -592,96 +625,105 @@ export const getCRMAnalytics = async (req, res) => {
 
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthString = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
-        // 1. Enquiry Stats
-        const totalEnquiries = await Enquiry.countDocuments();
-        const enquiriesToday = await Enquiry.countDocuments({ createdAt: { $gte: today } });
-        const convertedThisMonth = await Enquiry.countDocuments({
-            status: 'Converted',
-            updatedAt: { $gte: startOfMonth }
-        });
-
-        // Calculate % change (Total vs Yesterday vs Today - let's do a mock trend or last 24h)
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const enquiriesYesterday = await Enquiry.countDocuments({
-            createdAt: { $gte: yesterday, $lt: today }
-        });
-
-        let enquiryTrend = 0;
-        if (enquiriesYesterday > 0) {
-            enquiryTrend = Math.round(((enquiriesToday - enquiriesYesterday) / enquiriesYesterday) * 100);
-        } else if (enquiriesToday > 0) {
-            enquiryTrend = 100;
-        }
-
-        // 2. Active Repairs (In Garage)
-        const activeRepairsCount = await RepairJob.countDocuments({
-            status: { $nin: ['Completed', 'Cancelled'] }
-        });
-
-        // 3. Staff Presence Today
-        const totalStaff = await Staff.countDocuments({ status: { $ne: 'Resigned' } });
-        const presentStaffCount = await Attendance.countDocuments({
-            date: today,
-            status: { $in: ['Present', 'Late'] }
-        });
-
-        // 4. Lead Pipeline (Donut Chart Data)
-        const leadPipeline = await Enquiry.aggregate([
-            { $group: { _id: "$status", value: { $sum: 1 } } },
-            { $project: { name: "$_id", value: 1, _id: 0 } }
-        ]);
-
-        // 5. Enquiry Pulse (Line Chart Data - Last 7 Days)
-        const last7Days = [];
+        // Create the last 7 days date objects
+        const dayDates = [];
+        const last7DaysPromises = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             d.setHours(0, 0, 0, 0);
-
             const nextD = new Date(d);
             nextD.setDate(nextD.getDate() + 1);
 
-            const newCount = await Enquiry.countDocuments({ createdAt: { $gte: d, $lt: nextD } });
-            const convCount = await Enquiry.countDocuments({
-                status: 'Converted',
-                updatedAt: { $gte: d, $lt: nextD }
-            });
-
-            last7Days.push({
-                name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-                new: newCount,
-                converted: convCount
-            });
+            dayDates.push(d);
+            last7DaysPromises.push(
+                Enquiry.countDocuments({ createdAt: { $gte: d, $lt: nextD } }),
+                Enquiry.countDocuments({ status: 'Converted', updatedAt: { $gte: d, $lt: nextD } })
+            );
         }
 
-        // 6. Recent Enquiries (Last 5)
-        const recentEnquiries = await Enquiry.find()
-            .sort({ createdAt: -1 })
-            .limit(5)
-            .lean();
+        const [
+            totalEnquiries,
+            enquiriesConvertedToday,
+            conversionsThisMonth,
+            totalStaff,
+            telecallersCount,
+            driversCount,
+            perTripDriversCount,
+            monthlyDriversCount,
+            accountantHRCount,
+            todayAttendances,
+            leaveStaffCount,
+            salaries,
+            expenses,
+            garagesCount,
+            activeRepairsCount,
+            activeVendors,
+            assignedTripsCount,
+            leadPipelineData,
+            ...last7DaysCounts
+        ] = await Promise.all([
+            Enquiry.countDocuments(),
+            Enquiry.countDocuments({ status: 'Converted', updatedAt: { $gte: today } }),
+            Enquiry.countDocuments({ status: 'Converted', updatedAt: { $gte: startOfMonth } }),
+            Staff.countDocuments({ status: { $ne: 'Resigned' } }),
+            Staff.countDocuments({ role: { $regex: 'telecaller', $options: 'i' }, status: { $ne: 'Resigned' } }),
+            Staff.countDocuments({ role: { $regex: 'driver', $options: 'i' }, status: { $ne: 'Resigned' } }),
+            Staff.countDocuments({ role: { $regex: 'driver', $options: 'i' }, salaryMethod: 'Per Trip', status: { $ne: 'Resigned' } }),
+            Staff.countDocuments({ role: { $regex: 'driver', $options: 'i' }, salaryMethod: 'Monthly', status: { $ne: 'Resigned' } }),
+            Staff.countDocuments({ role: { $regex: 'accountant|hr', $options: 'i' }, status: { $ne: 'Resigned' } }),
+            Attendance.find({ date: today }).populate('staff'),
+            Staff.countDocuments({ status: 'Leave' }),
+            Salary.find({ month: monthString }),
+            Expense.find({ month: monthString }),
+            Garage.countDocuments(),
+            RepairJob.countDocuments({ status: { $nin: ['Completed', 'Cancelled'] } }),
+            Vendor.find({ status: 'Active' }),
+            Booking.countDocuments({ assignedDriver: { $ne: null } }),
+            Enquiry.aggregate([
+                { $group: { _id: "$status", value: { $sum: 1 } } }
+            ]),
+            ...last7DaysPromises
+        ]);
 
-        // Populate car data manually if needed
-        const recentWithCars = await Promise.all(recentEnquiries.map(async (enq) => {
-            let carName = "N/A";
-            if (enq.carInterested) {
-                if (mongoose.Types.ObjectId.isValid(enq.carInterested)) {
-                    const car = await mongoose.model('Car').findById(enq.carInterested).select('brand model').lean();
-                    if (car) carName = `${car.brand} ${car.model}`;
-                } else {
-                    carName = enq.carInterested;
-                }
-            }
-            return {
-                id: enq._id,
-                name: enq.name,
-                action: `Inquired for ${carName}`,
-                time: "Recently", // You can use a timeago lib here or simple diff
-                status: enq.status,
-                type: enq.status === 'New' ? 'New' : enq.status
-            };
+        // Query vendor cars count for active vendors
+        const activeVendorIds = activeVendors.map(v => v._id);
+        const vendorCarsCount = await OutwardCar.countDocuments({ vendorId: { $in: activeVendorIds } });
+
+        // Process Attendance
+        const validAttendances = todayAttendances.filter(a => a.staff && a.staff.status !== 'Resigned');
+        const presentCount = validAttendances.filter(a => ['Present', 'Late'].includes(a.status)).length;
+        const absentCount = validAttendances.filter(a => a.status === 'Absent').length;
+        const lateCount = validAttendances.filter(a => a.status === 'Late').length;
+        const halfDayCount = validAttendances.filter(a => a.status === 'Half Day').length;
+
+        // Process Payroll & Payouts
+        const activePayrollCount = totalStaff; // All non-resigned staff are on payroll
+        const paidMonth = salaries.filter(s => s.status === 'Paid').reduce((sum, s) => sum + (s.netPay || 0), 0);
+        const pendingMonth = salaries.filter(s => s.status !== 'Paid').reduce((sum, s) => sum + (s.netPay || 0), 0);
+
+        // Process Expenses
+        const spentMonth = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+        // Format Lead Pipeline
+        const leadPipeline = leadPipelineData.map(item => ({
+            name: item._id || 'Unknown',
+            value: item.value
         }));
+
+        // Format Enquiry Pulse
+        const enquiryPulse = [];
+        for (let i = 0; i < 7; i++) {
+            const d = dayDates[i];
+            enquiryPulse.push({
+                name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                new: last7DaysCounts[i * 2],
+                converted: last7DaysCounts[i * 2 + 1]
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -689,23 +731,48 @@ export const getCRMAnalytics = async (req, res) => {
                 stats: {
                     enquiries: {
                         total: totalEnquiries,
-                        today: enquiriesToday,
-                        trend: enquiryTrend
-                    },
-                    repairs: {
-                        active: activeRepairsCount
-                    },
-                    staff: {
-                        present: presentStaffCount,
-                        total: totalStaff
+                        convertedToday: enquiriesConvertedToday
                     },
                     conversions: {
-                        month: convertedThisMonth
+                        month: conversionsThisMonth
+                    },
+                    staff: {
+                        total: totalStaff,
+                        telecallers: telecallersCount,
+                        drivers: driversCount,
+                        perTripDrivers: perTripDriversCount,
+                        monthlyDrivers: monthlyDriversCount,
+                        accountantHR: accountantHRCount
+                    },
+                    attendance: {
+                        present: presentCount,
+                        absent: absentCount,
+                        leave: leaveStaffCount,
+                        late: lateCount,
+                        halfDay: halfDayCount
+                    },
+                    payroll: {
+                        active: activePayrollCount,
+                        paidMonth,
+                        pendingMonth
+                    },
+                    expense: {
+                        spentMonth
+                    },
+                    garage: {
+                        total: garagesCount,
+                        active: activeRepairsCount
+                    },
+                    vendor: {
+                        total: activeVendors.length,
+                        cars: vendorCarsCount
+                    },
+                    trips: {
+                        assigned: assignedTripsCount
                     }
                 },
-                enquiryPulse: last7Days,
-                leadPipeline,
-                recentEnquiries: recentWithCars
+                enquiryPulse,
+                leadPipeline
             }
         });
     } catch (error) {
@@ -717,6 +784,7 @@ export const getCRMAnalytics = async (req, res) => {
         });
     }
 };
+
 
 /**
  * @desc    Get All Staff
