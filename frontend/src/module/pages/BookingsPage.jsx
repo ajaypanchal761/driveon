@@ -562,13 +562,36 @@ const BookingsPage = () => {
   }, []);
 
   // Handle booking cancellation
-  const handleCancelBooking = () => {
+  const handleCancelBooking = async () => {
     if (!selectedReason) {
       alert('Please select a cancellation reason');
       return;
     }
 
+    if (!window.confirm('Are you sure you want to cancel this booking?')) {
+      return;
+    }
+
     try {
+      let isLocalOnly = true;
+
+      // Try to cancel via API first if booking is from database
+      if (cancellationBooking && cancellationBooking.id && typeof cancellationBooking.id === 'string' && !cancellationBooking.id.startsWith('local')) {
+        try {
+          const response = await bookingService.updateBookingStatus(cancellationBooking.id, {
+            status: 'cancelled',
+            cancellationReason: selectedReason,
+          });
+          if (response && response.success) {
+            isLocalOnly = false;
+          }
+        } catch (apiError) {
+          console.error('API booking cancellation failed, trying local fallback:', apiError);
+          alert(apiError.response?.data?.message || 'Failed to cancel booking on the server. Please try again.');
+          return;
+        }
+      }
+
       // Get bookings from localStorage
       const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
       
@@ -617,6 +640,11 @@ const BookingsPage = () => {
       
       // Switch to cancelled tab
       setActiveTab('cancelled');
+
+      // Refresh list to make sure we have synced database state
+      if (!isLocalOnly) {
+        fetchBookings();
+      }
     } catch (error) {
       console.error('Error cancelling booking:', error);
       alert('Error cancelling booking. Please try again.');

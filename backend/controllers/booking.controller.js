@@ -841,6 +841,19 @@ export const updateBookingStatus = async (req, res) => {
       } catch (syncError) {
         console.error('Error syncing booking cancellation to OutwardBooking:', syncError);
       }
+
+      // Notify admins
+      try {
+        await createAdminNotification({
+          title: 'Booking Cancelled by User',
+          message: `Booking (${booking.bookingId}) has been cancelled by ${booking.user?.name || 'User'}. Reason: ${cancellationReason || 'No reason provided'}.`,
+          type: 'warning',
+          relatedId: booking._id,
+          relatedModel: 'Booking'
+        });
+      } catch (err) {
+        console.error('Error sending admin notification for cancelled booking:', err);
+      }
     } else if (status === 'confirmed') {
       booking.confirmedAt = new Date();
       notificationTitle = "Booking Confirmed";

@@ -89,42 +89,65 @@ const UpcomingCarsScreen = () => {
       ? new Date(car.returningDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       : '';
 
+    const fullName = `${car.brand} ${car.model}`;
+    let fontSizeClass = '';
+    
+    if (isLarge) {
+      if (fullName.length > 25) {
+        fontSizeClass = 'text-3xl md:text-[3.2rem] lg:text-[4rem] xl:text-[4.6rem]';
+      } else if (fullName.length > 18) {
+        fontSizeClass = 'text-4xl md:text-[4rem] lg:text-[4.8rem] xl:text-[5.5rem]';
+      } else if (fullName.length > 12) {
+        fontSizeClass = 'text-4xl md:text-[4.6rem] lg:text-[5.5rem] xl:text-[6.4rem]';
+      } else {
+        fontSizeClass = 'text-5xl md:text-[5.5rem] lg:text-[6.5rem] xl:text-[7.5rem]';
+      }
+    } else {
+      if (fullName.length > 20) {
+        fontSizeClass = 'text-2xl md:text-3xl';
+      } else if (fullName.length > 12) {
+        fontSizeClass = 'text-3xl md:text-4xl';
+      } else {
+        fontSizeClass = 'text-4xl md:text-5xl';
+      }
+    }
+
     return (
       <div 
         key={car._id || car.id || index}
         className={`w-full bg-gradient-to-br from-[#1C205C] to-[#0D102D] text-white rounded-[2.5rem] shadow-2xl border border-indigo-950 flex items-center justify-between transition-all duration-300 mx-auto
           ${isLarge 
-            ? 'p-20 md:p-28 gap-16 md:gap-24 w-[96vw] max-w-[96vw] h-[85vh] min-h-[720px] lg:min-h-[820px] rounded-[4rem]' 
+            ? 'p-12 md:p-16 gap-10 md:gap-14 w-[90vw] max-w-[90vw] h-[72vh] min-h-[500px] lg:min-h-[600px] rounded-[3.5rem]' 
             : 'p-10 gap-10 max-w-5xl min-h-[320px]'
           }`}
       >
         <div className="flex-1 min-w-0 text-left">
-          <div className={`flex items-center gap-4 ${isLarge ? 'mb-8' : 'mb-3'}`}>
-            <span className={`inline-block rounded-full bg-emerald-500 animate-ping ${isLarge ? 'w-7 h-7' : 'w-3.5 h-3.5'}`}></span>
-            <span className={`font-bold text-emerald-400 uppercase tracking-widest ${isLarge ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-sm md:text-base'}`}>
+          <div className={`flex items-center gap-4 ${isLarge ? 'mb-6' : 'mb-3'}`}>
+            <span className={`inline-block rounded-full bg-emerald-500 animate-ping ${isLarge ? 'w-5 h-5' : 'w-3.5 h-3.5'}`}></span>
+            <span className={`font-bold text-emerald-400 uppercase tracking-widest ${isLarge ? 'text-xl md:text-2xl lg:text-3xl' : 'text-sm md:text-base'}`}>
               Upcoming Car Today
             </span>
           </div>
-          <h3 className={`font-black text-white leading-none ${isLarge ? 'text-7xl md:text-[8.5rem] lg:text-[10rem] xl:text-[11.5rem] mb-8 pb-2 truncate' : 'text-4xl md:text-5xl mb-3 truncate'}`}>
-            {car.brand} {car.model}
+          <h3 className={`font-black text-white leading-none mb-6 pb-2 whitespace-normal break-words ${fontSizeClass}`}>
+            {fullName}
           </h3>
-          <p className={`text-gray-300 leading-relaxed ${isLarge ? 'text-4xl md:text-5xl lg:text-6xl mb-4' : 'text-2xl md:text-3xl mb-1'}`}>
+          <p className={`text-gray-300 leading-relaxed ${isLarge ? 'text-2xl md:text-3xl lg:text-4xl mb-3' : 'text-2xl md:text-3xl mb-1'}`}>
             Returning at <span className="font-extrabold text-white">{returnTime}</span>
           </p>
-          <p className={`text-emerald-400 font-extrabold ${isLarge ? 'text-3xl md:text-4xl lg:text-5xl mb-10' : 'text-xl md:text-2xl mb-3'}`}>
+          <p className={`text-emerald-400 font-extrabold ${isLarge ? 'text-xl md:text-2xl lg:text-3xl mb-6' : 'text-xl md:text-2xl mb-3'}`}>
             (in {car.returningIn || "a few hours"})
           </p>
-          <div className={`flex items-center gap-3 text-gray-400 ${isLarge ? 'text-3xl md:text-4xl lg:text-5xl' : 'text-base md:text-lg'}`}>
-            <MdLocationOn className="shrink-0 text-gray-400" size={isLarge ? 64 : 24} />
+          <div className={`flex items-center gap-3 text-gray-400 ${isLarge ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-base md:text-lg'}`}>
+            <MdLocationOn className="shrink-0 text-gray-400" size={isLarge ? 44 : 24} />
             <span className="truncate">{car.location?.city || car.location?.address || car.location || "Nearby"}</span>
           </div>
         </div>
-        <div className={`flex items-center justify-center relative flex-shrink-0 ${isLarge ? 'w-[45%] h-[450px] lg:h-[580px]' : 'w-64 h-40'}`}>
+        <div className={`flex items-center justify-center relative flex-shrink-0 ${isLarge ? 'w-[42%] h-[320px] lg:h-[420px]' : 'w-64 h-40'}`}>
           <img 
             src={getCarImage(car, index)} 
             alt={`${car.brand} ${car.model}`}
-            className={`w-auto object-contain select-none pointer-events-none ${isLarge ? 'transform scale-135' : 'transform scale-125'}`}
-            style={{ maxHeight: isLarge ? '560px' : '160px' }}
+            className={`w-auto object-contain select-none pointer-events-none ${isLarge ? 'transform scale-120' : 'transform scale-125'}`}
+            style={{ maxHeight: isLarge ? '380px' : '160px' }}
           />
         </div>
       </div>

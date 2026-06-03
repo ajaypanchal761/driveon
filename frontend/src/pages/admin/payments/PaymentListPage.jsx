@@ -73,6 +73,11 @@ const PaymentListPage = () => {
           bookings.forEach((booking) => {
             if (booking.transactions && Array.isArray(booking.transactions)) {
               booking.transactions.forEach((transaction) => {
+                // Skip cash payments (online or bank only)
+                if (transaction.paymentMethod && transaction.paymentMethod.toLowerCase() === 'cash') {
+                  return;
+                }
+
                 // Determine payment type based on booking payment option
                 let paymentType = 'full';
                 if (booking.paymentOption === 'advance') {
@@ -1242,10 +1247,11 @@ const ExportReportModal = ({ payments, stats, filters, onClose }) => {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const rows = buildRows();
     if (!rows.length) { toastUtils.error('No data to export'); return; }
 
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     // ── Summary Sheet ──────────────────────────────────────────
@@ -1289,7 +1295,7 @@ const ExportReportModal = ({ payments, stats, filters, onClose }) => {
     try {
       if (selectedFormat === 'pdf') await handleExportPDF();
       else if (selectedFormat === 'csv') handleExportCSV();
-      else handleExportExcel();
+      else await handleExportExcel();
       toastUtils.success(`Report exported as ${selectedFormat.toUpperCase()} successfully!`);
       onClose();
     } catch (err) {

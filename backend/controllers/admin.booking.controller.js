@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import OutwardBooking from '../models/OutwardBooking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
+import Transaction from '../models/Transaction.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
 import { sendPushNotification } from '../services/firebase.service.js';
 
@@ -314,14 +315,42 @@ export const updateBooking = async (req, res) => {
       if (paymentStatus === 'paid' && booking.paidAmount < booking.pricing?.totalPrice) {
         booking.paidAmount = booking.pricing?.totalPrice || booking.totalPrice || 0;
       }
-      // If payment status is set to "refunded", set refund date
+      // If payment status is set to "refunded", set refund date, 100% refund, update transactions & create general Transaction
       if (paymentStatus === 'refunded') {
         booking.refundDate = new Date();
+        const refundAmt = booking.paidAmount || 0;
+        booking.refundAmount = refundAmt;
+
+        // Update all transaction statuses in the booking
+        if (booking.transactions && booking.transactions.length > 0) {
+          booking.transactions.forEach(txn => {
+            if (txn.status === 'success' || txn.status === 'pending') {
+              txn.status = 'refunded';
+              txn.refundDate = new Date();
+              txn.refundAmount = txn.amount;
+            }
+          });
+        }
+
+        // Create transaction in CRM for P&L tracking
+        try {
+          await Transaction.create({
+            type: 'Cash Out',
+            category: 'Refund',
+            amount: refundAmt,
+            paymentMethod: 'UPI', // Standard default
+            description: `Refund for Booking: ${booking.bookingId || booking._id}`,
+            referenceId: booking._id.toString(),
+            date: new Date()
+          });
+        } catch (txnError) {
+          console.error('Error creating refund transaction record in CRM:', txnError);
+        }
       }
     }
 
     // Update refund amount if provided
-    if (refundAmount !== undefined) {
+    if (refundAmount !== undefined && paymentStatus !== 'refunded') {
       booking.refundAmount = refundAmount;
     }
 

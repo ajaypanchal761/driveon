@@ -18,14 +18,8 @@ import { adminService } from '../../services/admin.service';
 import { onMessageListener } from "../../services/firebase";
 import toastUtils from '../../config/toast';
 
-// Format currency helper
 const formatCurrency = (amount) => {
-  if (amount >= 100000) {
-    return `₹${(amount / 100000).toFixed(1)}L`;
-  } else if (amount >= 1000) {
-    return `₹${(amount / 1000).toFixed(1)}K`;
-  }
-  return `₹${amount}`;
+  return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
 };
 
 /**
