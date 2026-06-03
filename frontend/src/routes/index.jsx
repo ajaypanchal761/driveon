@@ -115,6 +115,9 @@ const BookingListPage = lazy(() =>
 const PaymentListPage = lazy(() =>
   import("../pages/admin/payments/PaymentListPage")
 );
+const CashPaymentListPage = lazy(() =>
+  import("../pages/admin/payments/CashPaymentListPage")
+);
 const TrackingPage = lazy(() =>
   import("../pages/admin/tracking/TrackingPage")
 );
@@ -681,6 +684,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/payments",
             element: <PaymentListPage />,
+          },
+          {
+            path: "/admin/cash-payments",
+            element: <CashPaymentListPage />,
           },
           {
             path: "/admin/payments/pending",

@@ -144,9 +144,9 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
 
         {/* Content */}
         <div className="p-6 flex-1 min-h-0 overflow-y-auto" style={{ backgroundColor: colors.backgroundSecondary }}>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* Left Column: Customer & Documents */}
             <div className="lg:col-span-1 space-y-6">
               {/* Customer Profile */}
@@ -180,7 +180,7 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
               <Card className="p-6">
                 <h3 className="text-sm font-bold uppercase tracking-wider mb-5" style={{ color: colors.textSecondary }}>KYC Documents</h3>
                 <div className="space-y-4">
-                  
+
                   {/* DL */}
                   <div className="p-4 rounded-xl border bg-gray-50/50" style={{ borderColor: colors.borderMedium }}>
                     <div className="flex justify-between items-center mb-2">
@@ -236,7 +236,7 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
 
             {/* Right Column: Car, Rental, Payment */}
             <div className="lg:col-span-2 space-y-6">
-              
+
               {/* Car & Rental Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="p-6">
@@ -291,7 +291,10 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
                       <>
                         <InfoItem label="Advance Paid" value={formatCurrency(advanceAmount)} />
                         {advanceAmount > 0 && (
-                          <InfoItem label="Adv. Payment Mode" value={getAdvanceMode()} />
+                          <InfoItem label="Advance Payment Mode" value={getAdvanceMode()} />
+                        )}
+                        {advanceAmount > 0 && getAdvanceMode()?.toLowerCase() === 'cash' && (
+                          <InfoItem label="Advance Cash Collector" value={booking.advanceCashCollector || booking.cashCollector || 'Staff'} valueClass="text-green-600" />
                         )}
                       </>
                     )}
@@ -302,7 +305,10 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
                   {remainingPaid > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-b" style={{ borderColor: colors.borderLight }}>
                       <InfoItem label="Remaining Paid" value={formatCurrency(remainingPaid)} />
-                      <InfoItem label="Rem. Payment Mode" value={getRemainingMode()} />
+                      <InfoItem label="Remaining Payment Mode" value={getRemainingMode()} />
+                      {getRemainingMode()?.toLowerCase() === 'cash' && (
+                        <InfoItem label="Remaining Cash Collector" value={booking.remainingCashCollector || booking.cashCollector || 'Staff'} valueClass="text-green-600" />
+                      )}
                     </div>
                   )}
 
@@ -317,7 +323,7 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
 
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>
@@ -327,8 +333,8 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
 const FleetBookingsPage = () => {
   const { bookings, cars, updateBookingInContext } = useFleet();
   const location = useLocation();
-  const typeFilter = location.pathname.includes('outward-bookings') 
-    ? FLEET_BOOKING_FILTERS.OUTWARD 
+  const typeFilter = location.pathname.includes('outward-bookings')
+    ? FLEET_BOOKING_FILTERS.OUTWARD
     : location.pathname.includes('inward-bookings')
       ? FLEET_BOOKING_FILTERS.INWARD
       : FLEET_BOOKING_FILTERS.ALL;
@@ -377,7 +383,7 @@ const FleetBookingsPage = () => {
   const filteredBookings = useMemo(() => {
     // Exclude regular bookings from being displayed in Fleet Bookings page
     const fleetBookingsOnly = bookings.filter(b => !b.isRegularBooking);
-    
+
     if (typeFilter === FLEET_BOOKING_FILTERS.ALL) return fleetBookingsOnly;
     return fleetBookingsOnly.filter((b) => b.carType === typeFilter);
   }, [bookings, typeFilter]);
@@ -411,13 +417,16 @@ const FleetBookingsPage = () => {
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                  
+
                   {/* Left Column: Car & Customer details */}
                   <div className="flex-1 space-y-2.5">
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-bold" style={{ color: colors.textPrimary }}>
                         {b.carName}
                       </h3>
+                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                        #{b.id}
+                      </span>
                       {renderStatusBadge(status)}
                     </div>
 

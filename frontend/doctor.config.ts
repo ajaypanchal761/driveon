@@ -1,6 +1,8 @@
-{
-  "ignore": {
-    "rules": [
+import type { ReactDoctorConfig } from "react-doctor/api";
+
+export default {
+  ignore: {
+    rules: [
       "react-doctor/design-no-redundant-size-axes",
       "react-doctor/button-has-type",
       "react-doctor/label-has-associated-control",
@@ -72,4 +74,4 @@
       "react-doctor/no-mirror-prop-effect"
     ]
   }
-}
+} satisfies ReactDoctorConfig;

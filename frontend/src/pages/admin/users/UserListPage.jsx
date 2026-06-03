@@ -66,6 +66,7 @@ const UserListPage = () => {
   const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDetail, setShowUserDetail] = useState(false);
+  const [activeGuarantorIds, setActiveGuarantorIds] = useState([]);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -103,6 +104,29 @@ const UserListPage = () => {
     const handleGlobalSearch = (e) => setSearchQuery(e.detail);
     window.addEventListener('admin-global-search', handleGlobalSearch);
     return () => window.removeEventListener('admin-global-search', handleGlobalSearch);
+  }, []);
+
+  // Fetch accepted guarantor requests to identify active guarantors
+  useEffect(() => {
+    const fetchGuarantors = async () => {
+      try {
+        const response = await adminService.getAllGuarantorRequests({ status: 'accepted' });
+        if (response.success && response.data?.requests) {
+          const ids = response.data.requests
+            .map((req) => {
+              const guarantor = req.guarantor;
+              if (!guarantor) return null;
+              return typeof guarantor === 'object' ? guarantor._id : guarantor;
+            })
+            .filter(Boolean)
+            .map((id) => id.toString());
+          setActiveGuarantorIds([...new Set(ids)]);
+        }
+      } catch (error) {
+        console.error('Error fetching guarantor requests:', error);
+      }
+    };
+    fetchGuarantors();
   }, []);
 
   // Fetch users from API (Runs only once on mount)
@@ -180,8 +204,12 @@ const UserListPage = () => {
     if (filters.userType !== 'all') {
       filtered = filtered.filter((user) => {
         const role = (user.role || 'user').toLowerCase();
+        const userId = (user._id || user.id || '').toString();
         if (filters.userType === 'regular') {
           return role === 'user' || role === 'regular';
+        }
+        if (filters.userType === 'guarantor') {
+          return activeGuarantorIds.includes(userId);
         }
         return role === filters.userType;
       });
@@ -213,7 +241,7 @@ const UserListPage = () => {
     }
 
     setFilteredUsers(filtered);
-  }, [users, searchQuery, filters]);
+  }, [users, searchQuery, filters, activeGuarantorIds]);
 
   // Handle user actions
   const handleUserAction = async (userId, action) => {
@@ -473,7 +501,6 @@ const UserListPage = () => {
                 { label: 'All', value: 'all' },
                 { label: 'Regular', value: 'regular' },
                 { label: 'Guarantor', value: 'guarantor' },
-                { label: 'Owner', value: 'owner' },
               ]}
             />
 
@@ -853,10 +880,7 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
                     <label className="text-xs font-medium text-gray-700">Phone</label>
                     <p className="text-xs text-gray-900">{user.phone || 'N/A'}</p>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-700">User Type</label>
-                    <p className="text-xs text-gray-900 capitalize">{user.role || 'user'}</p>
-                  </div>
+
                   <div>
                     <label className="text-xs font-medium text-gray-700">User ID</label>
                     <p className="text-xs text-gray-900 font-mono">{formatUserId(user._id || user.id)}</p>

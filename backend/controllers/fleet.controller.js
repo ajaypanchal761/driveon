@@ -368,6 +368,8 @@ export const getOutwardBookings = async (req, res) => {
             panVerified: b.panVerified || false,
             deposit: b.deposit || 0,
             cashCollector: b.cashCollector || '',
+            advanceCashCollector: b.advanceCashCollector || '',
+            remainingCashCollector: b.remainingCashCollector || '',
             status: b.status || 'active',
             createdAt: b.createdAt
         }));
@@ -448,6 +450,7 @@ export const createOutwardBooking = async (req, res) => {
             panVerified: bookingData.panVerified || false,
             deposit: bookingData.deposit || 0,
             cashCollector: bookingData.cashCollector || '',
+            advanceCashCollector: bookingData.cashCollector || '',
             status: bookingData.status || 'active'
         });
 
@@ -498,6 +501,8 @@ export const createOutwardBooking = async (req, res) => {
             panVerified: newBooking.panVerified,
             deposit: newBooking.deposit || 0,
             cashCollector: newBooking.cashCollector || '',
+            advanceCashCollector: newBooking.advanceCashCollector || '',
+            remainingCashCollector: newBooking.remainingCashCollector || '',
             status: newBooking.status,
             createdAt: newBooking.createdAt
         };
@@ -892,6 +897,7 @@ export const completeOutwardBooking = async (req, res) => {
 
         if (cashCollector) {
             booking.cashCollector = cashCollector;
+            booking.remainingCashCollector = cashCollector;
         }
 
         await booking.save();

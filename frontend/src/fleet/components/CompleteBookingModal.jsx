@@ -13,6 +13,23 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (open) {
+      setCashCollector('');
+      const fetchSettings = async () => {
+        try {
+          const res = await commonService.getSystemSettings();
+          if (res.success && res.data?.settings?.cashCollectors) {
+            setCashCollectors(res.data.settings.cashCollectors);
+          }
+        } catch (err) {
+          console.error('Failed to fetch system settings:', err);
+        }
+      };
+      fetchSettings();
+    }
+  }, [open]);
+
   if (!open || !booking) return null;
 
   const totalPrice = Number(booking.totalPrice || 0);
@@ -31,23 +48,6 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
       script.onerror = () => resolve(false);
       document.head.appendChild(script);
     });
-
-  useEffect(() => {
-    if (open) {
-      setCashCollector('');
-      const fetchSettings = async () => {
-        try {
-          const res = await commonService.getSystemSettings();
-          if (res.success && res.data?.settings?.cashCollectors) {
-            setCashCollectors(res.data.settings.cashCollectors);
-          }
-        } catch (err) {
-          console.error('Failed to fetch system settings:', err);
-        }
-      };
-      fetchSettings();
-    }
-  }, [open]);
 
   const completeBooking = async (payload) => {
     try {

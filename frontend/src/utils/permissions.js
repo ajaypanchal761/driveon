@@ -10,6 +10,7 @@ const adminPathMap = [
   { path: '/admin/bookings/driver-assignment', key: 'admin:driver-assignment' },
   { path: '/admin/bookings', key: 'admin:bookings' },
   { path: '/admin/payments', key: 'admin:payments' },
+  { path: '/admin/cash-payments', key: 'admin:cash-payments' },
   { path: '/admin/tracking', key: 'admin:tracking' },
   { path: '/admin/referrals', key: 'admin:referrals' },
   { path: '/admin/offers', key: 'admin:offers' },
