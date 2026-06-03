@@ -100,7 +100,9 @@ import {
     recordManualSalaryPayment,
     getHolidays,
     markHoliday,
-    deleteHoliday
+    deleteHoliday,
+    getEmployeeSupportSettings,
+    updateEmployeeSupportSettings
 } from '../controllers/crm.controller.js';
 import { getPolicyByKey, updatePolicy } from '../controllers/policy.controller.js';
 // import { protect, admin } from '../middleware/auth.middleware.js'; // Assuming you have auth middleware
@@ -338,6 +340,11 @@ router.route('/settings/cities')
 router.route('/settings/cities/:id')
     .put(updateCity)
     .delete(deleteCity);
+
+// Settings - Employee Support Contact Details
+router.route('/settings/employee-support')
+    .get(getEmployeeSupportSettings)
+    .put(updateEmployeeSupportSettings);
 
 // Dashboard - Smart Command Center
 router.get('/dashboard/alerts', getDashboardAlerts);

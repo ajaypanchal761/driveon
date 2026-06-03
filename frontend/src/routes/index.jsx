@@ -136,6 +136,9 @@ const AddOnServicesPage = lazy(() =>
 const AdminSettingsPage = lazy(() =>
   import("../pages/admin/settings/AdminSettingsPage")
 );
+const AdminNotificationsPage = lazy(() =>
+  import("../pages/admin/notifications/AdminNotificationsPage")
+);
 const AdminProfilePage = lazy(() =>
   import("../pages/admin/profile/AdminProfilePage")
 );
@@ -251,6 +254,7 @@ const CRM_StaffSalary = lazy(() => import("../crm/pages/staff/StaffSubPages").th
 const CRM_StaffAttendanceSettings = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AttendanceSettingsPage })));
 const CRM_StaffDriverAssignment = lazy(() => import("../crm/pages/staff/DriverAssignmentPage"));
 const CRM_StaffDriverRecord = lazy(() => import("../crm/pages/staff/DriverRecordPage"));
+const CRM_EmployeeSupportPage = lazy(() => import("../crm/pages/staff/EmployeeSupportPage"));
 const CRM_UpcomingCarsScreen = lazy(() => import("../crm/pages/UpcomingCarsScreen"));
 
 
@@ -438,6 +442,10 @@ const router = createBrowserRouter([
       {
         path: "staff/driver-record",
         element: <CRM_StaffDriverRecord />,
+      },
+      {
+        path: "staff/employee-support",
+        element: <CRM_EmployeeSupportPage />,
       },
       {
         path: "upcoming-cars-screen",
@@ -736,6 +744,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/support",
             element: <AdminSupportPage />,
+          },
+          {
+            path: "/admin/notifications",
+            element: <AdminNotificationsPage />,
           },
           {
             path: "/admin/settings",

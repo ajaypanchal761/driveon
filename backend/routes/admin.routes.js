@@ -21,6 +21,9 @@ import {
   createSubAdmin,
   updateSubAdmin,
   deleteSubAdmin,
+  getStaffRoles,
+  sendRoleNotification,
+  getSentNotifications,
 } from '../controllers/admin.controller.js';
 import {
   getAllCars,
@@ -423,6 +426,30 @@ router.put('/referrals/:referralId/points', authenticateAdmin, updateReferralPoi
 // Send Manual Notification - PROTECTED
 // Route: POST /api/admin/send-notification
 router.post('/send-notification', sendNotification);
+
+// ============================================
+// STAFF NOTIFICATION MANAGEMENT ROUTES - PROTECTED
+// ============================================
+
+// Get Staff Roles - PROTECTED
+router.get('/notifications/roles', authenticateAdmin, getStaffRoles);
+
+// Get Sent Notifications History - PROTECTED
+router.get('/notifications', authenticateAdmin, getSentNotifications);
+
+// Send Role-wise Notification - PROTECTED
+router.post('/notifications/send-role', authenticateAdmin, async (req, res, next) => {
+  const upload = req.app.locals.upload;
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'File upload error',
+      });
+    }
+    next();
+  });
+}, sendRoleNotification);
 
 // ============================================
 // POLICY MANAGEMENT ROUTES - PROTECTED

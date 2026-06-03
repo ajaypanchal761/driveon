@@ -10,7 +10,10 @@ import Coupon from '../models/Coupon.js';
 import AddOnServices from '../models/AddOnServices.js';
 import mongoose from 'mongoose';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
-import { sendPushNotification, sendPushToToken } from '../services/firebase.service.js';
+import { sendPushNotification, sendPushToToken, sendStaffPushNotification } from '../services/firebase.service.js';
+import Staff from '../models/Staff.js';
+import Notification from '../models/Notification.js';
+import { uploadImage } from '../services/cloudinary.service.js';
 
 /**
  * Format user ID to USER001 format (same as frontend)
@@ -1992,6 +1995,199 @@ export const deleteSubAdmin = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error deleting subadmin',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get All Distinct Staff Roles
+ * @route   GET /api/admin/notifications/roles
+ * @access  Private (Admin)
+ */
+export const getStaffRoles = async (req, res) => {
+  try {
+    const roles = await Staff.distinct('role', { isDeleted: { $ne: true } });
+    res.status(200).json({
+      success: true,
+      data: {
+        roles: roles.filter(role => role && role.trim() !== '')
+      }
+    });
+  } catch (error) {
+    console.error('Get staff roles error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching staff roles',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Send role-wise notification with image support
+ * @route   POST /api/admin/notifications/send-role
+ * @access  Private (Admin)
+ */
+export const sendRoleNotification = async (req, res) => {
+  try {
+    const { role, title, message } = req.body;
+
+    if (!role || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role, title, and message are required'
+      });
+    }
+
+    let imageUrl = null;
+    if (req.file) {
+      const uploadResult = await uploadImage(req.file, {
+        folder: 'admin/notifications'
+      });
+      imageUrl = uploadResult.secure_url;
+    }
+
+    // Determine target collection and recipient model
+    let recipients = [];
+    let recipientModel = 'Staff';
+
+    if (role === 'Customer') {
+      // Find active customers
+      recipients = await User.find({ isDeleted: { $ne: true }, accountStatus: 'active' });
+      recipientModel = 'User';
+    } else {
+      // Find active staff by role
+      recipients = await Staff.find({ role: role, isDeleted: { $ne: true } });
+      recipientModel = 'Staff';
+    }
+
+    if (recipients.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No active recipients found with role: ${role}`
+      });
+    }
+
+    // Create notifications for all recipients matching the target
+    const notifications = recipients.map(recipient => ({
+      recipient: recipient._id,
+      recipientModel: recipientModel,
+      title,
+      message,
+      type: 'info',
+      image: imageUrl,
+      isSent: true
+    }));
+
+    await Notification.insertMany(notifications);
+
+    // Send push notifications
+    const payload = {
+      notification: {
+        title,
+        body: message,
+        ...(imageUrl ? { image: imageUrl } : {})
+      },
+      data: {
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        title,
+        body: message,
+        ...(imageUrl ? { image: imageUrl } : {})
+      }
+    };
+
+    const pushPromises = recipients.map(recipient => {
+      const promises = [];
+      if (recipient.fcmToken) {
+        if (recipientModel === 'User') {
+          promises.push(sendPushNotification(recipient._id, payload, false));
+        } else {
+          promises.push(sendStaffPushNotification(recipient._id, payload, false));
+        }
+      }
+      if (recipient.fcmTokenMobile) {
+        if (recipientModel === 'User') {
+          promises.push(sendPushNotification(recipient._id, payload, true));
+        } else {
+          promises.push(sendStaffPushNotification(recipient._id, payload, true));
+        }
+      }
+      return Promise.all(promises);
+    });
+
+    // Run in parallel but handle errors gracefully
+    Promise.all(pushPromises).catch(err => {
+      console.error('Push notification background sending error:', err);
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Notification broadcasted successfully to ${recipients.length} ${role === 'Customer' ? 'customers' : 'staff members'}`
+    });
+  } catch (error) {
+    console.error('Send role notification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error sending notification',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get All Sent Notifications History
+ * @route   GET /api/admin/notifications
+ * @access  Private (Admin)
+ */
+export const getSentNotifications = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = { recipientModel: { $in: ['Staff', 'User'] } };
+
+    const total = await Notification.countDocuments(query);
+    const notifications = await Notification.find(query)
+      .populate('recipient', 'name role email phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        notifications: notifications.map(notif => ({
+          id: notif._id,
+          title: notif.title,
+          message: notif.message,
+          type: notif.type,
+          image: notif.image,
+          isRead: notif.isRead,
+          createdAt: notif.createdAt,
+          recipientModel: notif.recipientModel,
+          recipient: notif.recipient ? {
+            id: notif.recipient._id,
+            name: notif.recipient.name,
+            role: notif.recipientModel === 'User' ? 'Customer' : (notif.recipient.role || 'Staff'),
+            email: notif.recipient.email,
+            phone: notif.recipient.phone
+          } : null
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get sent notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching sent notifications',
       error: error.message
     });
   }

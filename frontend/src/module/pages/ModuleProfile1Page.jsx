@@ -117,11 +117,23 @@ const ModuleProfile1Page = () => {
 
   // Get user data with fallbacks
   const userName = (user?.name || user?.fullName || "").trim() || "User";
+  const userPhone = (user?.phone || "").trim();
   const userEmail = (user?.email || "").trim();
   const userPhoto =
     user?.profilePhoto && user.profilePhoto.trim() !== ""
       ? user.profilePhoto
       : null;
+
+  // Format phone number for display (add +91 prefix if it's a 10-digit number)
+  const formatPhoneNumber = (phone) => {
+    if (!phone || phone.trim() === "") return "";
+    const cleaned = String(phone).replace(/\D/g, "");
+    if (cleaned.length === 10) {
+      return `+91 ${cleaned}`;
+    }
+    return phone;
+  };
+  const displayPhone = formatPhoneNumber(userPhone);
 
   // Format user ID - Show last 5 characters in user-XXXXX format
   const getFormattedUserId = () => {
@@ -397,14 +409,21 @@ const ModuleProfile1Page = () => {
                 >
                   {userName}
                 </h2>
-                {userEmail && (
+                {displayPhone ? (
+                  <p
+                    className="text-xs leading-tight truncate"
+                    style={{ color: colors.textSecondary || "#666666" }}
+                  >
+                    {displayPhone}
+                  </p>
+                ) : userEmail ? (
                   <p
                     className="text-xs leading-tight truncate"
                     style={{ color: colors.textSecondary || "#666666" }}
                   >
                     {userEmail}
                   </p>
-                )}
+                ) : null}
                 <div className="flex items-center gap-0 leading-tight">
                   <p
                     className="text-xs"

@@ -115,6 +115,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       icon: <MdBadge />
     },
     {
+      id: 'employee-support',
+      path: '/crm/staff/employee-support',
+      name: 'Employee Support',
+      icon: <MdSettings />
+    },
+    {
       id: 'upcoming-cars-screen',
       path: '/crm/upcoming-cars-screen',
       name: 'Screen',
@@ -159,6 +165,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           const keyMap = {
             '/crm/dashboard': 'crm:dashboard',
             '/crm/staff/driver-record': 'crm:driver-record',
+            '/crm/staff/employee-support': 'crm:employee-support',
           };
           const key = keyMap[item.path || item.id];
           if (!key) return item;
@@ -329,7 +336,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-800">Admin</p>
-                <p className="text-xs text-gray-500">Manager</p>
               </div>
             </div>
           </div>

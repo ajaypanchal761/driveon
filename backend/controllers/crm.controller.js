@@ -4537,4 +4537,83 @@ export const deleteHoliday = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Get Employee Support settings (email & phone)
+ * @route   GET /api/crm/settings/employee-support
+ * @access  Private/Public
+ */
+export const getEmployeeSupportSettings = async (req, res) => {
+    try {
+        const emailSetting = await Setting.findOne({ key: 'employeeSupportEmail' });
+        const phoneSetting = await Setting.findOne({ key: 'employeeSupportPhone' });
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                email: emailSetting ? emailSetting.value : 'support.employee@driveon.com',
+                phone: phoneSetting ? phoneSetting.value : '+91 98765 43210'
+            }
+        });
+    } catch (error) {
+        console.error('Get Employee Support settings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error fetching employee support settings',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * @desc    Update Employee Support settings (email & phone)
+ * @route   PUT /api/crm/settings/employee-support
+ * @access  Private (Admin)
+ */
+export const updateEmployeeSupportSettings = async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+        
+        if (!email || !phone) {
+            return res.status(400).json({
+                success: false,
+                message: 'Both support email and phone number are required'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^\S+@\S+\.\S+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
+            });
+        }
+
+        await Setting.findOneAndUpdate(
+            { key: 'employeeSupportEmail' },
+            { value: email.trim().toLowerCase() },
+            { upsert: true, new: true }
+        );
+
+        await Setting.findOneAndUpdate(
+            { key: 'employeeSupportPhone' },
+            { value: phone.trim() },
+            { upsert: true, new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Employee support contact details updated successfully'
+        });
+    } catch (error) {
+        console.error('Update Employee Support settings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating employee support settings',
+            error: error.message
+        });
+    }
+};
+
+
 

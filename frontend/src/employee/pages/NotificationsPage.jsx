@@ -9,6 +9,7 @@ const NotificationsPage = () => {
   const { setUnreadCount } = useEmployee();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -134,6 +135,16 @@ const NotificationsPage = () => {
                   <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">{formatTime(notif.createdAt)}</span>
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed">{notif.message}</p>
+                {notif.image && (
+                  <div className="mt-3 rounded-xl overflow-hidden border border-gray-100 max-h-48 flex items-center bg-gray-50 cursor-pointer">
+                    <img 
+                      src={notif.image} 
+                      alt="Notification attachment" 
+                      onClick={() => setLightboxImage(notif.image)}
+                      className="w-full object-cover max-h-48 hover:scale-[1.02] transition-transform duration-200"
+                    />
+                  </div>
+                )}
               </div>
               {!notif.isRead && (
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></div>
@@ -141,6 +152,28 @@ const NotificationsPage = () => {
             </motion.div>
           )))}
       </div>
+
+      {/* Lightbox / Modal View */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fadeIn"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <img 
+              src={lightboxImage} 
+              alt="Notification attachment zoom" 
+              className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl mx-auto"
+            />
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-all text-xl font-bold leading-none w-10 h-10 flex items-center justify-center"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>

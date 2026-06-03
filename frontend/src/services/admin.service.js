@@ -840,6 +840,54 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Get all unique staff roles
+   * @returns {Promise}
+   */
+  getStaffRoles: async () => {
+    try {
+      const response = await api.get('/admin/notifications/roles');
+      return response.data;
+    } catch (error) {
+      console.error('Get staff roles error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send notification to a specific role with image support
+   * @param {FormData} formData - Contains role, title, message, and optional image
+   * @returns {Promise}
+   */
+  sendRoleNotification: async (formData) => {
+    try {
+      const response = await api.post('/admin/notifications/send-role', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Send role notification error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get historical sent notifications logs
+   * @param {Object} params - { page, limit }
+   * @returns {Promise}
+   */
+  getSentNotifications: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/notifications', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Get sent notifications error:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;

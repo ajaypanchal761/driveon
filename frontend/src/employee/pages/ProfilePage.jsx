@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { motion } from 'framer-motion';
-import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle } from 'react-icons/fi';
+import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle, FiHeadphones } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AnimatePresence } from 'framer-motion';
@@ -153,6 +153,13 @@ const ProfilePage = () => {
                                 hasBadge={unreadCount > 0}
                                 badgeCount={unreadCount}
                                 onClick={() => navigate('/employee/notifications')}
+                            />
+                            <MenuRow
+                                icon={<FiHeadphones size={20} />}
+                                label="Support"
+                                color="text-teal-600"
+                                bg="bg-teal-50"
+                                onClick={() => navigate('/employee/support')}
                                 isLast
                             />
                         </div>

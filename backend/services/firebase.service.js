@@ -25,7 +25,8 @@ const initializeFirebase = () => {
         }
         // 2. Try Local File
         else {
-            const serviceAccountPath = path.resolve("config/newdriveon-firebase-adminsdk.json");
+            const relativePath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "config/newdriveon-firebase-adminsdk.json";
+            const serviceAccountPath = path.resolve(relativePath);
             if (fs.existsSync(serviceAccountPath)) {
                 try {
                     serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));

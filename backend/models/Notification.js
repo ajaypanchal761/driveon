@@ -37,6 +37,10 @@ const notificationSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    image: {
+        type: String,
+        default: null
+    },
     isSent: {
         type: Boolean,
         default: false
