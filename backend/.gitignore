@@ -23,4 +23,4 @@ Thumbs.db
 *.swo
 
 # Credentials
-config/newdriveon-firebase-adminsdk.json
+.config/newdriveon-firebase-adminsdk.json
