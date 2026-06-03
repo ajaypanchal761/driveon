@@ -2,6 +2,9 @@ import mongoose from 'mongoose';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
+import OutwardBooking from '../models/OutwardBooking.js';
+
+let lastOutwardSyncTime = 0;
 
 /**
  * @desc    Get All Cars (Public)
@@ -10,71 +13,93 @@ import Booking from '../models/Booking.js';
  */
 export const getAllCars = async (req, res) => {
   try {
-    // Perform dynamic sync for outward cars to make sure everything matches
-    try {
-      const OutwardCar = mongoose.model('OutwardCar');
-      if (OutwardCar) {
-        const outwardCars = await OutwardCar.find({});
-        const adminUser = await mongoose.model('User').findOne({ role: 'admin' }) || await mongoose.model('User').findOne({});
-        const ownerId = adminUser ? adminUser._id : new mongoose.Types.ObjectId('60d5ec0f1f1d2c001f8e29a5');
+    // Perform dynamic sync for outward cars in the background (run once every 60s max)
+    const now = Date.now();
+    if (now - lastOutwardSyncTime > 60000) {
+      lastOutwardSyncTime = now;
+      const syncOutwardCars = async () => {
+        try {
+          const OutwardCar = mongoose.model('OutwardCar');
+          if (OutwardCar) {
+            const outwardCars = await OutwardCar.find({});
+            const adminUser = await mongoose.model('User').findOne({ role: 'admin' }) || await mongoose.model('User').findOne({});
+            const ownerId = adminUser ? adminUser._id : new mongoose.Types.ObjectId('60d5ec0f1f1d2c001f8e29a5');
 
-        for (const outCar of outwardCars) {
-          const shadowCar = await Car.findOne({ outwardCarId: outCar.originalOutputId });
-          
-          let isCarInRepair = false;
-          if (shadowCar) {
-            const RepairJob = mongoose.model('RepairJob');
-            const activeRepair = await RepairJob.findOne({ car: shadowCar._id, status: { $nin: ['Completed', 'Cancelled'] } });
-            if (activeRepair) {
-              isCarInRepair = true;
+            for (const outCar of outwardCars) {
+              const shadowCar = await Car.findOne({ outwardCarId: outCar.originalOutputId });
+              
+              let isCarInRepair = false;
+              if (shadowCar) {
+                const RepairJob = mongoose.model('RepairJob');
+                const activeRepair = await RepairJob.findOne({ car: shadowCar._id, status: { $nin: ['Completed', 'Cancelled'] } });
+                if (activeRepair) {
+                  isCarInRepair = true;
+                }
+              }
+
+              const carData = {
+                owner: ownerId,
+                brand: outCar.brand || 'External',
+                model: outCar.model || 'Vehicle',
+                year: 2024,
+                color: 'N/A',
+                registrationNumber: outCar.carNumber || outCar.registrationNumber || `OUT-${outCar.originalOutputId.slice(-6).toUpperCase()}`,
+                carType: 'suv',
+                fuelType: 'petrol',
+                transmission: 'automatic',
+                seatingCapacity: 5,
+                pricePerDay: outCar.pricePerDay || 1000,
+                pricePerWeek: (outCar.pricePerDay || 1000) * 7,
+                pricePerMonth: (outCar.pricePerDay || 1000) * 30,
+                securityDeposit: 0,
+                description: `This verified premium outward car is owned by ${outCar.ownerName} and managed by DriveOn partners.`,
+                isAvailable: isCarInRepair ? false : true,
+                status: 'active',
+                images: outCar.image ? [{ url: outCar.image, isPrimary: true }] : [],
+                location: {
+                  city: outCar.location || 'Indore',
+                  state: 'Madhya Pradesh',
+                  address: outCar.location || 'Indore'
+                },
+                ownerInfo: {
+                  name: outCar.ownerName,
+                  email: 'partner@driveon.com',
+                  phone: outCar.ownerPhone
+                },
+                ownerName: outCar.ownerName,
+                source: 'outward',
+                outwardCarId: outCar.originalOutputId,
+                features: outCar.features || []
+              };
+
+              if (shadowCar) {
+                // Only write to DB if the data actually changed to save IO operations
+                let hasChanged = false;
+                for (const key of Object.keys(carData)) {
+                  if (key === 'location') {
+                    if (shadowCar.location?.city !== carData.location.city) hasChanged = true;
+                  } else if (key === 'features') {
+                    if (shadowCar.features?.length !== carData.features.length) hasChanged = true;
+                  } else if (shadowCar[key] !== carData[key]) {
+                    hasChanged = true;
+                  }
+                }
+                if (hasChanged) {
+                  Object.assign(shadowCar, carData);
+                  await shadowCar.save();
+                }
+              } else {
+                await Car.create(carData);
+              }
             }
           }
-
-          const carData = {
-            owner: ownerId,
-            brand: outCar.brand || 'External',
-            model: outCar.model || 'Vehicle',
-            year: 2024,
-            color: 'N/A',
-            registrationNumber: outCar.carNumber || outCar.registrationNumber || `OUT-${outCar.originalOutputId.slice(-6).toUpperCase()}`,
-            carType: 'suv',
-            fuelType: 'petrol',
-            transmission: 'automatic',
-            seatingCapacity: 5,
-            pricePerDay: outCar.pricePerDay || 1000,
-            pricePerWeek: (outCar.pricePerDay || 1000) * 7,
-            pricePerMonth: (outCar.pricePerDay || 1000) * 30,
-            securityDeposit: 0,
-            description: `This verified premium outward car is owned by ${outCar.ownerName} and managed by DriveOn partners.`,
-            isAvailable: isCarInRepair ? false : true,
-            status: 'active',
-            images: outCar.image ? [{ url: outCar.image, isPrimary: true }] : [],
-            location: {
-              city: outCar.location || 'Indore',
-              state: 'Madhya Pradesh',
-              address: outCar.location || 'Indore'
-            },
-            ownerInfo: {
-              name: outCar.ownerName,
-              email: 'partner@driveon.com',
-              phone: outCar.ownerPhone
-            },
-            ownerName: outCar.ownerName,
-            source: 'outward',
-            outwardCarId: outCar.originalOutputId,
-            features: outCar.features || []
-          };
-
-          if (shadowCar) {
-            Object.assign(shadowCar, carData);
-            await shadowCar.save();
-          } else {
-            await Car.create(carData);
-          }
+        } catch (syncErr) {
+          console.error('Dynamic shadow car sync error:', syncErr);
         }
-      }
-    } catch (syncErr) {
-      console.error('Dynamic shadow car sync error:', syncErr);
+      };
+      
+      // Call async in background, do not await!
+      syncOutwardCars();
     }
 
     const {
@@ -103,6 +128,53 @@ export const getAllCars = async (req, res) => {
       isAvailable: isAvailable === 'true' || isAvailable === true,
     };
 
+    // Exclude cars currently booked right now by default if no explicit date range is specified
+    if (!availabilityStart || !availabilityEnd) {
+      const currentDate = new Date();
+      const currentDateISO = currentDate.toISOString();
+
+      // 1. Conflicting normal bookings
+      const currentConflictingBookings = await Booking.find({
+        status: { $in: ['pending', 'confirmed', 'active'] },
+        tripStatus: { $nin: ['completed', 'cancelled'] },
+        $or: [
+          {
+            'tripStart.date': { $lte: currentDate },
+            'tripEnd.date': { $gte: currentDate },
+          }
+        ],
+      }).select('car');
+      const currentExcludedIds = currentConflictingBookings.map(b => b.car).filter(Boolean);
+
+      // 2. Conflicting inward/outward bookings
+      const currentConflictingOutward = await OutwardBooking.find({
+        status: 'active',
+        fromDate: { $lte: currentDateISO },
+        toDate: { $gte: currentDateISO }
+      }).select('carId');
+      const currentOutwardCarIds = currentConflictingOutward.map(b => b.carId).filter(Boolean);
+
+      let currentOutwardExcludedIds = [];
+      if (currentOutwardCarIds.length > 0) {
+        const matchedCars = await Car.find({
+          $or: [
+            { outwardCarId: { $in: currentOutwardCarIds } },
+            { _id: { $in: currentOutwardCarIds.filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id)) } }
+          ]
+        }).select('_id');
+        currentOutwardExcludedIds = matchedCars.map(c => c._id);
+      }
+
+      const totalExcludedIds = [...new Set([
+        ...currentExcludedIds.map(id => id.toString()),
+        ...currentOutwardExcludedIds.map(id => id.toString())
+      ])].map(id => new mongoose.Types.ObjectId(id));
+
+      if (totalExcludedIds.length > 0) {
+        query._id = { $nin: totalExcludedIds };
+      }
+    }
+
     // Availability Filter (Date Range)
     if (availabilityStart && availabilityEnd) {
       const searchStart = new Date(availabilityStart);
@@ -113,7 +185,10 @@ export const getAllCars = async (req, res) => {
       console.log('Search End:', searchEnd);
 
       if (!isNaN(searchStart.getTime()) && !isNaN(searchEnd.getTime())) {
-        // Find bookings that overlap with the requested dates
+        const searchStartISO = searchStart.toISOString();
+        const searchEndISO = searchEnd.toISOString();
+
+        // 1. Find normal bookings that overlap with requested dates
         const conflictingBookings = await Booking.find({
           status: { $in: ['pending', 'confirmed', 'active'] },
           $or: [
@@ -123,13 +198,38 @@ export const getAllCars = async (req, res) => {
             }
           ],
         }).select('car');
+        const excludedCarIds = conflictingBookings.map(b => b.car).filter(Boolean);
 
-        console.log('Conflicting Bookings Found:', conflictingBookings.length);
-        const excludedCarIds = conflictingBookings.map(b => b.car);
-        console.log('Excluded Car IDs:', excludedCarIds);
+        // 2. Find inward/outward bookings that overlap with requested dates
+        const conflictingOutwardBookings = await OutwardBooking.find({
+          status: 'active',
+          fromDate: { $lte: searchEndISO },
+          toDate: { $gte: searchStartISO }
+        }).select('carId');
+        const outwardCarIds = conflictingOutwardBookings.map(b => b.carId).filter(Boolean);
+
+        let outwardExcludedCarIds = [];
+        if (outwardCarIds.length > 0) {
+          const matchedCars = await Car.find({
+            $or: [
+              { outwardCarId: { $in: outwardCarIds } },
+              { _id: { $in: outwardCarIds.filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id)) } }
+            ]
+          }).select('_id');
+          outwardExcludedCarIds = matchedCars.map(c => c._id);
+        }
+
+        const totalExcludedIds = [...new Set([
+          ...excludedCarIds.map(id => id.toString()),
+          ...outwardExcludedCarIds.map(id => id.toString())
+        ])].map(id => new mongoose.Types.ObjectId(id));
+
+        console.log('Conflicting Normal Bookings Found:', conflictingBookings.length);
+        console.log('Conflicting Outward Bookings Found:', conflictingOutwardBookings.length);
+        console.log('Total Excluded Car IDs:', totalExcludedIds);
         
-        if (excludedCarIds.length > 0) {
-          query._id = { $nin: excludedCarIds };
+        if (totalExcludedIds.length > 0) {
+          query._id = { $nin: totalExcludedIds };
         }
       } else {
         console.log('Invalid dates provided');

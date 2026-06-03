@@ -27,7 +27,7 @@ const ModuleLoginPage = () => {
   const [canResend, setCanResend] = useState(false);
 
   // Get return URL from location state or default to module home
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from || '/';
 
   // Prevent body scroll when component mounts
   useEffect(() => {

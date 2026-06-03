@@ -248,6 +248,7 @@ const CRM_StaffSalary = lazy(() => import("../crm/pages/staff/StaffSubPages").th
 const CRM_StaffAttendanceSettings = lazy(() => import("../crm/pages/staff/StaffSubPages").then(module => ({ default: module.AttendanceSettingsPage })));
 const CRM_StaffDriverAssignment = lazy(() => import("../crm/pages/staff/DriverAssignmentPage"));
 const CRM_StaffDriverRecord = lazy(() => import("../crm/pages/staff/DriverRecordPage"));
+const CRM_UpcomingCarsScreen = lazy(() => import("../crm/pages/UpcomingCarsScreen"));
 
 
 
@@ -434,6 +435,10 @@ const router = createBrowserRouter([
       {
         path: "staff/driver-record",
         element: <CRM_StaffDriverRecord />,
+      },
+      {
+        path: "upcoming-cars-screen",
+        element: <CRM_UpcomingCarsScreen />,
       },
 
 

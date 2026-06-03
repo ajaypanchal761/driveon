@@ -114,6 +114,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       name: 'Driver Record',
       icon: <MdBadge />
     },
+    {
+      id: 'upcoming-cars-screen',
+      path: '/crm/upcoming-cars-screen',
+      name: 'Screen',
+      icon: <MdDirectionsCar />
+    },
   ];
 
   const filterCRMMenuItems = (items, user) => {
@@ -155,7 +161,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             '/crm/staff/driver-record': 'crm:driver-record',
           };
           const key = keyMap[item.path || item.id];
-          const hasAccess = key ? permissions.includes(key) : false;
+          if (!key) return item;
+          const hasAccess = permissions.includes(key);
           return hasAccess ? item : null;
         }
       })

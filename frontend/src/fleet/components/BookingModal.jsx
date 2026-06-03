@@ -2,15 +2,13 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { colors } from '../../module/theme/colors';
 import api from '../../services/api';
 import { Button } from '../../components/common';
+import { commonService } from '../../services/common.service';
 import {
   getDaysBetween,
   getDaysBetweenWithTime,
   isValidDateRange,
   rangesOverlapInclusive,
 } from '../utils/fleetDateUtils';
-
-// Default advance percentage
-const DEFAULT_ADVANCE_PCT = 30;
 
 const fileToDataUrl = (file) =>
   new Promise((resolve, reject) => {
@@ -35,6 +33,11 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
   // Payment fields — simplified
   const [paymentMode, setPaymentMode] = useState('cash'); // 'cash' | 'razorpay'
   const [paymentType, setPaymentType] = useState('advance'); // 'advance' | 'full'
+  const [deposit, setDeposit] = useState('');
+  const [cashCollectors, setCashCollectors] = useState([]);
+  const [cashCollector, setCashCollector] = useState('');
+  const [advancePercentage, setAdvancePercentage] = useState(20); // Dynamic from settings
+  const settingsPercentageRef = useRef(20);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -218,12 +221,39 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     setActiveCameraField(null);
     setPanNumber('');
     setIsPanVerified(false);
+    setDeposit('');
+    setCashCollector('');
+    setAdvancePercentage(settingsPercentageRef.current); // Reset to system setting value
   }, [open, car?.id]);
+
+  useEffect(() => {
+    if (open) {
+      const fetchSettings = async () => {
+        try {
+          const res = await commonService.getSystemSettings();
+          if (res.success && res.data?.settings) {
+            const settingsObj = res.data.settings;
+            if (settingsObj.advancePaymentPercentage !== undefined) {
+              const pctVal = Number(settingsObj.advancePaymentPercentage);
+              settingsPercentageRef.current = pctVal;
+              setAdvancePercentage(pctVal);
+            }
+            if (settingsObj.cashCollectors) {
+              setCashCollectors(settingsObj.cashCollectors);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch system settings:', err);
+        }
+      };
+      fetchSettings();
+    }
+  }, [open]);
 
   // Computed values
   const numberOfDays = useMemo(() => getDaysBetweenWithTime(fromDate, startTime, toDate, endTime), [fromDate, startTime, toDate, endTime]);
   const totalPrice = useMemo(() => (!car ? 0 : numberOfDays * Number(car.pricePerDay || 0)), [car, numberOfDays]);
-  const advanceAmount = useMemo(() => Math.round((DEFAULT_ADVANCE_PCT / 100) * totalPrice), [totalPrice]);
+  const advanceAmount = useMemo(() => Math.round((advancePercentage / 100) * totalPrice), [totalPrice, advancePercentage]);
   const amountToPay = paymentType === 'full' ? totalPrice : advanceAmount;
 
   const hasOverlap = useMemo(() => {
@@ -243,8 +273,9 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     if (!startTime || !endTime) return false;
     if (!isValidDateRange(fromDate, toDate)) return false;
     if (hasOverlap) return false;
+    if (paymentMode === 'cash' && !cashCollector) return false;
     return true;
-  }, [car, customerName, customerPhone, customerImagePreview, fromDate, toDate, startTime, endTime, isDlVerified, isPanVerified, panNumber, hasOverlap]);
+  }, [car, customerName, customerPhone, customerImagePreview, fromDate, toDate, startTime, endTime, isDlVerified, isPanVerified, panNumber, hasOverlap, paymentMode, cashCollector]);
 
   const loadRazorpayScript = () =>
     new Promise((resolve) => {
@@ -268,6 +299,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
     if (panNumber.trim() && !isPanVerified) { setError('Please verify PAN Card via QuickEKYC before booking'); return; }
     // Aadhaar is optional — no verification required
     if (hasOverlap) { setError('Car is already booked for these dates'); return; }
+    if (paymentMode === 'cash' && !cashCollector) { setError('Please select who collected the cash'); return; }
 
     setSubmitting(true);
     try {
@@ -297,6 +329,8 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
         aadhaarVerified: isAadhaarVerified,
         licenseNumber: licenseNumber.trim(),
         licenseVerified: isDlVerified,
+        deposit: car.type === 'inward' ? (Number(deposit) || 0) : 0,
+        cashCollector: paymentMode === 'cash' ? cashCollector : '',
       };
 
       if (paymentMode === 'razorpay') {
@@ -691,6 +725,25 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
             )}
           </div>
 
+          {/* ── Security Deposit (Inward Only) ── */}
+          {car.type === 'inward' && (
+            <div className="border rounded-xl p-4" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}>
+              <label className="block text-sm font-bold uppercase tracking-wide mb-2" style={labelStyle}>
+                Security Deposit (Record Only)
+              </label>
+              <input
+                type="number"
+                value={deposit}
+                onChange={(e) => setDeposit(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 outline-none text-sm font-semibold"
+                style={inputStyle}
+                placeholder="Enter deposit amount in ₹ (e.g. 5000)"
+                min={0}
+              />
+              <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>This is for record-keeping to track the security deposit kept with the admin.</p>
+            </div>
+          )}
+
           {/* ── Booking Summary ── */}
           <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}>
             <h3 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: colors.textSecondary }}>Booking Summary</h3>
@@ -708,7 +761,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
             </div>
             <div className="border-t pt-2" style={{ borderTopColor: colors.borderLight }}>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-bold" style={{ color: colors.textPrimary }}>Advance Required ({DEFAULT_ADVANCE_PCT}%)</span>
+                <span className="text-sm font-bold" style={{ color: colors.textPrimary }}>Advance Required ({advancePercentage}%)</span>
                 <span className="text-lg font-extrabold" style={{ color: colors.backgroundTertiary }}>₹{advanceAmount}</span>
               </div>
             </div>
@@ -721,7 +774,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
             {/* Advance or Full */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { value: 'advance', label: 'Advance Payment', desc: `₹${advanceAmount} (${DEFAULT_ADVANCE_PCT}%)`, icon: '💰' },
+                { value: 'advance', label: 'Advance Payment', desc: `₹${advanceAmount} (${advancePercentage}%)`, icon: '💰' },
                 { value: 'full', label: 'Full Payment', desc: `₹${totalPrice}`, icon: '✅' },
               ].map((opt) => (
                 <button
@@ -763,6 +816,30 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
                 </button>
               ))}
             </div>
+
+            {/* Cash Collector Dropdown (Only when cash is selected) */}
+            {paymentMode === 'cash' && (
+              <div className="space-y-1.5 p-4 rounded-xl border animate-fade-in" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}>
+                <label className="block text-xs font-bold uppercase tracking-wider" style={labelStyle}>
+                  Select Cash Collector <span style={{ color: colors.accentRed }}>*</span>
+                </label>
+                <select
+                  value={cashCollector}
+                  onChange={(e) => setCashCollector(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 outline-none text-sm font-bold cursor-pointer"
+                  style={inputStyle}
+                  required
+                >
+                  <option value="" style={{ backgroundColor: colors.backgroundSecondary }}>-- Select Collector Name --</option>
+                  {cashCollectors.map((collectorName, i) => (
+                    <option key={i} value={collectorName} style={{ backgroundColor: colors.backgroundSecondary }}>
+                      {collectorName}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>Choose the admin or staff member who is physically collecting the cash.</p>
+              </div>
+            )}
 
             {/* Amount to collect info box */}
             <div

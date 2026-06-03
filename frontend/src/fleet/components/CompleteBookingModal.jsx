@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { colors } from '../../module/theme/colors';
 import api from '../../services/api';
+import { commonService } from '../../services/common.service';
 
 const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
   const [paymentMode, setPaymentMode] = useState('cash'); // 'cash' | 'razorpay'
   const [onlineMethod, setOnlineMethod] = useState('razorpay'); // 'razorpay' | 'transaction_id'
   const [transactionId, setTransactionId] = useState('');
+  const [cashCollectors, setCashCollectors] = useState([]);
+  const [cashCollector, setCashCollector] = useState('');
   
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +31,23 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
       script.onerror = () => resolve(false);
       document.head.appendChild(script);
     });
+
+  useEffect(() => {
+    if (open) {
+      setCashCollector('');
+      const fetchSettings = async () => {
+        try {
+          const res = await commonService.getSystemSettings();
+          if (res.success && res.data?.settings?.cashCollectors) {
+            setCashCollectors(res.data.settings.cashCollectors);
+          }
+        } catch (err) {
+          console.error('Failed to fetch system settings:', err);
+        }
+      };
+      fetchSettings();
+    }
+  }, [open]);
 
   const completeBooking = async (payload) => {
     try {
@@ -66,6 +86,11 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
       return;
     }
 
+    if (paymentMode === 'cash' && !cashCollector) {
+      setError('Please select who collected the cash');
+      return;
+    }
+
     setSubmitting(true);
     
     const finalPaidAmount = paidAmount + amountToCollect;
@@ -75,6 +100,7 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
       paidAmount: finalPaidAmount,
       paymentMode: paymentMode === 'razorpay' ? 'Razorpay / Online' : 'Cash',
       paymentStatus: finalPaymentStatus,
+      cashCollector: paymentMode === 'cash' ? cashCollector : undefined,
     };
     if (paymentMode === 'razorpay' && onlineMethod === 'transaction_id' && transactionId) {
       backendPayload.transactionId = transactionId;
@@ -139,7 +165,8 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
 
   const isCompleteDisabled = submitting || 
     amountToCollect < 0 || 
-    (paymentMode === 'razorpay' && onlineMethod === 'transaction_id' && !transactionId.trim());
+    (paymentMode === 'razorpay' && onlineMethod === 'transaction_id' && !transactionId.trim()) ||
+    (paymentMode === 'cash' && !cashCollector);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -208,6 +235,30 @@ const CompleteBookingModal = ({ open, booking, onClose, onConfirm }) => {
                 </button>
               ))}
             </div>
+
+            {/* Cash Collector Dropdown (Only when cash is selected) */}
+            {paymentMode === 'cash' && (
+              <div className="mt-4 space-y-1.5 p-4 rounded-xl border animate-fade-in" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}>
+                <label className="block text-xs font-bold uppercase tracking-wider" style={{ color: colors.textSecondary }}>
+                  Select Cash Collector <span style={{ color: colors.accentRed }}>*</span>
+                </label>
+                <select
+                  value={cashCollector}
+                  onChange={(e) => setCashCollector(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 outline-none text-sm font-bold cursor-pointer"
+                  style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary, color: colors.textPrimary }}
+                  required
+                >
+                  <option value="" style={{ backgroundColor: colors.backgroundSecondary }}>-- Select Collector Name --</option>
+                  {cashCollectors.map((collectorName, i) => (
+                    <option key={i} value={collectorName} style={{ backgroundColor: colors.backgroundSecondary }}>
+                      {collectorName}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>Choose the admin or staff member who is physically collecting the cash.</p>
+              </div>
+            )}
 
             {paymentMode === 'razorpay' && (
               <div className="mt-4 p-4 rounded-xl border" style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}>

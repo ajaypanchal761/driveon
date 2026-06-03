@@ -308,12 +308,12 @@ export const generateBookingPDF = (bookingData) => {
   doc.setTextColor(15, 23, 42); // slate-900
 
   let paymentOptionText = bookingData.paymentOption || 'N/A';
-  if (bookingData.paymentOption === 'advance') {
-    let percentage = 30; // Default to 30% to match user screenshot
-    if (bookingData.pricing && bookingData.pricing.totalPrice > 0 && bookingData.pricing.advancePayment > 0) {
-      percentage = Math.round((bookingData.pricing.advancePayment / bookingData.pricing.totalPrice) * 100);
-    } else if (bookingData.totalPrice > 0 && (bookingData.paidAmount || bookingData.advancePayment)) {
-      const paid = bookingData.paidAmount || bookingData.advancePayment;
+  if (bookingData.paymentOption === 'advance' || bookingData.advanceAmount > 0) {
+    let percentage = 20; // Default to 20% fallback (since system settings default is 20%)
+    if (bookingData.pricing && bookingData.pricing.totalPrice > 0 && (bookingData.pricing.advancePayment > 0 || bookingData.pricing.advanceAmount > 0)) {
+      percentage = Math.round(((bookingData.pricing.advancePayment || bookingData.pricing.advanceAmount) / bookingData.pricing.totalPrice) * 100);
+    } else if (bookingData.totalPrice > 0 && (bookingData.paidAmount || bookingData.advancePayment || bookingData.advanceAmount)) {
+      const paid = bookingData.paidAmount || bookingData.advancePayment || bookingData.advanceAmount;
       percentage = Math.round((paid / bookingData.totalPrice) * 100);
     }
     paymentOptionText = `${percentage}% Advance`;

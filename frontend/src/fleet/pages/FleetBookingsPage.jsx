@@ -282,6 +282,7 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
                     <InfoItem label="Base Rental Price" value={formatCurrency(basePrice)} />
                     {discount > 0 && <InfoItem label="Discount Applied" value={`-${formatCurrency(discount)}`} valueClass="text-green-600" />}
                     <InfoItem label="Final Total Price" value={formatCurrency(totalPrice)} valueClass="text-lg text-blue-600" />
+                    {booking.deposit > 0 && <InfoItem label="Security Deposit" value={formatCurrency(booking.deposit)} valueClass="text-purple-600 font-bold" />}
                     <InfoItem label="Payment Status" value={paymentStatusLabel} />
                   </div>
 
@@ -510,6 +511,12 @@ const FleetBookingsPage = () => {
                       <span style={{ color: colors.textSecondary }}>Paid Amount:</span>
                       <span className="font-semibold text-green-400">{formatCurrency(paidAmount)}</span>
                     </div>
+                    {b.deposit > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span style={{ color: colors.textSecondary }}>Security Deposit:</span>
+                        <span className="font-bold text-purple-400">{formatCurrency(b.deposit)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm border-t pt-1.5" style={{ borderTopColor: colors.borderLight }}>
                       <span style={{ color: colors.textSecondary }}>Due Amount:</span>
                       <span className="font-bold text-orange-400">{formatCurrency(dueAmount)}</span>

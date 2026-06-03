@@ -192,16 +192,17 @@ export const getReturningCars = async (req, res) => {
     // Get current time
     const now = new Date();
 
-    // Find active bookings that are ending within the next 6 hours
-    const sixHoursFromNow = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+    // Find active bookings returning today (until end of today 23:59:59)
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
 
     const activeBookings = await Booking.find({
       status: 'confirmed',
-      tripStatus: 'active',
+      tripStatus: { $nin: ['completed', 'cancelled'] },
       $or: [
-        { 'tripEnd.date': { $lte: sixHoursFromNow, $gte: now } },
-        { dropDate: { $lte: sixHoursFromNow, $gte: now } },
-        { endDate: { $lte: sixHoursFromNow, $gte: now } },
+        { 'tripEnd.date': { $lte: endOfToday, $gte: now } },
+        { dropDate: { $lte: endOfToday, $gte: now } },
+        { endDate: { $lte: endOfToday, $gte: now } },
       ],
     })
       .populate('car', 'brand model pricePerDay images location')

@@ -49,6 +49,21 @@ const BookNowPage = () => {
     user: state.auth?.user || state.user?.user || state.user,
   }));
 
+  // Redirect unauthenticated users immediately
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toastUtils.info("Please login to proceed with booking.");
+      navigate("/login", {
+        state: {
+          from: {
+            pathname: `/book-now/${id}`,
+            state: location.state,
+          }
+        }
+      });
+    }
+  }, [isAuthenticated, id, navigate, location.state]);
+
   // Get car data from navigation state, session cache, or use mock data as fallback
   const getCarData = () => {
     // First, try to get car from navigation state (when coming from search or car details)

@@ -18,6 +18,7 @@ import { userService } from '../../services/user.service';
 import { setUser, updateUser } from '../../store/slices/userSlice';
 import razorpayService from '../../services/razorpay.service';
 import bookingService from '../../services/booking.service';
+import toastUtils from '../../config/toast';
 
 // Import car images
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
@@ -1969,19 +1970,35 @@ const CarDetailsPage = () => {
     } catch (err) {
       console.warn('Failed to cache car before booking', err);
     }
+
+    const bookingPayload = {
+      car,
+      pickupDate,
+      pickupTime,
+      dropDate,
+      dropTime,
+      paymentOption,
+      specialRequests,
+      couponCode: appliedCoupon?.code,
+      couponDiscount,
+      priceDetails,
+    };
+
+    if (!isAuthenticated) {
+      toastUtils.info("Please login to proceed with booking.");
+      navigate('/login', {
+        state: {
+          from: {
+            pathname: `/book-now/${car?.id || car?._id || id}`,
+            state: bookingPayload,
+          }
+        }
+      });
+      return;
+    }
+
     navigate(`/book-now/${car?.id || car?._id || id}`, {
-      state: {
-        car,
-        pickupDate,
-        pickupTime,
-        dropDate,
-        dropTime,
-        paymentOption,
-        specialRequests,
-        couponCode: appliedCoupon?.code,
-        couponDiscount,
-        priceDetails,
-      },
+      state: bookingPayload,
     });
   };
 

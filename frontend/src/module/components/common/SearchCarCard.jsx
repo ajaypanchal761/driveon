@@ -16,6 +16,16 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const isFav = isFavorite(car.id);
 
+  const isTransparentPNG = car.image && (
+    typeof car.image === 'string' && (
+      car.image.includes('removebg') || 
+      car.image.includes('car_img') || 
+      car.image.includes('logo') ||
+      car.image.startsWith('data:image/svg') ||
+      car.image.endsWith('.svg')
+    )
+  );
+
   // Horizontal layout for Popular Cars section (matches second image)
   if (horizontal) {
     return (
@@ -32,14 +42,17 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
         {/* Car Image - Left Side */}
         <div 
           className="relative w-32 md:w-48 lg:w-56 h-28 md:h-40 lg:h-44 flex items-center justify-center flex-shrink-0 rounded-l-xl md:rounded-l-2xl overflow-hidden"
-          style={{ backgroundColor: colors.backgroundLight }}
+          style={{ backgroundColor: isTransparentPNG ? colors.backgroundLight : '#ffffff' }}
         >
           <motion.img 
             ref={imageRef}
             src={car.image} 
             alt={car.name} 
-            className="w-full h-full object-contain md:p-2"
-            style={{ transform: 'scale(1.2)' }}
+            loading="lazy"
+            className={`w-full h-full ${
+              isTransparentPNG ? "object-contain md:p-2" : "object-cover"
+            }`}
+            style={{ transform: isTransparentPNG ? 'scale(1.2)' : 'none' }}
             initial={{ x: 100, opacity: 0 }}
             animate={isImageInView ? { x: 0, opacity: 1 } : { x: 100, opacity: 0 }}
             transition={{ 
@@ -94,13 +107,18 @@ const SearchCarCard = ({ car, horizontal = false, index = 0 }) => {
       {/* Car Image Container - Compact on mobile, larger on desktop */}
       <div 
         className="relative w-full h-28 md:h-48 lg:h-56 flex items-center justify-center rounded-t-xl md:rounded-t-2xl overflow-hidden"
-        style={{ backgroundColor: colors.backgroundImage }}
+        style={{ backgroundColor: isTransparentPNG ? colors.backgroundImage : '#ffffff' }}
       >
         <motion.img 
           ref={imageRef}
           src={car.image} 
           alt={car.name} 
-          className="w-full h-full object-contain p-1.5 md:p-3 lg:p-4"
+          loading="lazy"
+          className={`w-full h-full ${
+            isTransparentPNG 
+              ? "object-contain p-1.5 md:p-3 lg:p-4" 
+              : "object-cover"
+          }`}
           initial={{ x: 100, opacity: 0 }}
           animate={isImageInView ? { x: 0, opacity: 1 } : { x: 100, opacity: 0 }}
           transition={{ 

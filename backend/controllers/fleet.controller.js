@@ -366,6 +366,8 @@ export const getOutwardBookings = async (req, res) => {
             licenseVerified: b.licenseVerified || false,
             panNumber: b.panNumber || '',
             panVerified: b.panVerified || false,
+            deposit: b.deposit || 0,
+            cashCollector: b.cashCollector || '',
             status: b.status || 'active',
             createdAt: b.createdAt
         }));
@@ -444,6 +446,8 @@ export const createOutwardBooking = async (req, res) => {
             licenseVerified: bookingData.licenseVerified || false,
             panNumber: bookingData.panNumber || '',
             panVerified: bookingData.panVerified || false,
+            deposit: bookingData.deposit || 0,
+            cashCollector: bookingData.cashCollector || '',
             status: bookingData.status || 'active'
         });
 
@@ -492,6 +496,8 @@ export const createOutwardBooking = async (req, res) => {
             licenseVerified: newBooking.licenseVerified,
             panNumber: newBooking.panNumber,
             panVerified: newBooking.panVerified,
+            deposit: newBooking.deposit || 0,
+            cashCollector: newBooking.cashCollector || '',
             status: newBooking.status,
             createdAt: newBooking.createdAt
         };
@@ -850,7 +856,7 @@ export const cancelOutwardBooking = async (req, res) => {
 export const completeOutwardBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        const { paidAmount, paymentMode, paymentStatus, transactionId } = req.body;
+        const { paidAmount, paymentMode, paymentStatus, transactionId, cashCollector } = req.body;
         const booking = await OutwardBooking.findOne({ originalBookingId: id });
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -882,6 +888,10 @@ export const completeOutwardBooking = async (req, res) => {
 
         if (transactionId) {
             booking.transactionId = transactionId;
+        }
+
+        if (cashCollector) {
+            booking.cashCollector = cashCollector;
         }
 
         await booking.save();

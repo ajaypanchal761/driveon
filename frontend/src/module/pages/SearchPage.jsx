@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SearchHeader from '../components/layout/SearchHeader';
@@ -10,6 +10,7 @@ import ReturningCarBanner from '../components/common/ReturningCarBanner';
 import { colors } from '../theme/colors';
 import { useAppSelector } from '../../hooks/redux';
 import { carService } from '../../services/car.service';
+import { commonService } from '../../services/common.service';
 import { useLocation } from '../../hooks/useLocation';
 
 // Import car images
@@ -35,6 +36,86 @@ import logo13 from '../../assets/car_logo13_PNG.png';
 import logo14 from '../../assets/car_logo14_PNG.png';
 import logo15 from '../../assets/car_logo15.png';
 import logo16 from '../../assets/car_logo16.png';
+
+const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
+
+// Shimmer Skeleton Loader for Car Card
+const CarCardSkeleton = () => (
+  <div className="w-full bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm animate-pulse">
+    {/* Image placeholder */}
+    <div className="w-full h-28 md:h-48 lg:h-56 bg-gray-200"></div>
+    {/* Content placeholder */}
+    <div className="p-2 md:p-4 lg:p-5 space-y-3">
+      {/* Title & Rating */}
+      <div className="flex justify-between items-center">
+        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div className="h-4 bg-gray-200 rounded w-8"></div>
+      </div>
+      {/* Location */}
+      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+      {/* Price & Button */}
+      <div className="flex justify-between items-center pt-2">
+        <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+        <div className="h-8 bg-gray-200 rounded-lg w-16 md:w-20"></div>
+      </div>
+    </div>
+  </div>
+);
+
+// Banner component shown when no cars match search criteria but there is a car returning today
+const ReturningSoonNoCarsBanner = ({ car }) => {
+  const navigate = useNavigate();
+  const returnTime = car.returningDate 
+    ? new Date(car.returningDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+    : '';
+
+  let carImage = fallbackCarImages[0];
+  if (car.image) {
+    carImage = car.image;
+  } else if (car.images && car.images.length > 0) {
+    const imgObj = car.images[0];
+    const path = typeof imgObj === 'string' ? imgObj : (imgObj.url || imgObj.path);
+    if (path) {
+      carImage = path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL || ''}${path}`;
+    }
+  }
+
+  return (
+    <div 
+      className="w-full max-w-xl mx-auto bg-gradient-to-br from-[#1C205C] to-[#0D102D] text-white rounded-2xl shadow-lg overflow-hidden p-5 flex items-center justify-between gap-5 border border-indigo-950 animate-fade-in mb-6 mt-2"
+    >
+      <div className="flex-1 min-w-0 text-left">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Upcoming Car Today</span>
+        </div>
+        <h3 className="text-lg md:text-xl font-bold text-white mb-1 truncate">
+          {car.brand} {car.model}
+        </h3>
+        <p className="text-sm md:text-base text-gray-300 mb-0.5 leading-relaxed">
+          Returning at <span className="font-semibold text-white">{returnTime}</span>
+        </p>
+        <p className="text-xs md:text-sm text-emerald-400 font-medium mb-1.5">
+          (in {car.returningIn || "a few hours"})
+        </p>
+        <div className="flex items-center gap-1.5 text-xs md:text-sm text-gray-400">
+          <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span className="truncate">{car.location?.city || car.location?.address || car.location || "Nearby"}</span>
+        </div>
+      </div>
+      <div className="w-32 h-20 flex items-center justify-center relative flex-shrink-0">
+        <img 
+          src={carImage} 
+          alt={`${car.brand} ${car.model}`}
+          className="max-h-20 w-auto object-contain transform scale-110 select-none pointer-events-none"
+        />
+      </div>
+    </div>
+  );
+};
 
 /**
  * SearchPage Component - Exact match to design
@@ -101,11 +182,13 @@ const SearchPage = () => {
 
   // Dynamic data state
   const [brands, setBrands] = useState([]);
-  const [allRecommendCars, setAllRecommendCars] = useState([]);
-  const [allPopularCars, setAllPopularCars] = useState([]);
+  const [allCars, setAllCars] = useState([]);
+  const [returningCars, setReturningCars] = useState([]);
+  const [currentReturningCarIndex, setCurrentReturningCarIndex] = useState(0);
   const [dataLoaded, setDataLoaded] = useState(false);
   // Don't show loader initially - data will load in background
   const [isLoading, setIsLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(6);
 
   // Filter states from FilterDropdown
   const [appliedFilters, setAppliedFilters] = useState({
@@ -125,6 +208,38 @@ const SearchPage = () => {
     pickupTime: '',
     dropoffTime: '',
   });
+
+  // Infinite scroll callback observers for Mobile and Web
+  const mobileObserverRef = useRef(null);
+  const mobileSentinelRef = useCallback((node) => {
+    if (mobileObserverRef.current) mobileObserverRef.current.disconnect();
+    if (node) {
+      mobileObserverRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 6);
+        }
+      }, { rootMargin: '100px' });
+      mobileObserverRef.current.observe(node);
+    }
+  }, []);
+
+  const webObserverRef = useRef(null);
+  const webSentinelRef = useCallback((node) => {
+    if (webObserverRef.current) webObserverRef.current.disconnect();
+    if (node) {
+      webObserverRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 6);
+        }
+      }, { rootMargin: '100px' });
+      webObserverRef.current.observe(node);
+    }
+  }, []);
+
+  // Reset visible count when filters or search query changes
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [selectedBrand, searchQuery, appliedFilters]);
 
   // Track if filters should auto-open (e.g., when coming from home pills)
   const [shouldOpenFilters, setShouldOpenFilters] = useState(false);
@@ -202,9 +317,6 @@ const SearchPage = () => {
     locations: [],
     ratings: [],
   });
-
-  // Fallback images for cars when API images missing
-  const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
 
   // Helper: case-insensitive partial match for multi-word queries
   const matchesQuery = (car, query) => {
@@ -298,7 +410,7 @@ const SearchPage = () => {
 
         // Build backend query params
         const queryParams = {
-          limit: 100, // Increase limit to allow client-side filtering of unsupported fields
+          limit: 200, // Increase limit to allow client-side filtering of all cars
           sortBy: 'createdAt',
           sortOrder: 'desc',
           status: 'active',
@@ -317,9 +429,7 @@ const SearchPage = () => {
 
         const transformedCars = cars.map((car, index) => transformCarData(car, index));
 
-        // First 6 as "Recommend For You", next 4 as "Our Popular Cars"
-        setAllRecommendCars(transformedCars.slice(0, 6));
-        setAllPopularCars(transformedCars.slice(6, 10));
+        setAllCars(transformedCars);
 
         // Build dynamic brands list from available cars
         const uniqueBrandNames = Array.from(
@@ -536,6 +646,16 @@ const SearchPage = () => {
           locations: uniqueLocations,
           ratings: ratingOptions,
         });
+
+        // Fetch returning cars for empty state banner
+        try {
+          const returningResponse = await commonService.getReturningCars();
+          if (returningResponse.success && returningResponse.data?.cars) {
+            setReturningCars(returningResponse.data.cars);
+          }
+        } catch (retError) {
+          console.error('Error loading returning cars:', retError);
+        }
       } catch (error) {
         console.error('Error loading search data:', error);
         // Keep empty lists on error - UI will simply show no cars
@@ -548,6 +668,15 @@ const SearchPage = () => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Rotate returning cars banner every 10 seconds if multiple exist
+  useEffect(() => {
+    if (returningCars.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentReturningCarIndex((prev) => (prev + 1) % returningCars.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [returningCars.length]);
 
   // Handle search
   const handleSearch = (query) => {
@@ -563,139 +692,8 @@ const SearchPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const filteredRecommendCars = useMemo(() => {
-    let filtered = allRecommendCars;
-
-    // Filter by brand (combined from pills and dropdown)
-    const activeBrand = appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : '');
-    if (activeBrand) {
-      const target = norm(activeBrand);
-      filtered = filtered.filter((car) => {
-        const b = norm(car.brand);
-        const m = norm(car.model);
-        const n = norm(car.name);
-        return b === target || m.includes(target) || n.includes(target);
-      });
-    }
-
-    // Filter by model from FilterDropdown
-    if (appliedFilters.model) {
-      const modelQuery = norm(appliedFilters.model);
-      filtered = filtered.filter((car) =>
-        norm(car.model).includes(modelQuery) ||
-        norm(car.name).includes(modelQuery)
-      );
-    }
-
-    // Filter by fuel type
-    if (appliedFilters.fuelType) {
-      filtered = filtered.filter((car) => {
-        const carFuelType = car.fuelType || '';
-        return carFuelType === appliedFilters.fuelType;
-      });
-    }
-
-    // Filter by transmission
-    if (appliedFilters.transmission) {
-      filtered = filtered.filter((car) => {
-        const carTransmission = car.transmission || '';
-        return carTransmission === appliedFilters.transmission;
-      });
-    }
-
-    // Filter by car type
-    if (appliedFilters.carType) {
-      filtered = filtered.filter((car) => {
-        const carType = car.carType || '';
-        return carType.toLowerCase() === appliedFilters.carType.toLowerCase();
-      });
-    }
-
-    // Filter by color
-    if (appliedFilters.color) {
-      filtered = filtered.filter((car) => {
-        const carColor = car.color || '';
-        return carColor.toLowerCase() === appliedFilters.color.toLowerCase();
-      });
-    }
-
-    // Filter by seats
-    if (appliedFilters.seats) {
-      filtered = filtered.filter((car) => {
-        const carSeats = String(car.seats || car.seatingCapacity || '');
-        return carSeats === appliedFilters.seats;
-      });
-    }
-
-    // Filter by features (all selected features must be present)
-    if (appliedFilters.features && appliedFilters.features.length > 0) {
-      filtered = filtered.filter((car) => {
-        const carFeatures = car.features || [];
-        return appliedFilters.features.every((feature) =>
-          carFeatures.some((carFeature) =>
-            carFeature.toLowerCase() === feature.toLowerCase()
-          )
-        );
-      });
-    }
-
-    // Filter by price range
-    if (appliedFilters.priceRange.min || appliedFilters.priceRange.max) {
-      filtered = filtered.filter((car) => {
-        const carPrice = parseFloat(car.price?.replace(/[^0-9.]/g, '') || car.pricePerDay || 0);
-        const minPrice = parseFloat(appliedFilters.priceRange.min) || 0;
-        const maxPrice = parseFloat(appliedFilters.priceRange.max) || Infinity;
-        return carPrice >= minPrice && carPrice <= maxPrice;
-      });
-    }
-
-    // Filter by rating
-    if (appliedFilters.rating) {
-      const minRating = parseFloat(appliedFilters.rating.replace('+', '')) || 0;
-      filtered = filtered.filter((car) => {
-        const carRating = parseFloat(car.rating) || 0;
-        return carRating >= minRating;
-      });
-    }
-
-    // Filter by location
-    if (appliedFilters.location) {
-      const locationQuery = norm(appliedFilters.location);
-      filtered = filtered.filter((car) => {
-        const carLoc = norm(car.location);
-        return carLoc.includes(locationQuery);
-      });
-    }
-
-    // Filter by availability
-    if (appliedFilters.availableFrom && appliedFilters.availableTo) {
-      const selectedFrom = new Date(appliedFilters.availableFrom).getTime();
-      const selectedTo = new Date(appliedFilters.availableTo).getTime();
-
-      if (!isNaN(selectedFrom) && !isNaN(selectedTo)) {
-        filtered = filtered.filter((car) => {
-          // If the car has explicit bookings data, check for overlap
-          const bookings = car.bookings || car.bookingsMap || [];
-          const hasOverlap = bookings.some(booking => {
-            const bookingStart = new Date(booking.startDate || booking.start).getTime();
-            const bookingEnd = new Date(booking.endDate || booking.end).getTime();
-            return selectedFrom < bookingEnd && selectedTo > bookingStart;
-          });
-          return !hasOverlap;
-        });
-      }
-    }
-
-    // Filter by search query (case-insensitive, supports partial words)
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((car) => matchesQuery(car, searchQuery));
-    }
-
-    return filtered;
-  }, [selectedBrand, allRecommendCars, searchQuery, appliedFilters]);
-
-  const filteredPopularCars = useMemo(() => {
-    let filtered = allPopularCars;
+  const filteredCars = useMemo(() => {
+    let filtered = allCars;
 
     // Filter by brand (combined from pills and dropdown)
     const activeBrand = appliedFilters.brand || (selectedBrand !== 'all' ? selectedBrand : '');
@@ -822,12 +820,13 @@ const SearchPage = () => {
     }
 
     return filtered;
-  }, [selectedBrand, allPopularCars, searchQuery, appliedFilters]);
+  }, [selectedBrand, allCars, searchQuery, appliedFilters]);
 
-  // Combine all filtered cars to check if any exist
-  const allFilteredCars = useMemo(() => {
-    return [...filteredRecommendCars, ...filteredPopularCars];
-  }, [filteredRecommendCars, filteredPopularCars]);
+  const visibleCars = useMemo(() => {
+    return filteredCars.slice(0, visibleCount);
+  }, [filteredCars, visibleCount]);
+
+  const allFilteredCars = filteredCars;
 
   return (
     <>
@@ -1017,99 +1016,106 @@ const SearchPage = () => {
             {/* Returning Car Banner */}
             < ReturningCarBanner />
 
+            {returningCars.length > 0 && (
+              <div className="my-4 overflow-hidden">
+                <motion.div
+                  key={returningCars[currentReturningCarIndex]?.id || returningCars[currentReturningCarIndex]?._id || currentReturningCarIndex}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                >
+                  <ReturningSoonNoCarsBanner car={returningCars[currentReturningCarIndex]} />
+                </motion.div>
+              </div>
+            )}
+
             {/* Main Content */}
             < div className="mt-4" >
-              {/* Show "No cars found" message if no cars match the filter - only after loading is complete */}
-              {
-                !isLoading && dataLoaded && allFilteredCars.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 md:py-20">
-                    <div className="text-center">
-                      <svg
-                        className="w-16 h-16 md:w-24 md:h-24 mx-auto mb-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <h3 className="text-lg md:text-2xl font-bold text-gray-700 mb-2">
-                        No Cars Found
-                      </h3>
-                      <p className="text-sm md:text-base text-gray-500">
-                        Sorry, we couldn't find any cars matching your selected filter.
-                      </p>
-                    </div>
+              {/* Show Skeleton Loader when loading, otherwise show content */}
+              {isLoading ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-black animate-pulse">
+                      Available Cars
+                    </h2>
                   </div>
-                ) : (
-                  <>
-                    {/* Recommend For You Section */}
-                    {filteredRecommendCars.length > 0 && (
-                      <motion.div
-                        className="mb-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.3 }}
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-lg font-bold text-black">
-                            Recommend For You
-                          </h2>
-                        </div>
+                  {/* Skeleton grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {[...Array(4)].map((_, idx) => (
+                      <CarCardSkeleton key={idx} />
+                    ))}
+                  </div>
+                </div>
+              ) : !dataLoaded ? (
+                <div className="grid grid-cols-2 gap-3 animate-pulse">
+                  {[...Array(4)].map((_, idx) => (
+                    <CarCardSkeleton key={idx} />
+                  ))}
+                </div>
+              ) : allFilteredCars.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 md:py-20">
+                  <div className="text-center">
+                    <svg
+                      className="w-16 h-16 md:w-24 md:h-24 mx-auto mb-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <h3 className="text-lg md:text-2xl font-bold text-gray-700 mb-2">
+                      No Available Cars Found
+                    </h3>
+                    <p className="text-sm md:text-base text-gray-500">
+                      Sorry, we couldn't find any available cars matching your selected filter.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Available Cars Section */}
+                  {filteredCars.length > 0 && (
+                    <motion.div
+                      className="mb-6"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.3 }}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-black">
+                          Available Cars
+                        </h2>
+                      </div>
 
-                        {/* Car Cards Grid - 2 columns */}
-                        <div className="grid grid-cols-2 gap-3">
-                          {filteredRecommendCars.map((car, index) => (
-                            <motion.div
-                              key={car.id}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.3, delay: 0.4 + (index * 0.1) }}
-                            >
-                              <SearchCarCard car={car} index={index} />
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
+                      {/* Car Cards Grid - 2 columns */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {visibleCars.map((car, index) => (
+                          <motion.div
+                            key={car.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: index < 6 ? 0.4 + (index * 0.1) : 0 }}
+                          >
+                            <SearchCarCard car={car} index={index} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
 
-                    {/* Our Popular Cars Section */}
-                    {filteredPopularCars.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.5 }}
-                      >
-                        <div className="flex items-center justify-between mb-3 md:mb-4 lg:mb-6">
-                          <h2 className="text-base md:text-2xl lg:text-3xl font-bold text-black">
-                            Our Popular Cars
-                          </h2>
-                        </div>
-
-                        {/* Popular Cars - Horizontal scrollable on mobile (1 card at a time), grid on desktop */}
-                        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-0 md:gap-4 lg:gap-6 overflow-x-auto md:overflow-x-visible scrollbar-hide snap-x snap-mandatory">
-                          {filteredPopularCars.map((car, index) => (
-                            <motion.div
-                              key={car.id}
-                              className="w-full md:w-full flex-shrink-0 snap-start px-2 md:px-0"
-                              style={{ pointerEvents: 'auto' }}
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.4, delay: 0.6 + (index * 0.1) }}
-                            >
-                              <SearchCarCard car={car} horizontal={true} index={index} />
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </>
-                )
-              }
+                  {/* Sentinel for Infinite Scroll - Mobile */}
+                  {visibleCount < filteredCars.length && (
+                    <div ref={mobileSentinelRef} className="h-20 w-full flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                    </div>
+                  )}
+                </>
+              )}
             </div >
           </motion.div >
         </main >
@@ -1315,8 +1321,41 @@ const SearchPage = () => {
               <ReturningCarBanner />
             </div>
 
+            {returningCars.length > 0 && (
+              <div className="mb-8 md:mb-10 lg:mb-12 overflow-hidden">
+                <motion.div
+                  key={returningCars[currentReturningCarIndex]?.id || returningCars[currentReturningCarIndex]?._id || currentReturningCarIndex}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                >
+                  <ReturningSoonNoCarsBanner car={returningCars[currentReturningCarIndex]} />
+                </motion.div>
+              </div>
+            )}
+
             {/* Main Content - Web */}
-            {!isLoading && dataLoaded && allFilteredCars.length === 0 ? (
+            {isLoading ? (
+              <div className="mb-12 lg:mb-16">
+                <div className="flex items-center justify-between mb-6 lg:mb-8">
+                  <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-black animate-pulse">
+                    Available Cars
+                  </h2>
+                </div>
+                {/* Skeleton grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+                  {[...Array(8)].map((_, idx) => (
+                    <CarCardSkeleton key={idx} />
+                  ))}
+                </div>
+              </div>
+            ) : !dataLoaded ? (
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6 animate-pulse">
+                {[...Array(8)].map((_, idx) => (
+                  <CarCardSkeleton key={idx} />
+                ))}
+              </div>
+            ) : allFilteredCars.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="text-center">
                   <svg
@@ -1333,48 +1372,37 @@ const SearchPage = () => {
                     />
                   </svg>
                   <h3 className="text-2xl font-bold text-gray-700 mb-2">
-                    No Cars Found
+                    No Available Cars Found
                   </h3>
                   <p className="text-base text-gray-500">
-                    Sorry, we couldn't find any cars matching your selected filter.
+                    Sorry, we couldn't find any available cars matching your selected filter.
                   </p>
                 </div>
               </div>
             ) : (
               <>
-                {/* Recommend For You Section - Web */}
-                {filteredRecommendCars.length > 0 && (
+                {/* Available Cars Section - Web */}
+                {filteredCars.length > 0 && (
                   <div className="mb-12 lg:mb-16">
                     <div className="flex items-center justify-between mb-6 lg:mb-8">
                       <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-black">
-                        Recommend For You
+                        Available Cars
                       </h2>
                     </div>
 
                     {/* Car Cards Grid - Web */}
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-                      {filteredRecommendCars.map((car, index) => (
+                      {visibleCars.map((car, index) => (
                         <SearchCarCard key={car.id} car={car} index={index} />
                       ))}
                     </div>
-                  </div>
-                )}
 
-                {/* Our Popular Cars Section - Web */}
-                {filteredPopularCars.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-6 lg:mb-8">
-                      <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-black">
-                        Our Popular Cars
-                      </h2>
-                    </div>
-
-                    {/* Popular Cars - Grid on web */}
-                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-                      {filteredPopularCars.map((car, index) => (
-                        <SearchCarCard key={car.id} car={car} index={index} />
-                      ))}
-                    </div>
+                    {/* Sentinel for Infinite Scroll - Web */}
+                    {visibleCount < filteredCars.length && (
+                      <div ref={webSentinelRef} className="h-20 w-full flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

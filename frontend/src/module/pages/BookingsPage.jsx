@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { colors } from '../theme/colors';
@@ -18,6 +18,32 @@ import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg8 from '../../assets/car_img8.png';
 
 const carImages = [carImg1, carImg2, carImg4, carImg5, carImg6, carImg8];
+
+// Booking card shimmer skeleton loading component
+const BookingCardSkeleton = () => (
+  <div className="w-full bg-white rounded-2xl p-3 flex gap-3 border border-gray-100 shadow-sm animate-pulse">
+    {/* Left: Image placeholder */}
+    <div className="w-20 h-20 bg-gray-200 rounded-xl flex-shrink-0"></div>
+    {/* Right: Content placeholders */}
+    <div className="flex-1 min-w-0 flex flex-col justify-between">
+      <div className="flex justify-between items-start">
+        <div className="space-y-2 w-2/3">
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-2.5 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        <div className="h-4 bg-gray-200 rounded w-12 flex-shrink-0"></div>
+      </div>
+      <div className="flex gap-1.5 my-2">
+        <div className="h-4 bg-gray-200 rounded w-10"></div>
+        <div className="h-4 bg-gray-200 rounded w-12"></div>
+        <div className="h-4 bg-gray-200 rounded w-10"></div>
+      </div>
+      <div className="flex justify-end pt-1">
+        <div className="h-6 bg-gray-200 rounded-lg w-16"></div>
+      </div>
+    </div>
+  </div>
+);
 
 /**
  * BookingCard Component - Individual booking card with scroll-based animation
@@ -179,6 +205,27 @@ const BookingsPage = () => {
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [selectedReason, setSelectedReason] = useState('');
   
+  // Pagination & Lazy Loading States
+  const [visibleCount, setVisibleCount] = useState(6);
+  const observerRef = useRef(null);
+  
+  const sentinelRef = useCallback((node) => {
+    if (observerRef.current) observerRef.current.disconnect();
+    if (node) {
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 6);
+        }
+      }, { rootMargin: '100px' });
+      observerRef.current.observe(node);
+    }
+  }, []);
+
+  // Reset pagination when active tab changes
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [activeTab]);
+
   // Cancellation reasons
   const cancellationReasons = [
     'Change of plans',
@@ -212,8 +259,22 @@ const BookingsPage = () => {
     }
     
     try {
-      // Fetch bookings from API
-      const response = await bookingService.getBookings();
+      // Fetch bookings and active cars list in parallel to avoid N sequential requests
+      const [response, carsResponse] = await Promise.all([
+        bookingService.getBookings(),
+        carService.getCars({ limit: 200 }).catch(err => {
+          console.error("Error pre-fetching cars list:", err);
+          return { success: false };
+        })
+      ]);
+
+      // Build a lookup map for instant client-side resolution of car specifications
+      const carMap = new Map();
+      if (carsResponse?.success && carsResponse?.data?.cars) {
+        carsResponse.data.cars.forEach(c => {
+          carMap.set(c._id || c.id, c);
+        });
+      }
       
       console.log('📥 Bookings API Response:', response);
       console.log('📥 Response structure:', {
@@ -253,8 +314,34 @@ const BookingsPage = () => {
             let carData = booking.car;
             const carId = booking.car?._id || booking.car?.id || booking.carId;
             
-            // If car is populated but missing fields, or if we only have carId, fetch full car details
-            if (carId && (!carData || !carData.seatingCapacity || !carData.transmission)) {
+            // Try to resolve from pre-fetched map first
+            const cachedCar = carId ? carMap.get(carId) : null;
+            if (cachedCar) {
+              let carImage = carImg1;
+              if (cachedCar.images && cachedCar.images.length > 0) {
+                const primary = cachedCar.images.find((img) => img.isPrimary);
+                carImage = primary ? primary.url : (cachedCar.images[0]?.url || carImage);
+              } else if (cachedCar.image) {
+                carImage = typeof cachedCar.image === 'string' ? cachedCar.image : (cachedCar.image?.url || carImg1);
+              }
+
+              // Normalize image path if relative
+              if (carImage && typeof carImage === 'string' && !carImage.startsWith('http') && !carImage.startsWith('data:') && !carImage.startsWith('/src') && !carImage.startsWith('blob:')) {
+                const base = import.meta.env.VITE_API_BASE_URL || '';
+                carImage = `${base}${carImage.startsWith('/') ? '' : '/'}${carImage}`;
+              }
+
+              carData = {
+                id: cachedCar._id || cachedCar.id,
+                brand: cachedCar.brand || carData?.brand || '',
+                model: cachedCar.model || carData?.model || '',
+                image: carImage,
+                seats: cachedCar.seatingCapacity || carData?.seatingCapacity || 4,
+                transmission: cachedCar.transmission || carData?.transmission || 'Automatic',
+                fuelType: cachedCar.fuelType || carData?.fuelType || 'Petrol',
+              };
+            } else if (carId && (!carData || !carData.seatingCapacity || !carData.transmission)) {
+              // Fallback to fetch individually only if not found in map
               try {
                 const carResponse = await carService.getCarDetails(carId);
                 if (carResponse.success && carResponse.data?.car) {
@@ -720,61 +807,66 @@ const BookingsPage = () => {
 
         {/* Bookings List */}
         {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div 
-              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-              style={{ borderColor: colors.backgroundTertiary }}
-            ></div>
-            <p style={{ color: colors.textSecondary }}>Loading bookings...</p>
+          <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 lg:gap-8 pb-4 md:pb-8">
+            {[...Array(6)].map((_, idx) => (
+              <BookingCardSkeleton key={idx} />
+            ))}
           </div>
-        </div>
-      ) : filteredBookings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4">
-          <svg 
-            className="w-20 h-20 mb-4"
-            style={{ color: colors.textTertiary }}
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
-            />
-          </svg>
-          <p className="text-base font-semibold mb-1" style={{ color: colors.textPrimary }}>
-            No bookings found
-          </p>
-          <p className="text-sm text-center" style={{ color: colors.textSecondary }}>
-            {activeTab === 'all' 
-              ? "You don't have any bookings yet"
-              : `No ${activeTab} bookings found`
-            }
-          </p>
-        </div>
-      ) : (
-        <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 lg:gap-8 pb-4 md:pb-8">
-          {filteredBookings.map((booking, index) => (
-            <BookingCard
-              key={`${booking.id}-${booking.bookingId}-${index}`}
-              booking={booking}
-              index={index}
-              navigate={navigate}
-              setSelectedBooking={setSelectedBooking}
-              setShowDetailsModal={setShowDetailsModal}
-              setCancellationBooking={setCancellationBooking}
-              setShowCancellationModal={setShowCancellationModal}
-              getStatusColor={getStatusColor}
-              getStatusLabel={getStatusLabel}
-              calculateDays={calculateDays}
-              calculateDelay={calculateDelay}
-              colors={colors}
-            />
-          ))}
-        </div>
+        ) : filteredBookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4">
+            <svg 
+              className="w-20 h-20 mb-4"
+              style={{ color: colors.textTertiary }}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" 
+              />
+            </svg>
+            <p className="text-base font-semibold mb-1" style={{ color: colors.textPrimary }}>
+              No bookings found
+            </p>
+            <p className="text-sm text-center" style={{ color: colors.textSecondary }}>
+              {activeTab === 'all' 
+                ? "You don't have any bookings yet"
+                : `No ${activeTab} bookings found`
+              }
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 lg:gap-8 pb-4 md:pb-8">
+              {filteredBookings.slice(0, visibleCount).map((booking, index) => (
+                <BookingCard
+                  key={`${booking.id}-${booking.bookingId}-${index}`}
+                  booking={booking}
+                  index={index}
+                  navigate={navigate}
+                  setSelectedBooking={setSelectedBooking}
+                  setShowDetailsModal={setShowDetailsModal}
+                  setCancellationBooking={setCancellationBooking}
+                  setShowCancellationModal={setShowCancellationModal}
+                  getStatusColor={getStatusColor}
+                  getStatusLabel={getStatusLabel}
+                  calculateDays={calculateDays}
+                  calculateDelay={calculateDelay}
+                  colors={colors}
+                />
+              ))}
+            </div>
+
+            {/* Sentinel for Infinite Scroll */}
+            {visibleCount < filteredBookings.length && (
+              <div ref={sentinelRef} className="h-20 w-full flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: colors.backgroundTertiary }}></div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

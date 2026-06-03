@@ -207,6 +207,30 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    // Check for conflicting inward/outward bookings in OutwardBooking collection
+    const startDateISO = startDate.toISOString();
+    const endDateISO = endDate.toISOString();
+    const outwardConflictConditions = [
+      { carId: carId.toString() }
+    ];
+    if (car.outwardCarId) {
+      outwardConflictConditions.push({ carId: car.outwardCarId });
+    }
+
+    const conflictingOutwardBooking = await OutwardBooking.findOne({
+      status: 'active',
+      fromDate: { $lte: endDateISO },
+      toDate: { $gte: startDateISO },
+      $or: outwardConflictConditions
+    });
+
+    if (conflictingOutwardBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'Car is already booked for the selected dates (outward/inward)',
+      });
+    }
+
     // Calculate pricing
     const basePrice = car.pricePerDay || 0;
     let totalPrice = basePrice * totalDays;

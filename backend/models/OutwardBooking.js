@@ -108,6 +108,14 @@ const outwardBookingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    deposit: {
+      type: Number,
+      default: 0,
+    },
+    cashCollector: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['active', 'completed', 'cancelled'],

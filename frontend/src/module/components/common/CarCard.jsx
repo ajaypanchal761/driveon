@@ -16,6 +16,16 @@ const CarCard = memo(({ car, index = 0 }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const isFav = isFavorite(car.id);
 
+  const isTransparentPNG = car.image && (
+    typeof car.image === 'string' && (
+      car.image.includes('removebg') || 
+      car.image.includes('car_img') || 
+      car.image.includes('logo') ||
+      car.image.startsWith('data:image/svg') ||
+      car.image.endsWith('.svg')
+    )
+  );
+
   const handleOpenDetails = () => {
     try {
       sessionStorage.setItem('driveon:selectedCar', JSON.stringify(car));
@@ -37,15 +47,22 @@ const CarCard = memo(({ car, index = 0 }) => {
       {/* Car Image Container */}
       <div
         className="relative w-full h-28 md:h-40 lg:h-48 flex items-center justify-center rounded-t-xl overflow-hidden"
-        style={{ backgroundColor: colors.backgroundImage }}
+        style={{ backgroundColor: isTransparentPNG ? colors.backgroundImage : '#ffffff' }}
       >
         <motion.img
           ref={imageRef}
           src={car.image}
           alt={car.name}
-          className="w-full h-full object-contain scale-125"
-          initial={{ opacity: 0, scale: 0.8, x: -15 }}
-          animate={isImageInView ? { opacity: 1, scale: 1.25, x: 0 } : { opacity: 0, scale: 0.8, x: -15 }}
+          loading="lazy"
+          className={`w-full h-full ${
+            isTransparentPNG ? "object-contain scale-125" : "object-cover"
+          }`}
+          initial={{ opacity: 0, scale: isTransparentPNG ? 0.8 : 1, x: isTransparentPNG ? -15 : 0 }}
+          animate={
+            isImageInView 
+              ? { opacity: 1, scale: isTransparentPNG ? 1.25 : 1, x: 0 } 
+              : { opacity: 0, scale: isTransparentPNG ? 0.8 : 1, x: isTransparentPNG ? -15 : 0 }
+          }
           transition={{
             duration: 0.6,
             delay: index * 0.1,
@@ -53,8 +70,8 @@ const CarCard = memo(({ car, index = 0 }) => {
             type: "tween"
           }}
           whileHover={{
-            scale: 1.35,
-            x: 5,
+            scale: isTransparentPNG ? 1.35 : 1.05,
+            x: isTransparentPNG ? 5 : 0,
             transition: { duration: 0.3, ease: "easeOut" }
           }}
         />
