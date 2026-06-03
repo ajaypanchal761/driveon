@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { useAppSelector, useAppDispatch } from "../../hooks/redux";
 import { logoutUser } from "../../store/slices/authSlice";
@@ -22,7 +23,7 @@ const ModuleProfile1Page = () => {
   const isInitializing = useAppSelector((state) => state.auth.isInitializing);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
-  const { profileComplete, kycStatus, guarantor } = useAppSelector(
+  const { kycStatus, guarantor } = useAppSelector(
     (state) => state.user
   );
 
@@ -76,7 +77,6 @@ const ModuleProfile1Page = () => {
     };
 
     fetchUserProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, isAuthenticated]);
 
   const handleLogout = async () => {
@@ -86,6 +86,7 @@ const ModuleProfile1Page = () => {
       toastUtils.success("Logged out successfully");
       window.location.href = "/login";
     } catch (error) {
+      console.error("Logout failed:", error);
       dispatch(clearUser());
       toastUtils.success("Logged out successfully");
       window.location.href = "/login";
@@ -116,7 +117,6 @@ const ModuleProfile1Page = () => {
 
   // Get user data with fallbacks
   const userName = (user?.name || user?.fullName || "").trim() || "User";
-  const userPhone = (user?.phone || "").trim();
   const userEmail = (user?.email || "").trim();
   const userPhoto =
     user?.profilePhoto && user.profilePhoto.trim() !== ""
@@ -138,44 +138,30 @@ const ModuleProfile1Page = () => {
     return name.trim().charAt(0).toUpperCase();
   };
 
-  // Format phone number for display
-  const formatPhoneNumber = (phone) => {
-    if (!phone || phone === "" || phone.trim() === "") {
-      return "Not provided";
-    }
-    const cleaned = String(phone).replace(/\D/g, "");
-    if (cleaned.length === 10) {
-      return `+91 ${cleaned}`;
-    }
-    if (cleaned.length > 0) {
-      return phone;
-    }
-    return "Not provided";
-  };
-
-  const displayPhone = formatPhoneNumber(userPhone);
-
   // Determine KYC status
   const isKYCVerified =
+    user?.isKYCVerified ||
     kycStatus === "verified" ||
     kycStatus === "approved" ||
     (typeof kycStatus === "object" && kycStatus?.verified);
   const kycStatusText = isKYCVerified ? "Verified" : "Pending";
 
+  // Determine Guarantor status dynamically
+  const isGuarantorAdded = user?.guarantor?.added || guarantor?.added || false;
+  const isGuarantorVerified = user?.guarantor?.verified || guarantor?.verified || false;
+
   // Module theme colors - using colors from module/theme/colors.js
   const primaryColor = colors.backgroundTertiary || "#1C205C"; // Dark color for primary buttons
-  const accentColor = colors.accentBlue || "#8FA3B0"; // Light blue-gray for accents
   const successColor = colors.success || "#4CAF50"; // Green for verified status
-  const darkColor = colors.backgroundDark || "#294657"; // Dark blue for premium feel
 
   // Menu items matching current profile page
   const menuItems = [
-    {
+    ...(!isProfileFullyComplete ? [{
       id: "complete",
       title: "Complete Profile",
       description: "Complete your profile to start booking cars.",
       path: "/profile/complete",
-    },
+    }] : []),
     {
       id: "kyc",
       title: "KYC Status",
@@ -357,7 +343,7 @@ const ModuleProfile1Page = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
         >
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+          <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Profile Picture or Initial */}
               {userPhoto && !imageError ? (
@@ -457,8 +443,19 @@ const ModuleProfile1Page = () => {
               </div>
             </div>
 
-            {/* Spacing alignment */}
-            <div className="flex-shrink-0" />
+            <div className="flex-shrink-0 self-center">
+              <button
+                onClick={() => navigate("/profile/edit")}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:bg-gray-50 active:scale-95 whitespace-nowrap"
+                style={{
+                  borderColor: primaryColor,
+                  color: primaryColor,
+                  backgroundColor: "transparent",
+                }}
+              >
+                Edit profile
+              </button>
+            </div>
           </div>
 
           {/* Status Tags */}
@@ -497,14 +494,14 @@ const ModuleProfile1Page = () => {
             <motion.span
               className="px-2.5 py-1 rounded-lg text-[11px] font-semibold"
               style={{
-                backgroundColor: guarantor?.verified
+                backgroundColor: isGuarantorVerified
                   ? `${successColor}15`
-                  : guarantor?.added
+                  : isGuarantorAdded
                     ? `${primaryColor}15`
                     : `${colors.backgroundIcon || "#e0e0e0"}15`,
-                color: guarantor?.verified
+                color: isGuarantorVerified
                   ? successColor
-                  : guarantor?.added
+                  : isGuarantorAdded
                     ? primaryColor
                     : colors.textSecondary,
               }}
@@ -513,72 +510,12 @@ const ModuleProfile1Page = () => {
               transition={{ duration: 0.3, delay: 0.4 }}
             >
               Guarantor:{" "}
-              {guarantor?.verified
+              {isGuarantorVerified
                 ? "Verified"
-                : guarantor?.added
+                : isGuarantorAdded
                   ? "Added"
                   : "Not Added"}
             </motion.span>
-          </div>
-        </motion.div>
-
-        {/* Profile Details Card */}
-        <motion.div
-          className="bg-white rounded-2xl p-4 md:p-6 shadow-sm"
-          style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3
-              className="text-base font-bold"
-              style={{ color: colors.textPrimary || "#000000" }}
-            >
-              Profile details
-            </h3>
-            <button
-              onClick={() => navigate("/profile/edit")}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all hover:opacity-90"
-              style={{
-                borderColor: primaryColor,
-                color: primaryColor,
-                backgroundColor: "transparent",
-              }}
-            >
-              Edit profile
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center py-1">
-              <span
-                className="text-sm"
-                style={{ color: colors.textSecondary || "#666666" }}
-              >
-                Name
-              </span>
-              <span
-                className="text-sm font-bold"
-                style={{ color: colors.textPrimary || "#000000" }}
-              >
-                {userName}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-1">
-              <span
-                className="text-sm"
-                style={{ color: colors.textSecondary || "#666666" }}
-              >
-                Phone
-              </span>
-              <span
-                className="text-sm font-bold"
-                style={{ color: colors.textPrimary || "#000000" }}
-              >
-                {userPhone || displayPhone}
-              </span>
-            </div>
           </div>
         </motion.div>
 

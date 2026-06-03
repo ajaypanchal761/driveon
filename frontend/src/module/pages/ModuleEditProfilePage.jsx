@@ -224,11 +224,16 @@ const ModuleEditProfilePage = () => {
 
       if (response.success !== false) {
         // Update Redux store
-        dispatch(updateUser({
-          ...user,
-          ...updateData,
-          profilePhoto: photoPreview || user?.profilePhoto,
-        }));
+        const updatedUser = response?.data?.user || response?.data?.data?.user || response?.user;
+        if (updatedUser) {
+          dispatch(updateUser(updatedUser));
+        } else {
+          dispatch(updateUser({
+            ...user,
+            ...updateData,
+            profilePhoto: photoPreview || user?.profilePhoto,
+          }));
+        }
 
         toastUtils.success('Profile updated successfully!');
         navigate('/profile', { replace: true });

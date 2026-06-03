@@ -3,6 +3,7 @@ import Staff from '../models/Staff.js';
 import { uploadImage, isConfigured } from '../services/cloudinary.service.js';
 import Booking from '../models/Booking.js';
 import { sendPushNotification } from '../services/firebase.service.js';
+import GuarantorRequest from '../models/GuarantorRequest.js';
 
 /**
  * @desc    Send Returning Soon Notification
@@ -106,6 +107,26 @@ export const getProfile = async (req, res) => {
       await user.save();
     }
 
+    // Fetch latest guarantor request for this user (acting as renter)
+    const guarantorRequest = await GuarantorRequest.findOne({ user: user._id })
+      .populate('guarantor', 'name email phone isKYCVerified')
+      .sort({ createdAt: -1 });
+
+    const guarantorStatus = guarantorRequest ? {
+      added: true,
+      verified: guarantorRequest.status === 'accepted' && !!guarantorRequest.guarantor?.isKYCVerified,
+      status: guarantorRequest.status,
+      details: {
+        name: guarantorRequest.guarantor?.name || '',
+        email: guarantorRequest.guarantor?.email || '',
+        phone: guarantorRequest.guarantor?.phone || '',
+      }
+    } : {
+      added: false,
+      verified: false,
+      details: null
+    };
+
     res.status(200).json({
       success: true,
       data: {
@@ -126,6 +147,7 @@ export const getProfile = async (req, res) => {
           referralCode: user.referralCode,
           guarantorId: user.guarantorId || '',
           profileComplete: user.profileComplete,
+          guarantor: guarantorStatus,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
           kycDetails: {
@@ -231,6 +253,26 @@ export const updateProfile = async (req, res) => {
     await user.save();
     console.log('💾 User saved successfully');
 
+    // Fetch latest guarantor request for this user (acting as renter)
+    const guarantorRequest = await GuarantorRequest.findOne({ user: user._id })
+      .populate('guarantor', 'name email phone isKYCVerified')
+      .sort({ createdAt: -1 });
+
+    const guarantorStatus = guarantorRequest ? {
+      added: true,
+      verified: guarantorRequest.status === 'accepted' && !!guarantorRequest.guarantor?.isKYCVerified,
+      status: guarantorRequest.status,
+      details: {
+        name: guarantorRequest.guarantor?.name || '',
+        email: guarantorRequest.guarantor?.email || '',
+        phone: guarantorRequest.guarantor?.phone || '',
+      }
+    } : {
+      added: false,
+      verified: false,
+      details: null
+    };
+
     res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
@@ -245,6 +287,7 @@ export const updateProfile = async (req, res) => {
           address: user.address || '',
           profilePhoto: user.profilePhoto || '',
           profileComplete: user.profileComplete,
+          guarantor: guarantorStatus,
           role: user.role,
           isEmailVerified: user.isEmailVerified,
           isPhoneVerified: user.isPhoneVerified,
