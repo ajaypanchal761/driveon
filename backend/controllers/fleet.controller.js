@@ -28,19 +28,13 @@ export const getOutwardCars = async (req, res) => {
         // Calculate bookings and revenue stats dynamically
         const carIds = cars.map(c => c.originalOutputId).filter(Boolean);
         const outwardBookingAggregation = await OutwardBooking.aggregate([
-            { $match: { carId: { $in: carIds } } },
+            { $match: { carId: { $in: carIds }, status: { $ne: 'cancelled' } } },
             {
                 $group: {
                     _id: '$carId',
                     count: { $sum: 1 },
                     revenue: {
-                        $sum: {
-                            $cond: [
-                                { $ne: ['$paymentStatus', 'failed'] },
-                                { $ifNull: ['$paidAmount', 0] },
-                                0
-                            ]
-                        }
+                        $sum: { $ifNull: ['$paidAmount', 0] }
                     }
                 }
             }
@@ -58,7 +52,7 @@ export const getOutwardCars = async (req, res) => {
 
         // Also fetch bookings from the standard Booking collection for replicated Cars
         const standardCars = await Car.find({ outwardCarId: { $in: carIds } });
-        const standardCarMap = {};
+        const standardCarMap = {}; // standardCar._id.toString() -> outwardCarId
         const standardCarIds = [];
         standardCars.forEach(sc => {
             standardCarMap[sc._id.toString()] = sc.outwardCarId;
@@ -66,25 +60,20 @@ export const getOutwardCars = async (req, res) => {
         });
 
         if (standardCarIds.length > 0) {
+            // Standard Booking collection (shadow car inward bookings)
             const standardBookingAggregation = await mongoose.model('Booking').aggregate([
-                { $match: { car: { $in: standardCarIds } } },
+                {
+                    $match: {
+                        car: { $in: standardCarIds },
+                        status: { $nin: ['cancelled', 'rejected'] }
+                    }
+                },
                 {
                     $group: {
                         _id: '$car',
                         count: { $sum: 1 },
                         revenue: {
-                            $sum: {
-                                $cond: [
-                                    {
-                                        $and: [
-                                            { $ne: ['$status', 'cancelled'] },
-                                            { $ne: ['$status', 'rejected'] }
-                                        ]
-                                    },
-                                    { $ifNull: ['$paidAmount', 0] },
-                                    0
-                                ]
-                            }
+                            $sum: { $ifNull: ['$paidAmount', 0] }
                         }
                     }
                 }
@@ -93,6 +82,39 @@ export const getOutwardCars = async (req, res) => {
             standardBookingAggregation.forEach(stat => {
                 if (stat._id) {
                     const outwardCarId = standardCarMap[stat._id.toString()];
+                    if (outwardCarId) {
+                        if (!bookingStatsMap[outwardCarId]) {
+                            bookingStatsMap[outwardCarId] = { count: 0, revenue: 0 };
+                        }
+                        bookingStatsMap[outwardCarId].count += stat.count;
+                        bookingStatsMap[outwardCarId].revenue += stat.revenue;
+                    }
+                }
+            });
+
+            // OutwardBooking collection keyed by shadow car _id (fleet bookings stored with shadowCar._id as carId)
+            const shadowCarIdStrings = standardCarIds.map(id => id.toString());
+            const shadowOutwardBookingAggregation = await OutwardBooking.aggregate([
+                {
+                    $match: {
+                        carId: { $in: shadowCarIdStrings },
+                        status: { $ne: 'cancelled' }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$carId',
+                        count: { $sum: 1 },
+                        revenue: {
+                            $sum: { $ifNull: ['$paidAmount', 0] }
+                        }
+                    }
+                }
+            ]);
+
+            shadowOutwardBookingAggregation.forEach(stat => {
+                if (stat._id) {
+                    const outwardCarId = standardCarMap[stat._id];
                     if (outwardCarId) {
                         if (!bookingStatsMap[outwardCarId]) {
                             bookingStatsMap[outwardCarId] = { count: 0, revenue: 0 };

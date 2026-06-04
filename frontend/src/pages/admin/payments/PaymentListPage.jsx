@@ -37,7 +37,9 @@ const PaymentListPage = () => {
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, success, failed, pending, refunded
     paymentType: 'all', // all, full, partial, security_deposit
-    dateRange: 'all', // all, today, week, month
+    dateRange: 'all', // all, today, week, month, custom
+    startDate: '', // YYYY-MM-DD
+    endDate: '', // YYYY-MM-DD
     user: 'all',
     booking: 'all',
   });
@@ -155,16 +157,22 @@ const PaymentListPage = () => {
   useEffect(() => {
     let filtered = [...payments];
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (payment) =>
-          payment.transactionId.toLowerCase().includes(query) ||
-          payment.bookingId.toLowerCase().includes(query) ||
-          payment.userName.toLowerCase().includes(query) ||
-          payment.userEmail.toLowerCase().includes(query)
-      );
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filtered = filtered.filter((payment) => {
+        const transactionId = (payment.transactionId || '').toLowerCase();
+        const bookingId = (payment.bookingId || '').toLowerCase();
+        const userName = (payment.userName || '').toLowerCase();
+        const userEmail = (payment.userEmail || '').toLowerCase();
+
+        return keywords.every((keyword) =>
+          transactionId.includes(keyword) ||
+          bookingId.includes(keyword) ||
+          userName.includes(keyword) ||
+          userEmail.includes(keyword)
+        );
+      });
     }
 
     // Status filter
@@ -191,6 +199,20 @@ const PaymentListPage = () => {
           case 'month':
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             return paymentDate >= monthAgo;
+          case 'custom':
+            const start = filters.startDate ? new Date(filters.startDate) : null;
+            const end = filters.endDate ? new Date(filters.endDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end) end.setHours(23, 59, 59, 999);
+            
+            if (start && end) {
+              return paymentDate >= start && paymentDate <= end;
+            } else if (start) {
+              return paymentDate >= start;
+            } else if (end) {
+              return paymentDate <= end;
+            }
+            return true;
           default:
             return true;
         }
@@ -603,13 +625,13 @@ const PaymentListPage = () => {
           </Card>
           <Card className="p-4 text-center">
             <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
-              ₹{(stats.totalRevenue / 1000).toFixed(0)}K
+              ₹{stats.totalRevenue.toLocaleString()}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Revenue</div>
           </Card>
           <Card className="p-4 text-center">
             <div className="text-xl md:text-2xl font-bold mb-1 text-purple-600">
-              ₹{(stats.totalRefunded / 1000).toFixed(0)}K
+              ₹{stats.totalRefunded.toLocaleString()}
             </div>
             <div className="text-xs md:text-sm text-gray-600">Refunded</div>
           </Card>
@@ -677,6 +699,7 @@ const PaymentListPage = () => {
                 { value: 'today', label: 'Today' },
                 { value: 'week', label: 'This Week' },
                 { value: 'month', label: 'This Month' },
+                { value: 'custom', label: 'Custom Range' },
               ]}
             />
 
@@ -708,6 +731,29 @@ const PaymentListPage = () => {
               ]}
             />
           </div>
+
+          {filters.dateRange === 'custom' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={filters.startDate || ''}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={filters.endDate || ''}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Payments List */}

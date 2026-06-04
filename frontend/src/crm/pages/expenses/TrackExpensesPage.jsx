@@ -507,9 +507,15 @@ const TrackExpensesPage = () => {
                                     className="bg-transparent border-0 text-xs font-bold text-gray-700 focus:outline-none cursor-pointer"
                                 >
                                     <option value="All">All Years</option>
-                                    {uniqueYears.map(yr => (
-                                        <option key={yr} value={yr}>{yr}</option>
-                                    ))}
+                                    {(() => {
+                                        const years = [];
+                                        for (let y = 2025; y <= 2090; y++) {
+                                            years.push(y);
+                                        }
+                                        return years.map(yr => (
+                                            <option key={yr} value={yr}>{yr}</option>
+                                        ));
+                                    })()}
                                 </select>
                             </div>
                         </div>

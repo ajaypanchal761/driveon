@@ -32,7 +32,8 @@ const EnquiryCard = ({ enquiry, onStatusUpdate, onClick }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -3, boxShadow: "0 10px 20px -5px rgba(0, 0, 0, 0.05)" }}
-      className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100/80 mb-4 relative overflow-hidden transition-all group"
+      onClick={onClick}
+      className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100/80 mb-4 relative overflow-hidden transition-all group cursor-pointer"
     >
       {/* Background Watermark Stamp for Converted / Closed */}
       {statusLower === 'converted' && (
@@ -54,6 +55,9 @@ const EnquiryCard = ({ enquiry, onStatusUpdate, onClick }) => {
           </div>
           <div>
             <h4 className="font-extrabold text-gray-800 text-base leading-tight group-hover:text-[#1C205C] transition-colors">{enquiry.name}</h4>
+            {enquiry.car && (
+              <p className="text-xs text-indigo-600 font-bold mt-0.5">{enquiry.car}</p>
+            )}
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-xs text-gray-500 font-medium">{enquiry.phone}</span>
               {/* Dial Button */}

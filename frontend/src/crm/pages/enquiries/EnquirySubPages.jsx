@@ -262,11 +262,16 @@ export const AllEnquiriesPage = () => {
   // Filter Logic
   const filteredEnquiries = enquiriesList.filter(enquiry => {
     // Search
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      (enquiry.name || '').toLowerCase().includes(searchLower) ||
-      (enquiry.phone || '').includes(searchTerm) ||
-      (enquiry.car || '').toLowerCase().includes(searchLower);
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (enquiry.name || '').toLowerCase().includes(keyword) ||
+        (enquiry.phone || '').includes(keyword) ||
+        (enquiry.car || '').toLowerCase().includes(keyword)
+      );
+    }
 
     // Status
     const statusVal = statusFilter.replace('Status: ', '');
@@ -331,8 +336,16 @@ export const AllEnquiriesPage = () => {
   };
 
   const filteredForSelect = enquiriesList.filter(enquiry => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = (enquiry.name || '').toLowerCase().includes(searchLower) || (enquiry.phone || '').includes(searchTerm) || (enquiry.car || '').toLowerCase().includes(searchLower);
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (enquiry.name || '').toLowerCase().includes(keyword) ||
+        (enquiry.phone || '').includes(keyword) ||
+        (enquiry.car || '').toLowerCase().includes(keyword)
+      );
+    }
     const statusVal = statusFilter.replace('Status: ', '');
     const matchesStatus = statusFilter === 'Status: All' || enquiry.status === statusVal;
     return matchesSearch && matchesStatus;
@@ -372,7 +385,7 @@ export const AllEnquiriesPage = () => {
 
           {/* Telecaller chips container */}
           <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-hide w-full lg:w-auto max-w-full">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1">Caller:</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1">Staff:</span>
             <button
               onClick={() => setCallerFilter('All')}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${callerFilter === 'All'
@@ -619,7 +632,7 @@ export const AllEnquiriesPage = () => {
                 onClick={() => setShowAssignModal(true)}
                 className="flex items-center gap-2 px-4 py-1.5 bg-white text-[#1C205C] rounded-xl text-sm font-bold hover:bg-indigo-50 transition-colors"
               >
-                <MdPersonAdd size={16} /> Assign to Caller
+                <MdPersonAdd size={16} /> Assign to Staff Member
               </button>
               <button
                 onClick={handleUnassignBulk}
@@ -961,9 +974,16 @@ export const NewEnquiriesPage = () => {
 
   // Filtering Logic
   const filteredEnquiries = enquiriesList.filter(enquiry => {
-    const matchesSearch =
-      (enquiry.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (enquiry.phone || '').includes(searchTerm);
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (enquiry.name || '').toLowerCase().includes(keyword) ||
+        (enquiry.phone || '').includes(keyword) ||
+        (enquiry.interest || '').toLowerCase().includes(keyword)
+      );
+    }
 
     let matchesDate = true;
     if (dateFilter !== 'Date: All') {
@@ -1250,7 +1270,7 @@ export const NewEnquiriesPage = () => {
                 onClick={() => setShowAssignModal(true)}
                 className="flex items-center gap-2 px-4 py-1.5 bg-white text-[#1C205C] rounded-xl text-sm font-bold hover:bg-indigo-50 transition-colors"
               >
-                <MdPersonAdd size={16} /> Assign to Caller
+                <MdPersonAdd size={16} /> Assign to Staff Member
               </button>
               <button
                 onClick={handleUnassignBulk}
@@ -1353,9 +1373,16 @@ export const InProgressEnquiriesPage = () => {
 
   // Filter Logic
   const filteredInProgress = inProgressList.filter(enquiry => {
-    const matchesSearch =
-      enquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      enquiry.interest.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (enquiry.name || '').toLowerCase().includes(keyword) ||
+        (enquiry.phone || '').includes(keyword) ||
+        (enquiry.interest || '').toLowerCase().includes(keyword)
+      );
+    }
 
     const matchesStage = stageFilter === 'Stage: All' || enquiry.stage === stageFilter;
 
@@ -1562,8 +1589,17 @@ export const FollowUpsEnquiriesPage = () => {
   };
 
   const filteredFollowUps = followUpsList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.note.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (item.name || '').toLowerCase().includes(keyword) ||
+        (item.phone || '').includes(keyword) ||
+        (item.car || '').toLowerCase().includes(keyword) ||
+        (item.note || '').toLowerCase().includes(keyword)
+      );
+    }
     const matchesStatus = statusFilter === 'Show: All' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -1773,8 +1809,17 @@ export const ConvertedEnquiriesPage = () => {
   };
 
   const filteredConverted = convertedList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.bookingId.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (item.name || '').toLowerCase().includes(keyword) ||
+        (item.phone || '').includes(keyword) ||
+        (item.bookingId || '').toLowerCase().includes(keyword) ||
+        (item.car || '').toLowerCase().includes(keyword)
+      );
+    }
 
     let matchesDate = true;
     if (dateFilter !== 'Date: All Time') {
@@ -2014,8 +2059,16 @@ export const ClosedEnquiriesPage = () => {
   };
 
   const filteredClosed = closedList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.phone.includes(searchTerm);
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (item.name || '').toLowerCase().includes(keyword) ||
+        (item.phone || '').includes(keyword) ||
+        (item.car || '').toLowerCase().includes(keyword)
+      );
+    }
     const matchesReason = reasonFilter === 'Reason: All' || item.reason === reasonFilter;
     return matchesSearch && matchesReason;
   });

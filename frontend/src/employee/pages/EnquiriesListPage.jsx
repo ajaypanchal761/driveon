@@ -14,6 +14,70 @@ import { toast } from 'react-hot-toast';
 
 
 
+const DetailModal = ({ isOpen, onClose, enquiry }) => {
+  if (!isOpen || !enquiry) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl border border-gray-100 relative"
+      >
+        {/* Header */}
+        <div className="bg-[#1C205C] px-6 py-5 text-white flex justify-between items-center">
+          <div>
+            <h3 className="font-extrabold text-lg leading-tight">{enquiry.name}</h3>
+            <p className="text-blue-200 text-xs font-semibold tracking-wide uppercase mt-1">{enquiry.phone}</p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+          >
+            <FiX size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Car Details */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Interested Car</span>
+            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+              <div className="text-base font-bold text-[#1C205C]">
+                {enquiry.car || 'Not Specified'}
+              </div>
+            </div>
+          </div>
+
+          {/* Note details */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Note Given by Admin</span>
+            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100 text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+              {enquiry.note || 'No notes added by admin when enquiry was created.'}
+            </div>
+          </div>
+        </div>
+
+        {/* Action button */}
+        <div className="px-6 pb-6 pt-2">
+          <button 
+            onClick={onClose}
+            className="w-full py-3.5 bg-[#1C205C] text-white font-bold rounded-2xl text-sm hover:bg-indigo-800 transition-colors shadow-lg shadow-indigo-900/10 active:scale-[0.98]"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const EnquiriesListPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,6 +87,7 @@ const EnquiriesListPage = () => {
   const [dateFilter, setDateFilter] = useState({ start: null, end: null });
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
 
   // Fetch Enquiries
   useEffect(() => {
@@ -43,7 +108,9 @@ const EnquiriesListPage = () => {
             phone: enq.phone,
             status: enq.status,
             date: enq.createdAt ? format(new Date(enq.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-            createdAt: enq.createdAt // Keep original for date usage if needed
+            createdAt: enq.createdAt, // Keep original for date usage if needed
+            car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : ''),
+            note: enq.note || ''
           }));
           setEnquiries(mappedEnquiries);
         }
@@ -173,7 +240,7 @@ const EnquiriesListPage = () => {
               </div>
             ) : filteredEnquiries.length > 0 ? (
               filteredEnquiries.map(enquiry => (
-                <EnquiryCard key={enquiry.id} enquiry={enquiry} onStatusUpdate={handleStatusUpdate} onClick={() => navigate(`/employee/enquiries/${enquiry.id}`)} />
+                <EnquiryCard key={enquiry.id} enquiry={enquiry} onStatusUpdate={handleStatusUpdate} onClick={() => setSelectedEnquiry(enquiry)} />
               ))
             ) : (
               <motion.div
@@ -198,6 +265,12 @@ const EnquiriesListPage = () => {
         isOpen={isDateModalOpen}
         onClose={() => setIsDateModalOpen(false)}
         onApply={handleDateApply}
+      />
+
+      <DetailModal
+        isOpen={!!selectedEnquiry}
+        onClose={() => setSelectedEnquiry(null)}
+        enquiry={selectedEnquiry}
       />
 
 

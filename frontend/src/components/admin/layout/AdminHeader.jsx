@@ -5,6 +5,7 @@ import { useAdminAuth } from "../../../context/AdminContext";
 import { messaging } from "../../../services/firebase";
 import { onMessage } from "firebase/messaging";
 import toastUtils from "../../../config/toast";
+import { adminService } from "../../../services/admin.service";
 
 /**
  * Admin Header Component
@@ -39,6 +40,30 @@ const AdminHeader = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Fetch notifications from database on mount/auth state change
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await adminService.getMyNotifications();
+        if (res.success && res.data?.notifications) {
+          const normalized = res.data.notifications.map(n => ({
+            id: n.id || n._id,
+            title: n.title,
+            body: n.message || n.body,
+            time: new Date(n.createdAt),
+            read: n.isRead,
+            data: n.data || {}
+          }));
+          setNotifications(normalized);
+        }
+      } catch (err) {
+        console.error("Error fetching historical notifications in AdminHeader:", err);
+      }
+    };
+
+    fetchNotifications();
+  }, [adminUser]);
 
   // Notification Listener
   useEffect(() => {
@@ -187,7 +212,14 @@ const AdminHeader = () => {
                 <h3 className="text-sm font-bold" style={{ color: colors.textPrimary }}>Notifications</h3>
                 {notifications.length > 0 && (
                   <button
-                    onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                    onClick={async () => {
+                      try {
+                        await adminService.markAllNotificationsAsRead();
+                        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                      } catch (err) {
+                        console.error("Error marking all read:", err);
+                      }
+                    }}
                     className="text-xs font-medium hover:underline"
                     style={{ color: colors.primary }}
                   >
@@ -215,8 +247,13 @@ const AdminHeader = () => {
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.backgroundLight}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !notification.read ? colors.primary + '10' : 'transparent'}
-                      onClick={() => {
-                        setNotifications(prev => prev.map(n => n.id === notification.id ? ({ ...n, read: true }) : n));
+                      onClick={async () => {
+                        try {
+                          await adminService.markNotificationAsRead(notification.id);
+                          setNotifications(prev => prev.map(n => n.id === notification.id ? ({ ...n, read: true }) : n));
+                        } catch (err) {
+                          console.error("Error marking notification as read:", err);
+                        }
                       }}
                     >
                       <div className="flex justify-between items-start mb-1">

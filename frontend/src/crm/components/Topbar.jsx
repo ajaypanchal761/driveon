@@ -195,13 +195,7 @@ const Topbar = ({ toggleSidebar }) => {
                   )}
                 </div>
 
-                {notifications.length > 0 && (
-                  <div className="p-3 border-t border-gray-50 bg-gray-50/30 text-center">
-                    <button className="text-[10px] font-bold text-gray-500 hover:text-gray-700 uppercase tracking-widest">
-                      View All History
-                    </button>
-                  </div>
-                )}
+
               </motion.div>
             )}
           </AnimatePresence>

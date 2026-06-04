@@ -58,7 +58,8 @@ const CarListPage = () => {
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, active, inactive, pending, suspended
     availability: 'all', // all, available, booked
-    owner: 'all',
+    owner: 'all',         // inward car owner (by ownerId)
+    outwardOwner: 'all',  // outward car owner (by ownerName)
     location: 'all',
     carType: 'all', // all, sedan, suv, hatchback, luxury
     priceRange: 'all', // all, 0-1000, 1000-2000, 2000+
@@ -109,7 +110,7 @@ const CarListPage = () => {
             availability: car.isInActiveRepair 
               ? 'undermaintenance' 
               : (car.isCurrentlyBooked ? 'booked' : 'available'),
-            ownerId: car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner,
+            ownerId: (car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner)?.toString() || '',
             ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
             ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
             location: car.location?.city || car.location || 'Unknown',
@@ -145,9 +146,12 @@ const CarListPage = () => {
         const outwardCars = (Array.isArray(outwardRes.data.data) ? outwardRes.data.data : []).map((car) => {
           const reg = (car.carNumber || car.registrationNumber || '').toUpperCase().trim();
           const isInRepair = activeRepairOutwardRegs.has(reg);
+          const outwardId = car.id || car._id || '';
+          // Backend getOutwardCars already combines OutwardBooking + standard shadow Booking counts
+          const totalBookings = car.totalBookings || 0;
 
           return {
-            id: car._id || car.id,
+            id: outwardId,
             brand: car.brand || '',
             model: car.model || '',
             year: car.year || '',
@@ -155,16 +159,17 @@ const CarListPage = () => {
             pricePerDay: car.pricePerDay || 0,
             status: 'active',
             availability: isInRepair ? 'undermaintenance' : 'available',
-            ownerId: '',
+            ownerId: outwardId,
             ownerName: car.ownerName || 'Unknown',
-            ownerEmail: '',
+            ownerEmail: car.ownerEmail || '',
+            ownerPhone: car.ownerPhone || '',
             location: car.location || 'Unknown',
             images: car.image ? [{ url: car.image, isPrimary: true }] : [],
             imageUrl: car.image || null,
             rating: car.rating || 5,
-            totalBookings: car.totalBookings || 0,
+            totalBookings,
             totalRevenue: car.totalRevenue || 0,
-            features: [],
+            features: car.features || [],
             registrationDate: car.createdAt || new Date().toISOString(),
             registrationNumber: car.carNumber || car.registrationNumber || '',
             fuelType: '',
@@ -199,14 +204,24 @@ const CarListPage = () => {
     // Search filter (case-insensitive)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((car) =>
-        (car.brand || '').toLowerCase().includes(query) ||
-        (car.model || '').toLowerCase().includes(query) ||
-        (car.ownerName || '').toLowerCase().includes(query) ||
-        (car.location || '').toLowerCase().includes(query) ||
-        (car.registrationNumber || '').toLowerCase().includes(query) ||
-        (`${car.brand || ''} ${car.model || ''}`).toLowerCase().includes(query)
-      );
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filtered = filtered.filter((car) => {
+        const brand = (car.brand || '').toLowerCase();
+        const model = (car.model || '').toLowerCase();
+        const ownerName = (car.ownerName || '').toLowerCase();
+        const location = (car.location || '').toLowerCase();
+        const registrationNumber = (car.registrationNumber || '').toLowerCase();
+        const brandModel = `${brand} ${model}`;
+
+        return keywords.every((keyword) =>
+          brand.includes(keyword) ||
+          model.includes(keyword) ||
+          ownerName.includes(keyword) ||
+          location.includes(keyword) ||
+          registrationNumber.includes(keyword) ||
+          brandModel.includes(keyword)
+        );
+      });
     }
 
     // Status filter
@@ -219,9 +234,18 @@ const CarListPage = () => {
       filtered = filtered.filter((car) => (car.availability || '').toLowerCase() === filters.availability.toLowerCase());
     }
 
-    // Owner filter
+    // Inward owner filter — only applies to inward cars
     if (filters.owner !== 'all') {
-      filtered = filtered.filter((car) => car.ownerId === filters.owner);
+      filtered = filtered.filter(
+        (car) => car.source === 'inward' && (car.ownerId?.toString() || '') === filters.owner
+      );
+    }
+
+    // Outward owner filter — only applies to outward cars
+    if (filters.outwardOwner !== 'all') {
+      filtered = filtered.filter(
+        (car) => car.source === 'outward' && (car.ownerName || '') === filters.outwardOwner
+      );
     }
 
     // Location filter
@@ -379,11 +403,10 @@ const CarListPage = () => {
     )
   );
 
-  // Get unique owners (filter out null/undefined and deduplicate properly)
+  // Get unique inward owners (source === 'inward', keyed by ownerId)
   const ownersMap = new Map();
   cars.forEach((car) => {
-    if (car.ownerId && car.ownerName) {
-      // Use ownerId as key to ensure uniqueness
+    if (car.source === 'inward' && car.ownerId && car.ownerName) {
       if (!ownersMap.has(car.ownerId)) {
         ownersMap.set(car.ownerId, {
           id: car.ownerId,
@@ -393,6 +416,17 @@ const CarListPage = () => {
     }
   });
   const owners = Array.from(ownersMap.values());
+
+  // Get unique outward owners (source === 'outward', keyed by ownerName)
+  const outwardOwnersMap = new Map();
+  cars.forEach((car) => {
+    if (car.source === 'outward' && car.ownerName && car.ownerName !== 'Unknown') {
+      if (!outwardOwnersMap.has(car.ownerName)) {
+        outwardOwnersMap.set(car.ownerName, car.ownerName);
+      }
+    }
+  });
+  const outwardOwners = Array.from(outwardOwnersMap.values());
 
   // Stats calculation
   const stats = {
@@ -514,7 +548,7 @@ const CarListPage = () => {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             {/* Status Filter */}
             <AdminCustomSelect
               label="Status"
@@ -542,16 +576,30 @@ const CarListPage = () => {
               ]}
             />
 
-            {/* Owner Filter */}
+            {/* Inward Owner Filter */}
             <AdminCustomSelect
               label="Owner"
               value={filters.owner}
-              onChange={(value) => setFilters({ ...filters, owner: value })}
+              onChange={(value) => setFilters({ ...filters, owner: value, outwardOwner: 'all' })}
               options={[
                 { label: 'All Owners', value: 'all' },
                 ...owners.map((owner, index) => ({
                   label: owner.name || 'Unknown Owner',
                   value: owner.id || `owner-${index}`
+                }))
+              ]}
+            />
+
+            {/* Outward Owner Filter */}
+            <AdminCustomSelect
+              label="Outward Owner"
+              value={filters.outwardOwner}
+              onChange={(value) => setFilters({ ...filters, outwardOwner: value, owner: 'all' })}
+              options={[
+                { label: 'All Outward Owners', value: 'all' },
+                ...outwardOwners.map((name) => ({
+                  label: name,
+                  value: name
                 }))
               ]}
             />
@@ -957,9 +1005,9 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
 
         {/* Modal Content */}
         <div className="p-6">
-          {/* Tabs */}
+          {/* Tabs — hide 'bookings' tab for outward cars */}
           <div className="flex gap-2 mb-6 border-b border-gray-200">
-            {['details', 'owner', 'bookings', 'reviews'].map((tab) => (
+            {['details', 'owner', ...(car.source !== 'outward' ? ['bookings'] : []), 'reviews'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1117,15 +1165,21 @@ const CarDetailModal = ({ car, onClose, onEdit, onApprove, onReject, onSuspend, 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-700">Name</label>
-                    <p className="text-sm text-gray-900">{car.ownerName}</p>
+                    <p className="text-sm text-gray-900">{car.ownerName || '—'}</p>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700">Email</label>
-                    <p className="text-sm text-gray-900">{car.ownerEmail}</p>
+                    <p className="text-sm text-gray-900">{car.ownerEmail || '—'}</p>
                   </div>
+                  {car.ownerPhone && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-700">Phone</label>
+                      <p className="text-sm text-gray-900">{car.ownerPhone}</p>
+                    </div>
+                  )}
                   <div>
-                    <label className="text-xs font-medium text-gray-700">Owner ID</label>
-                    <p className="text-sm text-gray-900">{car.ownerId}</p>
+                    <label className="text-xs font-medium text-gray-700">{car.source === 'outward' ? 'Outward Car ID' : 'Owner ID'}</label>
+                    <p className="text-sm text-gray-900 font-mono break-all">{car.source === 'outward' ? car.id : car.ownerId || '—'}</p>
                   </div>
                 </div>
               </div>

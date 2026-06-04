@@ -31,24 +31,20 @@ const ReferralManagementPage = () => {
   const [showReferralDetail, setShowReferralDetail] = useState(false);
   const [viewMode, setViewMode] = useState(getInitialView()); // list, statistics, top-referrers
   
-  // Filter states
   const [filters, setFilters] = useState({
     status: 'all', // all, pending, completed
-    dateRange: 'all', // all, today, week, month
+    dateRange: 'all', // all, today, week, month, custom
+    startDate: '', // YYYY-MM-DD
+    endDate: '', // YYYY-MM-DD
     referrer: 'all',
   });
 
-  // Fetch referrals data from API
+  // Fetch referrals data from API (Runs only once on mount)
   useEffect(() => {
     const fetchReferrals = async () => {
       try {
         setLoading(true);
-        const response = await adminService.getAllReferrals({
-          status: filters.status !== 'all' ? filters.status : undefined,
-          dateRange: filters.dateRange !== 'all' ? filters.dateRange : undefined,
-          referrer: filters.referrer !== 'all' ? filters.referrer : undefined,
-          search: searchQuery || undefined,
-        });
+        const response = await adminService.getAllReferrals();
         
         if (response.success && response.data?.referrals) {
           setReferrals(response.data.referrals);
@@ -66,14 +62,92 @@ const ReferralManagementPage = () => {
     };
 
     fetchReferrals();
-  }, [filters.status, filters.dateRange, filters.referrer, searchQuery]);
+  }, []);
 
-  // Filter referrals (backend already applies filters, but we keep this for client-side filtering if needed)
+  // Combined client-side search and filtering for referrals
   useEffect(() => {
-    // Since backend already applies filters, we can directly use referrals
-    // But we keep this effect for any additional client-side filtering if needed
-    setFilteredReferrals(referrals);
-  }, [referrals]);
+    let filtered = [...referrals];
+    
+    // 1. Status Filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter((r) => r.status === filters.status);
+    }
+    
+    // 2. Referrer Filter
+    if (filters.referrer !== 'all') {
+      filtered = filtered.filter((r) => r.referrerId === filters.referrer);
+    }
+    
+    // 3. Date Range Filter
+    if (filters.dateRange !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter((referral) => {
+        const referralDate = referral.referralDate ? new Date(referral.referralDate) : null;
+        if (!referralDate) return false;
+
+        switch (filters.dateRange) {
+          case 'today': {
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return referralDate >= startOfToday;
+          }
+          case 'week': {
+            // Start of current week (Monday)
+            const startOfWeek = new Date(now);
+            const day = startOfWeek.getDay();
+            const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+            startOfWeek.setDate(diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+            return referralDate >= startOfWeek;
+          }
+          case 'month': {
+            // Start of current month
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            return referralDate >= startOfMonth;
+          }
+          case 'custom': {
+            const start = filters.startDate ? new Date(filters.startDate) : null;
+            const end = filters.endDate ? new Date(filters.endDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end) end.setHours(23, 59, 59, 999);
+
+            if (start && end) {
+              return referralDate >= start && referralDate <= end;
+            } else if (start) {
+              return referralDate >= start;
+            } else if (end) {
+              return referralDate <= end;
+            }
+            return true;
+          }
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // 4. Search Filter (Splits query by whitespace for space-independent keyword matching)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filtered = filtered.filter((referral) => {
+        const referrerName = (referral.referrerName || '').toLowerCase();
+        const referrerEmail = (referral.referrerEmail || '').toLowerCase();
+        const referredUserName = (referral.referredUserName || '').toLowerCase();
+        const referredUserEmail = (referral.referredUserEmail || '').toLowerCase();
+        const referralCode = (referral.referralCode || '').toLowerCase();
+
+        return keywords.every((keyword) =>
+          referrerName.includes(keyword) ||
+          referrerEmail.includes(keyword) ||
+          referredUserName.includes(keyword) ||
+          referredUserEmail.includes(keyword) ||
+          referralCode.includes(keyword)
+        );
+      });
+    }
+    
+    setFilteredReferrals(filtered);
+  }, [referrals, filters.status, filters.dateRange, filters.startDate, filters.endDate, filters.referrer, searchQuery]);
 
   // Calculate statistics
   const statistics = {
@@ -132,12 +206,7 @@ const ReferralManagementPage = () => {
       if (response.success) {
         toastUtils.success('Points updated successfully');
         // Refresh referrals list
-        const refreshResponse = await adminService.getAllReferrals({
-          status: filters.status !== 'all' ? filters.status : undefined,
-          dateRange: filters.dateRange !== 'all' ? filters.dateRange : undefined,
-          referrer: filters.referrer !== 'all' ? filters.referrer : undefined,
-          search: searchQuery || undefined,
-        });
+        const refreshResponse = await adminService.getAllReferrals();
         if (refreshResponse.success && refreshResponse.data?.referrals) {
           setReferrals(refreshResponse.data.referrals);
         }
@@ -209,13 +278,13 @@ const ReferralManagementPage = () => {
 
   // Get unique referrers
   const referrers = Array.from(
-    new Set(
-      referrals.map((referral) => ({
-        id: referral.referrerId,
-        name: referral.referrerName,
-      }))
-    )
-  );
+    referrals.reduce((acc, referral) => {
+      if (referral.referrerId && referral.referrerName) {
+        acc.set(referral.referrerId, referral.referrerName);
+      }
+      return acc;
+    }, new Map())
+  ).map(([id, name]) => ({ id, name }));
 
   if (loading) {
     return (
@@ -369,6 +438,7 @@ const ReferralManagementPage = () => {
                     { value: 'today', label: 'Today' },
                     { value: 'week', label: 'This Week' },
                     { value: 'month', label: 'This Month' },
+                    { value: 'custom', label: 'Custom Range' },
                   ]}
                 />
 
@@ -387,6 +457,31 @@ const ReferralManagementPage = () => {
                 />
               </div>
             </Card>
+
+            {filters.dateRange === 'custom' && (
+              <Card className="p-4 md:p-6 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      value={filters.startDate || ''}
+                      onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={filters.endDate || ''}
+                      onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {/* Referrals List */}
             <div className="mb-4">

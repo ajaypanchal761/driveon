@@ -276,10 +276,12 @@ export const AllGaragesPage = () => {
         }
     };
 
+    const trimmedSearch = searchTerm.trim().toLowerCase();
     const filteredGarages = garages.filter(garage =>
-        garage.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        garage.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (garage.specialistIn || '').toLowerCase().includes(searchTerm.toLowerCase())
+        !trimmedSearch ||
+        garage.name.toLowerCase().includes(trimmedSearch) ||
+        garage.location.toLowerCase().includes(trimmedSearch) ||
+        (garage.specialistIn || '').toLowerCase().includes(trimmedSearch)
     );
 
     const validate = () => {

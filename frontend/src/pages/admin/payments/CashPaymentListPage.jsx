@@ -196,12 +196,23 @@ const CashPaymentListPage = () => {
     return entries.filter((entry) => {
       // 1. Search Query
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const bookingIdMatch = entry.bookingId?.toLowerCase().includes(query);
-        const nameMatch = entry.customerName?.toLowerCase().includes(query);
-        const phoneMatch = entry.customerPhone?.toLowerCase().includes(query);
-        const collectorMatch = entry.receivedBy?.toLowerCase().includes(query);
-        if (!bookingIdMatch && !nameMatch && !phoneMatch && !collectorMatch) return false;
+        const query = searchQuery.toLowerCase().trim();
+        const keywords = query.split(/\s+/).filter(Boolean);
+        const matchesAllKeywords = keywords.every((keyword) => {
+          const bookingId = (entry.bookingId || '').toLowerCase();
+          const customerName = (entry.customerName || '').toLowerCase();
+          const customerPhone = (entry.customerPhone || '').toLowerCase();
+          const receivedBy = (entry.receivedBy || '').toLowerCase();
+
+          return (
+            bookingId.includes(keyword) ||
+            customerName.includes(keyword) ||
+            customerPhone.includes(keyword) ||
+            receivedBy.includes(keyword)
+          );
+        });
+
+        if (!matchesAllKeywords) return false;
       }
 
       // 2. Booking Type Filter
@@ -588,7 +599,7 @@ const CashPaymentListPage = () => {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-[#1C205C] bg-[#fcfcfc] text-xs font-semibold h-[38px] w-[130px] cursor-pointer"
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-[#1C205C] bg-[#fcfcfc] text-xs font-semibold h-[38px] w-[150px] cursor-pointer"
                     />
                   </div>
                   <div className="flex flex-col">
@@ -597,7 +608,7 @@ const CashPaymentListPage = () => {
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-[#1C205C] bg-[#fcfcfc] text-xs font-semibold h-[38px] w-[130px] cursor-pointer"
+                      className="px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-[#1C205C] bg-[#fcfcfc] text-xs font-semibold h-[38px] w-[150px] cursor-pointer"
                     />
                   </div>
                 </div>
@@ -620,7 +631,7 @@ const CashPaymentListPage = () => {
           <Card className="p-8 text-center bg-white shadow-sm">
             <div className="text-gray-400 mb-2">
               <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.5 7.5h7M8.5 10.5h6M8.5 7.5c4 0 6 2 6 4.5 0 3-3 4.5-6 4.5h2l4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <p className="text-gray-500 font-semibold text-sm">No cash transactions found matching your filters.</p>

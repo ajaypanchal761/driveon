@@ -73,7 +73,9 @@ const UserListPage = () => {
     accountStatus: 'all', // all, active, suspended, banned
     kycStatus: 'all', // all, verified, pending
     userType: 'all', // all, regular, guarantor, owner
-    registrationDate: 'all', // all, today, week, month, year
+    registrationDate: 'all', // all, today, week, month, year, custom
+    startDate: '', // YYYY-MM-DD
+    endDate: '', // YYYY-MM-DD
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -170,18 +172,23 @@ const UserListPage = () => {
       const isCustomIdSearch = !!userMatch;
       const customIdSuffix = userMatch ? userMatch[1] : '';
 
-      filtered = filtered.filter((user) => {
-        const name = (user.name || '').toLowerCase();
-        const email = (user.email || '').toLowerCase();
-        const phone = (user.phone || '').toLowerCase();
-        const id = (user._id || user.id || '').toString().toLowerCase();
-
-        if (isCustomIdSearch) {
+      if (isCustomIdSearch) {
+        filtered = filtered.filter((user) => {
+          const id = (user._id || user.id || '').toString().toLowerCase();
           return id.endsWith(customIdSuffix);
-        }
+        });
+      } else {
+        const keywords = query.split(/\s+/).filter(Boolean);
+        filtered = filtered.filter((user) => {
+          const name = (user.name || '').toLowerCase();
+          const email = (user.email || '').toLowerCase();
+          const phone = (user.phone || '').toLowerCase();
 
-        return name.includes(query) || email.includes(query) || phone.includes(query);
-      });
+          return keywords.every((keyword) =>
+            name.includes(keyword) || email.includes(keyword) || phone.includes(keyword)
+          );
+        });
+      }
     }
 
     // 2. Account Status Filter
@@ -234,6 +241,20 @@ const UserListPage = () => {
           case 'year':
             const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
             return regDate >= yearAgo;
+          case 'custom':
+            const start = filters.startDate ? new Date(filters.startDate) : null;
+            const end = filters.endDate ? new Date(filters.endDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end) end.setHours(23, 59, 59, 999);
+            
+            if (start && end) {
+              return regDate >= start && regDate <= end;
+            } else if (start) {
+              return regDate >= start;
+            } else if (end) {
+              return regDate <= end;
+            }
+            return true;
           default:
             return true;
         }
@@ -515,9 +536,33 @@ const UserListPage = () => {
                 { label: 'This Week', value: 'week' },
                 { label: 'This Month', value: 'month' },
                 { label: 'This Year', value: 'year' },
+                { label: 'Custom Range', value: 'custom' },
               ]}
             />
           </div>
+
+          {filters.registrationDate === 'custom' && (
+            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={filters.startDate || ''}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={filters.endDate || ''}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Users List */}

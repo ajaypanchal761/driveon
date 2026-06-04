@@ -13,7 +13,7 @@ import {
   MdNotifications,
   MdPersonAdd,
   MdBadge,
-  MdAttachMoney,
+  MdCurrencyRupee,
   MdDirectionsCar,
   MdStore,
   MdCancel,
@@ -148,7 +148,11 @@ const DashboardPage = () => {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/enquiries/all')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="p-3 rounded-2xl bg-blue-50 text-blue-600"><MdPeople size={24} /></div>
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Enquiries</p>
@@ -156,7 +160,11 @@ const DashboardPage = () => {
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/enquiries/converted')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600"><MdCheckCircle size={24} /></div>
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Converted Today</p>
@@ -164,7 +172,11 @@ const DashboardPage = () => {
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/enquiries/converted')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600"><MdShowChart size={24} /></div>
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Converted This Month</p>
@@ -183,37 +195,61 @@ const DashboardPage = () => {
           animate="show"
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
         >
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/directory')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-purple-600 mb-2"><MdPeople size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.staff.total, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Total Staff</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/directory')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-indigo-600 mb-2"><MdBadge size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.staff.telecallers || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Telecallers</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/directory')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-blue-600 mb-2"><MdDirectionsCar size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.staff.drivers || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Total Drivers</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/directory')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-emerald-600 mb-2"><MdDirectionsCar size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.staff.perTripDrivers || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Per Trip Drivers</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/directory')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-orange-600 mb-2"><MdDirectionsCar size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.staff.monthlyDrivers || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Monthly Drivers</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/directory')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-rose-600 mb-2"><MdPeople size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.staff.accountantHR || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Accountant / HR</p>
@@ -230,27 +266,47 @@ const DashboardPage = () => {
           animate="show"
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
         >
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-green-500">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/attendance')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-green-500 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-green-600 mb-1 font-bold">{renderVal(stats.attendance.present || 0, 'w-8')}</div>
             <p className="text-gray-700 text-sm font-extrabold">Present Today</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-red-500">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/attendance')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-red-500 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-red-600 mb-1 font-bold">{renderVal(stats.attendance.absent || 0, 'w-8')}</div>
             <p className="text-gray-700 text-sm font-extrabold">Absent Today</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-orange-500">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/attendance')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-orange-500 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-orange-600 mb-1 font-bold">{renderVal(stats.attendance.leave || 0, 'w-8')}</div>
             <p className="text-gray-700 text-sm font-extrabold">On Leave</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-amber-500">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/attendance')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-amber-500 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-amber-600 mb-1 font-bold">{renderVal(stats.attendance.late || 0, 'w-8')}</div>
             <p className="text-gray-700 text-sm font-extrabold">Late Arrivals</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-400">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/attendance')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all border-l-4 border-l-blue-400 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-blue-500 mb-1 font-bold">{renderVal(stats.attendance.halfDay || 0, 'w-8')}</div>
             <p className="text-gray-700 text-sm font-extrabold">Half Day Today</p>
           </motion.div>
@@ -266,26 +322,42 @@ const DashboardPage = () => {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/salary')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-blue-600 mb-2"><MdBadge size={24} /></div>
             <h3 className="text-2xl font-black text-gray-900">{renderVal(stats.payroll.active || 0, 'w-10')}</h3>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Active Payroll Staff</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
-            <div className="text-emerald-600 mb-2"><MdAttachMoney size={24} /></div>
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/salary')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <div className="text-emerald-600 mb-2"><MdCurrencyRupee size={24} /></div>
             <h3 className="text-2xl font-black text-gray-900">{renderVal(formatCurrency(stats.payroll.paidMonth || 0), 'w-24')}</h3>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Paid This Month</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
-            <div className="text-rose-600 mb-2"><MdAttachMoney size={24} /></div>
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/staff/salary')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <div className="text-rose-600 mb-2"><MdCurrencyRupee size={24} /></div>
             <h3 className="text-2xl font-black text-gray-900">{renderVal(formatCurrency(stats.payroll.pendingMonth || 0), 'w-24')}</h3>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Pending Payouts</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
-            <div className="text-purple-600 mb-2"><MdAttachMoney size={24} /></div>
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/expenses/track')}
+            className="bg-white p-5 rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <div className="text-purple-600 mb-2"><MdCurrencyRupee size={24} /></div>
             <h3 className="text-2xl font-black text-gray-900">{renderVal(formatCurrency(stats.expense.spentMonth || 0), 'w-24')}</h3>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Spent This Month</p>
           </motion.div>
@@ -301,25 +373,41 @@ const DashboardPage = () => {
           animate="show"
           className="grid grid-cols-2 lg:grid-cols-5 gap-4"
         >
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/garage/all')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-rose-600 mb-2"><MdStore size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.garage.total || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Active Garages</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/garage/active')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-orange-600 mb-2"><MdBuild size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.garage.active || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Active Repairs</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/vendors/all')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-indigo-600 mb-2"><MdStore size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.vendor.total || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Active Vendors</p>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <motion.div
+            variants={itemVariants}
+            onClick={() => navigate('/crm/vendors/all')}
+            className="bg-white p-4 rounded-[1.25rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
+          >
             <div className="text-blue-600 mb-2"><MdDriveEta size={22} /></div>
             <h3 className="text-xl font-extrabold text-gray-900">{renderVal(stats.vendor.cars || 0, 'w-8')}</h3>
             <p className="text-gray-500 text-xs font-semibold">Total Vendor Cars</p>

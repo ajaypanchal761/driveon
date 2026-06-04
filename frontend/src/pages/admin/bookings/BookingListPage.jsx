@@ -109,7 +109,9 @@ const BookingListPage = () => {
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, pending, confirmed, active, completed, cancelled
     paymentStatus: 'all', // all, paid, pending, refunded
-    dateRange: 'all', // all, today, week, month
+    dateRange: 'all', // all, today, week, month, custom
+    startDate: '', // YYYY-MM-DD
+    endDate: '', // YYYY-MM-DD
     car: 'all',
     user: 'all',
   });
@@ -123,6 +125,19 @@ const BookingListPage = () => {
       })
       .catch((err) => console.log("failed: ", err));
   }, []);
+
+  // Prevent background scrolling when any modal is open
+  useEffect(() => {
+    const isModalOpen = showBookingDetail || showCompleteModal || showPaymentDetails;
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showBookingDetail, showCompleteModal, showPaymentDetails]);
 
   // Fetch bookings from API
   useEffect(() => {
@@ -198,15 +213,22 @@ const BookingListPage = () => {
     let filtered = [...bookings];
 
     // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (booking) =>
-          booking.bookingId.toLowerCase().includes(query) ||
-          booking.userName.toLowerCase().includes(query) ||
-          booking.userEmail.toLowerCase().includes(query) ||
-          booking.carName.toLowerCase().includes(query)
-      );
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filtered = filtered.filter((booking) => {
+        const bookingId = (booking.bookingId || '').toLowerCase();
+        const userName = (booking.userName || '').toLowerCase();
+        const userEmail = (booking.userEmail || '').toLowerCase();
+        const carName = (booking.carName || '').toLowerCase();
+
+        return keywords.every((keyword) =>
+          bookingId.includes(keyword) ||
+          userName.includes(keyword) ||
+          userEmail.includes(keyword) ||
+          carName.includes(keyword)
+        );
+      });
     }
 
     // Status filter
@@ -233,6 +255,20 @@ const BookingListPage = () => {
           case 'month':
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             return bookingDate >= monthAgo;
+          case 'custom':
+            const start = filters.startDate ? new Date(filters.startDate) : null;
+            const end = filters.endDate ? new Date(filters.endDate) : null;
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end) end.setHours(23, 59, 59, 999);
+            
+            if (start && end) {
+              return bookingDate >= start && bookingDate <= end;
+            } else if (start) {
+              return bookingDate >= start;
+            } else if (end) {
+              return bookingDate <= end;
+            }
+            return true;
           default:
             return true;
         }
@@ -716,6 +752,7 @@ const BookingListPage = () => {
                   { value: 'today', label: 'Today' },
                   { value: 'week', label: 'This Week' },
                   { value: 'month', label: 'This Month' },
+                  { value: 'custom', label: 'Custom Range' },
                 ]}
               />
             </div>
@@ -752,6 +789,29 @@ const BookingListPage = () => {
               />
             </div>
           </div>
+
+          {filters.dateRange === 'custom' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={filters.startDate || ''}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={filters.endDate || ''}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Bookings List */}
@@ -982,6 +1042,7 @@ const BookingListPage = () => {
       {showBookingDetail && selectedBooking && (
         <BookingDetailModal
           booking={selectedBooking}
+          addOnPrices={addOnPrices}
           onClose={() => {
             setShowBookingDetail(false);
             setSelectedBooking(null);
@@ -1059,64 +1120,14 @@ const BookingListPage = () => {
 /**
  * Booking Detail Modal Component
  */
-const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, onProcessRefund }) => {
+const BookingDetailModal = ({ booking, addOnPrices = {}, onClose, onApprove, onReject, onCancel, onProcessRefund }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [paymentStatus, setPaymentStatus] = useState(booking.paymentStatus || 'pending');
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
   const [guarantorPoints, setGuarantorPoints] = useState(null);
   const [loadingGuarantorPoints, setLoadingGuarantorPoints] = useState(false);
 
-  // Driver Assignment States
-  const [drivers, setDrivers] = useState([]);
-  const [selectedDriverId, setSelectedDriverId] = useState(
-    booking.assignedDriver?._id || 
-    (typeof booking.assignedDriver === 'string' ? booking.assignedDriver : '')
-  );
-  const [isAssigningDriver, setIsAssigningDriver] = useState(false);
 
-  // Fetch Drivers
-  useEffect(() => {
-    const fetchDrivers = async () => {
-      try {
-        const res = await api.get('/crm/staff');
-        if (res.data?.success && res.data?.data?.staff) {
-          const driverStaff = res.data.data.staff.filter(s => 
-            s.role && (
-              s.role.toLowerCase() === 'driver' || 
-              s.role.toLowerCase().includes('driver')
-            )
-          );
-          setDrivers(driverStaff);
-        }
-      } catch (err) {
-        console.error('Error fetching drivers:', err);
-      }
-    };
-    fetchDrivers();
-  }, []);
-
-  const handleAssignDriver = async (driverId) => {
-    try {
-      setIsAssigningDriver(true);
-      const res = await adminService.updateBooking(booking.id, {
-        assignedDriver: driverId || null
-      });
-      if (res.success) {
-        setSelectedDriverId(driverId);
-        toastUtils.success('Driver assigned successfully!');
-        setTimeout(() => {
-          window.location.reload();
-        }, 800);
-      } else {
-        toastUtils.error('Failed to assign driver');
-      }
-    } catch (err) {
-      console.error('Error assigning driver:', err);
-      toastUtils.error(err.response?.data?.message || 'Failed to assign driver');
-    } finally {
-      setIsAssigningDriver(false);
-    }
-  };
 
   // Update payment status when booking prop changes
   useEffect(() => {
@@ -1240,46 +1251,7 @@ const BookingDetailModal = ({ booking, onClose, onApprove, onReject, onCancel, o
           <div>
             {activeTab === 'details' && (
               <div className="space-y-6">
-                {/* Driver Assignment */}
-                <div className="bg-purple-50/40 p-4 rounded-xl border border-purple-100 shadow-sm">
-                  <h3 className="text-sm font-black text-purple-900 mb-3 uppercase tracking-wider flex items-center gap-1.5">
-                    🚗 Driver Assignment
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 block mb-1">Select Driver</label>
-                      <select
-                        value={selectedDriverId}
-                        onChange={(e) => handleAssignDriver(e.target.value)}
-                        disabled={isAssigningDriver}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-xs bg-white font-bold text-gray-700 shadow-sm"
-                      >
-                        <option value="">No Driver Assigned (Self Drive)</option>
-                        {drivers.map(d => (
-                          <option key={d._id || d.id} value={d._id || d.id}>
-                            {d.name} ({d.role}) - {d.status || 'Active'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {selectedDriverId && (
-                      <div className="bg-white p-3 rounded-lg border border-purple-100/70 text-[11px] shadow-sm">
-                        {(() => {
-                          const currentDriver = drivers.find(d => (d._id || d.id) === selectedDriverId) || booking.assignedDriver;
-                          if (!currentDriver || typeof currentDriver !== 'object') return <span className="text-gray-400 font-medium">Loading driver details...</span>;
-                          return (
-                            <div className="space-y-1 text-purple-950 font-semibold">
-                              <p className="font-extrabold text-xs text-purple-950">{currentDriver.name}</p>
-                              <p>📞 Phone: {currentDriver.phone || 'N/A'}</p>
-                              <p>📧 Email: {currentDriver.email || 'N/A'}</p>
-                              <p>🆔 ID: {currentDriver.employeeId || 'N/A'}</p>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Car Information */}
                 <div>

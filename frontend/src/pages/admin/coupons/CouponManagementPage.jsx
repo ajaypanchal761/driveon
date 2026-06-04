@@ -29,7 +29,9 @@ const CouponManagementPage = () => {
   const [filters, setFilters] = useState({
     status: 'all', // all, active, expired, used
     couponType: 'all', // all, percentage, fixed
-    dateRange: 'all', // all, today, week, month
+    dateRange: 'all', // all, today, week, month, custom
+    startDate: '', // YYYY-MM-DD
+    endDate: '', // YYYY-MM-DD
   });
 
   // Form state
@@ -63,7 +65,7 @@ const CouponManagementPage = () => {
         const response = await couponService.getAllCoupons({
           status: filters.status,
           couponType: filters.couponType,
-          dateRange: filters.dateRange,
+          dateRange: filters.dateRange !== 'custom' ? filters.dateRange : 'all',
           search: searchQuery,
         });
 
@@ -119,17 +121,42 @@ const CouponManagementPage = () => {
     let filtered = [...coupons];
 
     // Search filter (client-side for instant results)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (coupon) =>
-          coupon.code.toLowerCase().includes(query) ||
-          (coupon.description && coupon.description.toLowerCase().includes(query))
-      );
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filtered = filtered.filter((coupon) => {
+        const code = (coupon.code || '').toLowerCase();
+        const description = (coupon.description || '').toLowerCase();
+
+        return keywords.every((keyword) =>
+          code.includes(keyword) ||
+          description.includes(keyword)
+        );
+      });
+    }
+
+    // Custom date range filter
+    if (filters.dateRange === 'custom') {
+      const start = filters.startDate ? new Date(filters.startDate) : null;
+      const end = filters.endDate ? new Date(filters.endDate) : null;
+      if (start) start.setHours(0, 0, 0, 0);
+      if (end) end.setHours(23, 59, 59, 999);
+
+      filtered = filtered.filter((coupon) => {
+        const createdDate = new Date(coupon.createdAt);
+        if (start && end) {
+          return createdDate >= start && createdDate <= end;
+        } else if (start) {
+          return createdDate >= start;
+        } else if (end) {
+          return createdDate <= end;
+        }
+        return true;
+      });
     }
 
     setFilteredCoupons(filtered);
-  }, [coupons, searchQuery]);
+  }, [coupons, searchQuery, filters.dateRange, filters.startDate, filters.endDate]);
 
   const handleCreateCoupon = () => {
     setCouponForm({
@@ -469,9 +496,33 @@ const CouponManagementPage = () => {
                 { value: 'today', label: 'Today' },
                 { value: 'week', label: 'This Week' },
                 { value: 'month', label: 'This Month' },
+                { value: 'custom', label: 'Custom Range' },
               ]}
             />
           </div>
+
+          {filters.dateRange === 'custom' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={filters.startDate || ''}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={filters.endDate || ''}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Coupons List */}

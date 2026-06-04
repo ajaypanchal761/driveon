@@ -419,50 +419,7 @@ const TrackingPage = () => {
                 )}
               </p>
             </div>
-            <div className="flex gap-2">
-              {/* Filter Toggle */}
-              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setFilterType('all')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${filterType === 'all'
-                    ? 'text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  style={filterType === 'all' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilterType('user')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors ${filterType === 'user'
-                    ? 'text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  style={filterType === 'user' ? { backgroundColor: colors.backgroundTertiary } : {}}
-                >
-                  Users
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
-              {stats.total}
-            </div>
-            <div className="text-xs md:text-sm text-gray-600">Total Tracked</div>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1 text-blue-600">{stats.users}</div>
-            <div className="text-xs md:text-sm text-gray-600">Users</div>
-          </Card>
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1 text-green-600">{stats.active}</div>
-            <div className="text-xs md:text-sm text-gray-600">Active Now</div>
-          </Card>
         </div>
 
         {/* User ID Search */}

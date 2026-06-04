@@ -888,6 +888,49 @@ export const adminService = {
       throw error;
     }
   },
+
+  /**
+   * Get historical notifications for the logged in admin user
+   * @returns {Promise}
+   */
+  getMyNotifications: async () => {
+    try {
+      const response = await api.get('/notifications');
+      return response.data;
+    } catch (error) {
+      console.error('Get my notifications error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark a notification as read
+   * @param {String} id - Notification ID
+   * @returns {Promise}
+   */
+  markNotificationAsRead: async (id) => {
+    try {
+      const response = await api.put(`/notifications/${id}/read`);
+      return response.data;
+    } catch (error) {
+      console.error('Mark notification read error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark all notifications as read
+   * @returns {Promise}
+   */
+  markAllNotificationsAsRead: async () => {
+    try {
+      const response = await api.put('/notifications/read-all');
+      return response.data;
+    } catch (error) {
+      console.error('Mark all notifications read error:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminService;

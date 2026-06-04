@@ -110,6 +110,10 @@ const staffSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
+        insuranceNote: {
+            type: String,
+            default: '',
+        },
         resetPasswordToken: String,
         resetPasswordExpire: Date,
     },

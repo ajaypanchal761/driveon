@@ -244,25 +244,28 @@ const GuarantorListPage = () => {
     let filtered = [...guarantors];
 
     // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
       filtered = filtered.filter((bookingGroup) => {
-        // Check booking ID
-        const matchesBookingId = bookingGroup.bookingId?.toLowerCase().includes(query);
-        
-        // Check linked user info
-        const matchesLinkedUser = 
-          bookingGroup.linkedUserName?.toLowerCase().includes(query) ||
-          bookingGroup.linkedUserEmail?.toLowerCase().includes(query);
-        
-        // Check guarantors info
-        const matchesGuarantor = bookingGroup.guarantors?.some((guarantor) =>
-          guarantor.guarantorName?.toLowerCase().includes(query) ||
-          guarantor.guarantorEmail?.toLowerCase().includes(query) ||
-          guarantor.guarantorPhone?.includes(query)
-        );
-        
-        return matchesBookingId || matchesLinkedUser || matchesGuarantor;
+        return keywords.every((keyword) => {
+          const bookingId = (bookingGroup.bookingId || '').toLowerCase();
+          const linkedUserName = (bookingGroup.linkedUserName || '').toLowerCase();
+          const linkedUserEmail = (bookingGroup.linkedUserEmail || '').toLowerCase();
+
+          const matchesBookingId = bookingId.includes(keyword);
+          const matchesLinkedUser = linkedUserName.includes(keyword) || linkedUserEmail.includes(keyword);
+          
+          const matchesGuarantor = bookingGroup.guarantors?.some((guarantor) => {
+            const guarantorName = (guarantor.guarantorName || '').toLowerCase();
+            const guarantorEmail = (guarantor.guarantorEmail || '').toLowerCase();
+            const guarantorPhone = (guarantor.guarantorPhone || '').toLowerCase();
+            
+            return guarantorName.includes(keyword) || guarantorEmail.includes(keyword) || guarantorPhone.includes(keyword);
+          });
+
+          return matchesBookingId || matchesLinkedUser || matchesGuarantor;
+        });
       });
     }
 

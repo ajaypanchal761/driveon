@@ -53,7 +53,7 @@ const AssignCallerModal = ({ isOpen, onClose, enquiryIds = [], onSuccess, single
           <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-[#1C205C] to-indigo-600">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <MdPersonAdd size={20} /> Assign to Caller
+                <MdPersonAdd size={20} /> Assign to Staff Member
               </h2>
               <p className="text-indigo-200 text-xs mt-0.5">
                 Assigning {ids.length} enquir{ids.length === 1 ? 'y' : 'ies'} to a staff member

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { jsPDF } from 'jspdf';
 import { 
@@ -9,196 +10,62 @@ import {
 import BottomNav from '../components/BottomNav';
 
 
-// Expanded Dummy Data simulating a database
-// Expanded Dummy Data simulating a database
-const enquiryDatabase = [
-  { 
-    id: 1, 
-    name: "Rahul Sharma", 
-    phone: "+91 98765 43210", 
-    status: "Pending", 
-    date: "2023-10-24",
-    model: "Seltos",
-    source: "Facebook Lead",
-    email: "rahul.sharma@example.com",
-    enquiryId: "E2023102401",
-    category: "Corporate",
-    customerType: "Individual",
-    address: "123, Palm Grove Heights, Mumbai",
-    exchange: "Yes",
-    remark: "Looking for diesel variant specifically.",
-    variant: "GTX Plus",
-    exteriorColor: "Imperial Blue",
-    interiorColor: "Black",
-    bookingBalance: "0",
-    
-    // Follow Up Data
-    followUps: [
-      { id: 101, date: "2023-10-25", type: "Call", note: "Customer engaged, asked for brochure.", status: "Completed" },
-      { id: 102, date: "2023-10-27", type: "Visit", note: "Scheduled for test drive.", status: "Pending" }
-    ],
-
-    // Invoice Data
-    invoice: {
-      number: "INV-23-9088",
-      date: "2023-11-01",
-      amount: "18,45,000",
-      status: "Paid",
-      pdfUrl: "#"
-    },
-
-    // Feedback Data
-    feedback: {
-      rating: 4,
-      comment: "Sales executive was very helpful. Delivery process could be faster.",
-      date: "2023-11-05"
-    }
-  },
-  { 
-    id: 2, 
-    name: "Priya Singh", 
-    phone: "+91 98989 89898", 
-    status: "Closed", 
-    date: "2023-10-23",
-    model: "Sonet",
-    source: "Walk-in",
-    email: "priya.singh88@gmail.com",
-    enquiryId: "E2023102305",
-    category: "Individual",
-    customerType: "First Time Buyer",
-    address: "B-402, Sunshine Apartments, Delhi",
-    exchange: "No",
-    remark: "Budget constraint around 12L.",
-    variant: "HTK Plus",
-    exteriorColor: "Clear White",
-    interiorColor: "Beige",
-    bookingBalance: "0",
-    
-    // Populated Data
-    followUps: [
-         { id: 103, date: "2023-10-23", type: "Call", note: "Called customer, no answer. Left voicemail.", status: "Completed" },
-         { id: 104, date: "2023-10-24", type: "Call", note: "Follow up call, phone switched off.", status: "Completed" }
-    ],
-    booking: null,
-    invoice: null,
-    feedback: null
-  },
-  { 
-    id: 3, 
-    name: "Amit Verma", 
-    phone: "+91 99887 76655", 
-    status: "Converted", 
-    date: "2023-10-24",
-    model: "Carens",
-    source: "Referral",
-    email: "amit.verma@techs.com",
-    enquiryId: "E2023102409",
-    category: "Individual",
-    customerType: "Individual",
-    address: "77/A, Green Park, Bangalore",
-    exchange: "Yes",
-    remark: "Ready to book, waiting for loan approval.",
-    booking: {
-        id: "BKQ789012",
-        date: "2023/10/25",
-        status: "Confirmed",
-        amountPaid: "25,000"
-    },
-    variant: "Luxury Plus",
-    exteriorColor: "Moss Brown",
-    interiorColor: "Triton Navy",
-    bookingBalance: "14,50,000",
-    
-    followUps: [
-      { id: 201, date: "2023-10-24", type: "Call", note: "Loan approved from HDFC.", status: "Completed" },
-      { id: 202, date: "2023-10-25", type: "Visit", note: "Customer came for booking formalities.", status: "Completed" }
-    ],
-    invoice: {
-      number: "INV-23-9092",
-      date: "2023-10-28",
-      amount: "14,75,000",
-      status: "Paid",
-      pdfUrl: "#"
-    },
-    feedback: {
-      rating: 5,
-      comment: "Excellent service provided by the team. Very happy with the car.",
-      date: "2023-10-28"
-    }
-  },
-  { 
-    id: 4, 
-    name: "Sneha Gupta", 
-    phone: "+91 88776 65544", 
-    status: "Pending", 
-    date: "2023-10-23",
-    model: "Seltos",
-    source: "Website",
-    email: "sneha.g@outlook.com",
-    enquiryId: "E2023102311",
-    category: "Individual",
-    customerType: "Individual",
-    address: "Flat 505, River View, Pune",
-    exchange: "No",
-    remark: "Comparing with Creta.",
-    variant: "HTX",
-    exteriorColor: "Sparkling Silver",
-    interiorColor: "Black",
-    bookingBalance: "0",
-    
-    followUps: [
-        { id: 301, date: "2023-10-24", type: "Call", note: "Explained features over call.", status: "Completed" },
-        { id: 302, date: "2023-10-26", type: "Test Drive", note: "Test drive scheduled at home.", status: "Pending" }
-    ], 
-    booking: null,
-    invoice: null, 
-    feedback: null
-  },
-  { 
-    id: 5, 
-    name: "Vikram Malhotra", 
-    phone: "+91 77665 54433", 
-    status: "Missed", 
-    date: "2023-10-22",
-    model: "Carnival",
-    source: "Cold Call",
-    email: "vikram.m@business.net",
-    enquiryId: "E2023102203",
-    category: "Corporate",
-    customerType: "Fleet Owner",
-    address: "Plot 88, Industrial Area, Gurgaon",
-    exchange: "Yes",
-    remark: "Interested in 3 units.",
-    variant: "Limousine",
-    exteriorColor: "Aurora Black Pearl",
-    interiorColor: "Viper Burgundy",
-    bookingBalance: "0",
-    
-    followUps: [
-        { id: 401, date: "2023-10-23", type: "Call", note: "Sent corporate fleet proposal via email.", status: "Completed" },
-        { id: 402, date: "2023-10-25", type: "Call", note: "Customer asked to call back next week.", status: "Pending" }
-    ], 
-    booking: null,
-    invoice: null, 
-    feedback: null
-  },
-];
+// Expanded Dummy Data simulating a database removed to fetch from API
 
 const EnquiryDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Enquiry');
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Find data based on ID
-    const foundData = enquiryDatabase.find(item => item.id === parseInt(id));
-    if (foundData) {
-      setData(foundData);
-    }
+    const fetchEnquiryDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/crm/enquiries/${id}`);
+        if (response.data.success) {
+          const enq = response.data.data;
+          
+          // Map backend Enquiry to page format
+          const formatted = {
+            id: enq._id || enq.id,
+            name: enq.name,
+            phone: enq.phone,
+            email: enq.email || 'N/A',
+            status: enq.status,
+            date: enq.createdAt ? new Date(enq.createdAt).toLocaleDateString('en-GB') : '',
+            model: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : 'Not Specified'),
+            source: enq.source || 'Walk-in',
+            enquiryId: (enq.enquiryId || enq._id || enq.id || '').toString().slice(-8).toUpperCase(), // slice last 8 chars for a shorter display ID
+            category: 'Individual',
+            customerType: 'Individual',
+            address: 'Not Specified',
+            exchange: 'No',
+            remark: enq.note || 'No notes added by admin.',
+            variant: enq.carInterested?.year || '',
+            exteriorColor: enq.carInterested?.color || '',
+            interiorColor: '',
+            bookingBalance: '0',
+            followUps: [],
+            booking: null,
+            invoice: null,
+            feedback: null
+          };
+          setData(formatted);
+        }
+      } catch (error) {
+        console.error('Error fetching enquiry details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEnquiryDetails();
   }, [id]);
 
-  if (!data) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-[#1C205C]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1C205C]"></div></div>;
+  if (!data) return <div className="min-h-screen flex items-center justify-center text-gray-500">Enquiry details not found</div>;
 
   const handleDownloadInvoice = (invoice) => {
     const doc = new jsPDF();
@@ -361,9 +228,9 @@ const EnquiryDetailsPage = () => {
                      </div>
                   </div>
 
-                  {/* Remark */}
+                  {/* Admin Note */}
                   <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                     <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">Remark</p>
+                     <p className="text-[10px] text-blue-400 font-bold uppercase mb-1">Admin Note</p>
                      <p className="text-sm text-[#1C205C] font-medium leading-relaxed">{data.remark}</p>
                   </div>
                </div>

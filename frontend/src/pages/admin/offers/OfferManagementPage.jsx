@@ -72,14 +72,20 @@ const OfferManagementPage = () => {
   useEffect(() => {
     let filtered = [...offers];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (o) =>
-          o.code.toLowerCase().includes(query) ||
-          o.title.toLowerCase().includes(query) ||
-          (o.description && o.description.toLowerCase().includes(query))
-      );
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filtered = filtered.filter((o) => {
+        const code = (o.code || '').toLowerCase();
+        const title = (o.title || '').toLowerCase();
+        const description = (o.description || '').toLowerCase();
+
+        return keywords.every((keyword) =>
+          code.includes(keyword) ||
+          title.includes(keyword) ||
+          description.includes(keyword)
+        );
+      });
     }
 
     setFilteredOffers(filtered);

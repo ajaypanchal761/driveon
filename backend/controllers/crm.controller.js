@@ -3122,11 +3122,18 @@ export const getStaffPayroll = async (req, res) => {
             });
         }
 
+        // Get global settings for fallback deductions
+        let globalSettings = await Setting.findOne({ key: 'attendance_settings' });
+        const globalAbsentDeduction = globalSettings?.value?.absentDeduction || 0;
+        const globalHalfDayDeduction = globalSettings?.value?.halfDayDeduction || 0;
+
         // Compute days from records
         let presentCount = 0;
         let halfDayCount = 0;
         let absentCount = 0;
         let leaveCount = 0;
+        let notJoinedCount = 0;
+        let pendingCount = 0;
         let extraWorkAmount = 0;
         let totalExtraMinutes = 0;
 
@@ -3164,7 +3171,21 @@ export const getStaffPayroll = async (req, res) => {
             const dateString = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const isHoliday = holidaysMap[dateString];
 
-            if (isHoliday) {
+            const compDate = new Date(targetYear, targetMonth, day);
+            compDate.setHours(0,0,0,0);
+
+            const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt || new Date();
+            const startOfJoin = new Date(joinDate);
+            startOfJoin.setHours(0,0,0,0);
+
+            const isBeforeJoin = compDate < startOfJoin;
+
+            if (isBeforeJoin) {
+                computedStatus = 'Not Joined';
+                if (dayOfWeek !== 0) {
+                    notJoinedCount++;
+                }
+            } else if (isHoliday) {
                 computedStatus = 'Holiday';
                 if (record) {
                     const durationMinutes = parseWorkHours(record.workHours);
@@ -3227,21 +3248,15 @@ export const getStaffPayroll = async (req, res) => {
                     // Not a Sunday and no record = Absent (if past day) or Pending (if future/today)
                     const todayDate = new Date();
                     todayDate.setHours(0,0,0,0);
-                    const compDate = new Date(targetYear, targetMonth, day);
-                    compDate.setHours(0,0,0,0);
 
-                    // Check if before joining date
-                    const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt || new Date();
-                    const startOfJoin = new Date(joinDate);
-                    startOfJoin.setHours(0,0,0,0);
-
-                    if (compDate < startOfJoin) {
-                        computedStatus = 'Not Joined';
-                    } else if (compDate < todayDate) {
+                    if (compDate < todayDate) {
                         absentCount++;
                         computedStatus = 'Absent';
                     } else {
                         computedStatus = 'Pending';
+                        if (dayOfWeek !== 0) {
+                            pendingCount++;
+                        }
                     }
                 }
             }
@@ -3257,15 +3272,22 @@ export const getStaffPayroll = async (req, res) => {
             });
         }
 
-        let absentDeduction = absentCount * perDaySalary;
-        let halfDayDeduction = halfDayCount * halfDaySalary;
+        const absentRate = staff.absentDeduction || globalAbsentDeduction || perDaySalary;
+        const halfDayRate = staff.halfDayDeduction || globalHalfDayDeduction || halfDaySalary;
+
+        let absentDeduction = absentCount * absentRate;
+        let halfDayDeduction = halfDayCount * halfDayRate;
+        let notJoinedDeduction = notJoinedCount * perDaySalary;
+        let pendingDeduction = pendingCount * perDaySalary;
 
         if (isDriverRole && staff.salaryMethod === 'Per Trip') {
             absentDeduction = 0;
             halfDayDeduction = 0;
+            notJoinedDeduction = 0;
+            pendingDeduction = 0;
         }
 
-        const netPayable = baseSalary - absentDeduction - halfDayDeduction + extraWorkAmount;
+        const netPayable = baseSalary - absentDeduction - halfDayDeduction - notJoinedDeduction - pendingDeduction + extraWorkAmount;
 
         // Check if salary already paid for this month
         const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -3301,6 +3323,8 @@ export const getStaffPayroll = async (req, res) => {
                 halfDaySalary,
                 absentDeduction,
                 halfDayDeduction,
+                notJoinedDeduction,
+                pendingDeduction,
                 extraWorkAmount,
                 netPayable: remainingAmount,
                 totalNetPayable: netPayable,
@@ -3587,6 +3611,8 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
             let halfDayCount = 0;
             let absentCount = 0;
             let leaveCount = 0;
+            let notJoinedCount = 0;
+            let pendingCount = 0;
             let extraWorkAmount = 0;
             let totalExtraMinutes = 0;
 
@@ -3603,6 +3629,22 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
 
                 const dateString = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isHoliday = holidaysMap[dateString];
+
+                const compDate = new Date(targetYear, targetMonth, day);
+                compDate.setHours(0,0,0,0);
+
+                const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt || new Date();
+                const startOfJoin = new Date(joinDate);
+                startOfJoin.setHours(0,0,0,0);
+
+                const isBeforeJoin = compDate < startOfJoin;
+
+                if (isBeforeJoin) {
+                    if (dayOfWeek !== 0) {
+                        notJoinedCount++;
+                    }
+                    continue;
+                }
 
                 if (isHoliday) {
                     if (record) {
@@ -3655,16 +3697,13 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
                 } else {
                     const todayDate = new Date();
                     todayDate.setHours(0,0,0,0);
-                    const compDate = new Date(targetYear, targetMonth, day);
-                    compDate.setHours(0,0,0,0);
 
-                    // Check if before joining date
-                    const joinDate = staff.joiningDate || staff.joinDate || staff.createdAt || new Date();
-                    const startOfJoin = new Date(joinDate);
-                    startOfJoin.setHours(0,0,0,0);
-
-                    if (compDate >= startOfJoin && compDate < todayDate) {
+                    if (compDate < todayDate) {
                         absentCount++;
+                    } else {
+                        if (dayOfWeek !== 0) {
+                            pendingCount++;
+                        }
                     }
                 }
             }
@@ -3675,13 +3714,17 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
 
             let absentDeduction = absentCount * absentRate;
             let halfDayDeduction = halfDayCount * halfDayRate;
+            let notJoinedDeduction = notJoinedCount * perDaySalary;
+            let pendingDeduction = pendingCount * perDaySalary;
 
             if (isDriverRole && staff.salaryMethod === 'Per Trip') {
                 absentDeduction = 0;
                 halfDayDeduction = 0;
+                notJoinedDeduction = 0;
+                pendingDeduction = 0;
             }
 
-            const totalNetPayable = baseSalary - absentDeduction - halfDayDeduction + extraWorkAmount;
+            const totalNetPayable = baseSalary - absentDeduction - halfDayDeduction - notJoinedDeduction - pendingDeduction + extraWorkAmount;
 
             // Check saved payroll record
             const salaryRecord = await Salary.findOne({ staff: staff._id, month: monthString });

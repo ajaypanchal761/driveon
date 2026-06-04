@@ -390,10 +390,11 @@ export const getAllUsers = async (req, res) => {
     const orConditions = [];
 
     // Search filter
-    if (search && search !== '') {
+    if (search && search.trim() !== '') {
+      const trimmedSearch = search.trim();
       // Handle special "user-XXXXX" search format
-      if (/^user-?[0-9a-fA-F]{1,5}$/i.test(search)) {
-        const match = search.match(/^user-?([0-9a-fA-F]+)$/i);
+      if (/^user-?[0-9a-fA-F]{1,5}$/i.test(trimmedSearch)) {
+        const match = trimmedSearch.match(/^user-?([0-9a-fA-F]+)$/i);
         if (match) {
           const suffix = match[1].toLowerCase();
           // We'll use a regex that matches ObjectIds ending with this suffix
@@ -401,13 +402,22 @@ export const getAllUsers = async (req, res) => {
           const idRegex = new RegExp(`.*${suffix}$`, 'i');
           orConditions.push({ _id: { $regex: idRegex } });
         }
+      } else {
+        const keywords = trimmedSearch.split(/\s+/).filter(Boolean);
+        if (keywords.length > 0) {
+          const keywordConditions = keywords.map(keyword => {
+            const regex = { $regex: keyword, $options: 'i' };
+            return {
+              $or: [
+                { name: regex },
+                { email: regex },
+                { phone: regex }
+              ]
+            };
+          });
+          query.$and = query.$and ? [...query.$and, ...keywordConditions] : keywordConditions;
+        }
       }
-
-      orConditions.push(
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
-      );
     }
 
     // Account status filter (only if not 'all')
@@ -687,7 +697,9 @@ export const getDashboardStats = async (req, res) => {
       standardRevenue,
       outwardRevenue,
       dbCars,
-      outwardCars
+      outwardCars,
+      monthlyInwardBookings,
+      yearlyInwardBookings
     ] = await Promise.all([
       User.countDocuments(),
       Car.countDocuments(),
@@ -712,6 +724,10 @@ export const getDashboardStats = async (req, res) => {
         status: { $in: ['confirmed', 'active'] }
       }),
       Booking.countDocuments({
+        createdAt: {
+          $gte: new Date(`${selectedYear}-01-01T00:00:00.000Z`),
+          $lte: new Date(`${selectedYear}-12-31T23:59:59.999Z`)
+        },
         status: { $ne: 'unpaid' },
         $or: [
           { status: { $ne: 'cancelled' } },
@@ -793,7 +809,12 @@ export const getDashboardStats = async (req, res) => {
               $gte: new Date(`${selectedYear}-01-01T00:00:00.000Z`),
               $lte: new Date(`${selectedYear}-12-31T23:59:59.999Z`)
             },
-            status: { $ne: 'unpaid' }
+            status: { $ne: 'unpaid' },
+            $or: [
+              { status: { $ne: 'cancelled' } },
+              { paidAmount: { $gt: 0 } },
+              { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+            ]
           }
         },
         {
@@ -808,7 +829,12 @@ export const getDashboardStats = async (req, res) => {
       Booking.aggregate([
         {
           $match: {
-            status: { $ne: 'unpaid' }
+            status: { $ne: 'unpaid' },
+            $or: [
+              { status: { $ne: 'cancelled' } },
+              { paidAmount: { $gt: 0 } },
+              { paymentStatus: { $in: ['paid', 'partial', 'refunded'] } }
+            ]
           }
         },
         {
@@ -839,7 +865,39 @@ export const getDashboardStats = async (req, res) => {
         }
       ]),
       Car.find({}),
-      mongoose.connection.db.collection('outwardcars').find({}).toArray()
+      mongoose.connection.db.collection('outwardcars').find({}).toArray(),
+      OutwardBooking.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: new Date(`${selectedYear}-01-01T00:00:00.000Z`),
+              $lte: new Date(`${selectedYear}-12-31T23:59:59.999Z`)
+            },
+            carType: 'inward'
+          }
+        },
+        {
+          $group: {
+            _id: { $month: '$createdAt' },
+            inwardBookings: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]),
+      OutwardBooking.aggregate([
+        {
+          $match: {
+            carType: 'inward'
+          }
+        },
+        {
+          $group: {
+            _id: { $year: '$createdAt' },
+            inwardBookings: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ])
     ]);
 
     // 1. Process Pending KYC Count
@@ -961,9 +1019,11 @@ export const getDashboardStats = async (req, res) => {
     const formattedMonthlyData = monthNames.map((name, index) => {
       const monthNum = index + 1;
       const dbData = monthlyBookings.find(item => item._id === monthNum);
+      const inwardData = monthlyInwardBookings.find(item => item._id === monthNum);
       return {
         name,
         bookings: dbData ? dbData.bookings : 0,
+        inwardBookings: inwardData ? inwardData.inwardBookings : 0,
         revenue: dbData ? dbData.revenue : 0
       };
     });
@@ -972,9 +1032,11 @@ export const getDashboardStats = async (req, res) => {
     const recentYears = [2022, 2023, 2024, 2025, 2026];
     const formattedYearlyData = recentYears.map(yr => {
       const dbData = yearlyBookings.find(item => item._id === yr);
+      const inwardData = yearlyInwardBookings.find(item => item._id === yr);
       return {
         name: yr.toString(),
         bookings: dbData ? dbData.bookings : 0,
+        inwardBookings: inwardData ? inwardData.inwardBookings : 0,
         revenue: dbData ? dbData.revenue : 0
       };
     });
@@ -1582,16 +1644,24 @@ export const getAllReferrals = async (req, res) => {
     }
 
     // Search filter
-    if (search && search !== '') {
-      const query = search.toLowerCase();
-      filteredReferrals = filteredReferrals.filter(
-        (referral) =>
-          referral.referrerName.toLowerCase().includes(query) ||
-          referral.referrerEmail.toLowerCase().includes(query) ||
-          referral.referredUserName.toLowerCase().includes(query) ||
-          referral.referredUserEmail.toLowerCase().includes(query) ||
-          referral.referralCode.toLowerCase().includes(query)
-      );
+    if (search && search.trim() !== '') {
+      const query = search.toLowerCase().trim();
+      const keywords = query.split(/\s+/).filter(Boolean);
+      filteredReferrals = filteredReferrals.filter((referral) => {
+        const referrerName = (referral.referrerName || '').toLowerCase();
+        const referrerEmail = (referral.referrerEmail || '').toLowerCase();
+        const referredUserName = (referral.referredUserName || '').toLowerCase();
+        const referredUserEmail = (referral.referredUserEmail || '').toLowerCase();
+        const referralCode = (referral.referralCode || '').toLowerCase();
+
+        return keywords.every((keyword) =>
+          referrerName.includes(keyword) ||
+          referrerEmail.includes(keyword) ||
+          referredUserName.includes(keyword) ||
+          referredUserEmail.includes(keyword) ||
+          referralCode.includes(keyword)
+        );
+      });
     }
 
     res.status(200).json({

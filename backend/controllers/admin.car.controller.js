@@ -1045,7 +1045,7 @@ export const getCarRecord = async (req, res) => {
     if (standardCarId) {
       const rawBookings = await Booking.find({ 
         car: standardCarId,
-        paymentStatus: { $in: ['paid', 'partial'] }
+        status: { $nin: ['cancelled', 'rejected'] }
       })
         .populate('user', 'name email phone')
         .sort({ createdAt: -1 });
@@ -1081,7 +1081,7 @@ export const getCarRecord = async (req, res) => {
     if (outwardQuery.length > 0) {
       const rawOutwardBookings = await OutwardBooking.find({
         $or: outwardQuery,
-        paymentStatus: { $in: ['paid', 'partial'] }
+        status: { $ne: 'cancelled' }
       }).sort({ createdAt: -1 });
 
       outwardBookings = rawOutwardBookings.map(b => ({

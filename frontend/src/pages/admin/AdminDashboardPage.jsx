@@ -142,7 +142,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.backgroundTertiary,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/users'),
     },
@@ -156,7 +156,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.info,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/cars'),
     },
@@ -169,7 +169,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.success,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/bookings'),
     },
@@ -182,7 +182,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.success,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/payments'),
     },
@@ -198,7 +198,7 @@ const AdminDashboardPage = () => {
       color: colors.info,
       change: 'Live',
       changeType: 'info',
-      onClick: () => navigate('/admin/tracking/active'),
+      onClick: () => navigate('/admin/bookings/active'),
     },
     {
       title: 'Total Outward Cars',
@@ -209,9 +209,9 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.warning,
-      change: '--',
+      change: '',
       changeType: 'neutral',
-      onClick: () => navigate('/admin/fleet/outward'),
+      onClick: () => navigate('/admin/cars/add-outward'),
     },
     {
       title: 'Pending Bookings',
@@ -222,9 +222,9 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.warning,
-      change: '--',
+      change: '',
       changeType: 'neutral',
-      onClick: () => navigate('/admin/bookings?status=pending'),
+      onClick: () => navigate('/admin/bookings/pending'),
     },
     {
       title: 'Total Inward Bookings',
@@ -235,7 +235,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.success,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/fleet/inward-bookings'),
     },
@@ -248,9 +248,9 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.info,
-      change: '--',
+      change: '',
       changeType: 'neutral',
-      onClick: () => navigate('/admin/fleet/outward-bookings'),
+      onClick: () => navigate('/admin/bookings'),
     },
     {
       title: 'Active Offers',
@@ -261,7 +261,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.error,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/offers'),
     },
@@ -275,9 +275,9 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.success,
-      change: '--',
+      change: '',
       changeType: 'neutral',
-      onClick: () => navigate('/admin/addons'),
+      onClick: () => navigate('/admin/addon-services'),
     },
     {
       title: 'Active Coupons',
@@ -288,7 +288,7 @@ const AdminDashboardPage = () => {
         </svg>
       ),
       color: colors.backgroundTertiary,
-      change: '--',
+      change: '',
       changeType: 'neutral',
       onClick: () => navigate('/admin/coupons'),
     },
@@ -368,17 +368,26 @@ const AdminDashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 md:mb-8">
           {/* Left Column: Booking Trends Chart */}
           <Card className="p-4 md:p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-              <div>
-                <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
-                  Booking Trends & Analytics
+            <div className="flex flex-col gap-4 mb-6">
+              {/* Row 1: Title & Legends */}
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <h3 className="text-lg md:text-xl font-semibold whitespace-nowrap" style={{ color: colors.textPrimary }}>
+                  Normal & Inward Booking Trends & Analytics
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Real-time booking and reservation charts derived from database bookings.
-                </p>
+                
+                {/* Custom Legend like CRM */}
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 whitespace-nowrap">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div> Total Bookings
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500 whitespace-nowrap">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Inward Bookings
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              {/* Row 2: Controls */}
+              <div className="flex items-center justify-end gap-3">
                 {/* Month/Year View Toggle */}
                 <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
                   <button
@@ -401,22 +410,23 @@ const AdminDashboardPage = () => {
                   </button>
                 </div>
 
-                {/* Year Selector (Only active in Monthly View) */}
+                {/* Year Selector Dropdown (Only active in Monthly View) */}
                 {chartView === 'monthly' && (
-                  <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
-                    {[2024, 2025, 2026].map((yr) => (
-                      <button
-                        key={yr}
-                        onClick={() => setSelectedYear(yr)}
-                        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                          selectedYear === yr ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                        style={selectedYear === yr ? { backgroundColor: colors.backgroundTertiary } : {}}
-                      >
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="px-3 py-1.5 text-xs font-semibold border rounded-lg bg-white outline-none cursor-pointer"
+                    style={{
+                      borderColor: colors.borderMedium || '#D1D5DB',
+                      color: colors.textPrimary || '#1F2937',
+                    }}
+                  >
+                    {Array.from({ length: 2090 - 2025 + 1 }, (_, i) => 2025 + i).map((yr) => (
+                      <option key={yr} value={yr}>
                         {yr}
-                      </button>
+                      </option>
                     ))}
-                  </div>
+                  </select>
                 )}
               </div>
             </div>
@@ -435,8 +445,12 @@ const AdminDashboardPage = () => {
                     >
                       <defs>
                         <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor={colors.backgroundTertiary || '#7C3AED'} stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorInward" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
@@ -451,15 +465,25 @@ const AdminDashboardPage = () => {
                           fontSize: '12px'
                         }}
                       />
-                      <Legend verticalAlign="top" height={36} iconType="circle" />
                       <Area
-                        name="Bookings"
+                        name="Total Bookings"
                         type="monotone"
                         dataKey="bookings"
-                        stroke={colors.backgroundTertiary || '#7C3AED'}
-                        strokeWidth={2}
+                        stroke="#3B82F6"
+                        strokeWidth={3}
                         fillOpacity={1}
                         fill="url(#colorBookings)"
+                        animationDuration={2000}
+                      />
+                      <Area
+                        name="Inward Bookings"
+                        type="monotone"
+                        dataKey="inwardBookings"
+                        stroke="#10B981"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorInward)"
+                        animationDuration={2000}
                       />
                     </AreaChart>
                   ) : (
@@ -479,13 +503,19 @@ const AdminDashboardPage = () => {
                           fontSize: '12px'
                         }}
                       />
-                      <Legend verticalAlign="top" height={36} iconType="circle" />
                       <Bar
-                        name="Bookings"
+                        name="Total Bookings"
                         dataKey="bookings"
-                        fill={colors.backgroundTertiary || '#7C3AED'}
+                        fill="#3B82F6"
                         radius={[4, 4, 0, 0]}
-                        maxBarSize={45}
+                        maxBarSize={30}
+                      />
+                      <Bar
+                        name="Inward Bookings"
+                        dataKey="inwardBookings"
+                        fill="#10B981"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={30}
                       />
                     </BarChart>
                   )}
@@ -497,15 +527,24 @@ const AdminDashboardPage = () => {
           {/* Right Column: Top 5 Cars by Revenue */}
           <Card className="p-4 md:p-6 flex flex-col justify-between">
             <div>
-              <div className="mb-6">
-                <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
-                  Top Revenue Cars
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Top 5 cars generating the highest booking revenue.
-                </p>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg md:text-xl font-semibold" style={{ color: colors.textPrimary }}>
+                    Top Revenue Cars
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Top 5 cars generating the highest booking revenue.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/admin/cars')}
+                  className="text-sm font-medium hover:underline flex-shrink-0"
+                  style={{ color: colors.backgroundTertiary }}
+                >
+                  View All
+                </button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {dashboardData.loading ? (
                   <div className="space-y-4">
                     {[1, 2, 3, 4, 5].map((idx) => (
@@ -513,52 +552,62 @@ const AdminDashboardPage = () => {
                     ))}
                   </div>
                 ) : dashboardData.topCars && dashboardData.topCars.length > 0 ? (
-                  dashboardData.topCars.map((car, index) => (
-                    <div key={index} className="flex flex-col gap-1.5 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                      <div className="flex items-center justify-between gap-4">
-                        {/* Car Details */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Rank Circle Badge */}
-                          <div 
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                            style={{
-                              backgroundColor: index === 0 ? '#FEF3C7' : index === 1 ? '#F3F4F6' : index === 2 ? '#FFEDD5' : '#F3F4F6',
-                              color: index === 0 ? '#D97706' : index === 1 ? '#4B5563' : index === 2 ? '#EA580C' : '#9CA3AF',
-                            }}
-                          >
-                            #{index + 1}
-                          </div>
+                  dashboardData.topCars.slice(0, 5).map((car, index) => {
+                    const rowBg = index === 0 ? 'rgba(254, 243, 199, 0.25)' // soft gold/yellow
+                      : index === 1 ? 'rgba(224, 242, 254, 0.25)' // soft blue
+                        : index === 2 ? 'rgba(255, 237, 213, 0.25)' // soft orange/bronze
+                          : 'transparent';
+                    return (
+                      <div
+                        key={index}
+                        className="flex flex-col gap-1.5 p-3 rounded-xl border border-transparent transition-all"
+                        style={rowBg !== 'transparent' ? { backgroundColor: rowBg, borderColor: index === 0 ? '#FDE68A' : index === 1 ? '#BAE6FD' : '#FED7AA' } : { borderBottom: '1px solid #F3F4F6' }}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          {/* Car Details */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Rank Circle Badge */}
+                            <div
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                              style={{
+                                backgroundColor: index === 0 ? '#FEF3C7' : index === 1 ? '#BAE6FD' : index === 2 ? '#FFEDD5' : '#F3F4F6',
+                                color: index === 0 ? '#D97706' : index === 1 ? '#0369A1' : index === 2 ? '#EA580C' : '#9CA3AF',
+                              }}
+                            >
+                              #{index + 1}
+                            </div>
 
-                          <div className="min-w-0">
-                            <h4 className="text-sm font-semibold truncate" style={{ color: colors.textPrimary }}>
-                              {car.name || 'Unknown Car'}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
-                                {car.registrationNumber || 'N/A'}
-                              </span>
-                              <span 
-                                className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase"
-                                style={{
-                                  backgroundColor: car.source === 'outward' ? '#DBEAFE' : '#E8F5E9',
-                                  color: car.source === 'outward' ? '#1D4ED8' : '#1B5E20'
-                                }}
-                              >
-                                {car.source || 'inward'}
-                              </span>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-semibold truncate" style={{ color: colors.textPrimary }}>
+                                {car.name || 'Unknown Car'}
+                              </h4>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs text-gray-500 font-mono bg-gray-100/80 px-1.5 py-0.5 rounded">
+                                  {car.registrationNumber || 'N/A'}
+                                </span>
+                                <span
+                                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase"
+                                  style={{
+                                    backgroundColor: car.source === 'outward' ? '#DBEAFE' : '#E8F5E9',
+                                    color: car.source === 'outward' ? '#1D4ED8' : '#1B5E20'
+                                  }}
+                                >
+                                  {car.source || 'inward'}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Revenue Amount */}
-                        <div className="text-right flex-shrink-0">
-                          <span className="text-sm font-bold" style={{ color: colors.success }}>
-                            ₹{(car.revenue || 0).toLocaleString('en-IN')}
-                          </span>
+                          {/* Revenue Amount */}
+                          <div className="text-right flex-shrink-0">
+                            <span className="text-sm font-bold" style={{ color: colors.success }}>
+                              ₹{(car.revenue || 0).toLocaleString('en-IN')}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="h-64 flex items-center justify-center">
                     <p className="text-sm" style={{ color: colors.textSecondary }}>No revenue data available yet.</p>

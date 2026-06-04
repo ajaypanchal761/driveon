@@ -671,6 +671,14 @@ const router = createBrowserRouter([
                 path: "inward-bookings",
                 element: <FleetBookingsPage />,
               },
+              {
+                path: "outward",
+                element: <FleetOutwardCarsPage />,
+              },
+              {
+                path: "outward-bookings",
+                element: <FleetBookingsPage />,
+              },
             ],
           },
           {

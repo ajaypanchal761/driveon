@@ -172,11 +172,15 @@ const DriverAssignmentPage = () => {
     // Only show bookings that require a driver (driver count > 0)
     if (!b.addOnServices || !(b.addOnServices.driver > 0)) return false;
 
-    const matchesSearch =
-      (b.bookingId && b.bookingId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.user?.name && b.user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.tripStart?.location && b.tripStart.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (b.tripEnd?.location && b.tripEnd.location.toLowerCase().includes(searchTerm.toLowerCase()));
+    const searchWords = searchTerm.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const matchesSearch = searchWords.length === 0 || searchWords.every(word => {
+      return (
+        (b.bookingId && b.bookingId.toLowerCase().includes(word)) ||
+        (b.user?.name && b.user.name.toLowerCase().includes(word)) ||
+        (b.tripStart?.location && b.tripStart.location.toLowerCase().includes(word)) ||
+        (b.tripEnd?.location && b.tripEnd.location.toLowerCase().includes(word))
+      );
+    });
 
     if (!matchesSearch) return false;
 
@@ -193,7 +197,7 @@ const DriverAssignmentPage = () => {
         className="text-white pt-10 pb-16 px-8 rounded-b-[40px] shadow-xl relative overflow-hidden"
         style={{ background: GRADIENT_HEADER }}
       >
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="text-left">
             <div className="flex items-center gap-2 text-sm text-blue-100/70 mb-1 font-semibold uppercase tracking-wider">
               <span>Staff</span> <span>/</span> <span className="text-blue-100">Driver Assign</span>
@@ -229,7 +233,7 @@ const DriverAssignmentPage = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
       </div>
 
-      <div className="px-8 -mt-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-8 -mt-8 space-y-6">
 
         {/* Search & Tabs Card */}
         <div className="bg-white rounded-3xl p-5 shadow-lg shadow-blue-900/5 border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -302,7 +306,7 @@ const DriverAssignmentPage = () => {
                         className="hover:bg-gray-50/30 transition-colors text-xs font-semibold text-gray-700"
                       >
                         {/* Booking Ref */}
-                        <td className="py-5 px-6">
+                        <td className="py-5 px-6 align-middle">
                           <div className="space-y-1">
                             <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">Booking ID</span>
                             <span className="font-extrabold text-[#1C205C] text-sm block">#{booking.bookingId}</span>
@@ -314,7 +318,7 @@ const DriverAssignmentPage = () => {
 
 
                         {/* Customer */}
-                        <td className="py-5 px-6">
+                        <td className="py-5 px-6 align-middle">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 text-[#1C205C] flex items-center justify-center font-black">
                               <FiUser size={13} />
@@ -326,14 +330,14 @@ const DriverAssignmentPage = () => {
                         </td>
 
                         {/* Pickup & Drop Details */}
-                        <td className="py-5 px-6">
+                        <td className="py-5 px-6 align-middle">
                           <div className="space-y-1.5 text-[11px] max-w-sm">
                             <div className="flex items-center gap-1.5 text-gray-500">
                               <FiCalendar className="text-blue-500 shrink-0" size={12} />
                               <span>
                                 <strong className="text-gray-700 font-bold">Pickup Date &amp; Time:</strong>{' '}
                                 <span className="font-mono text-gray-800 font-bold">
-                                  {formatDateDDMMYYYY(booking.tripStart?.date)} @ {formatTime12h(booking.tripStart?.time)}
+                                  {formatDateDDMMYYYY(booking.tripStart?.date)} at {formatTime12h(booking.tripStart?.time)}
                                 </span>
                               </span>
                             </div>
@@ -342,7 +346,7 @@ const DriverAssignmentPage = () => {
                               <span>
                                 <strong className="text-gray-700 font-bold">Drop Date &amp; Time:</strong>{' '}
                                 <span className="font-mono text-gray-800 font-bold">
-                                  {formatDateDDMMYYYY(booking.tripEnd?.date)} @ {formatTime12h(booking.tripEnd?.time)}
+                                  {formatDateDDMMYYYY(booking.tripEnd?.date)} at {formatTime12h(booking.tripEnd?.time)}
                                 </span>
                               </span>
                             </div>
@@ -350,9 +354,9 @@ const DriverAssignmentPage = () => {
                         </td>
 
                         {/* Duration */}
-                        <td className="py-5 px-6">
+                        <td className="py-5 px-6 align-middle">
                           {tripDays ? (
-                            <div className="inline-flex items-center gap-1.5 bg-indigo-50/60 px-2.5 py-1.5 rounded-xl border border-indigo-100/40 text-xs">
+                            <div className="inline-flex items-center gap-1.5 bg-indigo-50/60 px-2.5 py-1.5 rounded-xl border border-indigo-100/40 text-xs whitespace-nowrap">
                               <FiClock className="text-indigo-500" size={12} />
                               <span className="font-extrabold text-indigo-800">{tripDays} {tripDays === 1 ? 'Day' : 'Days'}</span>
                             </div>
@@ -362,7 +366,7 @@ const DriverAssignmentPage = () => {
                         </td>
 
                         {/* Onduty Car */}
-                        <td className="py-5 px-6">
+                        <td className="py-5 px-6 align-middle">
                           {booking.car ? (
                             <div className="inline-flex items-center gap-2 bg-blue-50/40 px-2.5 py-1.5 rounded-xl border border-blue-100/30 text-xs">
                               <span className="text-blue-800 font-bold">{booking.car.brand} {booking.car.model}</span>
@@ -376,7 +380,7 @@ const DriverAssignmentPage = () => {
                         </td>
 
                         {/* Assigned Driver */}
-                        <td className="py-5 px-6">
+                        <td className="py-5 px-6 align-middle">
                           {hasDriver ? (
                             <div className="inline-flex items-center gap-2.5 bg-emerald-50/40 border border-emerald-100/40 px-3 py-1.5 rounded-xl">
                               <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-black flex items-center justify-center text-[10px]">
@@ -398,7 +402,7 @@ const DriverAssignmentPage = () => {
                         </td>
 
                         {/* Actions */}
-                        <td className="py-5 px-6 text-right">
+                        <td className="py-5 px-6 text-right align-middle">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => setSelectedBookingForDetails(booking)}
@@ -480,11 +484,11 @@ const DriverAssignmentPage = () => {
                   <div className="space-y-0.5">
                     <span className="font-bold block uppercase tracking-wide">Target Itinerary Interval:</span>
                     <span className="font-medium text-blue-800">
-                      {formatDateDDMMYYYY(selectedBookingForAssign.tripStart?.date)} @ {formatTime12h(selectedBookingForAssign.tripStart?.time)}
+                      {formatDateDDMMYYYY(selectedBookingForAssign.tripStart?.date)} at {formatTime12h(selectedBookingForAssign.tripStart?.time)}
                     </span>
                     <span className="font-bold mx-1 text-blue-400">to</span>
                     <span className="font-medium text-blue-800">
-                      {formatDateDDMMYYYY(selectedBookingForAssign.tripEnd?.date)} @ {formatTime12h(selectedBookingForAssign.tripEnd?.time)}
+                      {formatDateDDMMYYYY(selectedBookingForAssign.tripEnd?.date)} at {formatTime12h(selectedBookingForAssign.tripEnd?.time)}
                     </span>
                     {(() => {
                       const d = calcDuration(selectedBookingForAssign.tripStart?.date, selectedBookingForAssign.tripEnd?.date);

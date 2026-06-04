@@ -22,7 +22,7 @@ import {
   MdAccessTime,
   MdEventAvailable,
   MdDateRange,
-  MdAttachMoney,
+  MdCurrencyRupee,
   MdReceipt,
   MdAssignment,
   MdFlag,
@@ -37,15 +37,6 @@ import { jsPDF } from 'jspdf';
 import { premiumColors } from '../../../theme/colors';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemedDropdown from '../../components/ThemedDropdown';
-
-// Mock Data for Staff Directory
-const MOCK_STAFF_DATA = [
-  { id: 1, name: "Rajesh Kumar", role: "Sales Manager", department: "Sales", phone: "+91 98765 43210", email: "rajesh@example.com", status: "Active", joinDate: "12 Jan 2023" },
-  { id: 2, name: "Vikram Singh", role: "Senior Driver", department: "Fleet", phone: "+91 99887 76655", email: "vikram@example.com", status: "On Duty", joinDate: "05 Mar 2023" },
-  { id: 3, name: "Amit Bhardwaj", role: "Head Mechanic", department: "Garage", phone: "+91 91234 56789", email: "amit@example.com", status: "Leave", joinDate: "20 Jun 2024" },
-  { id: 4, name: "Priya Sharma", role: "Admin Executive", department: "Administration", phone: "+91 98989 89898", email: "priya@example.com", status: "Active", joinDate: "01 Feb 2024" },
-  { id: 5, name: "Suresh Raina", role: "Driver", department: "Fleet", phone: "+91 77788 99900", email: "suresh@example.com", status: "On Duty", joinDate: "15 Aug 2023" },
-];
 
 /**
  * Generic Placeholder for Staff Sub-Pages
@@ -157,7 +148,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     workingDays: '26',
     absentDeduction: '',
     halfDayDeduction: '',
-    overtimeRate: ''
+    overtimeRate: '',
+    insuranceNote: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -196,7 +188,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           workingDays: editingStaff.workingDays || '26',
           absentDeduction: editingStaff.absentDeduction || '',
           halfDayDeduction: editingStaff.halfDayDeduction || '',
-          overtimeRate: editingStaff.overtimeRate || ''
+          overtimeRate: editingStaff.overtimeRate || '',
+          insuranceNote: editingStaff.insuranceNote || ''
         });
         setStep(1);
         setSalaryMethod(editingStaff.salaryMethod || 'Monthly');
@@ -217,7 +210,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
           workingDays: '26',
           absentDeduction: '',
           halfDayDeduction: '',
-          overtimeRate: ''
+          overtimeRate: '',
+          insuranceNote: ''
         });
         setStep(1);
         setSalaryMethod('Monthly');
@@ -242,6 +236,9 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
     }
     if (!formData.email) newErrors.email = "Email is required";
     if (!editingStaff && !formData.password) newErrors.password = "Password is required";
+    if (!editingStaff && !aadharFile) {
+      newErrors.aadhar = "Aadhar card image is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -447,7 +444,9 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
               </div>
 
               <div className="col-span-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Aadhar Card Image</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
+                  Aadhar Card Image {!editingStaff && ' *'}
+                </label>
                 <div className="relative">
                   <input
                     type="file"
@@ -459,6 +458,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                       if (file) {
                         setAadharFile(file);
                         setAadharPreview(URL.createObjectURL(file));
+                        if (errors.aadhar) setErrors({ ...errors, aadhar: null });
                       }
                     }}
                   />
@@ -472,11 +472,23 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
                     <span className="text-indigo-600 font-bold hover:underline shrink-0">Browse</span>
                   </label>
                 </div>
+                {errors.aadhar && <p className="text-red-500 text-xs mt-1 font-medium">{errors.aadhar}</p>}
                 {aadharPreview && (
                   <div className="mt-2 relative w-20 h-12 rounded-lg border overflow-hidden bg-gray-50 flex items-center justify-center">
                     <img src={aadharPreview} alt="Aadhar Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">Note for Insurance Policy</label>
+                <textarea
+                  rows="2"
+                  value={formData.insuranceNote}
+                  onChange={(e) => setFormData({ ...formData, insuranceNote: e.target.value })}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-800 font-medium"
+                  placeholder="Enter details regarding insurance policy (e.g. policy number, coverage, expiry date)"
+                />
               </div>
             </motion.div>
           )}
@@ -621,24 +633,7 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Department</p>
-              <p className="text-gray-800 font-medium">{staff.department}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Status</p>
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold border ${staff.status === 'Active' ? 'bg-green-100 text-green-700 border-green-200' :
-                staff.status === 'On Duty' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                  'bg-red-100 text-red-700 border-red-200'
-                }`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${staff.status === 'Active' ? 'bg-green-500' :
-                  staff.status === 'On Duty' ? 'bg-blue-500' : 'bg-red-500'
-                  }`}></div>
-                {staff.status}
-              </span>
-            </div>
-          </div>
+
 
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-gray-700 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
@@ -689,6 +684,17 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
                 </div>
               </div>
             )}
+            {staff.insuranceNote && (
+              <div className="flex items-start gap-3 text-gray-700 bg-amber-50/50 p-3 rounded-xl border border-amber-100 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 shrink-0">
+                  <MdAssignment size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-amber-800 font-bold">Insurance Policy Note</p>
+                  <p className="font-medium text-xs text-gray-700 mt-1 whitespace-pre-wrap">{staff.insuranceNote}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -712,8 +718,13 @@ export const StaffDirectoryPage = () => {
   const urlParams = new URLSearchParams(location.search);
   const initialSearch = urlParams.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(initialSearch);
-  const [deptFilter, setDeptFilter] = useState('All');
+
+  const [roleFilter, setRoleFilter] = useState('All');
+  const [dateFilter, setDateFilter] = useState('All Time');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [staffList, setStaffList] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingStaff, setViewingStaff] = useState(null);
@@ -722,7 +733,19 @@ export const StaffDirectoryPage = () => {
 
   useEffect(() => {
     fetchStaff();
+    fetchRoles();
   }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await api.get('/crm/roles');
+      if (response.data.success) {
+        setAvailableRoles(response.data.data.roles.map(r => r.roleName));
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    }
+  };
 
   const fetchStaff = async () => {
     try {
@@ -743,10 +766,60 @@ export const StaffDirectoryPage = () => {
   };
 
   const filteredStaff = staffList.filter(staff => {
-    const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      staff.role.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = deptFilter === 'All' || deptFilter === `Dept: ${deptFilter}` || staff.department === deptFilter;
-    return matchesSearch && matchesDept;
+    const searchLower = searchTerm.toLowerCase().trim();
+    let matchesSearch = true;
+    if (searchLower) {
+      const keywords = searchLower.split(/\s+/);
+      matchesSearch = keywords.every(keyword =>
+        (staff.name || '').toLowerCase().includes(keyword) ||
+        (staff.role || '').toLowerCase().includes(keyword)
+      );
+    }
+    const matchesRole = roleFilter === 'All' || roleFilter === 'All Roles' || staff.role === roleFilter;
+    
+    let matchesDate = true;
+    if (dateFilter !== 'All Time') {
+      const joinTime = new Date(staff.joiningDate || staff.createdAt);
+      const now = new Date();
+      
+      switch (dateFilter) {
+        case 'Today':
+          matchesDate = joinTime.toDateString() === now.toDateString();
+          break;
+        case 'This Week': {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          matchesDate = joinTime >= weekAgo;
+          break;
+        }
+        case 'This Month': {
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          matchesDate = joinTime >= monthAgo;
+          break;
+        }
+        case 'This Year': {
+          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          matchesDate = joinTime >= yearAgo;
+          break;
+        }
+        case 'Custom Range': {
+          const start = customStartDate ? new Date(customStartDate) : null;
+          const end = customEndDate ? new Date(customEndDate) : null;
+          if (start) start.setHours(0, 0, 0, 0);
+          if (end) end.setHours(23, 59, 59, 999);
+          
+          if (start && end) {
+            matchesDate = joinTime >= start && joinTime <= end;
+          } else if (start) {
+            matchesDate = joinTime >= start;
+          } else if (end) {
+            matchesDate = joinTime <= end;
+          }
+          break;
+        }
+      }
+    }
+    
+    return matchesSearch && matchesRole && matchesDate;
   });
 
   const handleAddStaff = async (newStaff) => {
@@ -915,15 +988,48 @@ export const StaffDirectoryPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="relative w-full md:w-auto min-w-[150px]">
-          <ThemedDropdown
-            options={['All', 'Sales', 'Fleet', 'Garage', 'Administration']}
-            value={deptFilter}
-            onChange={(val) => setDeptFilter(val)}
-            className="w-full"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          <div className="relative w-full sm:w-[180px]">
+            <ThemedDropdown
+              options={['All Roles', ...availableRoles]}
+              value={roleFilter === 'All' ? 'All Roles' : roleFilter}
+              onChange={(val) => setRoleFilter(val === 'All Roles' ? 'All' : val)}
+              className="w-full"
+            />
+          </div>
+          <div className="relative w-full sm:w-[180px]">
+            <ThemedDropdown
+              options={['All Time', 'Today', 'This Week', 'This Month', 'This Year', 'Custom Range']}
+              value={dateFilter}
+              onChange={(val) => setDateFilter(val)}
+              className="w-full"
+            />
+          </div>
         </div>
       </div>
+
+      {dateFilter === 'Custom Range' && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-sm font-semibold text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-sm font-semibold text-gray-700"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
@@ -1017,15 +1123,6 @@ export const StaffDirectoryPage = () => {
     </div>
   );
 };
-// Mock Data for Roles
-const MOCK_ROLES_DATA = [
-  { id: 1, role: "Admin", access: "Full Access", count: 2, description: "Complete control over all modules and settings." },
-  { id: 2, role: "Sales Manager", access: "Leads, Bookings, Reports", count: 3, description: "Can manage enquiries, bookings and view sales reports." },
-  { id: 3, role: "Fleet Manager", access: "Cars, Garage, Drivers", count: 1, description: "Manages vehicle inventory, maintenance and drivers." },
-  { id: 4, role: "Driver", access: "Trip App Only", count: 15, description: "Limited access to assigned trips and basic profile." },
-  { id: 5, role: "Accountant", access: "Finance, Salary, Invoices", count: 1, description: "Manages expenses, income, and staff payroll." },
-];
-
 // Premium Permission Groups Config
 const PERMISSION_GROUPS = {
   attendance: {
@@ -1618,14 +1715,6 @@ export const RolesPage = () => {
     </div>
   );
 };
-// Mock Data for Attendance
-const MOCK_ATTENDANCE_DATA = [
-  { id: 1, name: "Rajesh Kumar", role: "Sales Manager", inTime: "09:00 AM", outTime: "-", status: "Present", workHours: "Running" },
-  { id: 2, name: "Vikram Singh", role: "Driver", inTime: "08:30 AM", outTime: "08:00 PM", status: "Present", workHours: "11h 30m" },
-  { id: 3, name: "Amit Bhardwaj", role: "Mechanic", inTime: "-", outTime: "-", status: "Absent", workHours: "-" },
-  { id: 4, name: "Priya Sharma", role: "Admin", inTime: "09:15 AM", outTime: "-", status: "Late", workHours: "Running" },
-];
-
 const MarkAttendanceModal = ({ isOpen, onClose, onSubmit, initialData, staffList = [] }) => {
   const [formData, setFormData] = useState({ staffId: '', status: 'Present', inTime: '', outTime: '' });
 
@@ -2055,16 +2144,25 @@ const StaffMonthlyAttendanceModal = ({ isOpen, onClose, staff }) => {
               }}
               className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20"
             >
-              {[2024, 2025, 2026].map(yr => {
+              {(() => {
+                const currentYear = new Date().getFullYear();
                 const joinDate = staff?.joiningDate ? new Date(staff.joiningDate) : null;
-                const joinYear = joinDate ? joinDate.getFullYear() : null;
-                const disabled = joinYear ? yr < joinYear : false;
-                return (
-                  <option key={yr} value={yr} disabled={disabled}>
-                    {yr}
-                  </option>
-                );
-              })}
+                const joinYear = joinDate && !isNaN(joinDate.getTime()) ? joinDate.getFullYear() : currentYear;
+                const startYear = Math.min(joinYear, 2024);
+                const endYear = Math.max(currentYear, joinYear);
+                const years = [];
+                for (let y = startYear; y <= endYear; y++) {
+                  years.push(y);
+                }
+                return years.map(yr => {
+                  const disabled = joinYear ? yr < joinYear : false;
+                  return (
+                    <option key={yr} value={yr} disabled={disabled}>
+                      {yr}
+                    </option>
+                  );
+                });
+              })()}
             </select>
             <button
               onClick={onClose}
@@ -3157,8 +3255,10 @@ export const SalaryPage = () => {
   };
 
   const filteredSalary = salaryList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const trimmedSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = !trimmedSearch ||
+      item.name.toLowerCase().includes(trimmedSearch) ||
+      item.role.toLowerCase().includes(trimmedSearch);
 
     let matchesStaff = true;
     if (staffFilter !== 'Staff: All') {
@@ -3201,7 +3301,7 @@ export const SalaryPage = () => {
               <h3 className="text-2xl font-black text-[#1C205C] mt-1">₹ {(totalPayoutVal + pendingPayoutVal).toLocaleString('en-IN')}</h3>
             </div>
             <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-              <MdAttachMoney size={24} />
+              <MdCurrencyRupee size={24} />
             </div>
           </div>
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
@@ -3587,6 +3687,7 @@ export const SalaryPage = () => {
                               {log.status === 'Absent' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-100">Absent</span>}
                               {log.status === 'Holiday' && <span className="px-2 py-1 bg-red-600 text-white rounded text-xs font-black border border-red-600 shadow-sm animate-pulse">Holiday: {log.holidayReason || 'Official'}</span>}
                               {log.status === 'Pending' && <span className="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs font-medium border border-gray-200">Pending</span>}
+                              {log.status === 'Not Joined' && <span className="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs font-medium border border-gray-200">Not Joined</span>}
                             </div>
                           </div>
                         </div>
@@ -3883,7 +3984,7 @@ export const AttendanceSettingsPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Office End Time (Chutti Time)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Office End Time</label>
                 <div className="relative">
                   <input
                     type="time"
