@@ -7,7 +7,7 @@ import { Button, Input } from '../../components/common';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
-import { requestForToken } from '../../services/firebase';
+import { requestForToken, isMobileApp } from '../../services/firebase';
 
 /**
  * Register Schema Validation - OTP Based
@@ -98,7 +98,7 @@ const RegisterPage = () => {
         phone: data.phone,
         referralCode: data.referralCode || undefined,
         fcmToken: fcmToken,
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       };
 
       console.log("Sending Register Payload:", registerPayload);

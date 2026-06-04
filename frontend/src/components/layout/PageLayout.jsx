@@ -6,7 +6,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import BottomNavbar from "./BottomNavbar";
 import { theme } from "../../theme/theme.constants";
-import { requestForToken, onMessageListener } from "../../services/firebase";
+import { requestForToken, onMessageListener, isMobileApp } from "../../services/firebase";
 import toastUtils from "../../config/toast";
 
 
@@ -22,9 +22,10 @@ const PageLayout = () => {
     if (user && user._id) {
       requestForToken().then(async (token) => {
         if (token) {
+          const platform = isMobileApp() ? 'mobile' : 'web';
           try {
-            await api.post('/user/fcm-token', { fcmToken: token });
-            console.log("User FCM Token saved");
+            await api.post('/user/fcm-token', { fcmToken: token, platform: platform });
+            console.log(`User FCM Token saved (${platform})`);
           } catch (error) {
             console.error("Error saving User FCM token:", error);
           }

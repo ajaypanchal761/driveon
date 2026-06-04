@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { adminService } from '../services/admin.service';
 import api from '../services/api';
+import { isMobileApp } from '../services/firebase';
 
 /**
  * Admin Context
@@ -109,7 +110,7 @@ export const AdminProvider = ({ children }) => {
       }
 
       // Call backend API
-      const response = await adminService.login({ email, password, fcmToken, platform: 'web' });
+      const response = await adminService.login({ email, password, fcmToken, platform: isMobileApp() ? 'mobile' : 'web' });
 
       if (response.success && response.data) {
         const { token, refreshToken, admin } = response.data;

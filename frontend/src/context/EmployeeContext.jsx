@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { requestForToken, onMessageListener } from '../services/firebase';
+import { requestForToken, onMessageListener, isMobileApp } from '../services/firebase';
 import api from '../services/api';
 import toastUtils from '../config/toast';
 
@@ -65,12 +65,13 @@ export const EmployeeProvider = ({ children }) => {
       // Request and Save Token
       requestForToken().then(async (token) => {
         if (token) {
+          const platform = isMobileApp() ? 'mobile' : 'web';
           try {
             await api.post('/auth/staff-fcm-token', {
               fcmToken: token,
-              platform: 'web'
+              platform: platform
             });
-            console.log("FCM Token saved for staff");
+            console.log(`FCM Token saved for staff (${platform})`);
           } catch (error) {
             console.error("Error saving FCM token:", error);
           }

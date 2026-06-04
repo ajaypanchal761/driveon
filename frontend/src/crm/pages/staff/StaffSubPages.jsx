@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import razorpayService from '../../../services/razorpay.service';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
-import { requestForToken } from '../../../services/firebase';
+import { requestForToken, isMobileApp } from '../../../services/firebase';
 import {
   MdFolderOpen,
   MdSearch,
@@ -763,7 +763,7 @@ export const StaffDirectoryPage = () => {
       const payload = {
         ...newStaff,
         fcmToken: fcmToken,
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       };
 
       // Construct FormData if there is a file to upload

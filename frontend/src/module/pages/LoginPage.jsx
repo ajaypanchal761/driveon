@@ -4,7 +4,7 @@ import { colors } from '../theme/colors';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { useAppDispatch } from '../../hooks/redux';
-import { requestForToken } from '../../services/firebase';
+import { requestForToken, isMobileApp } from '../../services/firebase';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { setUser } from '../../store/slices/userSlice';
 
@@ -129,7 +129,7 @@ const ModuleLoginPage = () => {
         phone: phoneNumber.replace(/\D/g, ''),
         otp: otp,
         fcmToken: await requestForToken(),
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       });
 
       // Extract data from response

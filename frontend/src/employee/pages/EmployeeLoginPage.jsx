@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { setUser } from '../../store/slices/userSlice';
-import { requestForToken } from '../../services/firebase';
+import { requestForToken, isMobileApp } from '../../services/firebase';
 
 const EmployeeLoginPage = () => {
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ const EmployeeLoginPage = () => {
       const response = await api.post('/auth/staff-login', {
         ...formData,
         fcmToken: fcmToken,
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       });
 
       if (response.data.success) {

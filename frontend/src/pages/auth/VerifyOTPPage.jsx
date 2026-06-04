@@ -8,6 +8,7 @@ import { setUser } from '../../store/slices/userSlice';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
+import { isMobileApp } from '../../services/firebase';
 
 /**
  * VerifyOTPPage Component
@@ -77,7 +78,7 @@ const VerifyOTPPage = () => {
         phone: phone || (!emailOrPhone?.includes('@') ? emailOrPhone?.replace(/\D/g, '') : undefined),
         otp: otp,
         fcmToken: fcmToken,
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       });
 
       // Extract data from response (handle different response formats)

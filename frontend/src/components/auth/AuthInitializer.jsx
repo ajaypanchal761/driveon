@@ -4,7 +4,7 @@ import { authService } from '../../services/auth.service';
 import { userService } from '../../services/user.service';
 import { loginSuccess, logout, authInitialized } from '../../store/slices/authSlice';
 import { setUser } from '../../store/slices/userSlice';
-import { requestForToken, onMessageListener } from '../../services/firebase';
+import { requestForToken, onMessageListener, isMobileApp } from '../../services/firebase';
 import toastUtils from '../../config/toast';
 import api from '../../services/api';
 
@@ -201,12 +201,13 @@ const AuthInitializer = ({ children }) => {
       // Request and Save Token
       requestForToken().then(async (token) => {
         if (token) {
+          const platform = isMobileApp() ? 'mobile' : 'web';
           try {
             await api.post('/auth/user-fcm-token', {
               fcmToken: token,
-              platform: 'web'
+              platform: platform
             });
-            console.log("✅ User FCM Token saved via AuthInitializer");
+            console.log(`✅ User FCM Token saved via AuthInitializer (${platform})`);
           } catch (error) {
             console.error("❌ Error saving user FCM token:", error);
           }

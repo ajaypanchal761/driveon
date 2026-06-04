@@ -6,7 +6,7 @@ import { setUser } from '../../store/slices/userSlice';
 import { colors } from '../theme/colors';
 import { authService } from '../../services';
 import toastUtils from '../../config/toast';
-import { requestForToken } from '../../services/firebase';
+import { requestForToken, isMobileApp } from '../../services/firebase';
 
 /**
  * ModuleRegisterPage Component
@@ -171,7 +171,7 @@ const ModuleRegisterPage = () => {
         referralCode: referralCode.trim() || undefined,
         heardAbout: heardAbout.trim() || '', // Send empty string if not selected
         fcmToken: fcmToken,
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       });
 
       console.log('Register Response:', response);
@@ -223,7 +223,7 @@ const ModuleRegisterPage = () => {
         email: email.trim(),
         otp: otp,
         fcmToken: await requestForToken(), // Ensure token is sent during verification too
-        platform: 'web'
+        platform: isMobileApp() ? 'mobile' : 'web'
       });
 
       console.log('✅ Verify OTP Response:', response);
