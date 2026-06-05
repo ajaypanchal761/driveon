@@ -140,18 +140,18 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
               </span>
             )}
             <div className="ml-auto">
-              {booking.status === 'confirmed' ? (
+              {(booking.status === 'confirmed' || booking.status === 'pending') ? (
                 <div className="flex gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); setShowDetailsModal(true); }}
-                    className="px-2.5 py-1 rounded-lg font-bold text-[9px] text-white"
+                    className="px-5 py-1 rounded-lg font-bold text-[9px] text-white"
                     style={{ backgroundColor: colors.backgroundTertiary }}
                   >
                     Details
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setCancellationBooking(booking); setShowCancellationModal(true); }}
-                    className="px-2.5 py-1 rounded-lg font-bold text-[9px] text-white"
+                    className="px-5 py-1 rounded-lg font-bold text-[9px] text-white"
                     style={{ backgroundColor: colors.error }}
                   >
                     Cancel
@@ -160,19 +160,19 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
               ) : booking.status === 'completed' && !booking.userRating ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/write-review/${booking.id}`, { state: { booking } }); }}
-                  className="px-3 py-1 rounded-lg font-bold text-[9px] text-white"
+                  className="px-4 py-1 rounded-lg font-bold text-[9px] text-white"
                   style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   Write Review
                 </button>
               ) : booking.status === 'completed' && booking.userRating > 0 ? (
-                <div className="px-2.5 py-1 rounded-lg text-[9px] font-bold" style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                <div className="px-5 py-1 rounded-lg text-[9px] font-bold" style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
                   ✓ Reviewed ({booking.userRating}★)
                 </div>
               ) : (
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedBooking(booking); setShowDetailsModal(true); }}
-                  className="px-2.5 py-1 rounded-lg font-bold text-[9px] text-white"
+                  className="px-5 py-1 rounded-lg font-bold text-[9px] text-white"
                   style={{ backgroundColor: colors.backgroundTertiary }}
                 >
                   Details
@@ -477,6 +477,9 @@ const BookingsPage = () => {
               userRating: booking.userRating || 0,
               pricing: booking.pricing || null,
               addOnServices: booking.addOnServices || null,
+              cancelledBy: booking.cancelledBy || null,
+              cancelledAt: booking.cancelledAt || null,
+              cancellationReason: booking.cancellationReason || null,
             };
           })
         );
@@ -657,11 +660,11 @@ const BookingsPage = () => {
     if (booking.status === 'unpaid') return false;
     if (booking.status === 'cancelled') {
       const paid = booking.paidAmount || booking.advancePayment || 0;
-      if (paid === 0) return false;
+      if (paid === 0 && booking.cancelledBy !== 'user') return false;
     }
 
     if (activeTab === 'all') return true;
-    if (activeTab === 'active') return booking.status === 'confirmed' || booking.status === 'active';
+    if (activeTab === 'active') return booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'active';
     if (activeTab === 'completed') return booking.status === 'completed';
     if (activeTab === 'cancelled') return booking.status === 'cancelled';
     return true;
@@ -910,6 +913,12 @@ const BookingsPage = () => {
           onClose={() => {
             setShowDetailsModal(false);
             setSelectedBooking(null);
+          }}
+          onCancel={() => {
+            setShowDetailsModal(false);
+            setCancellationBooking(selectedBooking);
+            setSelectedBooking(null);
+            setShowCancellationModal(true);
           }}
         />
       )}

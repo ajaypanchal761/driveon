@@ -2161,29 +2161,20 @@ export const sendRoleNotification = async (req, res) => {
       },
       data: {
         click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        title,
-        body: message,
         ...(imageUrl ? { image: imageUrl } : {})
       }
     };
 
     const pushPromises = recipients.map(recipient => {
-      const promises = [];
-      if (recipient.fcmToken) {
+      const hasToken = recipient.fcmToken || recipient.fcmTokenMobile;
+      if (hasToken) {
         if (recipientModel === 'User') {
-          promises.push(sendPushNotification(recipient._id, payload, false));
+          return sendPushNotification(recipient._id, payload, true);
         } else {
-          promises.push(sendStaffPushNotification(recipient._id, payload, false));
+          return sendStaffPushNotification(recipient._id, payload, true);
         }
       }
-      if (recipient.fcmTokenMobile) {
-        if (recipientModel === 'User') {
-          promises.push(sendPushNotification(recipient._id, payload, true));
-        } else {
-          promises.push(sendStaffPushNotification(recipient._id, payload, true));
-        }
-      }
-      return Promise.all(promises);
+      return Promise.resolve();
     });
 
     // Run in parallel but handle errors gracefully

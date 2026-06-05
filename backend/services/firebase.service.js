@@ -6,6 +6,33 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// In-memory cache for duplicate push notification prevention
+const sentMessagesCache = new Map();
+const CACHE_TTL_MS = 2000; // 2 seconds
+
+// Periodic cleanup of the cache
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, timestamp] of sentMessagesCache.entries()) {
+        if (now - timestamp > CACHE_TTL_MS) {
+            sentMessagesCache.delete(key);
+        }
+    }
+}, 10000).unref();
+
+const isDuplicateMessage = (token, payload) => {
+    const messageKey = `${token}:${JSON.stringify(payload)}`;
+    const now = Date.now();
+    if (sentMessagesCache.has(messageKey)) {
+        const lastSent = sentMessagesCache.get(messageKey);
+        if (now - lastSent < CACHE_TTL_MS) {
+            return true;
+        }
+    }
+    sentMessagesCache.set(messageKey, now);
+    return false;
+};
+
 // Initialize Firebase Admin (Only once)
 const initializeFirebase = () => {
     try {
@@ -214,11 +241,22 @@ export const sendPushNotification = async (
                 return;
             }
 
-            token = isMobile ? user.fcmTokenMobile : user.fcmToken;
+            // Prioritize fcmTokenMobile, then fallback to fcmToken
+            const tokens = [];
+            if (user.fcmTokenMobile) tokens.push(user.fcmTokenMobile);
+            if (user.fcmToken) tokens.push(user.fcmToken);
+            const uniqueTokens = Array.from(new Set(tokens.filter(Boolean)));
+
+            if (uniqueTokens.length === 0) {
+                console.log(`⚠️ No FCM Token for user ${userId}`);
+                return;
+            }
+
+            token = uniqueTokens[0];
         }
 
-        if (!token) {
-            console.log(`⚠️ No ${isToken ? 'direct' : (isMobile ? 'Mobile' : 'Web')} FCM Token for user/token ${userId}`);
+        if (isDuplicateMessage(token, payload)) {
+            console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
             return;
         }
 
@@ -289,6 +327,11 @@ export const sendPushToToken = async (
                     payload.data[key] = String(val);
                 }
             }
+        }
+
+        if (isDuplicateMessage(token, payload)) {
+            console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
+            return;
         }
 
         const message = {
@@ -400,14 +443,21 @@ export const sendStaffPushNotification = async (
             return;
         }
 
-        // Check both tokens if specific one not found, or use preferred
-        const token = isMobile ? staff.fcmTokenMobile : staff.fcmToken;
+        // Prioritize fcmTokenMobile, then fallback to fcmToken
+        const tokens = [];
+        if (staff.fcmTokenMobile) tokens.push(staff.fcmTokenMobile);
+        if (staff.fcmToken) tokens.push(staff.fcmToken);
+        const uniqueTokens = Array.from(new Set(tokens.filter(Boolean)));
 
-        if (!token) {
-            console.log(`⚠️ No ${isMobile ? 'Mobile' : 'Web'} FCM Token for staff ${staffId}`);
-            // Fallback: try the other token if the specific one is missing? 
-            // For now, stick to requested platform or maybe try both if critical.
-            // But existing logic is specific.
+        if (uniqueTokens.length === 0) {
+            console.log(`⚠️ No FCM Token for staff ${staffId}`);
+            return;
+        }
+
+        const token = uniqueTokens[0];
+
+        if (isDuplicateMessage(token, payload)) {
+            console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
             return;
         }
 
