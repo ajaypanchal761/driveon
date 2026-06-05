@@ -184,6 +184,13 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
   const couponDetails = booking.pricing?.couponDetails;
   const offerDetails = booking.pricing?.offerDetails;
 
+  const advancePaid = (booking.paymentOption === 'advance' || (booking.pricing?.advancePayment && booking.pricing.advancePayment > 0))
+    ? (booking.pricing?.advancePayment || booking.advancePayment || 0)
+    : ((booking.totalPrice - totalDiscount) || 0);
+
+  const isRemainingPaid = (booking.remainingAmount || 0) === 0 || booking.paymentStatus === 'paid';
+  const remainingPaymentVal = booking.pricing?.remainingPayment || Math.max(0, (booking.totalPrice - totalDiscount) - advancePaid);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -524,18 +531,38 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
                 </div>
               )}
 
-              {totalDiscount > 0 && (
-                <div className="pt-2 border-t" style={{ borderColor: colors.backgroundSecondary + '50' }}>
-                  <div className="flex items-center justify-between text-xs pl-1">
-                    <p style={{ color: colors.textSecondary }}>
-                      Subtotal (Before Discount)
-                    </p>
-                    <p className="font-semibold" style={{ color: colors.textPrimary }}>
-                      ₹{booking.totalPrice?.toLocaleString('en-IN') || '0'}
-                    </p>
-                  </div>
+              {booking.pricing?.weekendMultiplier > 0 && (
+                <div className="flex items-center justify-between text-xs pl-1 mt-1">
+                  <p style={{ color: colors.textSecondary }}>
+                    Weekend Surcharge
+                  </p>
+                  <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                    +₹{booking.pricing.weekendMultiplier.toLocaleString('en-IN')}
+                  </p>
                 </div>
               )}
+              {booking.pricing?.holidayMultiplier > 0 && (
+                <div className="flex items-center justify-between text-xs pl-1 mt-1">
+                  <p style={{ color: colors.textSecondary }}>
+                    Holiday Surcharge
+                  </p>
+                  <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                    +₹{booking.pricing.holidayMultiplier.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              )}
+              {booking.pricing?.demandSurge > 0 && (
+                <div className="flex items-center justify-between text-xs pl-1 mt-1">
+                  <p style={{ color: colors.textSecondary }}>
+                    Demand Surge
+                  </p>
+                  <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                    +₹{booking.pricing.demandSurge.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              )}
+
+
 
               {couponDiscount > 0 && (() => {
                 const promoText = couponDetails
@@ -571,125 +598,43 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
 
               <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>
                 <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                  Total Payable Amount
+                  Advance Paid
                 </p>
                 <p className="text-base font-bold" style={{ color: colors.backgroundTertiary }}>
-                  ₹{((booking.totalPrice - totalDiscount) || 0).toLocaleString('en-IN')}
+                  ₹{advancePaid.toLocaleString('en-IN')}
                 </p>
               </div>
-              {booking.paidAmount > 0 && (
-                <div className="flex items-center justify-between">
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>
-                    Paid Amount
-                  </p>
-                  <p className="text-sm font-semibold" style={{ color: colors.success }}>
-                    ₹{booking.paidAmount?.toLocaleString('en-IN') || '0'}
-                  </p>
-                </div>
-              )}
-              {booking.remainingAmount > 0 && (
-                <div className="flex items-center justify-between">
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>
-                    Remaining Amount
-                  </p>
-                  <p className="text-sm font-semibold" style={{ color: colors.warning }}>
-                    ₹{booking.remainingAmount?.toLocaleString('en-IN') || '0'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pricing Breakdown (if available) */}
-          {booking.pricing && (
-            <div className="space-y-3">
-              <h4 className="text-base font-bold" style={{ color: colors.textPrimary }}>
-                Pricing Breakdown
-              </h4>
-              <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: colors.backgroundPrimary }}>
-                {booking.pricing.basePrice && (
-                  <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
+                {isRemainingPaid ? (
+                  <>
                     <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      Base Price
+                      Paid
                     </p>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                      ₹{booking.pricing.basePrice.toLocaleString('en-IN')}
+                    <p className="text-sm font-semibold" style={{ color: colors.success }}>
+                      ₹{remainingPaymentVal.toLocaleString('en-IN')}
                     </p>
-                  </div>
-                )}
-                {booking.pricing.weekendMultiplier > 0 && (
-                  <div className="flex items-center justify-between">
+                  </>
+                ) : (
+                  <>
                     <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      Weekend Surcharge
+                      Remaining Amount
                     </p>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                      +₹{booking.pricing.weekendMultiplier.toLocaleString('en-IN')}
+                    <p className="text-sm font-semibold" style={{ color: colors.warning }}>
+                      ₹{(booking.remainingAmount || 0).toLocaleString('en-IN')}
                     </p>
-                  </div>
-                )}
-                {booking.pricing.holidayMultiplier > 0 && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      Holiday Surcharge
-                    </p>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                      +₹{booking.pricing.holidayMultiplier.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                )}
-                {booking.pricing.demandSurge > 0 && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      Demand Surge
-                    </p>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                      +₹{booking.pricing.demandSurge.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                )}
-                {couponDiscount > 0 && (() => {
-                  const promoText = couponDetails
-                    ? `${couponCode} - ${couponDetails.discountValue}${couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`
-                    : (couponCode || 'Applied');
-                  return (
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm" style={{ color: colors.success }}>
-                        Coupon Discount ({promoText})
-                      </p>
-                      <p className="text-sm font-semibold" style={{ color: colors.success }}>
-                        -₹{couponDiscount.toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                  );
-                })()}
-                {offerDiscount > 0 && (() => {
-                  const promoText = offerDetails
-                    ? `${offerDetails.title} - ${offerDetails.discountType === 'free' ? 'Free' : `${offerDetails.discountValue}${offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`}`
-                    : (offerCode || 'Applied');
-                  return (
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm" style={{ color: colors.success }}>
-                        Offer Discount ({promoText})
-                      </p>
-                      <p className="text-sm font-semibold" style={{ color: colors.success }}>
-                        -₹{offerDiscount.toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                  );
-                })()}
-                {(booking.pricing.finalPrice || booking.pricing.totalPrice) && (
-                  <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                      Final Price
-                    </p>
-                    <p className="text-base font-bold" style={{ color: colors.backgroundTertiary }}>
-                      ₹{(booking.pricing.totalPrice - (booking.pricing.discount || 0)).toLocaleString('en-IN')}
-                    </p>
-                  </div>
+                  </>
                 )}
               </div>
+              <div className="flex items-center justify-between pt-2 border-t mt-1" style={{ borderColor: colors.backgroundSecondary }}>
+                <p className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+                  Total Paid
+                </p>
+                <p className="text-base font-black" style={{ color: colors.backgroundTertiary }}>
+                  ₹{(advancePaid + (isRemainingPaid ? remainingPaymentVal : 0)).toLocaleString('en-IN')}
+                </p>
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Trip Status */}
           <div className="space-y-3">

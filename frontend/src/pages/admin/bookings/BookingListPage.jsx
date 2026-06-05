@@ -170,7 +170,9 @@ const BookingListPage = () => {
           carOwner: booking.car?.owner || booking.carOwner || 'N/A',
           status: booking.status,
           paymentStatus: booking.paymentStatus,
-          totalAmount: (booking.paidAmount || 0) + (booking.remainingAmount || 0),
+          totalAmount: booking.pricing 
+            ? (booking.pricing.totalPrice - (booking.pricing.discount || 0)) 
+            : ((booking.paidAmount || 0) + (booking.remainingAmount || 0)),
           paidAmount: booking.paidAmount || 0,
           refundAmount: booking.refundAmount,
           pickupDate: booking.tripStart?.date || booking.pickupDate || booking.pickupDateTime,

@@ -85,7 +85,9 @@ const BookingHistoryPage = () => {
               dropDate: booking.tripEnd?.date || booking.dropDate,
               duration: `${booking.totalDays || 1} ${(booking.totalDays || 1) === 1 ? 'day' : 'days'}`,
               pickupLocation: booking.tripStart?.location || booking.pickupLocation || 'Location not specified',
-              totalPrice: booking.pricing?.totalPrice || booking.totalPrice || 0,
+              totalPrice: booking.pricing 
+                ? (booking.pricing.totalPrice - (booking.pricing.discount || 0)) 
+                : (booking.totalPrice || 0),
               status: booking.status,
               completedDate: booking.completedDate,
               cancelledDate: booking.cancelledDate,

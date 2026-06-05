@@ -634,7 +634,7 @@ export const completeBookingWithPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: `Booking is already ${booking.status}` });
     }
 
-    const totalPrice = booking.pricing?.totalPrice || 0;
+    const totalPrice = (booking.pricing?.totalPrice || 0) - (booking.pricing?.discount || 0);
     const alreadyPaid = booking.paidAmount || 0;
     const remaining = Math.max(0, totalPrice - alreadyPaid);
 

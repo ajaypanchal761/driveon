@@ -95,7 +95,9 @@ const CancelledBookingDetailsPage = () => {
             status: bookingData.status || 'cancelled',
             paymentStatus: bookingData.paymentStatus || 'pending',
             paymentType: bookingData.paymentOption || bookingData.paymentType || 'full',
-            totalPrice: bookingData.pricing?.totalPrice || bookingData.totalPrice || 0,
+            totalPrice: bookingData.pricing 
+              ? (bookingData.pricing.totalPrice - (bookingData.pricing.discount || 0)) 
+              : (bookingData.totalPrice || 0),
             paidAmount: bookingData.paidAmount || 0,
             refundAmount: bookingData.refundAmount || 0,
             refundStatus: bookingData.refundStatus || 'pending',

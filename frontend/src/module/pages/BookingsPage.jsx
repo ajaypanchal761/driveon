@@ -100,9 +100,20 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
                 {booking.bookingId}
               </p>
             </div>
-            <span className="text-sm font-black flex-shrink-0" style={{ color: colors.backgroundTertiary }}>
-              ₹{((booking.paidAmount || 0) + (booking.remainingAmount || 0)).toLocaleString('en-IN')}
-            </span>
+            {(() => {
+              const p = booking.pricing;
+              const advPaid = (booking.paymentOption === 'advance' || (p?.advancePayment > 0))
+                ? (p?.advancePayment || 0)
+                : Math.max(0, (p?.totalPrice || booking.totalPrice || 0) - (p?.discount || 0));
+              const isRemPaid = (booking.remainingAmount || 0) === 0 || booking.paymentStatus === 'paid';
+              const remPaid = isRemPaid ? (p?.remainingPayment || 0) : 0;
+              const totalPaid = advPaid + remPaid;
+              return (
+                <span className="text-sm font-black flex-shrink-0" style={{ color: colors.backgroundTertiary }}>
+                  ₹{totalPaid.toLocaleString('en-IN')}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Middle: chips */}
@@ -445,9 +456,15 @@ const BookingsPage = () => {
             }
             
             // Handle pricing - check both pricing object and direct fields
-            const totalPrice = booking.pricing?.totalPrice || booking.totalPrice || booking.amount || 0;
-            const paidAmount = booking.paidAmount || booking.advancePayment || 0;
-            const remainingAmount = booking.remainingAmount || (totalPrice - paidAmount);
+            const totalPrice = booking.pricing 
+              ? booking.pricing.totalPrice 
+              : (booking.totalPrice || booking.amount || 0);
+            const paidAmount = booking.paidAmount !== undefined ? booking.paidAmount : (booking.pricing?.advancePayment || 0);
+            const remainingAmount = booking.remainingAmount !== undefined 
+              ? booking.remainingAmount 
+              : (booking.pricing?.remainingPayment !== undefined 
+                  ? booking.pricing.remainingPayment 
+                  : Math.max(0, totalPrice - (booking.pricing?.discount || 0) - paidAmount));
             
             // Handle dates - tripStart.date and tripEnd.date are Date objects, need to convert to ISO string
             let pickupDate = booking.tripStart?.date;
