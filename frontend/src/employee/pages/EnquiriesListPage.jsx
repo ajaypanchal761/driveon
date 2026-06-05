@@ -181,10 +181,11 @@ const EnquiriesListPage = () => {
       <div className="flex-1 overflow-y-auto pb-6 scrollbar-hide">
 
       {/* HEADER */}
-      <div className="bg-[#1C205C] pt-12 pb-6 px-6 rounded-b-[30px] shadow-lg sticky top-0 z-50">
+      <div className="bg-[#1C205C] pt-12 pb-8 px-4 sm:px-6 rounded-b-[30px] shadow-lg sticky top-0 z-50">
         <HeaderTopBar
           title="Enquiries"
           showBack={false}
+          className="mb-3"
           rightAction={
             <div className="relative">
               <button
@@ -218,7 +219,7 @@ const EnquiriesListPage = () => {
       </div>
 
       {/* LIST CONTENT */}
-      <div className="px-6 mt-6">
+      <div className="px-4 sm:px-6 mt-6">
         <div className="flex justify-between items-center mb-4">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
             Showing {filteredEnquiries.length} {activeTab}

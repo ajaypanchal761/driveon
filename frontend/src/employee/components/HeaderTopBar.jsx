@@ -2,11 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 
-const HeaderTopBar = ({ title, showBack = true, rightAction }) => {
+const HeaderTopBar = ({ title, showBack = true, rightAction, className = 'mb-6' }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex justify-between items-center text-white mb-6">
+    <div className={`flex justify-between items-center text-white ${className}`}>
       {showBack ? (
         <button 
           onClick={() => navigate(-1)} 

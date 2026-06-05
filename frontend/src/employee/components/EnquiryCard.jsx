@@ -33,7 +33,7 @@ const EnquiryCard = ({ enquiry, onStatusUpdate, onClick }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -3, boxShadow: "0 10px 20px -5px rgba(0, 0, 0, 0.05)" }}
       onClick={onClick}
-      className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100/80 mb-4 relative overflow-hidden transition-all group cursor-pointer"
+      className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100/80 mb-4 relative overflow-hidden transition-all group cursor-pointer"
     >
       {/* Background Watermark Stamp for Converted / Closed */}
       {statusLower === 'converted' && (
@@ -48,24 +48,21 @@ const EnquiryCard = ({ enquiry, onStatusUpdate, onClick }) => {
       )}
 
       {/* Main Info */}
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1C205C] to-indigo-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-indigo-100">
-            {enquiry.name?.charAt(0) || '?'}
-          </div>
-          <div>
-            <h4 className="font-extrabold text-gray-800 text-base leading-tight group-hover:text-[#1C205C] transition-colors">{enquiry.name}</h4>
+      <div className="flex justify-between items-start mb-4 gap-3">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="min-w-0">
+            <h4 className="font-extrabold text-gray-800 text-base leading-tight group-hover:text-[#1C205C] transition-colors truncate">{enquiry.name}</h4>
             {enquiry.car && (
-              <p className="text-xs text-indigo-600 font-bold mt-0.5">{enquiry.car}</p>
+              <p className="text-xs text-indigo-600 font-bold mt-0.5 break-words">{enquiry.car}</p>
             )}
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-xs text-gray-500 font-medium">{enquiry.phone}</span>
+              <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{enquiry.phone}</span>
               {/* Dial Button */}
               {statusLower !== 'new' && (
                 <a
                   href={`tel:${enquiry.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 hover:scale-105 active:scale-95 transition-all shadow-sm"
+                  className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 hover:scale-105 active:scale-95 transition-all shadow-sm shrink-0"
                   title="Call Lead"
                 >
                   <FiPhone size={11} className="stroke-[3]" />
@@ -74,7 +71,7 @@ const EnquiryCard = ({ enquiry, onStatusUpdate, onClick }) => {
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
           {getStatusBadge(enquiry.status || 'New')}
           <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
             <FiCalendar size={10} />
@@ -101,24 +98,24 @@ const EnquiryCard = ({ enquiry, onStatusUpdate, onClick }) => {
           )}
 
           {(statusLower === 'in progress' || statusLower === 'follow-up' || statusLower === 'pending') && (
-            <div className="grid grid-cols-2 gap-3.5 w-full mt-1">
+            <div className="grid grid-cols-2 gap-2 w-full mt-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onStatusUpdate(enquiry.id, 'Converted');
                 }}
-                className="flex items-center justify-center gap-1.5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold rounded-2xl text-xs transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 active:scale-[0.98]"
+                className="flex items-center justify-center gap-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-[11px] transition-all shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/20 active:scale-[0.98]"
               >
-                <FiCheck size={14} className="stroke-[3]" /> Converted
+                <FiCheck size={13} className="stroke-[3]" /> Converted
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowCloseReason(true);
                 }}
-                className="flex items-center justify-center gap-1.5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-xs transition-all shadow-md shadow-rose-500/10 hover:shadow-rose-500/20 active:scale-[0.98]"
+                className="flex items-center justify-center gap-1 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl text-[11px] transition-all shadow-md shadow-rose-500/10 hover:shadow-rose-500/20 active:scale-[0.98]"
               >
-                <FiX size={14} className="stroke-[3]" /> Closed
+                <FiX size={13} className="stroke-[3]" /> Closed
               </button>
             </div>
           )}

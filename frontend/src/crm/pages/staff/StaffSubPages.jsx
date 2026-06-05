@@ -3510,21 +3510,21 @@ export const SalaryPage = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleViewMonthlyLogs(item)}
-                            className="text-[#1C205C] hover:text-[#2a3550] text-xs font-bold bg-[#1C205C]/5 hover:bg-[#1C205C]/10 px-2.5 py-1.5 rounded-lg transition-colors border border-[#1C205C]/10 mr-1"
+                            className="w-[125px] py-1.5 text-center text-[#1C205C] hover:text-[#2a3550] text-xs font-bold bg-[#1C205C]/5 hover:bg-[#1C205C]/10 rounded-lg transition-colors border border-[#1C205C]/10"
                           >
                             Attendance Log
                           </button>
                           {item.salaryStatus === 'Paid' ? (
                             <button
                               onClick={() => handleDownloadSlip(item)}
-                              className="px-3 py-1.5 text-indigo-600 border border-indigo-100 rounded-lg text-xs font-bold hover:bg-indigo-50 transition-colors"
+                              className="w-[115px] py-1.5 text-center text-indigo-600 border border-indigo-100 rounded-lg text-xs font-bold hover:bg-indigo-50 transition-colors"
                             >
                               Receipt PDF
                             </button>
                           ) : (
                             <button
                               onClick={() => handlePayNow(item)}
-                              className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-green-700 transition-colors"
+                              className="w-[115px] py-1.5 text-center bg-green-600 text-white border border-transparent rounded-lg text-xs font-bold shadow-sm hover:bg-green-700 transition-colors"
                             >
                               Credit Salary
                             </button>
