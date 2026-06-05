@@ -101,7 +101,7 @@ const BookingCard = ({ booking, index, navigate, setSelectedBooking, setShowDeta
               </p>
             </div>
             <span className="text-sm font-black flex-shrink-0" style={{ color: colors.backgroundTertiary }}>
-              ₹{booking.totalPrice.toLocaleString('en-IN')}
+              ₹{((booking.paidAmount || 0) + (booking.remainingAmount || 0)).toLocaleString('en-IN')}
             </span>
           </div>
 
@@ -341,66 +341,86 @@ const BookingsPage = () => {
                 fuelType: cachedCar.fuelType || carData?.fuelType || 'Petrol',
               };
             } else if (carId && (!carData || !carData.seatingCapacity || !carData.transmission)) {
-              // Fallback to fetch individually only if not found in map
-              try {
-                const carResponse = await carService.getCarDetails(carId);
-                if (carResponse.success && carResponse.data?.car) {
-                  const apiCar = carResponse.data.car;
-                  // Resolve primary image
-                  let carImage = carImg1;
-                  if (apiCar.images && apiCar.images.length > 0) {
-                    const primary = apiCar.images.find((img) => img.isPrimary);
-                    carImage = primary ? primary.url : (apiCar.images[0]?.url || carImage);
-                  } else if (apiCar.image) {
-                    carImage = typeof apiCar.image === 'string' ? apiCar.image : (apiCar.image?.url || carImg1);
+              // Check if it's a mock car ID first
+              if (typeof carId === 'string' && carId.startsWith('car')) {
+                const carNumber = parseInt(carId.replace(/\D/g, '')) || 1;
+                carData = {
+                  id: carId,
+                  brand: ['Toyota', 'Honda', 'Maruti', 'Hyundai', 'Tata', 'Mahindra', 'Ford'][(carNumber - 1) % 7] || 'Car',
+                  model: ['Camry', 'City', 'Swift', 'i20', 'Nexon', 'XUV700', 'EcoSport'][(carNumber - 1) % 7] || 'Model',
+                  image: carImages[(carNumber - 1) % carImages.length] || carImg1,
+                  seats: 5,
+                  transmission: 'Manual',
+                  fuelType: 'Petrol',
+                };
+              } else {
+                // Fallback to fetch individually only if not found in map
+                try {
+                  const carResponse = await carService.getCarDetails(carId);
+                  if (carResponse.success && carResponse.data?.car) {
+                    const apiCar = carResponse.data.car;
+                    // Resolve primary image
+                    let carImage = carImg1;
+                    if (apiCar.images && apiCar.images.length > 0) {
+                      const primary = apiCar.images.find((img) => img.isPrimary);
+                      carImage = primary ? primary.url : (apiCar.images[0]?.url || carImage);
+                    } else if (apiCar.image) {
+                      carImage = typeof apiCar.image === 'string' ? apiCar.image : (apiCar.image?.url || carImg1);
+                    }
+                    
+                    carData = {
+                      id: apiCar._id || apiCar.id,
+                      brand: apiCar.brand || carData?.brand || '',
+                      model: apiCar.model || carData?.model || '',
+                      image: carImage,
+                      seats: apiCar.seatingCapacity || carData?.seatingCapacity || 4,
+                      transmission: apiCar.transmission || carData?.transmission || 'Automatic',
+                      fuelType: apiCar.fuelType || carData?.fuelType || 'Petrol',
+                    };
+                  } else if (carData) {
+                    // Use populated car data from booking, but ensure all fields exist
+                    let carImage = carImg1;
+                    if (carData.images && carData.images.length > 0) {
+                      const primary = carData.images.find((img) => img.isPrimary);
+                      carImage = primary ? primary.url : (carData.images[0]?.url || carImage);
+                    } else if (carData.image) {
+                      carImage = typeof carData.image === 'string' ? carData.image : (carData.image?.url || carImg1);
+                    }
+                    
+                    carData = {
+                      id: carData._id || carData.id || carId,
+                      brand: carData.brand || '',
+                      model: carData.model || '',
+                      image: carImage,
+                      seats: carData.seatingCapacity || 4,
+                      transmission: carData.transmission || 'Automatic',
+                      fuelType: carData.fuelType || 'Petrol',
+                    };
+                  }
+                } catch (error) {
+                  // Suppress expected 404 errors from polluting console.error
+                  if (error.response?.status === 404) {
+                    console.warn(`Car details not found (404) for ID: ${carId}`);
+                  } else {
+                    console.error('Error fetching car details:', error);
                   }
                   
-                  carData = {
-                    id: apiCar._id || apiCar.id,
-                    brand: apiCar.brand || carData?.brand || '',
-                    model: apiCar.model || carData?.model || '',
-                    image: carImage,
-                    seats: apiCar.seatingCapacity || carData?.seatingCapacity || 4,
-                    transmission: apiCar.transmission || carData?.transmission || 'Automatic',
-                    fuelType: apiCar.fuelType || carData?.fuelType || 'Petrol',
-                  };
-                } else if (carData) {
-                  // Use populated car data from booking, but ensure all fields exist
-                  let carImage = carImg1;
-                  if (carData.images && carData.images.length > 0) {
-                    const primary = carData.images.find((img) => img.isPrimary);
-                    carImage = primary ? primary.url : (carData.images[0]?.url || carImage);
-                  } else if (carData.image) {
-                    carImage = typeof carData.image === 'string' ? carData.image : (carData.image?.url || carImg1);
+                  // Use populated car data if available
+                  if (carData) {
+                    let carImage = carImg1;
+                    if (carData.images && carData.images.length > 0) {
+                      carImage = carData.images[0]?.url || carImg1;
+                    }
+                    carData = {
+                      id: carData._id || carData.id || carId,
+                      brand: carData.brand || '',
+                      model: carData.model || '',
+                      image: carImage,
+                      seats: 4,
+                      transmission: 'Automatic',
+                      fuelType: 'Petrol',
+                    };
                   }
-                  
-                  carData = {
-                    id: carData._id || carData.id || carId,
-                    brand: carData.brand || '',
-                    model: carData.model || '',
-                    image: carImage,
-                    seats: carData.seatingCapacity || 4,
-                    transmission: carData.transmission || 'Automatic',
-                    fuelType: carData.fuelType || 'Petrol',
-                  };
-                }
-              } catch (error) {
-                console.error('Error fetching car details:', error);
-                // Use populated car data if available
-                if (carData) {
-                  let carImage = carImg1;
-                  if (carData.images && carData.images.length > 0) {
-                    carImage = carData.images[0]?.url || carImg1;
-                  }
-                  carData = {
-                    id: carData._id || carData.id || carId,
-                    brand: carData.brand || '',
-                    model: carData.model || '',
-                    image: carImage,
-                    seats: 4,
-                    transmission: 'Automatic',
-                    fuelType: 'Petrol',
-                  };
                 }
               }
             } else if (carData) {
@@ -480,6 +500,9 @@ const BookingsPage = () => {
               cancelledBy: booking.cancelledBy || null,
               cancelledAt: booking.cancelledAt || null,
               cancellationReason: booking.cancellationReason || null,
+              user: booking.user || {},
+              paymentOption: booking.paymentOption || 'N/A',
+              transactions: booking.transactions || [],
             };
           })
         );
@@ -499,61 +522,17 @@ const BookingsPage = () => {
         console.log('✅ Transformed bookings count:', uniqueTransformedBookings.length);
         console.log('✅ Duplicates removed:', transformedBookings.length - uniqueTransformedBookings.length);
         
-        // Also get bookings from localStorage (for local bookings created before API integration)
-        try {
-          const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
-          console.log('📦 Local bookings from storage:', localBookings.length);
-          
-          // Remove duplicates: API bookings take priority, filter out local bookings that exist in API
-          const apiBookingIds = new Set(uniqueTransformedBookings.map(b => b.id));
-          const uniqueLocalBookings = localBookings.filter(b => {
-            const localId = b.id || b._id;
-            return localId && !apiBookingIds.has(localId);
-          });
-          
-          // Merge: unique local bookings + API bookings (API bookings take priority)
-          const finalBookings = [...uniqueLocalBookings, ...uniqueTransformedBookings];
-          console.log('✅ Final bookings to set:', finalBookings.length);
-          console.log('✅ Unique local bookings:', uniqueLocalBookings.length);
-          console.log('✅ API bookings:', uniqueTransformedBookings.length);
-          setBookings(finalBookings);
-        } catch (error) {
-          console.error('❌ Error reading bookings from localStorage:', error);
-          console.log('✅ Setting only transformed bookings:', uniqueTransformedBookings.length);
-          setBookings(uniqueTransformedBookings);
-        }
+        setBookings(uniqueTransformedBookings);
       } else {
         console.log('⚠️ No bookings found in API response or empty array');
-        console.log('Response was:', {
-          success: response?.success,
-          message: response?.message,
-          data: response?.data,
-        });
-        // If API returns success but empty array, or API fails, try localStorage as fallback
-        try {
-          const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
-          console.log(`📦 Found ${localBookings.length} bookings in localStorage`);
-          setBookings(localBookings);
-        } catch (error) {
-          console.error('❌ Error reading bookings from localStorage:', error);
-          setBookings([]);
-        }
+        setBookings([]);
       }
     } catch (error) {
       console.error('❌ Error fetching bookings:', error);
       console.error('❌ Error response:', error.response?.data);
       console.error('❌ Error status:', error.response?.status);
       console.error('❌ Error message:', error.message);
-      console.error('❌ Full error:', error);
-      // Fallback to localStorage
-      try {
-        const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
-        console.log(`Fallback: Found ${localBookings.length} bookings in localStorage`);
-        setBookings(localBookings);
-      } catch (localError) {
-        console.error('Error reading bookings from localStorage:', localError);
-        setBookings([]);
-      }
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -561,6 +540,8 @@ const BookingsPage = () => {
 
   // Fetch bookings on component mount
   useEffect(() => {
+    // Clear legacy mock bookings from localStorage
+    localStorage.removeItem('localBookings');
     fetchBookings();
   }, []);
 
@@ -576,77 +557,48 @@ const BookingsPage = () => {
     }
 
     try {
-      let isLocalOnly = true;
-
-      // Try to cancel via API first if booking is from database
-      if (cancellationBooking && cancellationBooking.id && typeof cancellationBooking.id === 'string' && !cancellationBooking.id.startsWith('local')) {
+      if (cancellationBooking && cancellationBooking.id && typeof cancellationBooking.id === 'string') {
         try {
           const response = await bookingService.updateBookingStatus(cancellationBooking.id, {
             status: 'cancelled',
             cancellationReason: selectedReason,
           });
           if (response && response.success) {
-            isLocalOnly = false;
+            // Update state
+            setBookings((prevBookings) => {
+              return prevBookings.map((booking) => {
+                if (booking.id === cancellationBooking.id) {
+                  return {
+                    ...booking,
+                    status: 'cancelled',
+                    tripStatus: 'cancelled',
+                    cancellationReason: selectedReason,
+                    cancelledAt: new Date().toISOString(),
+                    cancelledBy: 'user',
+                  };
+                }
+                return booking;
+              });
+            });
+            
+            // Close modal and reset
+            setShowCancellationModal(false);
+            setCancellationBooking(null);
+            setSelectedReason('');
+            
+            // Show success message
+            alert('Booking cancelled successfully!');
+            
+            // Switch to cancelled tab
+            setActiveTab('cancelled');
+
+            // Refresh list to make sure we have synced database state
+            fetchBookings();
           }
         } catch (apiError) {
-          console.error('API booking cancellation failed, trying local fallback:', apiError);
+          console.error('API booking cancellation failed:', apiError);
           alert(apiError.response?.data?.message || 'Failed to cancel booking on the server. Please try again.');
-          return;
         }
-      }
-
-      // Get bookings from localStorage
-      const localBookings = JSON.parse(localStorage.getItem('localBookings') || '[]');
-      
-      // Update the booking status
-      const updatedBookings = localBookings.map((booking) => {
-        if (booking.id === cancellationBooking.id) {
-          return {
-            ...booking,
-            status: 'cancelled',
-            tripStatus: 'cancelled',
-            cancellationReason: selectedReason,
-            cancelledAt: new Date().toISOString(),
-            cancelledBy: 'user',
-          };
-        }
-        return booking;
-      });
-      
-      // Save updated bookings to localStorage
-      localStorage.setItem('localBookings', JSON.stringify(updatedBookings));
-      
-      // Update state
-      setBookings((prevBookings) => {
-        return prevBookings.map((booking) => {
-          if (booking.id === cancellationBooking.id) {
-            return {
-              ...booking,
-              status: 'cancelled',
-              tripStatus: 'cancelled',
-              cancellationReason: selectedReason,
-              cancelledAt: new Date().toISOString(),
-              cancelledBy: 'user',
-            };
-          }
-          return booking;
-        });
-      });
-      
-      // Close modal and reset
-      setShowCancellationModal(false);
-      setCancellationBooking(null);
-      setSelectedReason('');
-      
-      // Show success message
-      alert('Booking cancelled successfully!');
-      
-      // Switch to cancelled tab
-      setActiveTab('cancelled');
-
-      // Refresh list to make sure we have synced database state
-      if (!isLocalOnly) {
-        fetchBookings();
       }
     } catch (error) {
       console.error('Error cancelling booking:', error);

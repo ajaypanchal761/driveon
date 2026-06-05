@@ -423,7 +423,7 @@ api.interceptors.response.use(
             console.error('Forbidden: You do not have permission to access this resource');
             break;
           case 404:
-            if (!originalRequest.url?.includes('/validate')) {
+            if (!originalRequest.url?.includes('/validate') && !originalRequest.url?.includes('/cars/')) {
               console.error('Not Found: The requested resource was not found');
             }
             break;

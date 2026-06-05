@@ -31,7 +31,9 @@ export const carService = {
       const response = await api.get(`/cars/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Get car details error:', error);
+      if (error.response?.status !== 404) {
+        console.error('Get car details error:', error);
+      }
       throw error;
     }
   },

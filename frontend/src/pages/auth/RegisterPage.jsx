@@ -54,9 +54,19 @@ const RegisterPage = () => {
     };
   }, []);
 
+  // Detect ref code from URL and set it in form on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref') || params.get('referralCode');
+    if (refCode) {
+      setValue('referralCode', refCode.toUpperCase().trim());
+    }
+  }, [setValue]);
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(registerSchema),

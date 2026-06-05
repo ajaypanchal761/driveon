@@ -170,7 +170,7 @@ const BookingListPage = () => {
           carOwner: booking.car?.owner || booking.carOwner || 'N/A',
           status: booking.status,
           paymentStatus: booking.paymentStatus,
-          totalAmount: booking.pricing?.totalPrice || booking.totalAmount || 0,
+          totalAmount: (booking.paidAmount || 0) + (booking.remainingAmount || 0),
           paidAmount: booking.paidAmount || 0,
           refundAmount: booking.refundAmount,
           pickupDate: booking.tripStart?.date || booking.pickupDate || booking.pickupDateTime,
@@ -937,6 +937,28 @@ const BookingListPage = () => {
                     {booking.status === 'cancelled' && booking.cancellationReason && (
                       <span className="text-red-600">Reason: {booking.cancellationReason}</span>
                     )}
+                    {booking.originalData?.pricing?.couponCode && (() => {
+                      const couponDetails = booking.originalData.pricing.couponDetails;
+                      const displayVal = couponDetails
+                        ? `${booking.originalData.pricing.couponCode} (${couponDetails.discountValue}${couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off)`
+                        : booking.originalData.pricing.couponCode;
+                      return (
+                        <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded font-medium border border-green-200 text-xs">
+                          🎫 Coupon: {displayVal}
+                        </span>
+                      );
+                    })()}
+                    {booking.originalData?.pricing?.offerCode && (() => {
+                      const offerDetails = booking.originalData.pricing.offerDetails;
+                      const displayVal = offerDetails
+                        ? `${offerDetails.title} (${offerDetails.discountType === 'free' ? 'Free' : `${offerDetails.discountValue}${offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`})`
+                        : booking.originalData.pricing.offerCode;
+                      return (
+                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium border border-blue-200 text-xs">
+                          🏷️ Offer: {displayVal}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1304,6 +1326,10 @@ const BookingDetailModal = ({ booking, addOnPrices = {}, onClose, onApprove, onR
                   const calculatedCarTotal = booking.totalAmount - addOnServicesTotal + (booking.originalData?.pricing?.discount || 0);
                   const basePrice = dbBasePrice || Math.max(0, Math.round(calculatedCarTotal / (booking.days || 1)));
                   const discount = booking.originalData?.pricing?.discount || 0;
+                  const offerDiscount = booking.originalData?.pricing?.offerDiscount || 0;
+                  const couponDiscount = Math.max(0, discount - offerDiscount);
+                  const couponCode = booking.originalData?.pricing?.couponCode;
+                  const offerCode = booking.originalData?.pricing?.offerCode;
 
                   return (
                     <div>
@@ -1353,12 +1379,30 @@ const BookingDetailModal = ({ booking, addOnPrices = {}, onClose, onApprove, onR
                         )}
 
                         {/* Discounts if any */}
-                        {discount > 0 && (
-                          <div className="flex justify-between text-sm text-green-600 py-1 border-b border-gray-200">
-                            <span>Discount ({booking.originalData?.pricing?.couponCode || booking.originalData?.pricing?.offerCode || 'Coupon/Offer'})</span>
-                            <span className="font-semibold">-₹{discount.toLocaleString()}</span>
-                          </div>
-                        )}
+                        {couponDiscount > 0 && (() => {
+                          const couponDetails = booking.originalData?.pricing?.couponDetails;
+                          const promoText = couponDetails
+                            ? `${couponCode} (${couponDetails.discountValue}${couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off)`
+                            : couponCode;
+                          return (
+                            <div className="flex justify-between text-sm text-green-600 py-1 border-b border-gray-200">
+                              <span>Coupon Discount ({promoText})</span>
+                              <span className="font-semibold">-₹{couponDiscount.toLocaleString()}</span>
+                            </div>
+                          );
+                        })()}
+                        {offerDiscount > 0 && (() => {
+                          const offerDetails = booking.originalData?.pricing?.offerDetails;
+                          const promoText = offerDetails
+                            ? `${offerDetails.title} (${offerDetails.discountType === 'free' ? 'Free' : `${offerDetails.discountValue}${offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`})`
+                            : offerCode;
+                          return (
+                            <div className="flex justify-between text-sm text-green-600 py-1 border-b border-gray-200">
+                              <span>Offer Discount ({promoText})</span>
+                              <span className="font-semibold">-₹{offerDiscount.toLocaleString()}</span>
+                            </div>
+                          );
+                        })()}
 
                         {/* Total Amount */}
                         <div className="pt-2">

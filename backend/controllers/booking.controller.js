@@ -11,6 +11,76 @@ import { sendPushNotification, sendAdminNotification } from '../services/firebas
 import { createAdminNotification } from './notification.controller.js';
 
 /**
+ * Helper to enrich bookings with Coupon and Offer details
+ */
+const enrichBookingsWithPromoDetails = async (bookings) => {
+  if (!bookings || bookings.length === 0) return bookings;
+
+  // Extract all unique codes
+  const couponCodes = new Set();
+  const offerCodes = new Set();
+
+  bookings.forEach(booking => {
+    const couponCode = booking.pricing?.couponCode;
+    const offerCode = booking.pricing?.offerCode;
+    if (couponCode) couponCodes.add(couponCode.toUpperCase().trim());
+    if (offerCode) offerCodes.add(offerCode.toUpperCase().trim());
+  });
+
+  // Query database
+  const [coupons, offers] = await Promise.all([
+    couponCodes.size > 0 ? Coupon.find({ code: { $in: Array.from(couponCodes) } }).lean() : [],
+    offerCodes.size > 0 ? Offer.find({ code: { $in: Array.from(offerCodes) } }).lean() : []
+  ]);
+
+  // Create lookup maps
+  const couponMap = {};
+  coupons.forEach(c => {
+    couponMap[c.code] = {
+      code: c.code,
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      maxDiscount: c.maxDiscount,
+      description: c.description
+    };
+  });
+
+  const offerMap = {};
+  offers.forEach(o => {
+    offerMap[o.code] = {
+      code: o.code,
+      title: o.title,
+      discountType: o.discountType,
+      discountValue: o.discountValue,
+      description: o.description
+    };
+  });
+
+  // Enrich bookings
+  return bookings.map(booking => {
+    const bookingObj = booking.toObject ? booking.toObject() : booking;
+    if (bookingObj.pricing) {
+      const couponCode = bookingObj.pricing.couponCode;
+      const offerCode = bookingObj.pricing.offerCode;
+
+      if (couponCode && couponMap[couponCode.toUpperCase().trim()]) {
+        bookingObj.pricing.couponDetails = couponMap[couponCode.toUpperCase().trim()];
+      }
+      if (offerCode && offerMap[offerCode.toUpperCase().trim()]) {
+        bookingObj.pricing.offerDetails = offerMap[offerCode.toUpperCase().trim()];
+      }
+    }
+    return bookingObj;
+  });
+};
+
+const enrichSingleBookingWithPromoDetails = async (booking) => {
+  if (!booking) return booking;
+  const enriched = await enrichBookingsWithPromoDetails([booking]);
+  return enriched[0];
+};
+
+/**
  * @desc    Create new booking
  * @route   POST /api/bookings
  * @access  Private
@@ -567,7 +637,7 @@ export const createBooking = async (req, res) => {
 
     // Populate car and user details
     await booking.populate('car', 'brand model year color images pricePerDay');
-    await booking.populate('user', 'name phone email');
+    await booking.populate('user', 'name phone email age gender address profilePhoto');
 
     // Notify admins
     try {
@@ -582,11 +652,12 @@ export const createBooking = async (req, res) => {
       console.error('Error sending admin notification for new booking:', err);
     }
 
+    const enrichedBooking = await enrichSingleBookingWithPromoDetails(booking);
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
       data: {
-        booking,
+        booking: enrichedBooking,
       },
     });
   } catch (error) {
@@ -686,6 +757,7 @@ export const getUserBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('car', 'brand model year color images pricePerDay')
+      .populate('user', 'name phone email age gender address profilePhoto')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -694,10 +766,12 @@ export const getUserBookings = async (req, res) => {
 
     const total = await Booking.countDocuments(query);
 
+    const enrichedBookings = await enrichBookingsWithPromoDetails(bookings);
+
     res.json({
       success: true,
       data: {
-        bookings,
+        bookings: enrichedBookings,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -728,7 +802,7 @@ export const getBookingById = async (req, res) => {
 
     const booking = await Booking.findById(id)
       .populate('car', 'brand model year color images pricePerDay location owner')
-      .populate('user', 'name phone email')
+      .populate('user', 'name phone email age gender address profilePhoto')
       .populate('guarantor', 'name phone email');
 
     if (!booking) {
@@ -746,10 +820,11 @@ export const getBookingById = async (req, res) => {
       });
     }
 
+    const enrichedBooking = await enrichSingleBookingWithPromoDetails(booking);
     res.json({
       success: true,
       data: {
-        booking,
+        booking: enrichedBooking,
       },
     });
   } catch (error) {
@@ -1278,7 +1353,7 @@ export const getDriverAssignedBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('car', 'brand model year color registrationNumber images pricePerDay')
-      .populate('user', 'name phone email')
+      .populate('user', 'name phone email age gender address profilePhoto')
       .sort({ createdAt: -1 });
 
     res.json({

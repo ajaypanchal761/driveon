@@ -198,6 +198,21 @@ export const generateBookingPDF = (bookingData) => {
   // ========== ROW 2: BOOKING & ADDITIONAL DETAILS (Side-by-Side) ==========
   const row2Y = yPosition;
 
+  // Payment Option formatting for Booking Details column
+  let paymentOptionText = bookingData.paymentOption || 'N/A';
+  if (bookingData.paymentOption === 'advance' || bookingData.advanceAmount > 0) {
+    let percentage = 20; // Default to 20% fallback (since system settings default is 20%)
+    if (bookingData.pricing && bookingData.pricing.totalPrice > 0 && (bookingData.pricing.advancePayment > 0 || bookingData.pricing.advanceAmount > 0)) {
+      percentage = Math.round(((bookingData.pricing.advancePayment || bookingData.pricing.advanceAmount) / bookingData.pricing.totalPrice) * 100);
+    } else if (bookingData.totalPrice > 0 && (bookingData.paidAmount || bookingData.advancePayment || bookingData.advanceAmount)) {
+      const paid = bookingData.paidAmount || bookingData.advancePayment || bookingData.advanceAmount;
+      percentage = Math.round((paid / bookingData.totalPrice) * 100);
+    }
+    paymentOptionText = `${percentage}% Advance`;
+  } else if (bookingData.paymentOption === 'full') {
+    paymentOptionText = 'Full Payment';
+  }
+
   // --- COLUMN 1: BOOKING DETAILS ---
   leftY = addCompactSectionHeader('BOOKING DETAILS', margin, row2Y, colWidth);
   const pickupDateStr = bookingData.pickupDate || bookingData.tripStart?.date;
@@ -222,29 +237,44 @@ export const generateBookingPDF = (bookingData) => {
   }
   leftY += addKeyValue('Total Days', `${daysVal} Day${daysVal > 1 ? 's' : ''}`, margin, leftY, colWidth);
 
-  // --- COLUMN 2: ADDITIONAL DETAILS ---
-  rightY = addCompactSectionHeader('ADDITIONAL DETAILS', rightColX, row2Y, colWidth);
-  const purposeLabels = { 'personal': 'Personal', 'job': 'Job', 'business': 'Business', 'student': 'Student' };
-  const purposeStr = purposeLabels[bookingData.bookingPurpose] || bookingData.bookingPurpose || 'Personal';
-
-  rightY += addKeyValue('Purpose', purposeStr, rightColX, rightY, colWidth);
-  if (bookingData.specialRequests) {
-    rightY += addKeyValue('Special Req.', bookingData.specialRequests, rightColX, rightY, colWidth);
+  // Transaction ID
+  let transactionIdText = 'N/A';
+  if (bookingData.transactions && bookingData.transactions.length > 0) {
+    const successfulTxn = bookingData.transactions.find(t => t.status === 'success');
+    if (successfulTxn && successfulTxn.transactionId) {
+      transactionIdText = successfulTxn.transactionId;
+    } else {
+      const firstValidTxn = bookingData.transactions.find(t => t.transactionId);
+      if (firstValidTxn) {
+        transactionIdText = firstValidTxn.transactionId;
+      }
+    }
+  } else if (bookingData.transactionId) {
+    transactionIdText = bookingData.transactionId;
   }
+  leftY += addKeyValue('Transaction ID', transactionIdText, margin, leftY, colWidth);
 
-  // Add-on Services overview
-  if (bookingData.addOnServices) {
-    const addOns = bookingData.addOnServices;
-    const items = [];
-    if (addOns.driver > 0) items.push(`Driver(${addOns.driver})`);
-    if (addOns.bodyguard > 0) items.push(`Bodyguard(${addOns.bodyguard})`);
-    if (addOns.gunmen > 0) items.push(`Gunmen(${addOns.gunmen})`);
-    if (addOns.bouncer > 0) items.push(`Bouncer(${addOns.bouncer})`);
+  // --- COLUMN 2: ADDITIONAL DETAILS ---
+  rightY = row2Y;
+  const addOns = bookingData.addOnServices || {};
+  const addOnItems = [];
+  if (addOns.driver > 0) addOnItems.push(`Driver(${addOns.driver})`);
+  if (addOns.bodyguard > 0) addOnItems.push(`Bodyguard(${addOns.bodyguard})`);
+  if (addOns.gunmen > 0) addOnItems.push(`Gunmen(${addOns.gunmen})`);
+  if (addOns.bouncer > 0) addOnItems.push(`Bouncer(${addOns.bouncer})`);
+  const hasAddOns = addOnItems.length > 0;
+  const hasSpecialRequests = !!bookingData.specialRequests;
 
-    if (items.length > 0) {
-      rightY += addKeyValue('Add-ons', items.join(', '), rightColX, rightY, colWidth);
+  if (hasSpecialRequests || hasAddOns) {
+    rightY = addCompactSectionHeader('ADDITIONAL DETAILS', rightColX, row2Y, colWidth);
+    if (hasSpecialRequests) {
+      rightY += addKeyValue('Special Req.', bookingData.specialRequests, rightColX, rightY, colWidth);
+    }
+    if (hasAddOns) {
+      rightY += addKeyValue('Add-ons', addOnItems.join(', '), rightColX, rightY, colWidth);
     }
   }
+
 
   yPosition = Math.max(leftY, rightY) + 6;
 
@@ -265,62 +295,114 @@ export const generateBookingPDF = (bookingData) => {
   doc.line(margin + 5, pricingBoxY + 2, margin + contentWidth - 5, pricingBoxY + 2);
 
   // Render side-by-side grid
-  const cellWidth = contentWidth / 4;
+  const cellWidth = contentWidth / 5;
   const yVal = pricingBoxY + 9;
 
-  // Column 1: Total Price
+  const totalDiscount = bookingData.pricing?.discount || bookingData.discount || 0;
+  const subtotal = bookingData.pricing?.totalPrice || bookingData.totalPrice || 0;
+  const finalPrice = subtotal - totalDiscount;
+
+  // Column 1: Subtotal
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...darkGray);
-  doc.text('Total Price', margin + 5, yVal);
+  doc.text('Subtotal', margin + 5, yVal);
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42); // slate-900
-  doc.text(formatCurrency(bookingData.totalPrice), margin + 5, yVal + 5);
+  doc.text(formatCurrency(subtotal), margin + 5, yVal + 5);
 
-  // Column 2: Paid Amount
+  // Column 2: Total Discount
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...darkGray);
-  doc.text('Paid Amount', margin + cellWidth + 5, yVal);
+  doc.text('Total Discount', margin + cellWidth + 5, yVal);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(22, 163, 74); // Green
+  doc.text(formatCurrency(totalDiscount), margin + cellWidth + 5, yVal + 5);
+
+  // Column 3: Final Price
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkGray);
+  doc.text('Final Price', margin + 2 * cellWidth + 5, yVal);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42); // slate-900
+  doc.text(formatCurrency(finalPrice), margin + 2 * cellWidth + 5, yVal + 5);
+
+  // Column 4: Paid Amount
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkGray);
+  doc.text('Paid Amount', margin + 3 * cellWidth + 5, yVal);
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...accentColor); // Blue
-  doc.text(formatCurrency(bookingData.paidAmount || bookingData.advancePayment), margin + cellWidth + 5, yVal + 5);
+  doc.text(formatCurrency(bookingData.paidAmount || bookingData.advancePayment), margin + 3 * cellWidth + 5, yVal + 5);
 
-  // Column 3: Remaining Amount
+  // Column 5: Remaining Amount
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...darkGray);
-  doc.text('Remaining Amount', margin + 2 * cellWidth + 5, yVal);
+  doc.text('Remaining Amount', margin + 4 * cellWidth + 5, yVal);
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(220, 38, 38); // Red
-  doc.text(formatCurrency(bookingData.remainingAmount), margin + 2 * cellWidth + 5, yVal + 5);
+  doc.text(formatCurrency(bookingData.remainingAmount), margin + 4 * cellWidth + 5, yVal + 5);
 
-  // Column 4: Payment Option
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...darkGray);
-  doc.text('Payment Option', margin + 3 * cellWidth + 5, yVal);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(15, 23, 42); // slate-900
+  // ========== DISCOUNTS & PROMOTIONS APPLIED ==========
+  const offerDiscount = bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0;
+  const couponDiscount = Math.max(0, totalDiscount - offerDiscount);
+  const couponCode = bookingData.pricing?.couponCode || bookingData.couponCode;
+  const offerCode = bookingData.pricing?.offerCode || bookingData.offerCode;
 
-  let paymentOptionText = bookingData.paymentOption || 'N/A';
-  if (bookingData.paymentOption === 'advance' || bookingData.advanceAmount > 0) {
-    let percentage = 20; // Default to 20% fallback (since system settings default is 20%)
-    if (bookingData.pricing && bookingData.pricing.totalPrice > 0 && (bookingData.pricing.advancePayment > 0 || bookingData.pricing.advanceAmount > 0)) {
-      percentage = Math.round(((bookingData.pricing.advancePayment || bookingData.pricing.advanceAmount) / bookingData.pricing.totalPrice) * 100);
-    } else if (bookingData.totalPrice > 0 && (bookingData.paidAmount || bookingData.advancePayment || bookingData.advanceAmount)) {
-      const paid = bookingData.paidAmount || bookingData.advancePayment || bookingData.advanceAmount;
-      percentage = Math.round((paid / bookingData.totalPrice) * 100);
+  const hasDiscounts = couponDiscount > 0 || offerDiscount > 0;
+  
+  if (hasDiscounts) {
+    yPosition = pricingBoxY + pricingBoxHeight + 5;
+    const discountBoxHeight = (couponDiscount > 0 && offerDiscount > 0) ? 20 : 15;
+    
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(margin, yPosition - 5, contentWidth, discountBoxHeight, 2, 2, 'F');
+
+    // Header
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryColor);
+    doc.text('DISCOUNTS & PROMOTIONS APPLIED', margin + 5, yPosition);
+
+    // Divider Line
+    doc.setDrawColor(...borderGray);
+    doc.line(margin + 5, yPosition + 2, margin + contentWidth - 5, yPosition + 2);
+
+    let discountY = yPosition + 8;
+    const successColor = [22, 163, 74]; // green-600
+
+    if (couponDiscount > 0) {
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkGray);
+      doc.text('Coupon Discount:', margin + 5, discountY);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...successColor);
+      doc.text(`-${formatCurrency(couponDiscount)}`, margin + contentWidth - 5, discountY, { align: 'right' });
+      discountY += 5.5;
     }
-    paymentOptionText = `${percentage}% Advance`;
-  } else if (bookingData.paymentOption === 'full') {
-    paymentOptionText = 'Full Payment';
+
+    if (offerDiscount > 0) {
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkGray);
+      doc.text('Offer Discount:', margin + 5, discountY);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...successColor);
+      doc.text(`-${formatCurrency(offerDiscount)}`, margin + contentWidth - 5, discountY, { align: 'right' });
+    }
   }
-  doc.text(paymentOptionText, margin + 3 * cellWidth + 5, yVal + 5);
 
   // ========== FOOTER SECTION ==========
   const footerY = pageHeight - 28;

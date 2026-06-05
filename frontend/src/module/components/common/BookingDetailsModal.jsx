@@ -176,6 +176,13 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
 
   const days = calculateDays(booking.pickupDate, booking.dropDate);
   const basePrice = booking.pricing?.basePrice || booking.car?.pricePerDay || 0;
+  const offerDiscount = booking.pricing?.offerDiscount || booking.offerDiscount || 0;
+  const totalDiscount = booking.pricing?.discount || booking.discount || 0;
+  const couponDiscount = Math.max(0, totalDiscount - offerDiscount);
+  const couponCode = booking.pricing?.couponCode || booking.couponCode;
+  const offerCode = booking.pricing?.offerCode || booking.offerCode;
+  const couponDetails = booking.pricing?.couponDetails;
+  const offerDetails = booking.pricing?.offerDetails;
 
   return (
     <div
@@ -517,12 +524,57 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
                 </div>
               )}
 
+              {totalDiscount > 0 && (
+                <div className="pt-2 border-t" style={{ borderColor: colors.backgroundSecondary + '50' }}>
+                  <div className="flex items-center justify-between text-xs pl-1">
+                    <p style={{ color: colors.textSecondary }}>
+                      Subtotal (Before Discount)
+                    </p>
+                    <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                      ₹{booking.totalPrice?.toLocaleString('en-IN') || '0'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {couponDiscount > 0 && (() => {
+                const promoText = couponDetails
+                  ? `${couponCode} - ${couponDetails.discountValue}${couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`
+                  : (couponCode || 'Applied');
+                return (
+                  <div className="flex items-center justify-between text-xs pl-1 mt-1">
+                    <p className="font-semibold" style={{ color: colors.success }}>
+                      Coupon Discount ({promoText})
+                    </p>
+                    <p className="font-bold" style={{ color: colors.success }}>
+                      -₹{couponDiscount.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {offerDiscount > 0 && (() => {
+                const promoText = offerDetails
+                  ? `${offerDetails.title} - ${offerDetails.discountType === 'free' ? 'Free' : `${offerDetails.discountValue}${offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`}`
+                  : (offerCode || 'Applied');
+                return (
+                  <div className="flex items-center justify-between text-xs pl-1 mt-1">
+                    <p className="font-semibold" style={{ color: colors.success }}>
+                      Offer Discount ({promoText})
+                    </p>
+                    <p className="font-bold" style={{ color: colors.success }}>
+                      -₹{offerDiscount.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                );
+              })()}
+
               <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>
-                  Total Amount
+                <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
+                  Total Payable Amount
                 </p>
                 <p className="text-base font-bold" style={{ color: colors.backgroundTertiary }}>
-                  ₹{booking.totalPrice?.toLocaleString('en-IN') || '0'}
+                  ₹{((booking.totalPrice - totalDiscount) || 0).toLocaleString('en-IN')}
                 </p>
               </div>
               {booking.paidAmount > 0 && (
@@ -595,33 +647,43 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
                     </p>
                   </div>
                 )}
-                {booking.pricing.discount > 0 && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm" style={{ color: colors.success }}>
-                      Discount
-                    </p>
-                    <p className="text-sm font-semibold" style={{ color: colors.success }}>
-                      -₹{booking.pricing.discount.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                )}
-                {booking.pricing.couponCode && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      Coupon Code
-                    </p>
-                    <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                      {booking.pricing.couponCode}
-                    </p>
-                  </div>
-                )}
-                {booking.pricing.finalPrice && (
+                {couponDiscount > 0 && (() => {
+                  const promoText = couponDetails
+                    ? `${couponCode} - ${couponDetails.discountValue}${couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`
+                    : (couponCode || 'Applied');
+                  return (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm" style={{ color: colors.success }}>
+                        Coupon Discount ({promoText})
+                      </p>
+                      <p className="text-sm font-semibold" style={{ color: colors.success }}>
+                        -₹{couponDiscount.toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  );
+                })()}
+                {offerDiscount > 0 && (() => {
+                  const promoText = offerDetails
+                    ? `${offerDetails.title} - ${offerDetails.discountType === 'free' ? 'Free' : `${offerDetails.discountValue}${offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`}`
+                    : (offerCode || 'Applied');
+                  return (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm" style={{ color: colors.success }}>
+                        Offer Discount ({promoText})
+                      </p>
+                      <p className="text-sm font-semibold" style={{ color: colors.success }}>
+                        -₹{offerDiscount.toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  );
+                })()}
+                {(booking.pricing.finalPrice || booking.pricing.totalPrice) && (
                   <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>
                     <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
                       Final Price
                     </p>
                     <p className="text-base font-bold" style={{ color: colors.backgroundTertiary }}>
-                      ₹{booking.pricing.finalPrice.toLocaleString('en-IN')}
+                      ₹{(booking.pricing.totalPrice - (booking.pricing.discount || 0)).toLocaleString('en-IN')}
                     </p>
                   </div>
                 )}

@@ -260,10 +260,8 @@ const BookNowPage = () => {
   }, []);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponDiscount, setCouponDiscount] = useState(0);
   const [activeOffers, setActiveOffers] = useState([]);
   const [appliedOffer, setAppliedOffer] = useState(null);
-  const [offerDiscount, setOfferDiscount] = useState(0);
   const [bookingPurpose, setBookingPurpose] = useState(""); // 'job', 'business', 'student'
   const [showAddons, setShowAddons] = useState(true);
 
@@ -493,6 +491,8 @@ const BookNowPage = () => {
         advancePayment: 0,
         remainingPayment: 0,
         discount: 0,
+        couponDiscount: 0,
+        offerDiscount: 0,
         finalPrice: 0,
       };
     }
@@ -525,8 +525,37 @@ const BookNowPage = () => {
     // Add add-on services to total price
     totalPrice += addOnServicesTotal + customServicesTotal;
 
-    // Apply coupon or offer discount (Only one can be applied - Option A)
-    const discount = couponDiscount > 0 ? couponDiscount : (offerDiscount > 0 ? offerDiscount : 0);
+    // Apply coupon and offer discounts sequentially matching backend rules
+    let calculatedCouponDiscount = 0;
+    if (appliedCoupon) {
+      if (appliedCoupon.discountType === "percentage") {
+        calculatedCouponDiscount = (totalPrice * (appliedCoupon.discountValue || 0)) / 100;
+        if (appliedCoupon.maxDiscount && calculatedCouponDiscount > appliedCoupon.maxDiscount) {
+          calculatedCouponDiscount = appliedCoupon.maxDiscount;
+        }
+      } else if (appliedCoupon.discountType === "fixed") {
+        calculatedCouponDiscount = appliedCoupon.discountValue || 0;
+      }
+      calculatedCouponDiscount = Math.round(calculatedCouponDiscount * 100) / 100;
+      calculatedCouponDiscount = Math.min(calculatedCouponDiscount, totalPrice);
+    }
+
+    const priceAfterCoupon = Math.max(0, totalPrice - calculatedCouponDiscount);
+
+    let calculatedOfferDiscount = 0;
+    if (appliedOffer) {
+      if (appliedOffer.discountType === "percentage") {
+        calculatedOfferDiscount = (priceAfterCoupon * (appliedOffer.discountValue || 0)) / 100;
+      } else if (appliedOffer.discountType === "fixed") {
+        calculatedOfferDiscount = appliedOffer.discountValue || 0;
+      } else if (appliedOffer.discountType === "free") {
+        calculatedOfferDiscount = priceAfterCoupon;
+      }
+      calculatedOfferDiscount = Math.round(calculatedOfferDiscount * 100) / 100;
+      calculatedOfferDiscount = Math.min(calculatedOfferDiscount, priceAfterCoupon);
+    }
+
+    const discount = calculatedCouponDiscount + calculatedOfferDiscount;
     const finalPrice = Math.max(0, totalPrice - discount);
 
     // Payment options
@@ -539,6 +568,8 @@ const BookNowPage = () => {
       totalPrice,
       addOnServicesTotal,
       discount,
+      couponDiscount: calculatedCouponDiscount,
+      offerDiscount: calculatedOfferDiscount,
       finalPrice,
       advancePayment,
       remainingPayment,
@@ -716,31 +747,22 @@ const BookNowPage = () => {
     try {
       const response = await couponService.validateCoupon({
         code: couponCode.trim().toUpperCase(),
-        amount: priceDetails.totalPrice - (couponDiscount || 0) - (offerDiscount || 0),
+        amount: priceDetails.totalPrice,
         carId: car.id || car._id || id,
       });
 
       if (response.success && response.data) {
-        const discountAmount = response.data.discountAmount || response.data.discount || 0;
         setAppliedCoupon(response.data.coupon);
-        setCouponDiscount(discountAmount);
-
-        // Clear offer when coupon is applied (Option A)
-        setAppliedOffer(null);
-        setOfferDiscount(0);
-
         toastUtils.success("Coupon applied successfully!");
       }
     } catch (err) {
       toastUtils.error(err.response?.data?.message || "Invalid coupon code");
       setAppliedCoupon(null);
-      setCouponDiscount(0);
     }
   };
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
-    setCouponDiscount(0);
     setCouponCode("");
   };
 
@@ -749,24 +771,16 @@ const BookNowPage = () => {
     try {
       const response = await offerService.validateOffer({
         code: offerCodeToApply,
-        amount: priceDetails.totalPrice - (couponDiscount || 0) - (offerDiscount || 0),
+        amount: priceDetails.totalPrice - (priceDetails.couponDiscount || 0),
       });
 
       if (response.success && response.data) {
-        const discountAmount = response.data.discountAmount || 0;
         setAppliedOffer({
           code: response.data.code,
           title: response.data.title,
           discountType: response.data.discountType,
           discountValue: response.data.discountValue,
         });
-        setOfferDiscount(discountAmount);
-
-        // Clear coupon when offer is applied (Option A)
-        setAppliedCoupon(null);
-        setCouponDiscount(0);
-        setCouponCode("");
-
         toastUtils.success(`Offer "${response.data.title}" applied successfully!`);
       }
     } catch (err) {
@@ -776,7 +790,6 @@ const BookNowPage = () => {
 
   const handleRemoveOffer = () => {
     setAppliedOffer(null);
-    setOfferDiscount(0);
   };
 
   // Handle form submission with backend + Razorpay
@@ -921,9 +934,9 @@ const BookNowPage = () => {
       paymentOption: paymentOption || "advance",
       specialRequests: specialRequests || "",
       couponCode: appliedCoupon?.code || null,
-      couponDiscount: couponDiscount,
+      couponDiscount: priceDetails.couponDiscount,
       offerCode: appliedOffer?.code || null,
-      offerDiscount: offerDiscount,
+      offerDiscount: priceDetails.offerDiscount,
       // Additional details for verification and reporting
       bookingPurpose: "personal",
       personalDetails: personalDetails,
@@ -1716,7 +1729,7 @@ const BookNowPage = () => {
                     className="text-xs font-bold"
                     style={{ color: colors.success }}
                   >
-                    -Rs. {couponDiscount.toFixed(2)}
+                    -Rs. {priceDetails.couponDiscount.toFixed(2)}
                   </span>
                 </div>
                 <button
@@ -1825,17 +1838,31 @@ const BookNowPage = () => {
                     </span>
                   </div>
                 )}
-                {priceDetails.discount > 0 && (
+                {priceDetails.couponDiscount > 0 && (
                   <div
                     className="flex justify-between text-sm"
                     style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
                   >
-                    <span>Discount</span>
+                    <span>Coupon ({appliedCoupon?.code})</span>
                     <span
                       className="font-semibold"
                       style={{ color: colors.success }}
                     >
-                      -Rs. {priceDetails.discount}
+                      -Rs. {formatDecimal(priceDetails.couponDiscount)}
+                    </span>
+                  </div>
+                )}
+                {priceDetails.offerDiscount > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ color: colors.backgroundSecondary, opacity: 0.9 }}
+                  >
+                    <span>Offer ({appliedOffer?.title || appliedOffer?.code})</span>
+                    <span
+                      className="font-semibold"
+                      style={{ color: colors.success }}
+                    >
+                      -Rs. {formatDecimal(priceDetails.offerDiscount)}
                     </span>
                   </div>
                 )}

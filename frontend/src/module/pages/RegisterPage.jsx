@@ -52,6 +52,15 @@ const ModuleRegisterPage = () => {
     };
   }, []);
 
+  // Detect ref code from URL and set it in state on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref') || params.get('referralCode');
+    if (refCode) {
+      setReferralCode(refCode.toUpperCase().trim());
+    }
+  }, []);
+
   // Handle clicking outside dropdown to close it
   useEffect(() => {
     const handleClickOutside = (event) => {

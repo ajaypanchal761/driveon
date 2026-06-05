@@ -21,6 +21,8 @@ const ModuleReferralDashboardPage = () => {
     totalPointsFromReferrals: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
 
   // Points system
   const pointsForSignup = 50;
@@ -90,18 +92,25 @@ const ModuleReferralDashboardPage = () => {
   // Handle share referral
   const handleShareReferral = () => {
     const codeToShare = referralCode || reduxReferralCode || 'DRIVE123';
-    const shareText = `Join DriveOn using my referral code: ${codeToShare}`;
+    const registerUrl = `${window.location.origin}/register?ref=${codeToShare}`;
+    const shareText = `Join DriveOn using my referral code: ${codeToShare}. Get amazing deals on car rentals!`;
+    
+    setShareUrl(registerUrl);
+
     if (navigator.share) {
       navigator.share({
         title: 'Join DriveOn',
         text: shareText,
-      }).catch(() => {
-        navigator.clipboard.writeText(shareText);
-        toastUtils.success('Referral link copied!');
+        url: registerUrl,
+      }).catch((err) => {
+        // If native share is aborted by user, don't show fallback modal.
+        // Otherwise, show fallback modal.
+        if (err.name !== 'AbortError') {
+          setShowShareModal(true);
+        }
       });
     } else {
-      navigator.clipboard.writeText(shareText);
-      toastUtils.success('Referral link copied!');
+      setShowShareModal(true);
     }
   };
 
@@ -377,6 +386,91 @@ const ModuleReferralDashboardPage = () => {
         </div>
 
       </div>
+
+      {showShareModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowShareModal(false)}
+        >
+          <div 
+            className="w-full max-w-sm rounded-2xl p-6 bg-white shadow-2xl border animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Share Referral</h3>
+              <button 
+                onClick={() => setShowShareModal(false)}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                aria-label="Close modal"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <p className="text-xs text-gray-500 mb-4">
+              Share your referral link with friends to earn reward points when they join and rent a car.
+            </p>
+
+            <div className="space-y-2 mb-6">
+              {/* WhatsApp Share */}
+              <a 
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join DriveOn using my referral code: ${referralCode || reduxReferralCode || 'DRIVE123'}. Get amazing deals on car rentals!\n\n${shareUrl}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-800"
+              >
+                <span className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.965C16.588 2.023 14.12 1 11.503 1c-5.451 0-9.878 4.372-9.882 9.8-.001 1.77.476 3.498 1.381 5.03l-.995 3.637 3.753-.974v-.011zm11.722-6.84c-.307-.154-1.817-.897-2.099-1-.282-.103-.487-.154-.69.154-.204.307-.788.992-.966 1.196-.178.204-.356.229-.663.076-.307-.154-1.295-.477-2.468-1.517-.912-.81-1.529-1.81-1.708-2.116-.179-.307-.019-.473.134-.626.137-.137.307-.357.46-.536.154-.179.205-.307.307-.512.102-.204.051-.383-.026-.537-.076-.154-.69-1.658-.946-2.272-.249-.597-.502-.516-.69-.526-.178-.009-.383-.01-.589-.01-.205 0-.538.077-.82.384-.282.307-1.077 1.05-1.077 2.561 0 1.51 1.101 2.97 1.254 3.175.154.205 2.167 3.284 5.251 4.61.733.315 1.305.503 1.751.644.737.233 1.407.2 1.938.121.593-.089 1.817-.743 2.073-1.459.256-.716.256-1.33.179-1.458-.076-.128-.282-.204-.59-.358z"/>
+                  </svg>
+                </span>
+                Share on WhatsApp
+              </a>
+
+              {/* Email Share */}
+              <a 
+                href={`mailto:?subject=Join%20DriveOn&body=${encodeURIComponent(`Join DriveOn using my referral code: ${referralCode || reduxReferralCode || 'DRIVE123'}. Get amazing deals on car rentals!\n\n${shareUrl}`)}`}
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-800"
+              >
+                <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </span>
+                Share via Email
+              </a>
+
+              {/* Copy Link */}
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl);
+                  toastUtils.success('Referral link copied!');
+                }}
+                className="flex items-center gap-3 w-full p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-800 text-left cursor-pointer"
+              >
+                <span className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                </span>
+                Copy Referral Link
+              </button>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="w-full py-2.5 rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors text-sm font-semibold text-gray-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Navbar - Hidden on web */}
       <div className="md:hidden">
         <BottomNavbar />

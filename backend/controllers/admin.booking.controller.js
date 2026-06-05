@@ -3,8 +3,80 @@ import OutwardBooking from '../models/OutwardBooking.js';
 import Car from '../models/Car.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import Coupon from '../models/Coupon.js';
+import Offer from '../models/Offer.js';
 import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
 import { sendPushNotification } from '../services/firebase.service.js';
+
+/**
+ * Helper to enrich bookings with Coupon and Offer details
+ */
+const enrichBookingsWithPromoDetails = async (bookings) => {
+  if (!bookings || bookings.length === 0) return bookings;
+
+  // Extract all unique codes
+  const couponCodes = new Set();
+  const offerCodes = new Set();
+
+  bookings.forEach(booking => {
+    const couponCode = booking.pricing?.couponCode;
+    const offerCode = booking.pricing?.offerCode;
+    if (couponCode) couponCodes.add(couponCode.toUpperCase().trim());
+    if (offerCode) offerCodes.add(offerCode.toUpperCase().trim());
+  });
+
+  // Query database
+  const [coupons, offers] = await Promise.all([
+    couponCodes.size > 0 ? Coupon.find({ code: { $in: Array.from(couponCodes) } }).lean() : [],
+    offerCodes.size > 0 ? Offer.find({ code: { $in: Array.from(offerCodes) } }).lean() : []
+  ]);
+
+  // Create lookup maps
+  const couponMap = {};
+  coupons.forEach(c => {
+    couponMap[c.code] = {
+      code: c.code,
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      maxDiscount: c.maxDiscount,
+      description: c.description
+    };
+  });
+
+  const offerMap = {};
+  offers.forEach(o => {
+    offerMap[o.code] = {
+      code: o.code,
+      title: o.title,
+      discountType: o.discountType,
+      discountValue: o.discountValue,
+      description: o.description
+    };
+  });
+
+  // Enrich bookings
+  return bookings.map(booking => {
+    const bookingObj = booking.toObject ? booking.toObject() : booking;
+    if (bookingObj.pricing) {
+      const couponCode = bookingObj.pricing.couponCode;
+      const offerCode = bookingObj.pricing.offerCode;
+
+      if (couponCode && couponMap[couponCode.toUpperCase().trim()]) {
+        bookingObj.pricing.couponDetails = couponMap[couponCode.toUpperCase().trim()];
+      }
+      if (offerCode && offerMap[offerCode.toUpperCase().trim()]) {
+        bookingObj.pricing.offerDetails = offerMap[offerCode.toUpperCase().trim()];
+      }
+    }
+    return bookingObj;
+  });
+};
+
+const enrichSingleBookingWithPromoDetails = async (booking) => {
+  if (!booking) return booking;
+  const enriched = await enrichBookingsWithPromoDetails([booking]);
+  return enriched[0];
+};
 
 /**
  * @desc    Get all bookings (Admin)
@@ -77,7 +149,7 @@ export const getAllBookings = async (req, res) => {
     const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
     const bookings = await Booking.find(query)
-      .populate('user', 'name phone email')
+      .populate('user', 'name phone email age gender address profilePhoto')
       .populate('car', 'brand model year registrationNumber fuelType transmission seatingCapacity location')
       .populate('guarantor', 'name phone email')
       .populate('assignedDriver', 'name phone email status employeeId')
@@ -101,10 +173,12 @@ export const getAllBookings = async (req, res) => {
       ]).then(result => result[0]?.total || 0),
     };
 
+    const enrichedBookings = await enrichBookingsWithPromoDetails(bookings);
+
     res.json({
       success: true,
       data: {
-        bookings,
+        bookings: enrichedBookings,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -217,10 +291,11 @@ export const getBookingById = async (req, res) => {
     }
 
     console.log('✅ Returning booking:', booking.bookingId || booking._id);
+    const enrichedBooking = await enrichSingleBookingWithPromoDetails(booking);
     res.json({
       success: true,
       data: {
-        booking,
+        booking: enrichedBooking,
       },
     });
   } catch (error) {
@@ -406,11 +481,12 @@ export const updateBooking = async (req, res) => {
       }
     }
 
+    const enrichedBooking = await enrichSingleBookingWithPromoDetails(booking);
     res.json({
       success: true,
       message: 'Booking updated successfully',
       data: {
-        booking,
+        booking: enrichedBooking,
       },
     });
   } catch (error) {
@@ -435,7 +511,7 @@ export const getActiveBookingsWithTracking = async (req, res) => {
       status: { $in: ['confirmed', 'active'] },
       tripStatus: { $in: ['started', 'in_progress'] },
     })
-      .populate('user', 'name phone email')
+      .populate('user', 'name phone email age gender address profilePhoto')
       .populate('car', 'brand model year color registrationNumber images')
       .select('bookingId user car tripStart tripEnd currentLocation lastLocationUpdate isTrackingActive status tripStatus createdAt')
       .sort({ createdAt: -1 });
@@ -590,7 +666,8 @@ export const completeBookingWithPayment = async (req, res) => {
         }, true);
       }
 
-      return res.json({ success: true, message: 'Booking completed successfully', data: { booking } });
+      const enrichedBooking = await enrichSingleBookingWithPromoDetails(booking);
+      return res.json({ success: true, message: 'Booking completed successfully', data: { booking: enrichedBooking } });
     }
 
     if (!paymentMode || !['online', 'cash', 'partial', 'none'].includes(paymentMode)) {
@@ -693,10 +770,11 @@ export const completeBookingWithPayment = async (req, res) => {
       sendPushNotification(booking.user, payload, true);
     }
 
+    const enrichedBooking = await enrichSingleBookingWithPromoDetails(booking);
     res.json({
       success: true,
       message: 'Booking completed and payment recorded successfully',
-      data: { booking },
+      data: { booking: enrichedBooking },
     });
   } catch (error) {
     console.error('completeBookingWithPayment error:', error);

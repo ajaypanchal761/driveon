@@ -81,15 +81,25 @@ const CompletedBookingDetailsPage = () => {
             paymentType: bookingData.paymentOption || 'full',
             totalPrice: bookingData.pricing?.totalPrice || bookingData.totalPrice || 0,
             paidAmount: bookingData.paidAmount || 0,
-            remainingAmount: Math.max(0, (bookingData.pricing?.totalPrice || bookingData.totalPrice || 0) - (bookingData.paidAmount || 0)),
+            remainingAmount: bookingData.remainingAmount !== undefined ? bookingData.remainingAmount : (bookingData.pricing?.remainingPayment || 0),
             basePrice: bookingData.pricing?.basePrice || bookingData.basePrice || 0,
             weekendMultiplier: bookingData.pricing?.weekendMultiplier || 0,
             holidayMultiplier: bookingData.pricing?.holidayMultiplier || 0,
             timeOfDayMultiplier: bookingData.pricing?.timeOfDayMultiplier || 0,
             demandSurge: bookingData.pricing?.demandSurge || 0,
             durationPrice: bookingData.pricing?.durationPrice || 0,
+            pricing: bookingData.pricing || null,
+            totalDiscount: bookingData.pricing?.discount || bookingData.discount || 0,
+            offerDiscount: bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0,
+            couponDiscount: Math.max(0, (bookingData.pricing?.discount || bookingData.discount || 0) - (bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0)),
+            couponCode: bookingData.pricing?.couponCode || bookingData.couponCode,
+            offerCode: bookingData.pricing?.offerCode || bookingData.offerCode,
+            couponDetails: bookingData.pricing?.couponDetails || null,
+            offerDetails: bookingData.pricing?.offerDetails || null,
             user: bookingData.user || {},
             guarantor: bookingData.guarantor || {},
+            paymentOption: bookingData.paymentOption || 'N/A',
+            transactions: bookingData.transactions || [],
           };
 
           setBooking(formattedBooking);
@@ -317,25 +327,49 @@ const CompletedBookingDetailsPage = () => {
               Payment Details
             </h2>
             <div className="space-y-3 md:space-y-4">
-              <div className="pb-3 md:pb-4 border-b border-gray-200">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm md:text-base text-gray-600">Total Amount</span>
-                  <span className="text-lg md:text-xl font-bold text-gray-900">₹{booking.totalPrice.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm md:text-base text-gray-600">Paids Amount</span>
-                  <span className="text-sm md:text-base font-semibold text-green-600">₹{booking.paidAmount.toLocaleString('en-IN')}</span>
-                </div>
-                {(() => {
-                  // Calculate remaining amount correctly
-                  const calculatedRemaining = Math.max(0, booking.totalPrice - booking.paidAmount);
-                  return calculatedRemaining > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm md:text-base text-gray-600">Remaining</span>
-                      <span className="text-sm md:text-base font-semibold text-orange-600">₹{calculatedRemaining.toLocaleString('en-IN')}</span>
+              <div className="pb-3 md:pb-4 border-b border-gray-200 space-y-2">
+                {booking.totalDiscount > 0 && (
+                  <div className="flex justify-between items-center text-xs md:text-sm text-gray-600">
+                    <span>Subtotal (Before Discount)</span>
+                    <span className="font-semibold">₹{booking.totalPrice.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {booking.couponDiscount > 0 && (() => {
+                  const promoText = booking.couponDetails
+                    ? `${booking.couponCode} - ${booking.couponDetails.discountValue}${booking.couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`
+                    : (booking.couponCode || 'Applied');
+                  return (
+                    <div className="flex justify-between items-center text-xs md:text-sm text-green-600 font-medium">
+                      <span>Coupon Discount ({promoText})</span>
+                      <span>-₹{booking.couponDiscount.toLocaleString('en-IN')}</span>
                     </div>
                   );
                 })()}
+                {booking.offerDiscount > 0 && (() => {
+                  const promoText = booking.offerDetails
+                    ? `${booking.offerDetails.title} - ${booking.offerDetails.discountType === 'free' ? 'Free' : `${booking.offerDetails.discountValue}${booking.offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`}`
+                    : (booking.offerCode || 'Applied');
+                  return (
+                    <div className="flex justify-between items-center text-xs md:text-sm text-green-600 font-medium">
+                      <span>Offer Discount ({promoText})</span>
+                      <span>-₹{booking.offerDiscount.toLocaleString('en-IN')}</span>
+                    </div>
+                  );
+                })()}
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                  <span className="text-sm md:text-base text-gray-800 font-semibold">Total Amount</span>
+                  <span className="text-lg md:text-xl font-bold text-gray-950">₹{((booking.totalPrice - booking.totalDiscount) || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm md:text-base text-gray-600">Paid Amount</span>
+                  <span className="text-sm md:text-base font-semibold text-green-600">₹{booking.paidAmount.toLocaleString('en-IN')}</span>
+                </div>
+                {booking.remainingAmount > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm md:text-base text-gray-600">Remaining Amount</span>
+                    <span className="text-sm md:text-base font-semibold text-orange-600">₹{booking.remainingAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-xs md:text-sm font-medium text-gray-500 uppercase mb-2 block">Payment Type</label>
@@ -388,9 +422,31 @@ const CompletedBookingDetailsPage = () => {
                       <span className="text-gray-900">+₹{booking.durationPrice.toLocaleString('en-IN')}</span>
                     </div>
                   )}
+                  {booking.couponDiscount > 0 && (() => {
+                     const promoText = booking.couponDetails
+                       ? `${booking.couponCode} - ${booking.couponDetails.discountValue}${booking.couponDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`
+                       : (booking.couponCode || 'Applied');
+                     return (
+                       <div className="flex justify-between">
+                         <span className="text-green-600">Coupon Discount ({promoText})</span>
+                         <span className="text-green-600 font-semibold">-₹{booking.couponDiscount.toLocaleString('en-IN')}</span>
+                       </div>
+                     );
+                   })()}
+                   {booking.offerDiscount > 0 && (() => {
+                     const promoText = booking.offerDetails
+                       ? `${booking.offerDetails.title} - ${booking.offerDetails.discountType === 'free' ? 'Free' : `${booking.offerDetails.discountValue}${booking.offerDetails.discountType === 'percentage' ? '%' : ' Rs.'} Off`}`
+                       : (booking.offerCode || 'Applied');
+                     return (
+                       <div className="flex justify-between">
+                         <span className="text-green-600">Offer Discount ({promoText})</span>
+                         <span className="text-green-600 font-semibold">-₹{booking.offerDiscount.toLocaleString('en-IN')}</span>
+                       </div>
+                     );
+                   })()}
                   <div className="flex justify-between pt-2 md:pt-3 border-t border-gray-200 font-semibold">
-                    <span className="text-gray-900">Total</span>
-                    <span className="text-gray-900">₹{booking.totalPrice.toLocaleString('en-IN')}</span>
+                    <span className="text-gray-900 font-bold">Total</span>
+                    <span className="text-gray-900 font-bold">₹{(booking.totalPrice - booking.totalDiscount).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
