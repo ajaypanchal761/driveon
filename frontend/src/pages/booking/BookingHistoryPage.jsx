@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../hooks/redux';
 import { BOOKING_STATUS } from '../../constants';
@@ -26,8 +26,18 @@ const BookingHistoryPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('active'); // 'active', 'completed', 'cancelled'
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Hydrate allBookings state from cache
+  const [allBookings, setAllBookings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('driveon_all_bookings');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  
+  const [loading, setLoading] = useState(allBookings.length === 0);
   const [error, setError] = useState(null);
 
   // Get car image from assets based on car ID or index
@@ -37,7 +47,7 @@ const BookingHistoryPage = () => {
     return carImages[index % carImages.length];
   };
 
-  // Fetch bookings from API
+  // Fetch all bookings from API (background sync on mount)
   useEffect(() => {
     const fetchBookings = async () => {
       if (!isAuthenticated) {
@@ -46,26 +56,12 @@ const BookingHistoryPage = () => {
       }
 
       try {
-        setLoading(true);
         setError(null);
-
-        // Map tab to status - Active tab should show both 'active' and 'confirmed' bookings
-        let queryParams = {};
-        
-        if (activeTab === 'active') {
-          // For active tab, fetch bookings with status 'active' or 'confirmed' or 'pending'
-          // Don't filter by status, we'll filter on frontend
-          queryParams = {};
-        } else if (activeTab === 'completed') {
-          queryParams = { status: 'completed' };
-        } else if (activeTab === 'cancelled') {
-          queryParams = { status: 'cancelled' };
-        }
-
-        const response = await bookingService.getBookings(queryParams);
+        // Fetch ALL bookings at once to allow instant tab switching
+        const response = await bookingService.getBookings({});
 
         if (response.success && response.data?.bookings) {
-          let allBookings = response.data.bookings.map((booking) => {
+          const mappedBookings = response.data.bookings.map((booking) => {
             const car = booking.car || {};
             const carId = car._id || car.id || 'unknown';
             
@@ -94,35 +90,36 @@ const BookingHistoryPage = () => {
             };
           });
 
-          // Filter bookings based on active tab
-          if (activeTab === 'active') {
-            // Show bookings that are pending, confirmed, or active (not completed or cancelled)
-            allBookings = allBookings.filter(booking => 
-              ['pending', 'confirmed', 'active'].includes(booking.status)
-            );
-          } else if (activeTab === 'completed') {
-            allBookings = allBookings.filter(booking => booking.status === 'completed');
-          } else if (activeTab === 'cancelled') {
-            allBookings = allBookings.filter(booking => booking.status === 'cancelled');
-          }
-
-          setBookings(allBookings);
-        } else {
-          setBookings([]);
+          setAllBookings(mappedBookings);
+          localStorage.setItem('driveon_all_bookings', JSON.stringify(mappedBookings));
         }
       } catch (err) {
         console.error('Error fetching bookings:', err);
-        setError(err.response?.data?.message || 'Failed to fetch bookings');
-        setBookings([]);
+        // Only set error if we don't have any cached data to display
+        if (allBookings.length === 0) {
+          setError(err.response?.data?.message || 'Failed to fetch bookings');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchBookings();
-  }, [activeTab, isAuthenticated]);
+  }, [isAuthenticated]);
 
-  const currentBookings = bookings;
+  // Compute displayed bookings based on activeTab using useMemo (instant filter!)
+  const currentBookings = useMemo(() => {
+    if (activeTab === 'active') {
+      return allBookings.filter(booking => 
+        ['pending', 'confirmed', 'active'].includes(booking.status)
+      );
+    } else if (activeTab === 'completed') {
+      return allBookings.filter(booking => booking.status === 'completed');
+    } else if (activeTab === 'cancelled') {
+      return allBookings.filter(booking => booking.status === 'cancelled');
+    }
+    return allBookings;
+  }, [allBookings, activeTab]);
 
   const handleReBook = (carId) => {
     navigate(`/rent-now/${carId}`);
