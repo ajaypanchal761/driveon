@@ -2145,7 +2145,7 @@ export const sendRoleNotification = async (req, res) => {
       recipientModel: recipientModel,
       title,
       message,
-      type: 'info',
+      type: 'broadcast',
       image: imageUrl,
       isSent: true
     }));
@@ -2207,35 +2207,98 @@ export const getSentNotifications = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const query = { recipientModel: { $in: ['Staff', 'User'] } };
+    const matchQuery = {
+      $or: [
+        { type: 'broadcast' },
+        { type: 'info', relatedId: null }
+      ],
+      recipientModel: { $in: ['Staff', 'User'] }
+    };
 
-    const total = await Notification.countDocuments(query);
-    const notifications = await Notification.find(query)
-      .populate('recipient', 'name role email phone')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const pipeline = [
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: {
+            title: '$title',
+            message: '$message',
+            image: '$image',
+            recipientModel: '$recipientModel',
+            dateGroup: {
+              $dateToString: { format: '%Y-%m-%d %H:%M', date: '$createdAt' }
+            }
+          },
+          createdAt: { $first: '$createdAt' },
+          recipientCount: { $sum: 1 },
+          sampleRecipient: { $first: '$recipient' }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [{ $skip: skip }, { $limit: limit }]
+        }
+      }
+    ];
+
+    const result = await Notification.aggregate(pipeline);
+    const notificationsGrouped = result[0]?.data || [];
+    const total = result[0]?.metadata[0]?.total || 0;
+
+    const staffIds = [];
+    const userIds = [];
+
+    notificationsGrouped.forEach(notif => {
+      if (notif.sampleRecipient) {
+        if (notif._id.recipientModel === 'User') {
+          userIds.push(notif.sampleRecipient);
+        } else {
+          staffIds.push(notif.sampleRecipient);
+        }
+      }
+    });
+
+    const [staffList, userList] = await Promise.all([
+      staffIds.length > 0 ? mongoose.model('Staff').find({ _id: { $in: staffIds } }).select('name role email phone').lean() : [],
+      userIds.length > 0 ? mongoose.model('User').find({ _id: { $in: userIds } }).select('name email phone').lean() : []
+    ]);
+
+    const staffMap = {};
+    staffList.forEach(s => { staffMap[s._id.toString()] = s; });
+
+    const userMap = {};
+    userList.forEach(u => { userMap[u._id.toString()] = u; });
+
+    const formattedNotifications = notificationsGrouped.map((notif, idx) => {
+      const isUser = notif._id.recipientModel === 'User';
+      const sampleRecId = notif.sampleRecipient ? notif.sampleRecipient.toString() : null;
+      const recipientDetails = isUser ? userMap[sampleRecId] : staffMap[sampleRecId];
+
+      const roleName = isUser ? 'Customer' : (recipientDetails?.role || 'Staff');
+      
+      return {
+        id: `${notif._id.title}-${notif._id.message}-${notif.createdAt}-${idx}`,
+        title: notif._id.title,
+        message: notif._id.message,
+        type: 'broadcast',
+        image: notif._id.image,
+        createdAt: notif.createdAt,
+        recipientModel: notif._id.recipientModel,
+        recipient: {
+          id: sampleRecId || '',
+          name: isUser ? `All Customers` : `All ${roleName}s`,
+          role: roleName,
+          email: `${notif.recipientCount} Recipients`,
+          phone: `Total: ${notif.recipientCount}`
+        }
+      };
+    });
 
     res.status(200).json({
       success: true,
       data: {
-        notifications: notifications.map(notif => ({
-          id: notif._id,
-          title: notif.title,
-          message: notif.message,
-          type: notif.type,
-          image: notif.image,
-          isRead: notif.isRead,
-          createdAt: notif.createdAt,
-          recipientModel: notif.recipientModel,
-          recipient: notif.recipient ? {
-            id: notif.recipient._id,
-            name: notif.recipient.name,
-            role: notif.recipientModel === 'User' ? 'Customer' : (notif.recipient.role || 'Staff'),
-            email: notif.recipient.email,
-            phone: notif.recipient.phone
-          } : null
-        })),
+        notifications: formattedNotifications,
         pagination: {
           page,
           limit,

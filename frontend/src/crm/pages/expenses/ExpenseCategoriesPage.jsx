@@ -149,10 +149,13 @@ const ExpenseCategoriesPage = () => {
     };
 
     // Filtered categories based on search
-    const filteredCategories = categories.filter(cat => 
-        cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCategories = categories.filter(cat => {
+        const cleanSearch = searchTerm.trim().toLowerCase();
+        return (
+            cat.name.toLowerCase().includes(cleanSearch) ||
+            (cat.description || '').toLowerCase().includes(cleanSearch)
+        );
+    });
 
     return (
         <div className="space-y-6">
@@ -236,7 +239,7 @@ const ExpenseCategoriesPage = () => {
                                 placeholder="Search categories..."
                                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1c205c]/10 focus:border-[#1c205c] transition-all"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                             />
                         </div>
 

@@ -248,7 +248,7 @@ const DriverAssignmentPage = () => {
               placeholder="Search by Booking ID, customer, or location..."
               className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20 focus:border-[#1C205C] font-semibold text-xs text-gray-700 transition-all shadow-inner"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value.trimStart())}
             />
           </div>
 

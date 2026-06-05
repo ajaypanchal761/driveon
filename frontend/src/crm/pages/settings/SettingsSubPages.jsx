@@ -297,10 +297,13 @@ export const LocationsPage = () => {
         }
     };
 
-    const filteredCities = cities.filter(city =>
-        city.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        city.state.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCities = cities.filter(city => {
+        const cleanSearch = searchTerm.trim().toLowerCase();
+        return (
+            city.name.toLowerCase().includes(cleanSearch) ||
+            city.state.toLowerCase().includes(cleanSearch)
+        );
+    });
 
     return (
         <div className="space-y-6">
@@ -331,7 +334,7 @@ export const LocationsPage = () => {
                             placeholder="Search cities..."
                             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all text-sm"
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                         />
                     </div>
                     <button

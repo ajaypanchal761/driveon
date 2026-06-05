@@ -504,12 +504,12 @@ const AdminNotificationsPage = () => {
                 </table>
 
                 {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex justify-between items-center mt-6">
+                {totalPages >= 1 && (
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
                     <span className="text-sm text-gray-400">
                       Page {page} of {totalPages}
                     </span>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 items-center">
                       <button
                         onClick={() => {
                           if (page > 1) {
@@ -521,6 +521,46 @@ const AdminNotificationsPage = () => {
                       >
                         Previous
                       </button>
+
+                      {/* Numeric page buttons */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                        // Show first page, last page, current page, and pages immediately adjacent to current page
+                        if (
+                          p === 1 ||
+                          p === totalPages ||
+                          Math.abs(p - page) <= 1
+                        ) {
+                          return (
+                            <button
+                              key={p}
+                              onClick={() => fetchHistory(p)}
+                              className={`px-3 py-1.5 text-sm border rounded-lg transition-all font-semibold ${
+                                page === p
+                                  ? 'text-white border-transparent font-bold shadow-md shadow-indigo-900/10'
+                                  : 'text-gray-400 border-gray-100/10 hover:bg-gray-100/10 hover:text-white'
+                              }`}
+                              style={page === p ? { backgroundColor: colors.backgroundTertiary } : {}}
+                            >
+                              {p}
+                            </button>
+                          );
+                        }
+                        
+                        // Show ellipsis if there's a gap
+                        if (
+                          (p === 2 && page > 3) ||
+                          (p === totalPages - 1 && page < totalPages - 2)
+                        ) {
+                          return (
+                            <span key={`ellipsis-${p}`} className="text-gray-500 px-1 select-none">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        return null;
+                      })}
+
                       <button
                         onClick={() => {
                           if (page < totalPages) {

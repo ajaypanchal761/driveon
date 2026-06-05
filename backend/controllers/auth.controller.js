@@ -1520,3 +1520,96 @@ export const uploadStaffPhoto = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Update Staff Profile (Name & Email only)
+ * @route   PUT /api/auth/staff-profile
+ * @access  Private (Staff)
+ */
+export const updateStaffProfile = async (req, res) => {
+  try {
+    const staffId = req.user._id;
+    const { name, email } = req.body;
+
+    const staff = await Staff.findById(staffId);
+    if (!staff) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff profile not found',
+      });
+    }
+
+    if (name !== undefined) {
+      staff.name = name;
+    }
+    
+    if (email !== undefined) {
+      // Basic email validation if email is changing
+      if (email && email !== staff.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid email format',
+          });
+        }
+        
+        // Check if email is already taken by another staff member
+        const emailExists = await Staff.findOne({ email, _id: { $ne: staffId } });
+        if (emailExists) {
+          return res.status(400).json({
+            success: false,
+            message: 'Email is already in use by another account',
+          });
+        }
+        staff.email = email;
+      } else if (email === '') {
+        staff.email = '';
+      }
+    }
+
+    await staff.save();
+
+    // Fetch permissions associated with this role
+    let permissions = [];
+    try {
+      if (staff.role) {
+        const crmRole = await CRMRole.findOne({
+          roleName: { $regex: new RegExp(`^${staff.role}$`, 'i') }
+        });
+        if (crmRole) {
+          permissions = crmRole.permissions || [];
+        }
+      }
+    } catch (roleError) {
+      console.error('Error fetching role permissions in update:', roleError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: staff._id,
+          name: staff.name,
+          email: staff.email,
+          role: staff.role,
+          permissions,
+          employeeId: staff.employeeId,
+          phone: staff.phone,
+          department: staff.department,
+          avatar: staff.avatar,
+          joinDate: staff.joinDate,
+          status: staff.status
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update staff profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating staff profile',
+      error: error.message
+    });
+  }
+};

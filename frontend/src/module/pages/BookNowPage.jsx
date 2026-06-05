@@ -1089,13 +1089,13 @@ const BookNowPage = () => {
       setIsProcessing(false);
 
       let serverMessage = err.response?.data?.message || err.message;
-      
+
       if (err.response?.data?.errors) {
         const errorStrings = err.response.data.errors.map(e => `${e.field}: ${e.message}`).join("\n");
         serverMessage = "Validation errors:\n" + errorStrings;
         console.error("Validation errors array:", err.response.data.errors);
       }
-      
+
       alert(serverMessage);
       setSubmitWarning(serverMessage);
     }
@@ -1298,155 +1298,155 @@ const BookNowPage = () => {
 
             {/* Personal Details Fields */}
             <div
-                className="space-y-3 p-3 rounded-lg"
-                style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
+              className="space-y-3 p-3 rounded-lg"
+              style={{ backgroundColor: `${colors.backgroundTertiary}10` }}
+            >
+              <h4
+                className="text-xs font-bold mb-2"
+                style={{ color: colors.textPrimary }}
               >
-                <h4
-                  className="text-xs font-bold mb-2"
+                Personal Details
+              </h4>
+
+              {/* Name */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5"
                   style={{ color: colors.textPrimary }}
                 >
-                  Personal Details
-                </h4>
-
-                {/* Name */}
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    value={personalDetails.name}
-                    onChange={(e) =>
-                      setPersonalDetails((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter your name"
-                    autoComplete="off"
-                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={personalDetails.phone}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      setPersonalDetails((prev) => ({
-                        ...prev,
-                        phone: value,
-                      }));
-                    }}
-                    placeholder="Enter your phone number"
-                    autoComplete="off"
-                    maxLength={10}
-                    inputMode="numeric"
-                    pattern="[0-9]{10}"
-                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={personalDetails.email}
-                    onChange={(e) =>
-                      setPersonalDetails((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter your email"
-                    autoComplete="off"
-                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                </div>
-
-                {/* Age */}
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Age
-                  </label>
-                  <input
-                    type="number"
-                    value={personalDetails.age}
-                    onChange={(e) =>
-                      setPersonalDetails((prev) => ({
-                        ...prev,
-                        age: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter your age"
-                    min="18"
-                    autoComplete="off"
-                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                    style={{
-                      borderColor: colors.borderMedium,
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.textPrimary,
-                    }}
-                  />
-                </div>
-
-                {/* Gender */}
-                <div>
-                  <label
-                    className="block text-xs font-semibold mb-1.5"
-                    style={{ color: colors.textPrimary }}
-                  >
-                    Gender
-                  </label>
-                  <CustomSelect
-                    value={personalDetails.gender}
-                    onChange={(value) =>
-                      setPersonalDetails((prev) => ({ ...prev, gender: value }))
-                    }
-                    options={[
-                      { label: "Male", value: "male" },
-                      { label: "Female", value: "female" },
-                      { label: "Other", value: "other" },
-                    ]}
-                    placeholder="Select gender"
-                  />
-                </div>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={personalDetails.name}
+                  onChange={(e) =>
+                    setPersonalDetails((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter your name"
+                  autoComplete="off"
+                  className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                  style={{
+                    borderColor: colors.borderMedium,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary,
+                  }}
+                />
               </div>
+
+              {/* Phone */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={personalDetails.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setPersonalDetails((prev) => ({
+                      ...prev,
+                      phone: value,
+                    }));
+                  }}
+                  placeholder="Enter your phone number"
+                  autoComplete="off"
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                  style={{
+                    borderColor: colors.borderMedium,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary,
+                  }}
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={personalDetails.email}
+                  onChange={(e) =>
+                    setPersonalDetails((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter your email"
+                  autoComplete="off"
+                  className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                  style={{
+                    borderColor: colors.borderMedium,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary,
+                  }}
+                />
+              </div>
+
+              {/* Age */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Age
+                </label>
+                <input
+                  type="number"
+                  value={personalDetails.age}
+                  onChange={(e) =>
+                    setPersonalDetails((prev) => ({
+                      ...prev,
+                      age: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter your age"
+                  min="18"
+                  autoComplete="off"
+                  className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                  style={{
+                    borderColor: colors.borderMedium,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.textPrimary,
+                  }}
+                />
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label
+                  className="block text-xs font-semibold mb-1.5"
+                  style={{ color: colors.textPrimary }}
+                >
+                  Gender
+                </label>
+                <CustomSelect
+                  value={personalDetails.gender}
+                  onChange={(value) =>
+                    setPersonalDetails((prev) => ({ ...prev, gender: value }))
+                  }
+                  options={[
+                    { label: "Male", value: "male" },
+                    { label: "Female", value: "female" },
+                    { label: "Other", value: "other" },
+                  ]}
+                  placeholder="Select gender"
+                />
+              </div>
+            </div>
           </motion.div>
 
           {/* Add-on Services Section */}
@@ -1482,148 +1482,148 @@ const BookNowPage = () => {
 
             {showAddons && (
               <div className="space-y-3 pt-2 mt-2 border-t" style={{ borderColor: colors.borderMedium }}>
-              {allAddOnServices.map((service) => (
-                <div
-                  key={service._id || service.key}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
-                  style={{
-                    borderColor: colors.borderMedium,
-                    backgroundColor: colors.backgroundSecondary,
-                  }}
-                >
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{
-                        backgroundColor: `${colors.backgroundTertiary}15`,
-                      }}
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        style={{ color: colors.backgroundTertiary }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                {allAddOnServices.map((service) => (
+                  <div
+                    key={service._id || service.key}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border-2 gap-3 sm:gap-0"
+                    style={{
+                      borderColor: colors.borderMedium,
+                      backgroundColor: colors.backgroundSecondary,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{
+                          backgroundColor: `${colors.backgroundTertiary}15`,
+                        }}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: colors.textPrimary }}
-                      >
-                        {service.name}
-                      </p>
-
-
-                      <p
-                        className="text-xs font-medium mt-0.5"
-                        style={{ color: colors.backgroundTertiary }}
-                      >
-                        ₹{service.price} per unit
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    {service.singleUnitOnly ? (
-                      <div className="flex items-center gap-3">
-                        {(serviceQuantities[service.key] || 0) > 0 && (
-                          <span
-                            className="text-xs font-semibold mr-2"
-                            style={{ color: colors.backgroundTertiary }}
-                          >
-                            ₹{service.price}
-                          </span>
-                        )}
-                        <input
-                          type="checkbox"
-                          checked={(serviceQuantities[service.key] || 0) > 0}
-                          onChange={(e) => {
-                            const newQty = e.target.checked ? 1 : 0;
-                            handleServiceQtyChange(service.key, newQty);
-                          }}
-                          className="w-5 h-5 rounded border-2 transition-all cursor-pointer"
-                          style={{ borderColor: (serviceQuantities[service.key] || 0) > 0 ? colors.backgroundTertiary : colors.borderCheckbox }}
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        {(serviceQuantities[service.key] || 0) > 0 && (
-                          <span
-                            className="text-xs font-semibold mr-2"
-                            style={{ color: colors.backgroundTertiary }}
-                          >
-                            ₹{(serviceQuantities[service.key] || 0) * service.price}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
-                          }
-                          className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                          style={{
-                            borderColor: colors.borderMedium,
-                            color: colors.textPrimary,
-                          }}
+                        <svg
+                          className="w-5 h-5"
+                          style={{ color: colors.backgroundTertiary }}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M20 12H4"
-                            />
-                          </svg>
-                        </button>
-                        <span
-                          className="w-8 text-center text-sm font-semibold"
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <p
+                          className="text-sm font-semibold"
                           style={{ color: colors.textPrimary }}
                         >
-                          {serviceQuantities[service.key] || 0}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
-                          }
-                          className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
-                          style={{
-                            borderColor: colors.borderMedium,
-                            color: colors.textPrimary,
-                          }}
+                          {service.name}
+                        </p>
+
+
+                        <p
+                          className="text-xs font-medium mt-0.5"
+                          style={{ color: colors.backgroundTertiary }}
                         >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                          ₹{service.price} per unit
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {service.singleUnitOnly ? (
+                        <div className="flex items-center gap-3">
+                          {(serviceQuantities[service.key] || 0) > 0 && (
+                            <span
+                              className="text-xs font-semibold mr-2"
+                              style={{ color: colors.backgroundTertiary }}
+                            >
+                              ₹{service.price}
+                            </span>
+                          )}
+                          <input
+                            type="checkbox"
+                            checked={(serviceQuantities[service.key] || 0) > 0}
+                            onChange={(e) => {
+                              const newQty = e.target.checked ? 1 : 0;
+                              handleServiceQtyChange(service.key, newQty);
+                            }}
+                            className="w-5 h-5 rounded border-2 transition-all cursor-pointer"
+                            style={{ borderColor: (serviceQuantities[service.key] || 0) > 0 ? colors.backgroundTertiary : colors.borderCheckbox }}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          {(serviceQuantities[service.key] || 0) > 0 && (
+                            <span
+                              className="text-xs font-semibold mr-2"
+                              style={{ color: colors.backgroundTertiary }}
+                            >
+                              ₹{(serviceQuantities[service.key] || 0) * service.price}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleServiceQtyChange(service.key, Math.max(0, (serviceQuantities[service.key] || 0) - 1))
+                            }
+                            className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                            style={{
+                              borderColor: colors.borderMedium,
+                              color: colors.textPrimary,
+                            }}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 4v16m8-8H4"
-                            />
-                          </svg>
-                        </button>
-                      </>
-                    )}
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M20 12H4"
+                              />
+                            </svg>
+                          </button>
+                          <span
+                            className="w-8 text-center text-sm font-semibold"
+                            style={{ color: colors.textPrimary }}
+                          >
+                            {serviceQuantities[service.key] || 0}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleServiceQtyChange(service.key, (serviceQuantities[service.key] || 0) + 1)
+                            }
+                            className="w-8 h-8 rounded-lg flex items-center justify-center border-2"
+                            style={{
+                              borderColor: colors.borderMedium,
+                              color: colors.textPrimary,
+                            }}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 4v16m8-8H4"
+                              />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             )}
           </motion.div>
 
@@ -1765,19 +1765,6 @@ const BookNowPage = () => {
                         boxShadow: isCurrentApplied ? "0 4px 15px rgba(0, 0, 0, 0.05)" : "none",
                       }}
                     >
-
-
-                      <span
-                        className="absolute -top-3 right-2 px-3 py-1 text-xs font-bold text-white rounded-full uppercase tracking-wider shadow-sm"
-                        style={{ backgroundColor: colors.backgroundTertiary }}
-                      >
-                        {offer.discountType === 'percentage'
-                          ? `${offer.discountValue}% Off`
-                          : offer.discountType === 'fixed'
-                            ? `₹${offer.discountValue} Off`
-                            : '100% FREE'}
-                      </span>
-
                       <div className="mb-4">
                         <h3 className="font-bold text-sm text-gray-800 mb-1 line-clamp-1">{offer.title}</h3>
                       </div>

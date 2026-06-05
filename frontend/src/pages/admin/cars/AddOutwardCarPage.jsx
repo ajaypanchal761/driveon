@@ -13,6 +13,13 @@ const isValidPhone = (value) => {
   return digits.length === 10;
 };
 
+const isValidCarNumber = (num) => {
+  if (!num) return false;
+  const cleaned = String(num).replace(/[^A-Z0-9]/g, '').toUpperCase();
+  const regex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
+  return regex.test(cleaned);
+};
+
 const AddOutwardCarPage = () => {
   const navigate = useNavigate();
   const routerLocation = useLocation();
@@ -37,6 +44,7 @@ const AddOutwardCarPage = () => {
   const [agreementPricePerMonth, setAgreementPricePerMonth] = useState('');
   const [vendorAgreementType, setVendorAgreementType] = useState('daily');
   const [carNumber, setCarNumber] = useState('');
+  const [carNumberTouched, setCarNumberTouched] = useState(false);
   const [image, setImage] = useState('');
   const [imagePreview, setImagePreview] = useState('');
   const [rating, setRating] = useState('5');
@@ -135,6 +143,7 @@ const AddOutwardCarPage = () => {
     const price = Number(pricePerDay);
     if (!Number.isFinite(price) || price <= 0) return false;
     if (!carNumber.trim()) return false;
+    if (!isValidCarNumber(carNumber)) return false;
     return true;
   }, [ownerName, ownerPhone, brand, model, location, pricePerDay, carNumber]);
 
@@ -164,6 +173,7 @@ const AddOutwardCarPage = () => {
     setAgreementPricePerMonth('');
     setVendorAgreementType('daily');
     setCarNumber('');
+    setCarNumberTouched(false);
     setImage('');
     setImagePreview('');
     setRating('5');
@@ -697,7 +707,7 @@ const AddOutwardCarPage = () => {
                       <input
                         type="text"
                         value={carNumber}
-                        onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
+                        onChange={(e) => setCarNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                         placeholder="e.g. MP09AB1234"
                         className="w-full px-4 py-2.5 rounded-xl border outline-none transition-all duration-200 bg-white uppercase font-mono tracking-wider"
                         style={{
@@ -708,10 +718,16 @@ const AddOutwardCarPage = () => {
                           e.target.style.boxShadow = `0 0 0 4px ${colors.shadowFocus}`;
                         }}
                         onBlur={(e) => {
+                          setCarNumberTouched(true);
                           e.target.style.borderColor = colors.borderMedium;
                           e.target.style.boxShadow = 'none';
                         }}
                       />
+                      {carNumberTouched && carNumber && !isValidCarNumber(carNumber) && (
+                        <p className="text-xs mt-1.5 text-red-500 font-medium">
+                          Invalid format. E.g., MP41HG5263
+                        </p>
+                      )}
                     </div>
 
                     <div>

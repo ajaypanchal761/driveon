@@ -305,19 +305,25 @@ const ModuleKYCStatusPage = () => {
 
                     {doc.id === 'drivingLicense' && (
                       <>
-                        <input
-                          type="text"
-                          value={dlNumber}
-                          onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
-                          placeholder="Driving License Number"
-                          className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none"
-                        />
-                        <input
-                          type="date"
-                          value={dlDob}
-                          onChange={(e) => setDlDob(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none"
-                        />
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-700">Driving License Number</label>
+                          <input
+                            type="text"
+                            value={dlNumber}
+                            onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                            placeholder="Driving License Number"
+                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-700">Enter expiry date</label>
+                          <input
+                            type="date"
+                            value={dlDob}
+                            onChange={(e) => setDlDob(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none"
+                          />
+                        </div>
                         <button
                           onClick={handleVerifyDl}
                           disabled={isSubmitting || !dlNumber || !dlDob}

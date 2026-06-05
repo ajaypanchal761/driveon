@@ -34,7 +34,27 @@ const KANBAN_COLUMNS = [
 const EnquiriesPage = () => {
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' or 'list'
   const [activeTab, setActiveTab] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
   
+  // Filter leads based on tab and search query
+  const filteredLeads = MOCK_LEADS.filter(lead => {
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = !cleanSearch ||
+      lead.name.toLowerCase().includes(cleanSearch) ||
+      (lead.phone || '').includes(cleanSearch) ||
+      (lead.car || '').toLowerCase().includes(cleanSearch);
+      
+    if (!matchesSearch) return false;
+    
+    if (activeTab === 'All') return true;
+    if (activeTab === 'New') return lead.status === 'New';
+    if (activeTab === 'In Progress') return lead.status === 'In Progress';
+    if (activeTab === 'Follow-ups') return lead.status === 'Follow-Up';
+    if (activeTab === 'Converted') return lead.status === 'Converted';
+    if (activeTab === 'Closed') return lead.status === 'Closed';
+    return true;
+  });
+
   // Tab Filters
   const tabs = ['All', 'New', 'In Progress', 'Follow-ups', 'Converted', 'Closed'];
 
@@ -82,6 +102,8 @@ const EnquiriesPage = () => {
                  type="text" 
                  placeholder="Search name, phone..." 
                  className="pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-48"
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                />
             </div>
             
@@ -112,13 +134,13 @@ const EnquiriesPage = () => {
                     <div className={`p-3 rounded-t-xl border-t border-x ${column.color} font-bold flex justify-between items-center bg-opacity-50`}>
                        <span>{column.title}</span>
                        <span className="text-xs bg-white/50 px-2 py-0.5 rounded-full">
-                          {MOCK_LEADS.filter(l => l.status === column.id).length}
+                          {filteredLeads.filter(l => l.status === column.id).length}
                        </span>
                     </div>
 
                     {/* Column Body / Droppable Area */}
                     <div className="flex-1 bg-gray-50/50 border-x border-b border-gray-200 rounded-b-xl p-2 overflow-y-auto space-y-3">
-                       {MOCK_LEADS.filter(l => l.status === column.id).map(lead => (
+                       {filteredLeads.filter(l => l.status === column.id).map(lead => (
                           <motion.div 
                             key={lead.id}
                             whileHover={{ y: -2 }}
@@ -164,7 +186,7 @@ const EnquiriesPage = () => {
                        ))}
                        
                        {/* Drop Placeholder if empty */}
-                       {MOCK_LEADS.filter(l => l.status === column.id).length === 0 && (
+                       {filteredLeads.filter(l => l.status === column.id).length === 0 && (
                           <div className="h-20 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">
                              Drop here
                           </div>
@@ -191,7 +213,7 @@ const EnquiriesPage = () => {
                   </tr>
                </thead>
                <tbody className="divide-y divide-gray-100">
-                  {MOCK_LEADS.map(lead => (
+                  {filteredLeads.map(lead => (
                      <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                            <p className="font-bold text-gray-900">{lead.name}</p>

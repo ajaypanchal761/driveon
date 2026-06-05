@@ -17,7 +17,11 @@ const carFormSchema = z.object({
   model: z.string().min(1, 'Model is required'),
   year: z.number().min(1900).max(new Date().getFullYear() + 1),
   color: z.string().optional(),
-  registrationNumber: z.string().min(1, 'Registration number is required'),
+  registrationNumber: z.string()
+    .min(1, 'Registration number is required')
+    .regex(/^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/, {
+      message: 'Invalid registration number format. E.g., MP41HG5263'
+    }),
 
   // Car Type & Category
   carType: z.enum(['sedan', 'suv', 'hatchback', 'luxury', 'sports', 'compact', 'muv', 'coupe']),
@@ -61,6 +65,7 @@ const AddCarPage = () => {
     setValue,
   } = useForm({
     resolver: zodResolver(carFormSchema),
+    mode: 'onTouched',
     defaultValues: {
       isAvailable: true,
       carType: 'sedan',
@@ -273,7 +278,8 @@ const AddCarPage = () => {
                   error={errors.registrationNumber?.message}
                   {...register('registrationNumber', {
                     onChange: (e) => {
-                      e.target.value = e.target.value.toUpperCase();
+                      // Convert to uppercase and strip non-alphanumeric characters
+                      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
                     }
                   })}
                   className="uppercase"

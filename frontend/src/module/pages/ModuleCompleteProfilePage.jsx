@@ -1148,29 +1148,35 @@ const ModuleCompleteProfilePage = () => {
 
                     {!(user?.kycDetails?.dl?.verified || user?.kycDetails?.dl?.isVerified) ? (
                       <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={dlNumber}
-                          onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
-                          placeholder="DL Number (e.g. DL1420110012345)"
-                          className="w-full px-4 py-2 rounded-lg border focus:outline-none uppercase"
-                          style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
-                        />
-                        <div className="flex gap-2">
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-700">Driving License Number</label>
                           <input
-                            type="date"
-                            value={dlDob}
-                            onChange={(e) => setDlDob(e.target.value)}
-                            className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
+                            type="text"
+                            value={dlNumber}
+                            onChange={(e) => setDlNumber(e.target.value.toUpperCase())}
+                            placeholder="DL Number (e.g. DL1420110012345)"
+                            className="w-full px-4 py-2 rounded-lg border focus:outline-none uppercase"
                             style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
                           />
-                          <button
-                            onClick={handleVerifyDl}
-                            disabled={isVerifyingDl || !dlNumber || !dlDob}
-                            className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
-                          >
-                            {isVerifyingDl ? '...' : 'Verify via QuickEKYC'}
-                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-700">Enter expiry date</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="date"
+                              value={dlDob}
+                              onChange={(e) => setDlDob(e.target.value)}
+                              className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
+                              style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                            />
+                            <button
+                              onClick={handleVerifyDl}
+                              disabled={isVerifyingDl || !dlNumber || !dlDob}
+                              className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
+                            >
+                              {isVerifyingDl ? '...' : 'Verify via QuickEKYC'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ) : (

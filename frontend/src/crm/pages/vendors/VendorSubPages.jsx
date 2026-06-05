@@ -1042,12 +1042,15 @@ export const AllVendorsPage = () => {
         owner.name.toLowerCase().includes((newVendor.name || '').toLowerCase())
     );
 
-    const filteredVendors = vendors.filter(vendor =>
-        vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.type.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredVendors = vendors.filter(vendor => {
+        const cleanSearch = searchTerm.trim().toLowerCase();
+        return (
+            vendor.name.toLowerCase().includes(cleanSearch) ||
+            vendor.email.toLowerCase().includes(cleanSearch) ||
+            vendor.phone.toLowerCase().includes(cleanSearch) ||
+            vendor.type.toLowerCase().includes(cleanSearch)
+        );
+    });
 
     const validate = () => {
         let tempErrors = {};
@@ -1152,7 +1155,7 @@ export const AllVendorsPage = () => {
                             placeholder="Search vendors..."
                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#212c40]/20 focus:border-[#212c40] transition-all shadow-sm"
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                         />
                     </div>
                     <button

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { motion } from 'framer-motion';
-import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle, FiHeadphones, FiCamera } from 'react-icons/fi';
+import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle, FiHeadphones, FiCamera, FiImage, FiEdit } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AnimatePresence } from 'framer-motion';
@@ -16,12 +16,45 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { unreadCount } = useEmployee();
-    const fileInputRef = React.useRef(null);
+    const galleryInputRef = React.useRef(null);
+    const cameraInputRef = React.useRef(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [showSourceModal, setShowSourceModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editName, setEditName] = useState('');
+    const [editEmail, setEditEmail] = useState('');
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+    const handleSaveProfile = async (e) => {
+        e.preventDefault();
+        if (!editName.trim()) {
+            toast.error('Name is required');
+            return;
+        }
+
+        setIsSavingProfile(true);
+        const loadingToast = toast.loading('Saving changes...');
+        try {
+            const response = await api.put('/auth/staff-profile', {
+                name: editName.trim(),
+                email: editEmail.trim(),
+            });
+            if (response.data.success) {
+                toast.success('Profile updated successfully', { id: loadingToast });
+                dispatch(updateUser(response.data.data.user));
+                setShowEditModal(false);
+            }
+        } catch (error) {
+            console.error('Update profile error:', error);
+            toast.error(error.response?.data?.message || 'Failed to update profile', { id: loadingToast });
+        } finally {
+            setIsSavingProfile(false);
+        }
+    };
 
     const handleAvatarClick = () => {
         if (!isUploading) {
-            fileInputRef.current.click();
+            setShowSourceModal(true);
         }
     };
 
@@ -55,6 +88,8 @@ const ProfilePage = () => {
             toast.error(error.response?.data?.message || 'Failed to upload photo', { id: loadingToast });
         } finally {
             setIsUploading(false);
+            if (galleryInputRef.current) galleryInputRef.current.value = '';
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
         }
     };
 
@@ -98,8 +133,23 @@ const ProfilePage = () => {
     };
 
     useEffect(() => {
-        // No extra fetching needed for now
-    }, [userData]);
+        if (userData) {
+            setEditName(userData.name || '');
+            setEditEmail(userData.email || '');
+        }
+    }, [userData, showEditModal]);
+
+    // Lock background body scroll when any modal or bottom sheet is open
+    useEffect(() => {
+        if (showDeleteModal || showSourceModal || showEditModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showDeleteModal, showSourceModal, showEditModal]);
 
     if (isInitializing || !userData) {
         return (
@@ -143,9 +193,17 @@ const ProfilePage = () => {
                             <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
                                 <input 
                                     type="file" 
-                                    ref={fileInputRef} 
+                                    ref={galleryInputRef} 
                                     onChange={handleFileChange} 
                                     accept="image/*" 
+                                    className="hidden" 
+                                />
+                                <input 
+                                    type="file" 
+                                    ref={cameraInputRef} 
+                                    onChange={handleFileChange} 
+                                    accept="image/*" 
+                                    capture="user" 
                                     className="hidden" 
                                 />
                                 <div className="w-28 h-28 rounded-full border-[4px] border-white/20 shadow-2xl overflow-hidden p-1.5 bg-white/10 backdrop-blur-md transition-transform duration-300 group-hover:scale-105 relative">
@@ -170,6 +228,12 @@ const ProfilePage = () => {
                                 <FiBriefcase className="text-blue-300" size={14} />
                                 <p className="text-blue-100 text-xs font-bold uppercase tracking-wider">{user.role} • {user.id}</p>
                             </div>
+                            <button
+                                onClick={() => setShowEditModal(true)}
+                                className="mt-3.5 px-5 py-2 bg-white/10 hover:bg-white/20 active:scale-95 border border-white/10 rounded-full text-xs font-bold text-white transition-all flex items-center gap-2 shadow-md shadow-black/5"
+                            >
+                                <FiEdit size={12} className="stroke-[2.5]" /> Edit Profile
+                            </button>
                         </motion.div>
                     </div>
 
@@ -295,6 +359,184 @@ const ProfilePage = () => {
                                     </button>
                                 </div>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Premium Photo Source Selection Bottom Sheet */}
+            <AnimatePresence>
+                {showSourceModal && (
+                    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowSourceModal(false)}
+                            className="absolute inset-0 bg-[#1C205C]/40 backdrop-blur-sm"
+                        />
+                        {/* Bottom Sheet */}
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full max-w-md bg-white rounded-t-[32px] p-6 shadow-2xl relative z-10 border-t border-gray-100 pb-10 animate-in"
+                        >
+                            {/* Drag Handle Indicator */}
+                            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+                            
+                            <h3 className="text-xl font-black text-gray-900 mb-6 text-center">Change Profile Photo</h3>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <button
+                                    onClick={() => {
+                                        setShowSourceModal(false);
+                                        setTimeout(() => {
+                                            cameraInputRef.current?.click();
+                                        }, 100);
+                                    }}
+                                    className="flex flex-col items-center justify-center p-5 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 rounded-2xl transition-all active:scale-95 group"
+                                >
+                                    <div className="w-14 h-14 bg-[#1C205C] text-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 mb-3">
+                                        <FiCamera size={24} />
+                                    </div>
+                                    <span className="font-bold text-gray-800 text-sm">Camera</span>
+                                </button>
+                                
+                                <button
+                                    onClick={() => {
+                                        setShowSourceModal(false);
+                                        setTimeout(() => {
+                                            galleryInputRef.current?.click();
+                                        }, 100);
+                                    }}
+                                    className="flex flex-col items-center justify-center p-5 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 rounded-2xl transition-all active:scale-95 group"
+                                >
+                                    <div className="w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 mb-3">
+                                        <FiImage size={24} />
+                                    </div>
+                                    <span className="font-bold text-gray-800 text-sm">Gallery</span>
+                                </button>
+                            </div>
+                            
+                            <button
+                                onClick={() => setShowSourceModal(false)}
+                                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all text-center"
+                            >
+                                Cancel
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Premium Edit Profile Modal */}
+            <AnimatePresence>
+                {showEditModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !isSavingProfile && setShowEditModal(false)}
+                            className="absolute inset-0 bg-[#1C205C]/40 backdrop-blur-md"
+                        />
+                        {/* Modal Dialog */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl relative z-10 border border-white/20 p-8"
+                        >
+                            <h3 className="text-2xl font-black text-gray-900 mb-6 text-center">Edit Profile</h3>
+                            
+                            <form onSubmit={handleSaveProfile} className="space-y-5">
+                                {/* Name Input */}
+                                <div>
+                                    <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Full Name</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                                            <FiUser size={18} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            placeholder="Enter your name"
+                                            disabled={isSavingProfile}
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-[15px] font-bold text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20 focus:border-[#1C205C] transition-all"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Email Input */}
+                                <div>
+                                    <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                                            <FiMail size={18} />
+                                        </div>
+                                        <input
+                                            type="email"
+                                            value={editEmail}
+                                            onChange={(e) => setEditEmail(e.target.value)}
+                                            placeholder="Enter your email"
+                                            disabled={isSavingProfile}
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-[15px] font-bold text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1C205C]/20 focus:border-[#1C205C] transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Phone Input (Disabled) */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-2 ml-1">
+                                        <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest">Phone Number</label>
+                                        <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Not Editable</span>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-300">
+                                            <FiPhone size={18} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={user.phone}
+                                            disabled
+                                            className="w-full pl-11 pr-4 py-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-[15px] font-bold text-gray-400 cursor-not-allowed select-none"
+                                        />
+                                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-300">
+                                            <FiShield size={16} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Buttons */}
+                                <div className="flex flex-col gap-3 pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingProfile}
+                                        className="w-full bg-[#1C205C] hover:bg-[#242976] text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#1C205C]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isSavingProfile ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            "Save Changes"
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditModal(false)}
+                                        disabled={isSavingProfile}
+                                        className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}

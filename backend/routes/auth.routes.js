@@ -15,6 +15,7 @@ import {
   saveUserFcmToken,
   deleteStaffAccount,
   uploadStaffPhoto,
+  updateStaffProfile,
 } from '../controllers/auth.controller.js';
 import { authenticate, authenticateStaff } from '../middleware/auth.middleware.js';
 
@@ -33,6 +34,7 @@ router.post('/auth/staff-reset-password/:resetToken', staffResetPassword);
 // Protected routes
 router.post('/auth/logout', authenticate, logout);
 router.get('/auth/staff-profile', authenticateStaff, getStaffProfile);
+router.put('/auth/staff-profile', authenticateStaff, updateStaffProfile);
 router.post('/auth/staff-fcm-token', authenticateStaff, saveStaffFcmToken);
 router.post('/auth/user-fcm-token', authenticate, saveUserFcmToken);
 router.delete('/auth/staff-profile', authenticateStaff, deleteStaffAccount);

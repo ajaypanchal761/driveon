@@ -396,12 +396,6 @@ const CouponManagementPage = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={handleExport}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
-              >
-                Export Reports
-              </button>
-              <button
                 onClick={handleCreateCoupon}
                 className="px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 transition-all"
                 style={{ backgroundColor: colors.backgroundTertiary }}
@@ -414,53 +408,54 @@ const CouponManagementPage = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
+          <Card padding={false} className="p-3 text-center">
+            <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.total}
             </div>
-            <div className="text-xs md:text-sm text-gray-600">Total Coupons</div>
+            <div className="text-xs text-gray-600">Total Coupons</div>
           </Card>
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1 text-green-600">{stats.active}</div>
-            <div className="text-xs md:text-sm text-gray-600">Active</div>
+          <Card padding={false} className="p-3 text-center">
+            <div className="text-xl md:text-2xl font-bold mb-1 text-green-600">{stats.active}</div>
+            <div className="text-xs text-gray-600">Active</div>
           </Card>
-          <Card className="p-4 text-center">
-            <div className="text-2xl md:text-3xl font-bold mb-1 text-red-600">{stats.expired}</div>
-            <div className="text-xs md:text-sm text-gray-600">Expired</div>
+          <Card padding={false} className="p-3 text-center">
+            <div className="text-xl md:text-2xl font-bold mb-1 text-red-600">{stats.expired}</div>
+            <div className="text-xs text-gray-600">Expired</div>
           </Card>
-          <Card className="p-4 text-center">
+          <Card padding={false} className="p-3 text-center">
             <div className="text-xl md:text-2xl font-bold mb-1" style={{ color: colors.backgroundTertiary }}>
               {stats.totalUsage}
             </div>
-            <div className="text-xs md:text-sm text-gray-600">Total Usage</div>
+            <div className="text-xs text-gray-600">Total Usage</div>
           </Card>
         </div>
 
         {/* Search and Filters */}
         <Card className="p-4 md:p-6 mb-6">
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search by coupon code or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+          {/* Search and Filters Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            {/* Search Input */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Search</label>
+              <div className="relative">
+                <svg
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by coupon code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Filter */}
             <AdminCustomSelect
               label="Status"

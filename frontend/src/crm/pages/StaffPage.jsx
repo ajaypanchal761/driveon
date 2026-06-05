@@ -29,10 +29,13 @@ const ATTENDANCE_MOCK = {
 };
 
 const StaffDirectory = ({ searchTerm, setSearchTerm }) => {
-  const filteredStaff = MOCK_STAFF.filter(staff => 
-      staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      staff.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStaff = MOCK_STAFF.filter(staff => {
+      const cleanSearch = searchTerm.trim().toLowerCase();
+      return (
+          staff.name.toLowerCase().includes(cleanSearch) || 
+          staff.role.toLowerCase().includes(cleanSearch)
+      );
+  });
 
   return (
     <div className="space-y-6">
@@ -44,7 +47,7 @@ const StaffDirectory = ({ searchTerm, setSearchTerm }) => {
                   placeholder="Search staff members..."
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value.trimStart())}
               />
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-colors">

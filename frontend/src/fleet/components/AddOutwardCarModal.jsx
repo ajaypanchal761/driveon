@@ -9,6 +9,13 @@ const isValidPhone = (value) => {
   return digits.length === 10;
 };
 
+const isValidCarNumber = (num) => {
+  if (!num) return false;
+  const cleaned = String(num).replace(/[^A-Z0-9]/g, '').toUpperCase();
+  const regex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
+  return regex.test(cleaned);
+};
+
 const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
   const [ownerName, setOwnerName] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('');
@@ -18,6 +25,7 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
   const [location, setLocation] = useState('');
   const [pricePerDay, setPricePerDay] = useState('');
   const [carNumber, setCarNumber] = useState('');
+  const [carNumberTouched, setCarNumberTouched] = useState(false);
   const [carImages, setCarImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +41,7 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
     setLocation('');
     setPricePerDay('');
     setCarNumber('');
+    setCarNumberTouched(false);
     setCarImages([]);
     setImagePreviews([]);
     setSubmitting(false);
@@ -58,8 +67,10 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
     if (!location.trim()) return false;
     const price = Number(pricePerDay);
     if (!Number.isFinite(price) || price <= 0) return false;
+    if (!carNumber.trim()) return false;
+    if (!isValidCarNumber(carNumber)) return false;
     return true;
-  }, [ownerName, ownerPhone, carName, brand, model, location, pricePerDay]);
+  }, [ownerName, ownerPhone, carName, brand, model, location, pricePerDay, carNumber]);
 
   const handleCreate = async () => {
     setError('');
@@ -250,11 +261,17 @@ const AddOutwardCarModal = ({ open, onClose, onCreate, vendors = [] }) => {
               </label>
               <input
                 value={carNumber}
-                onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
-                className="mt-1 w-full rounded-lg border px-3 py-2 outline-none uppercase"
+                onChange={(e) => setCarNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                onBlur={() => setCarNumberTouched(true)}
+                className="mt-1 w-full rounded-lg border px-3 py-2 outline-none uppercase font-mono tracking-wider"
                 style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
                 placeholder="e.g. MP09AB1234"
               />
+              {carNumberTouched && carNumber && !isValidCarNumber(carNumber) && (
+                <p className="text-xs mt-1.5" style={{ color: colors.accentRed }}>
+                  Invalid format. E.g., MP41HG5263
+                </p>
+              )}
             </div>
 
             {/* Car Images */}

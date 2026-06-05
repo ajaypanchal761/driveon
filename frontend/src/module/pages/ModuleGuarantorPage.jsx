@@ -477,7 +477,7 @@ const ModuleGuarantorPage = () => {
                               </p>
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className={`text-sm font-bold ${transaction.status === 'reversed' ? 'line-through' : ''}`} 
+                              <p className="text-sm font-bold" 
                                  style={{ color: transaction.status === 'reversed' ? colors.error : colors.success }}>
                                 {(() => {
                                   const pts = Number(transaction.pointsEarned);

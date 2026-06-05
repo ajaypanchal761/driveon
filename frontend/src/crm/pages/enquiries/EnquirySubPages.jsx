@@ -379,7 +379,7 @@ export const AllEnquiriesPage = () => {
               placeholder="Search by Name, Phone..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value.trimStart())}
             />
           </div>
 
@@ -1112,7 +1112,7 @@ export const NewEnquiriesPage = () => {
               placeholder="Search Name or Phone..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all text-sm"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value.trimStart())}
             />
           </div>
         </div>
@@ -1415,7 +1415,7 @@ export const InProgressEnquiriesPage = () => {
             placeholder="Search Name or interest..."
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value.trimStart())}
           />
         </div>
         <ThemedDropdown
@@ -1641,7 +1641,7 @@ export const FollowUpsEnquiriesPage = () => {
             placeholder="Search Name or Note..."
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value.trimStart())}
           />
         </div>
         <div className="flex gap-3">
@@ -1878,7 +1878,7 @@ export const ConvertedEnquiriesPage = () => {
             placeholder="Search Customer or Booking ID..."
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-100 focus:border-green-400 transition-all"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value.trimStart())}
           />
         </div>
         <div className="flex gap-3">
@@ -2104,7 +2104,7 @@ export const ClosedEnquiriesPage = () => {
             placeholder="Search Name or Phone..."
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-400 transition-all"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value.trimStart())}
           />
         </div>
         <div className="flex gap-3">

@@ -123,8 +123,9 @@ export const AllCarsPage = () => {
   };
 
   const filteredCars = MOCK_CARS_DATA.filter(car => {
-    const matchesSearch = car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      car.plate.toLowerCase().includes(searchTerm.toLowerCase());
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = car.name.toLowerCase().includes(cleanSearch) ||
+      car.plate.toLowerCase().includes(cleanSearch);
     const matchesStatus = statusFilter === 'All' || car.status === statusFilter;
     const matchesType = typeFilter === 'All' || car.type === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
@@ -157,7 +158,7 @@ export const AllCarsPage = () => {
                     className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all"
                     style={{ focusRingColor: rgba(premiumColors.primary.DEFAULT, 0.2), borderColor: 'transparent' }}
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                 />
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 md:pb-0">
@@ -333,8 +334,9 @@ export const IdleCarsPage = () => {
   };
 
   const filteredIdleCars = MOCK_IDLE_CARS.filter(item => {
-    const matchesSearch = item.car.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.reg.toLowerCase().includes(searchTerm.toLowerCase());
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = item.car.toLowerCase().includes(cleanSearch) ||
+      item.reg.toLowerCase().includes(cleanSearch);
     const matchesLocation = locationFilter === 'All' || item.location === locationFilter;
     return matchesSearch && matchesLocation;
   });
@@ -365,7 +367,7 @@ export const IdleCarsPage = () => {
                     placeholder="Search Vehicle..." 
                     className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                 />
             </div>
             <div className="flex gap-3">
@@ -509,6 +511,19 @@ export const AccidentActivePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('Severity: All');
 
+  const filteredAccidents = MOCK_ACCIDENTS.filter(item => {
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = !cleanSearch ||
+      item.car.toLowerCase().includes(cleanSearch) ||
+      item.reg.toLowerCase().includes(cleanSearch) ||
+      item.location.toLowerCase().includes(cleanSearch);
+      
+    const severityVal = severityFilter.replace('Severity: ', '');
+    const matchesSeverity = severityFilter === 'Severity: All' || item.severity === severityVal;
+    
+    return matchesSearch && matchesSeverity;
+  });
+
   const getSeverityColor = (severity) => {
     switch (severity) {
       case 'Major': return 'bg-red-50 text-red-700 border-red-200';
@@ -553,7 +568,7 @@ export const AccidentActivePage = () => {
                     placeholder="Search car, number..." 
                     className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                 />
             </div>
             <div className="flex gap-3">
@@ -577,51 +592,57 @@ export const AccidentActivePage = () => {
       </div>
 
       {/* Cards Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {MOCK_ACCIDENTS.map((item, index) => (
-          <div
-            key={item.id}
-            onClick={() => navigate(`/crm/cars/accidents/${item.id}`)}
-            className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group hover:-translate-y-1"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            {/* Car Image */}
-            <div className="h-48 bg-gray-100 relative overflow-hidden">
-              <img src={item.image} alt={item.car} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute top-3 right-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getSeverityColor(item.severity)}`}>
-                  {item.severity} Damage
-                </span>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-5">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{item.car}</h3>
-                  <p className="text-sm font-mono text-gray-500 font-medium">{item.reg}</p>
+      {filteredAccidents.length === 0 ? (
+        <div className="col-span-full p-10 text-center text-gray-500 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+            No active accident cases found matching "{searchTerm}"
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAccidents.map((item, index) => (
+            <div
+              key={item.id}
+              onClick={() => navigate(`/crm/cars/accidents/${item.id}`)}
+              className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group hover:-translate-y-1"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              {/* Car Image */}
+              <div className="h-48 bg-gray-100 relative overflow-hidden">
+                <img src={item.image} alt={item.car} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute top-3 right-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getSeverityColor(item.severity)}`}>
+                    {item.severity} Damage
+                  </span>
                 </div>
               </div>
 
-              <div className="space-y-3 mt-4">
-                <div className="flex items-center justify-between text-sm border-b border-gray-50 pb-2">
-                  <span className="text-gray-500">Incident Date</span>
-                  <span className="font-medium text-gray-800">{item.date}</span>
+              {/* Content */}
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{item.car}</h3>
+                    <p className="text-sm font-mono text-gray-500 font-medium">{item.reg}</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm border-b border-gray-50 pb-2">
-                  <span className="text-gray-500">Location</span>
-                  <span className="font-medium text-gray-800">{item.location}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm pt-1">
-                  <span className="text-gray-500">Current Status</span>
-                  <span className="font-bold text-indigo-600">{item.status}</span>
+
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between text-sm border-b border-gray-50 pb-2">
+                    <span className="text-gray-500">Incident Date</span>
+                    <span className="font-medium text-gray-800">{item.date}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm border-b border-gray-50 pb-2">
+                    <span className="text-gray-500">Location</span>
+                    <span className="font-medium text-gray-800">{item.location}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm pt-1">
+                    <span className="text-gray-500">Current Status</span>
+                    <span className="font-bold text-indigo-600">{item.status}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

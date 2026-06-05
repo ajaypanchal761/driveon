@@ -83,10 +83,7 @@ const TrackExpensesPage = () => {
     const [customDate, setCustomDate] = useState(''); // Default will be empty (means now)
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Inline Add Category Form inside Modal
-    const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [isCategorySubmitting, setIsCategorySubmitting] = useState(false);
+
 
     useEffect(() => {
         fetchExpenses();
@@ -100,7 +97,7 @@ const TrackExpensesPage = () => {
             if (selectedCategory !== 'All') params.category = selectedCategory;
             if (selectedMonth !== 'All') params.month = selectedMonth;
             if (selectedYear !== 'All') params.year = selectedYear;
-            if (searchTerm.trim() !== '') params.search = searchTerm;
+            if (searchTerm.trim() !== '') params.search = searchTerm.trim();
 
             const res = await api.get('/crm/expenses', { params });
             if (res.data.success) {
@@ -180,37 +177,7 @@ const TrackExpensesPage = () => {
         }
     };
 
-    const handleCreateInlineCategory = async () => {
-        if (!newCategoryName.trim()) {
-            toast.error('Please enter a category name');
-            return;
-        }
 
-        try {
-            setIsCategorySubmitting(true);
-            const res = await api.post('/crm/finance/categories', {
-                name: newCategoryName.trim(),
-                description: 'Custom category added from expenses modal'
-            });
-
-            if (res.data.success) {
-                toast.success(`Category "${newCategoryName}" created`);
-                setNewCategoryName('');
-                setIsAddingNewCategory(false);
-                // Refresh categories and set newly added category as active in modal
-                const updatedCats = await api.get('/crm/finance/categories');
-                if (updatedCats.data.success) {
-                    setCategories(updatedCats.data.data.categories || []);
-                    setCategory(newCategoryName.trim());
-                }
-            }
-        } catch (error) {
-            console.error('Error creating inline category:', error);
-            toast.error(error.response?.data?.message || 'Failed to create category');
-        } finally {
-            setIsCategorySubmitting(false);
-        }
-    };
 
     const handleDeleteExpense = async (id) => {
         if (!window.confirm('Are you sure you want to delete this expense record?')) {
@@ -462,7 +429,7 @@ const TrackExpensesPage = () => {
                                 placeholder="Search descriptions..."
                                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#1c205c]/10 focus:border-[#1c205c] transition-all"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => setSearchTerm(e.target.value.trimStart())}
                             />
                         </form>
 
@@ -594,7 +561,6 @@ const TrackExpensesPage = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => {
                     setIsAddModalOpen(false);
-                    setIsAddingNewCategory(false);
                 }}
                 title="Add Operational Expense"
             >
@@ -623,46 +589,19 @@ const TrackExpensesPage = () => {
 
                     {/* Category Selection Field */}
                     <div>
-                        <div className="flex justify-between items-center mb-2">
+                        <div className="mb-2">
                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Expense Category</label>
-                            <button
-                                type="button"
-                                onClick={() => setIsAddingNewCategory(!isAddingNewCategory)}
-                                className="text-xs font-bold text-[#1c205c] hover:underline"
-                            >
-                                {isAddingNewCategory ? "Cancel Addition" : "+ Add New Category"}
-                            </button>
                         </div>
 
-                        {isAddingNewCategory ? (
-                            <div className="flex gap-2 p-2 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                                <input
-                                    type="text"
-                                    placeholder="Enter new category name..."
-                                    className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#1c205c]"
-                                    value={newCategoryName}
-                                    onChange={(e) => setNewCategoryName(e.target.value)}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={handleCreateInlineCategory}
-                                    disabled={isCategorySubmitting}
-                                    className="px-3 py-1.5 bg-[#1c205c] text-white rounded-lg text-xs font-bold hover:bg-[#252d6d] transition-all disabled:opacity-50"
-                                >
-                                    {isCategorySubmitting ? "Saving..." : "Save"}
-                                </button>
-                            </div>
-                        ) : (
-                            <select
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-250 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1c205c]/10 focus:border-[#1c205c] text-xs font-bold text-gray-750 cursor-pointer"
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                            >
-                                {categories.map(cat => (
-                                    <option key={cat._id} value={cat.name}>{cat.name}</option>
-                                ))}
-                            </select>
-                        )}
+                        <select
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-250 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1c205c]/10 focus:border-[#1c205c] text-xs font-bold text-gray-750 cursor-pointer"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                        >
+                            {categories.map(cat => (
+                                <option key={cat._id} value={cat.name}>{cat.name}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Date picker (defaults to auto now if blank) */}

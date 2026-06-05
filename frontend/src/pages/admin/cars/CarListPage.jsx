@@ -54,6 +54,18 @@ const CarListPage = () => {
     return () => window.removeEventListener('admin-global-search', handleGlobalSearch);
   }, []);
 
+  // Lock background body scroll when any modal is open
+  useEffect(() => {
+    if (showCarDetail || showReviewsModal || showRecordModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showCarDetail, showReviewsModal, showRecordModal]);
+
   // Filter states
   const [filters, setFilters] = useState({
     status: getInitialStatus(), // all, active, inactive, pending, suspended
@@ -770,59 +782,60 @@ const CarListPage = () => {
                   >
                     View Details
                   </button>
+                  {/* Status-specific Action Button Row */}
+                  {car.status === 'pending' ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleApprove(car.id)}
+                        className="flex-1 px-3 py-2 text-xs md:text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors text-center"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(car.id)}
+                        className="flex-1 px-3 py-2 text-xs md:text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors text-center"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : car.status === 'active' ? (
+                    <button
+                      onClick={() => handleSuspend(car.id)}
+                      className="w-full px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors text-center"
+                    >
+                      Suspend
+                    </button>
+                  ) : (car.status === 'suspended' || car.status === 'inactive') ? (
+                    <button
+                      onClick={() => handleActivate(car.id)}
+                      className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors text-center"
+                    >
+                      Activate
+                    </button>
+                  ) : null}
+
+                  {/* Secondary actions: Delete + Record Side by Side */}
                   <div className="flex gap-2">
-                    {car.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleApprove(car.id)}
-                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleReject(car.id)}
-                          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    {car.status === 'active' && (
-                      <button
-                        onClick={() => handleSuspend(car.id)}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
-                      >
-                        Suspend
-                      </button>
-                    )}
-                    {(car.status === 'suspended' || car.status === 'inactive') && (
-                      <button
-                        onClick={() => handleActivate(car.id)}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Activate
-                      </button>
-                    )}
                     <button
                       onClick={() => {
                         if (window.confirm('Are you sure you want to delete this car?')) {
                           handleDelete(car.id);
                         }
                       }}
-                      className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      className="flex-1 px-3 py-2 text-xs md:text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-center"
                     >
                       Delete
                     </button>
+                    <button
+                      onClick={() => handleViewRecord(car)}
+                      className="flex-1 px-2 py-2 text-xs md:text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                    >
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Record
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleViewRecord(car)}
-                    className="w-full px-4 py-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Record
-                  </button>
                 </div>
               </div>
             </Card>
