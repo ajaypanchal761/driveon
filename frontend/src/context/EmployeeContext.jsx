@@ -79,16 +79,15 @@ export const EmployeeProvider = ({ children }) => {
       });
 
       // Listen for foreground messages
-      const unsubscribe = onMessageListener()
-        .then((payload) => {
-          toastUtils.info(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
-          console.log("Foreground Notification:", payload);
-          setUnreadCount(prev => prev + 1);
-        })
-        .catch((err) => console.log("failed: ", err));
+      const unsubscribe = onMessageListener((payload) => {
+        const cleanTitle = payload.notification.title?.replace('💰 ', '');
+        toastUtils.info(`🔔 ${cleanTitle}: ${payload.notification.body}`);
+        console.log("Foreground Notification:", payload);
+        setUnreadCount(prev => prev + 1);
+      });
 
       return () => {
-        // Any cleanup if needed
+        if (typeof unsubscribe === 'function') unsubscribe();
       };
     }
   }, [user]);

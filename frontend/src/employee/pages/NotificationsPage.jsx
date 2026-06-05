@@ -131,7 +131,9 @@ const NotificationsPage = () => {
               </div>
               <div className="flex-1">
                 <div className="flex justify-between items-start mb-1">
-                  <h4 className={`font-bold text-sm ${notif.isRead ? 'text-gray-700' : 'text-[#1C205C]'}`}>{notif.title}</h4>
+                  <h4 className={`font-bold text-sm ${notif.isRead ? 'text-gray-700' : 'text-[#1C205C]'}`}>
+                    {notif.title?.replace('💰 ', '')}
+                  </h4>
                   <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap ml-2">{formatTime(notif.createdAt)}</span>
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed">{notif.message}</p>

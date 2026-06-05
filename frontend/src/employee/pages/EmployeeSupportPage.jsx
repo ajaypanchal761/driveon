@@ -113,7 +113,7 @@ const SupportCard = ({ title, desc, value, icon, link }) => (
       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{desc}</p>
       <a 
         href={link}
-        className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors mt-2 inline-block font-mono"
+        className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors mt-2 block w-full break-all font-mono"
       >
         {value}
       </a>

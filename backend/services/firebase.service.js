@@ -224,10 +224,9 @@ export const sendPushNotification = async (
         // Handle case where userId is actually a direct FCM token
         const isToken = typeof userId === 'string' && !/^[0-9a-fA-F]{24}$/.test(userId);
 
-        let token;
+        let targetTokens = [];
         if (isToken) {
-            token = userId;
-            console.log(`ℹ️ sendPushNotification: First argument looks like an FCM token. Sending directly.`);
+            targetTokens = [userId];
         } else {
             const user = await User.findById(userId);
             if (!user) {
@@ -245,52 +244,53 @@ export const sendPushNotification = async (
             const tokens = [];
             if (user.fcmTokenMobile) tokens.push(user.fcmTokenMobile);
             if (user.fcmToken) tokens.push(user.fcmToken);
-            const uniqueTokens = Array.from(new Set(tokens.filter(Boolean)));
-
-            if (uniqueTokens.length === 0) {
-                console.log(`⚠️ No FCM Token for user ${userId}`);
-                return;
-            }
-
-            token = uniqueTokens[0];
+            targetTokens = Array.from(new Set(tokens.filter(Boolean)));
         }
 
-        if (isDuplicateMessage(token, payload)) {
-            console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
+        if (targetTokens.length === 0) {
+            console.log(`⚠️ No FCM Token for user ${userId}`);
             return;
         }
 
-        const message = {
-            token,
-            ...payload,
-        };
+        let lastResponse;
+        for (const token of targetTokens) {
+            if (isDuplicateMessage(token, payload)) {
+                console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
+                continue;
+            }
 
-        console.log(
-            '📦 FCM User Message:',
-            JSON.stringify(message, null, 2)
-        );
+            const message = {
+                token,
+                ...payload,
+            };
 
-        const response = await messaging.send(message);
-        console.log(`✅ Notification Sent to ${userId}: ${response}`);
-        return response;
-    } catch (error) {
-        console.error('❌ Error sending notification:', error);
+            console.log(
+                '📦 FCM User Message:',
+                JSON.stringify(message, null, 2)
+            );
 
-        if (error.code === 'messaging/registration-token-not-registered') {
-            const isToken = typeof userId === 'string' && !/^[0-9a-fA-F]{24}$/.test(userId);
-            if (!isToken) {
-                const user = await User.findById(userId);
-                if (user) {
-                    const isMobile = typeof payloadOrTitle === 'object' ? !!bodyOrIsMobile : !!isMobileOrUndefined;
-                    if (isMobile) user.fcmTokenMobile = null;
-                    else user.fcmToken = null;
-                    await user.save();
-                    console.log(
-                        `🗑️ Invalid ${isMobile ? 'Mobile' : 'Web'} token removed for ${userId}`
-                    );
+            try {
+                const response = await messaging.send(message);
+                console.log(`✅ Notification Sent to user ${userId} on token: ${response}`);
+                lastResponse = response;
+            } catch (err) {
+                console.error(`❌ Error sending user notification to token ${token}:`, err);
+                if (err.code === 'messaging/registration-token-not-registered') {
+                    if (!isToken) {
+                        const user = await User.findById(userId);
+                        if (user) {
+                            if (user.fcmTokenMobile === token) user.fcmTokenMobile = null;
+                            if (user.fcmToken === token) user.fcmToken = null;
+                            await user.save();
+                            console.log(`🗑️ Invalid token removed for user ${userId}`);
+                        }
+                    }
                 }
             }
         }
+        return lastResponse;
+    } catch (error) {
+        console.error('❌ Error sending notification:', error);
         throw error;
     }
 };
@@ -454,43 +454,44 @@ export const sendStaffPushNotification = async (
             return;
         }
 
-        const token = uniqueTokens[0];
+        let lastResponse;
+        for (const token of uniqueTokens) {
+            if (isDuplicateMessage(token, payload)) {
+                console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
+                continue;
+            }
 
-        if (isDuplicateMessage(token, payload)) {
-            console.log(`ℹ️ Duplicate notification to token detected within ${CACHE_TTL_MS}ms — skipping to prevent double-send.`);
-            return;
-        }
+            const message = {
+                token,
+                ...payload,
+            };
 
-        const message = {
-            token,
-            ...payload,
-        };
+            console.log(
+                '📦 FCM Staff Message:',
+                JSON.stringify(message, null, 2)
+            );
 
-        console.log(
-            '📦 FCM Staff Message:',
-            JSON.stringify(message, null, 2)
-        );
-
-        const response = await messaging.send(message);
-        console.log(`✅ Notification Sent to Staff ${staffId}: ${response}`);
-        return response;
-    } catch (error) {
-        console.error('❌ Error sending staff notification:', error);
-
-        if (error.code === 'messaging/registration-token-not-registered') {
-            const Staff = (await import("../models/Staff.js")).default;
-            const staff = await Staff.findById(staffId);
-            if (staff) {
-                if (isMobile) staff.fcmTokenMobile = null;
-                else staff.fcmToken = null;
-                await staff.save();
-                console.log(
-                    `🗑️ Invalid ${isMobile ? 'Mobile' : 'Web'} token removed for staff ${staffId}`
-                );
+            try {
+                const response = await messaging.send(message);
+                console.log(`✅ Notification Sent to Staff ${staffId} on token: ${response}`);
+                lastResponse = response;
+            } catch (err) {
+                console.error(`❌ Error sending staff notification to token ${token}:`, err);
+                if (err.code === 'messaging/registration-token-not-registered') {
+                    const Staff = (await import("../models/Staff.js")).default;
+                    const staff = await Staff.findById(staffId);
+                    if (staff) {
+                        if (staff.fcmTokenMobile === token) staff.fcmTokenMobile = null;
+                        if (staff.fcmToken === token) staff.fcmToken = null;
+                        await staff.save();
+                        console.log(`🗑️ Invalid token removed for staff ${staffId}`);
+                    }
+                }
             }
         }
-        // Don't throw for background notifications to avoid breaking the main flow
-        // throw error; 
+        return lastResponse;
+    } catch (error) {
+        console.error('❌ Error sending staff notification:', error);
     }
 };
 

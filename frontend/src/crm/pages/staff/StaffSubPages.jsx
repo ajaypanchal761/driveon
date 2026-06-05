@@ -3007,7 +3007,6 @@ export const AttendancePage = () => {
                           >
                             <MdLocationOn /> {item.location.status === 'Online' ? 'Live' : 'Last SEEN'}
                           </button>
-                          {item.location.status === 'Offline' && <span className="text-[10px] text-gray-400 font-medium">Offline</span>}
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400 font-medium flex items-center gap-1">

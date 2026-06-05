@@ -161,12 +161,19 @@ export const requestForToken = async () => {
     }
 };
 
-export const onMessageListener = () =>
-    new Promise((resolve) => {
+export const onMessageListener = (callback) => {
+    if (typeof callback === 'function') {
+        return onMessage(messaging, (payload) => {
+            console.log("payload", payload);
+            callback(payload);
+        });
+    }
+    return new Promise((resolve) => {
         onMessage(messaging, (payload) => {
             console.log("payload", payload);
             resolve(payload);
         });
     });
+};
 
 export { messaging };

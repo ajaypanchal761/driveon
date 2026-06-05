@@ -3529,7 +3529,7 @@ export const verifySalaryPayment = async (req, res) => {
         createNotification({
             recipient: staffId,
             recipientModel: 'Staff',
-            title: '💰 Salary Credited!',
+            title: 'Salary Credited!',
             message: `Your salary of ₹${parseFloat(amount).toLocaleString('en-IN')} for ${monthString} has been processed successfully.`,
             type: 'salary_paid',
             relatedId: payroll._id,
@@ -3941,7 +3941,7 @@ export const recordManualSalaryPayment = async (req, res) => {
         createNotification({
             recipient: staffId,
             recipientModel: 'Staff',
-            title: '💰 Salary Credited!',
+            title: 'Salary Credited!',
             message: `Your salary of ₹${parseFloat(amount).toLocaleString('en-IN')} for ${monthString} has been paid via ${paymentMethod || 'manual mode'}.`,
             type: 'salary_paid',
             relatedId: payroll._id,

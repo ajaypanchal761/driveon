@@ -185,7 +185,7 @@ const BookingsPage = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black shadow-sm border whitespace-nowrap transition-all flex-1 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-black shadow-sm border whitespace-nowrap transition-all shrink-0 ${
                 activeTab === tab 
                   ? 'bg-[#1C205C] text-white border-[#1C205C]' 
                   : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'
