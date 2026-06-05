@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiUser, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
+import { FiPhone, FiLock, FiEye, FiEyeOff, FiArrowRight, FiUser } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { toast } from 'react-hot-toast';
@@ -14,7 +14,7 @@ const EmployeeLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [view, setView] = useState('login'); // login | forgot-password
   const [formData, setFormData] = useState({
-    username: '',
+    phone: '',
     password: ''
   });
   const [forgotEmail, setForgotEmail] = useState('');
@@ -137,17 +137,17 @@ const EmployeeLoginPage = () => {
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-6">
 
-              {/* Username */}
+              {/* Phone Number */}
               <div className="space-y-1">
                 <div className="relative group">
-                  <FiUser className="absolute left-0 top-3.5 text-gray-400 group-focus-within:text-[#1C205C] transition-colors" size={20} />
+                  <FiPhone className="absolute left-0 top-3.5 text-gray-400 group-focus-within:text-[#1C205C] transition-colors" size={20} />
                   <input
-                    type="text"
+                    type="tel"
                     required
-                    placeholder="User Name"
+                    placeholder="Phone Number"
                     className="w-full pl-8 pr-4 py-3 bg-transparent border-b border-gray-200 focus:border-[#1C205C] outline-none transition-colors placeholder:text-gray-300 text-gray-700 font-medium"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   />
                 </div>
               </div>

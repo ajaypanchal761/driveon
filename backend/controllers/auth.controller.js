@@ -679,22 +679,19 @@ export const verifyOTP = async (req, res) => {
  */
 export const staffLogin = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { phone, password } = req.body;
 
-    if (!username || !password) {
+    if (!phone || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide username/email and password',
+        message: 'Please provide phone number and password',
       });
     }
 
-    // Check for staff by Name or Email
-    // Case insensitive search for Name
+    // Check for staff by phone number — strip non-digits, match last 10 digits
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
     const staff = await Staff.findOne({
-      $or: [
-        { email: username.toLowerCase() },
-        { name: { $regex: new RegExp(`^${username}$`, 'i') } }
-      ]
+      phone: { $regex: cleanPhone + '$' }
     });
 
     if (!staff) {

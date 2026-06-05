@@ -53,6 +53,28 @@ const EmployeeHomePage = () => {
   } = useEmployee();
   const [time, setTime] = useState(new Date());
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [todayHoliday, setTodayHoliday] = useState(null); // { date, reason } if today is holiday
+
+  // Fetch holidays and check if today is one
+  useEffect(() => {
+    const checkTodayHoliday = async () => {
+      try {
+        const res = await api.get('/crm/attendance/holidays');
+        if (res.data?.success) {
+          const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+          const holiday = res.data.data.find(h => {
+            // Compare date strings (stored as YYYY-MM-DD)
+            const hStr = typeof h.date === 'string' ? h.date.split('T')[0] : new Date(h.date).toISOString().split('T')[0];
+            return hStr === todayStr;
+          });
+          setTodayHoliday(holiday || null);
+        }
+      } catch (e) {
+        console.error('Error fetching holidays:', e);
+      }
+    };
+    checkTodayHoliday();
+  }, []);
 
   const handleClockClick = () => {
     if (checkedOutToday) return;
@@ -231,24 +253,42 @@ const EmployeeHomePage = () => {
         try {
           const userId = user?._id || user?.id;
           if (!userId) return;
-          const response = await api.get(`/crm/attendance?staffId=${userId}`);
+          const [response, holidaysRes] = await Promise.all([
+            api.get(`/crm/attendance?staffId=${userId}`),
+            api.get('/crm/attendance/holidays')
+          ]);
           if (response.data?.success) {
             const records = response.data.data.records || [];
-            
+            const formatted = records.map(r => ({
+              date: new Date(r.date),
+              status: r.status || 'Present',
+            }));
+            const holidaysList = holidaysRes.data?.success ? holidaysRes.data.data : [];
+            const combined = [...formatted];
+            holidaysList.forEach(h => {
+              const hDate = new Date(h.date);
+              const exists = combined.some(r => r.date.toDateString() === hDate.toDateString());
+              if (!exists) {
+                combined.push({ date: hDate, status: 'Holiday' });
+              } else {
+                const idx = combined.findIndex(r => r.date.toDateString() === hDate.toDateString());
+                combined[idx].status = 'Holiday';
+              }
+            });
+
             // Filter records for the current month
             const now = new Date();
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth();
-            const currentMonthRecords = records.filter(r => {
-              const recordDate = new Date(r.date);
-              return recordDate.getFullYear() === currentYear && recordDate.getMonth() === currentMonth;
+            const currentMonthRecords = combined.filter(r => {
+              return r.date.getFullYear() === currentYear && r.date.getMonth() === currentMonth;
             });
 
             // Count statuses
             const present = currentMonthRecords.filter(r => r.status === 'Present').length;
             const late = currentMonthRecords.filter(r => r.status === 'Late').length;
             const absent = currentMonthRecords.filter(r => r.status === 'Absent').length;
-            const leave = currentMonthRecords.filter(r => r.status === 'Leave').length;
+            const leave = currentMonthRecords.filter(r => r.status === 'Leave' || r.status === 'Leaves').length;
 
             setPersonalAttendanceCounts({ present, late, absent, leave });
           }
@@ -470,17 +510,27 @@ const EmployeeHomePage = () => {
                   </p>
                 </div>
 
-                {/* Clock Out/In Button */}
-                <motion.button
-                  whileTap={checkedOutToday ? undefined : { scale: 0.95 }}
-                  disabled={checkedOutToday}
-                  onClick={handleClockClick}
-                  className={`${checkedOutToday ? 'bg-gray-400 cursor-not-allowed opacity-70' : clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
-                      text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap`}
-                >
-                  <FiClock />
-                  {checkedOutToday ? 'Checked Out' : clockedIn ? 'Check Out' : 'Check In'}
-                </motion.button>
+                {/* Clock Out/In Button — hidden on holidays */}
+                {todayHoliday ? (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl shrink-0">
+                    <span className="text-lg">🎉</span>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-red-400 uppercase tracking-widest leading-none">Holiday</p>
+                      <p className="text-sm font-black text-red-600 leading-tight">{todayHoliday.reason}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <motion.button
+                    whileTap={checkedOutToday ? undefined : { scale: 0.95 }}
+                    disabled={checkedOutToday}
+                    onClick={handleClockClick}
+                    className={`${checkedOutToday ? 'bg-gray-400 cursor-not-allowed opacity-70' : clockedIn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} 
+                        text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap`}
+                  >
+                    <FiClock />
+                    {checkedOutToday ? 'Checked Out' : clockedIn ? 'Check Out' : 'Check In'}
+                  </motion.button>
+                )}
               </div>
 
               {/* Bottom Row: Timer & Full-Width Address */}
@@ -513,11 +563,12 @@ const EmployeeHomePage = () => {
                 </div>
                 <div className="text-center border-l border-gray-100">
                   <span className={`block text-xl font-bold ${
+                    todayHoliday ? 'text-rose-500' :
                     attendanceStatus === 'Late' ? 'text-amber-500' : 
                     attendanceStatus === 'Absent' ? 'text-rose-500' : 
                     attendanceStatus === '—' ? 'text-gray-400' : 'text-emerald-500'
                   }`}>
-                    {attendanceStatus === 'Late' ? 'Present (Late)' : attendanceStatus}
+                    {todayHoliday ? 'Holiday' : (attendanceStatus === 'Late' ? 'Present (Late)' : attendanceStatus)}
                   </span>
                   <span className="text-[10px] text-gray-400 font-bold uppercase">Status</span>
                 </div>

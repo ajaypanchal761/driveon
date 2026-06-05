@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FiClock, FiMapPin, FiRefreshCw, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiClock, FiRefreshCw, FiCheckCircle, FiChevronLeft, FiChevronRight, FiX, FiCalendar } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import HeaderTopBar from '../components/HeaderTopBar';
@@ -10,17 +10,422 @@ import api from '../../services/api';
 import { useEmployee } from '../../context/EmployeeContext';
 import { getAddressFromCoordinates, watchPosition, clearWatch, getCurrentPosition } from '../../services/location.service';
 
+// ─── Calendar Modal ───────────────────────────────────────────────────────────
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const statusConfig = {
+  Present: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-white', dot: 'bg-emerald-400' },
+  Late:    { bg: 'bg-amber-500',   border: 'border-amber-500',   text: 'text-white', dot: 'bg-amber-400' },
+  Absent:  { bg: 'bg-rose-50',     border: 'border-rose-200',    text: 'text-rose-500', dot: 'bg-rose-400' },
+  Leave:   { bg: 'bg-indigo-500',  border: 'border-indigo-500',  text: 'text-white', dot: 'bg-indigo-400' },
+  Holiday: { bg: 'bg-red-600',     border: 'border-red-600',     text: 'text-white', dot: 'bg-red-400' },
+  'Not Joined': { bg: 'bg-gray-100', border: 'border-gray-200', text: 'text-gray-400', dot: '' },
+  Weekend: { bg: 'bg-red-50',      border: 'border-red-100',     text: 'text-red-400', dot: '' },
+  Pending: { bg: 'bg-white',       border: 'border-gray-100',    text: 'text-gray-400', dot: '' },
+};
+
+const AttendanceCalendarModal = ({ isOpen, onClose, userId, user }) => {
+  const today = new Date();
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [tooltip, setTooltip] = useState(null);
+  const [monthData, setMonthData] = useState([]);
+  const [fetchingMonth, setFetchingMonth] = useState(false);
+  const [showPicker, setShowPicker] = useState(false); // month/year picker panel
+
+  // Fetch attendance + holidays whenever the selected month/year changes
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+    const fetchMonth = async () => {
+      setFetchingMonth(true);
+      setTooltip(null);
+      try {
+        const dateFrom = new Date(calYear, calMonth, 1).toISOString().split('T')[0];
+        const dateTo   = new Date(calYear, calMonth + 1, 0).toISOString().split('T')[0];
+
+        const [attRes, holRes] = await Promise.all([
+          api.get(`/crm/attendance?staffId=${userId}&dateFrom=${dateFrom}&dateTo=${dateTo}`),
+          api.get('/crm/attendance/holidays')
+        ]);
+
+        let records = [];
+        if (attRes.data.success) {
+          records = (attRes.data.data.records || []).map(r => ({
+            date: new Date(r.date),
+            status: r.status || 'Present',
+            checkIn: r.inTime || '--:--',
+            checkOut: r.outTime || '--:--',
+            reason: ''
+          }));
+        }
+
+        if (holRes.data?.success) {
+          holRes.data.data.forEach(h => {
+            const hDate = new Date(h.date);
+            if (hDate.getMonth() === calMonth && hDate.getFullYear() === calYear) {
+              const idx = records.findIndex(r => r.date.toDateString() === hDate.toDateString());
+              if (idx === -1) {
+                records.push({ date: hDate, status: 'Holiday', checkIn: '--:--', checkOut: '--:--', reason: h.reason });
+              } else {
+                records[idx].status = 'Holiday';
+                records[idx].reason = h.reason;
+              }
+            }
+          });
+        }
+
+        setMonthData(records);
+      } catch (err) {
+        console.error('Calendar month fetch error:', err);
+        setMonthData([]);
+      } finally {
+        setFetchingMonth(false);
+      }
+    };
+    fetchMonth();
+  }, [calMonth, calYear, isOpen, userId]);
+
+  if (!isOpen) return null;
+
+  const joinDate = user?.joinDate ? new Date(user.joinDate) : null;
+
+  // Lock: cannot go before current month; can go up to year 2099
+  const maxYear = 2099;
+
+  // Left arrow disabled if already at current month or earlier
+  const isPrevDisabled =
+    calYear < today.getFullYear() ||
+    (calYear === today.getFullYear() && calMonth <= today.getMonth());
+
+  // Right arrow disabled only at Dec 2099
+  const isNextDisabled = calYear >= maxYear && calMonth >= 11;
+
+  const goToPrev = () => {
+    if (isPrevDisabled) return;
+    setShowPicker(false);
+    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); }
+    else setCalMonth(m => m - 1);
+  };
+  const goToNext = () => {
+    if (isNextDisabled) return;
+    setShowPicker(false);
+    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); }
+    else setCalMonth(m => m + 1);
+  };
+
+  // Picker: allow current month up to Dec 2099
+  const pickerMaxYear = 2099;
+
+  const selectMonthYear = (m, y) => {
+    setCalMonth(m);
+    setCalYear(y);
+    setShowPicker(false);
+  };
+
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const firstDay    = new Date(calYear, calMonth, 1).getDay();
+
+  // Build grid — all future dates (including future months) show Pending
+  const grid = [];
+  for (let i = 0; i < firstDay; i++) grid.push({ isEmpty: true });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cellDate = new Date(calYear, calMonth, d);
+    const dateStr  = cellDate.toDateString();
+    const record   = monthData.find(r => r.date.toDateString() === dateStr);
+
+    let status = 'Pending';
+    let checkIn = '--:--', checkOut = '--:--', reason = '';
+
+    if (cellDate > today) {
+      // Future date — always Pending, no record lookup
+      status = 'Pending';
+    } else if (record) {
+      status   = record.status;
+      checkIn  = record.checkIn  || '--:--';
+      checkOut = record.checkOut || '--:--';
+      reason   = record.reason   || '';
+    } else if (cellDate.getDay() === 0) {
+      status = 'Weekend';
+    }
+    // else: past weekday with no record → stays 'Pending'
+
+    grid.push({ isEmpty: false, day: d, status, checkIn, checkOut, reason, date: cellDate });
+  }
+
+  // Stats
+  const presentCount = monthData.filter(r => r.status === 'Present').length;
+  const lateCount    = monthData.filter(r => r.status === 'Late').length;
+  const absentCount  = monthData.filter(r => r.status === 'Absent').length;
+  const leaveCount   = monthData.filter(r => r.status === 'Leave' || r.status === 'Leaves').length;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <motion.div
+        initial={{ y: '100%', opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: '100%', opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+        onClick={e => e.stopPropagation()}
+        className="relative w-full max-w-md bg-white rounded-t-[32px] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="px-5 py-3 flex items-center justify-between border-b border-gray-100 shrink-0">
+          <div className="flex items-center gap-2">
+            <FiCalendar className="text-[#1C205C]" size={18} />
+            <h2 className="font-black text-[#1C205C] text-base">Attendance Calendar</h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <FiX size={16} className="text-gray-600" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-4 pb-8">
+          {/* Month Navigator */}
+          <div className="flex items-center justify-between py-4">
+            {/* Prev Arrow */}
+            <button
+              onClick={goToPrev}
+              disabled={isPrevDisabled}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90
+                ${isPrevDisabled
+                  ? 'opacity-25 cursor-not-allowed bg-gray-50'
+                  : 'bg-gray-100 hover:bg-[#1C205C] hover:text-white'}`}
+            >
+              <FiChevronLeft size={20} />
+            </button>
+
+            {/* Month / Year — tap to open picker */}
+            <button
+              onClick={() => setShowPicker(p => !p)}
+              className="flex flex-col items-center px-4 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
+            >
+              <span className="font-black text-[#1C205C] text-lg leading-tight flex items-center gap-1">
+                {MONTH_NAMES[calMonth]}
+                <span className="text-xs text-blue-400 font-bold">▾</span>
+              </span>
+              <span className="text-xs text-gray-400 font-semibold">{calYear}</span>
+            </button>
+
+            {/* Next Arrow */}
+            <button
+              onClick={goToNext}
+              disabled={isNextDisabled}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90
+                ${isNextDisabled
+                  ? 'opacity-25 cursor-not-allowed bg-gray-50'
+                  : 'bg-gray-100 hover:bg-[#1C205C] hover:text-white'}`}
+            >
+              <FiChevronRight size={20} />
+            </button>
+          </div>
+
+          {/* Month / Year Picker Panel */}
+          <AnimatePresence>
+            {showPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                transition={{ duration: 0.18 }}
+                className="mb-4 bg-[#1C205C]/5 rounded-2xl p-4 border border-[#1C205C]/10"
+              >
+                {/* Year selector — current year and next year */}
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    onClick={() => setCalYear(y => Math.max(today.getFullYear(), y - 1))}
+                    disabled={calYear <= today.getFullYear()}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all
+                      ${calYear <= today.getFullYear() ? 'opacity-25 cursor-not-allowed' : 'bg-white hover:bg-[#1C205C] hover:text-white shadow-sm active:scale-90'}`}
+                  >
+                    <FiChevronLeft size={16} />
+                  </button>
+                  <span className="font-black text-[#1C205C] text-base">{calYear}</span>
+                  <button
+                    onClick={() => setCalYear(y => Math.min(pickerMaxYear, y + 1))}
+                    disabled={calYear >= pickerMaxYear}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all
+                      ${calYear >= pickerMaxYear ? 'opacity-25 cursor-not-allowed' : 'bg-white hover:bg-[#1C205C] hover:text-white shadow-sm active:scale-90'}`}
+                  >
+                    <FiChevronRight size={16} />
+                  </button>
+                </div>
+
+                {/* Month grid — grey past months, allow current + future */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {MONTH_NAMES.map((name, idx) => {
+                    // Disable: past months in current year only
+                    const isPast   = calYear === today.getFullYear() && idx < today.getMonth();
+                    const disabled = isPast;
+                    return (
+                      <button
+                        key={name}
+                        disabled={disabled}
+                        onClick={() => !disabled && selectMonthYear(idx, calYear)}
+                        className={`py-2 rounded-xl text-xs font-bold transition-all active:scale-95
+                          ${disabled ? 'opacity-30 cursor-not-allowed text-gray-400' :
+                            idx === calMonth && calYear === calYear ? 'bg-[#1C205C] text-white shadow-md' :
+                            'bg-white text-gray-700 hover:bg-blue-50 hover:text-[#1C205C] shadow-sm'}`}
+                      >
+                        {name.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {[
+              { label: 'Present', count: presentCount, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'Late',    count: lateCount,    color: 'text-amber-500',   bg: 'bg-amber-50' },
+              { label: 'Absent',  count: absentCount,  color: 'text-rose-500',    bg: 'bg-rose-50' },
+              { label: 'Leave',   count: leaveCount,   color: 'text-indigo-500',  bg: 'bg-indigo-50' },
+            ].map(s => (
+              <div key={s.label} className={`${s.bg} rounded-xl py-2.5 text-center`}>
+                <p className={`text-lg font-black ${s.color}`}>{s.count}</p>
+                <p className={`text-[9px] font-bold uppercase tracking-wide ${s.color} opacity-70`}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100 relative">
+            {/* Loading overlay when switching months */}
+            {fetchingMonth && (
+              <div className="absolute inset-0 bg-white/70 rounded-2xl flex items-center justify-center z-10">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1C205C]" />
+              </div>
+            )}
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {DAY_NAMES.map(d => (
+                <div key={d} className="text-center text-[10px] font-bold text-gray-400 uppercase">{d}</div>
+              ))}
+            </div>
+            {/* Day cells */}
+            <div className="grid grid-cols-7 gap-1">
+              {grid.map((item, idx) => {
+                if (item.isEmpty) return <div key={idx} />;
+                const cfg = statusConfig[item.status] || statusConfig.Pending;
+                const isToday = item.date.toDateString() === today.toDateString();
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => item.status !== 'Not Joined' && item.status !== 'Pending' && item.status !== 'Weekend'
+                      ? setTooltip(tooltip?.day === item.day ? null : item)
+                      : null
+                    }
+                    className={`
+                      aspect-square rounded-xl flex flex-col items-center justify-center border text-[11px] font-black relative transition-all
+                      ${cfg.bg} ${cfg.border} ${cfg.text}
+                      ${isToday ? 'ring-2 ring-[#1C205C] ring-offset-1' : ''}
+                      ${item.status !== 'Not Joined' && item.status !== 'Pending' && item.status !== 'Weekend' ? 'cursor-pointer active:scale-95' : 'cursor-default'}
+                    `}
+                  >
+                    {item.day}
+                    {isToday && <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#1C205C] rounded-full" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Tooltip/Detail Card */}
+          <AnimatePresence>
+            {tooltip && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                className="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-4"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-black text-[#1C205C] text-sm">
+                    {MONTH_NAMES[calMonth]} {tooltip.day}, {calYear}
+                  </p>
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
+                    tooltip.status === 'Present' ? 'bg-emerald-100 text-emerald-600' :
+                    tooltip.status === 'Late'    ? 'bg-amber-100 text-amber-600' :
+                    tooltip.status === 'Absent'  ? 'bg-rose-100 text-rose-600' :
+                    tooltip.status === 'Leave'   ? 'bg-indigo-100 text-indigo-600' :
+                    tooltip.status === 'Holiday' ? 'bg-red-100 text-red-600' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {tooltip.status === 'Late' ? 'Present (Late)' : tooltip.status}
+                  </span>
+                </div>
+                {tooltip.status === 'Holiday' ? (
+                  <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0 text-xl">🎉</div>
+                    <div>
+                      <p className="text-[10px] font-black text-red-400 uppercase tracking-wider mb-0.5">Holiday</p>
+                      <p className="text-base font-black text-red-600">{tooltip.reason || 'Official Holiday'}</p>
+                    </div>
+                  </div>
+                ) : tooltip.status === 'Absent' || tooltip.status === 'Leave' || tooltip.status === 'Leaves' ? (
+                  <div className="bg-gray-50 rounded-xl p-4 text-center">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                      {tooltip.status === 'Absent' ? 'No attendance recorded' : 'On Leave'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-0.5">Check In</p>
+                      <p className="font-black text-[#1C205C] text-sm">{tooltip.checkIn}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 text-center">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-0.5">Check Out</p>
+                      <p className="font-black text-[#1C205C] text-sm">{tooltip.checkOut}</p>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Legend */}
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+            {[
+              { color: 'bg-emerald-500', label: 'Present' },
+              { color: 'bg-amber-500',   label: 'Late' },
+              { color: 'bg-rose-200',    label: 'Absent' },
+              { color: 'bg-indigo-500',  label: 'Leave' },
+              { color: 'bg-red-600',     label: 'Holiday' },
+              { color: 'bg-gray-200',    label: 'Not Joined' },
+            ].map(l => (
+              <div key={l.label} className="flex items-center gap-1.5">
+                <div className={`w-2.5 h-2.5 rounded-full ${l.color}`} />
+                <span className="text-[10px] font-bold text-gray-500">{l.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 const AttendancePage = () => {
   const navigate = useNavigate();
   const { clockedIn, handleClockToggle, startTime } = useEmployee();
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Use context state
   const isClockedIn = clockedIn;
-
   const [locationAddress, setLocationAddress] = useState('Fetching Live Location...');
 
-  // Real DB attendance and stats states
   const { user } = useSelector((state) => state.user);
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,56 +436,20 @@ const AttendancePage = () => {
     { label: 'Leaves', value: 0, color: 'text-blue-500', bg: 'bg-blue-50' }
   ]);
 
-  // Segment states for Telecaller (Enquiries + Team Attendance names)
-  const userRole = user?.role || '';
-  const isTelecaller = userRole.toLowerCase() === 'telecaller' || userRole.toLowerCase() === 'tellecaller';
-  const [activeSegment, setActiveSegment] = useState('my'); // 'my' or 'team'
-
-  // Team Presence List States
-  const [teamList, setTeamList] = useState([]);
-  const [teamCounts, setTeamCounts] = useState({ present: 0, absent: 0, leave: 0, total: 0 });
-  const [teamLoading, setTeamLoading] = useState(false);
-  const [teamSearch, setTeamSearch] = useState('');
-  const [teamFilter, setTeamFilter] = useState('All');
-
-  const fetchTeamData = async () => {
-    try {
-      setTeamLoading(true);
-      const response = await api.get('/crm/team-presence');
-      if (response.data.success) {
-        const { activeStaff, present, absent, leave, total } = response.data.data;
-        setTeamList(activeStaff || []);
-        setTeamCounts({ present, absent, leave, total });
-      }
-    } catch (error) {
-      console.error('Error fetching team presence:', error);
-    } finally {
-      setTeamLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeSegment === 'team') {
-      fetchTeamData();
-    }
-  }, [activeSegment]);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     const fetchAttendance = async () => {
       const userId = user?.id || user?._id;
       if (!userId) return;
-
       try {
         setLoading(true);
         const [response, holidaysRes] = await Promise.all([
           api.get(`/crm/attendance?staffId=${userId}`),
           api.get('/crm/attendance/holidays')
         ]);
-
         if (response.data.success) {
           const records = response.data.data.records || [];
-
-          // Parse records into list format
           const formatted = records.map(r => ({
             date: new Date(r.date),
             status: r.status || 'Present',
@@ -88,63 +457,40 @@ const AttendancePage = () => {
             checkOut: r.outTime || '--:--',
             hours: r.workHours || '-'
           }));
-
-          // Merge holidays
           const holidaysList = holidaysRes.data?.success ? holidaysRes.data.data : [];
           const combined = [...formatted];
-          
           holidaysList.forEach(h => {
             const hDate = new Date(h.date);
             const exists = combined.some(r => r.date.toDateString() === hDate.toDateString());
             if (!exists) {
-              combined.push({
-                date: hDate,
-                status: 'Holiday',
-                checkIn: '--:--',
-                checkOut: '--:--',
-                hours: '-',
-                reason: h.reason
-              });
+              combined.push({ date: hDate, status: 'Holiday', checkIn: '--:--', checkOut: '--:--', hours: '-', reason: h.reason });
             } else {
-              // If it already exists, let's mark it as a holiday (to style it blue) but keep any checked-in details if present
               const idx = combined.findIndex(r => r.date.toDateString() === hDate.toDateString());
               combined[idx].status = 'Holiday';
               combined[idx].reason = h.reason;
             }
           });
-
-          // Sort combined list by date descending
           combined.sort((a, b) => b.date - a.date);
-
           setAttendanceData(combined);
 
-          // Calculate statistics for the current month
           const currentMonth = new Date().getMonth();
           const currentYear = new Date().getFullYear();
           const currentMonthRecords = combined.filter(r =>
-            r.date.getMonth() === currentMonth &&
-            r.date.getFullYear() === currentYear
+            r.date.getMonth() === currentMonth && r.date.getFullYear() === currentYear
           );
-
-          const presentCount = currentMonthRecords.filter(r => r.status === 'Present').length;
-          const lateCount = currentMonthRecords.filter(r => r.status === 'Late').length;
-          const absentCount = currentMonthRecords.filter(r => r.status === 'Absent').length;
-          const leavesCount = currentMonthRecords.filter(r => r.status === 'Leave' || r.status === 'Leaves').length;
-
           setStats([
-            { label: 'Present', value: presentCount, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Late', value: lateCount, color: 'text-amber-500', bg: 'bg-amber-50' },
-            { label: 'Absent', value: absentCount, color: 'text-rose-500', bg: 'bg-rose-50' },
-            { label: 'Leaves', value: leavesCount, color: 'text-blue-500', bg: 'bg-blue-50' }
+            { label: 'Present', value: currentMonthRecords.filter(r => r.status === 'Present').length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Late',    value: currentMonthRecords.filter(r => r.status === 'Late').length,    color: 'text-amber-500',   bg: 'bg-amber-50' },
+            { label: 'Absent',  value: currentMonthRecords.filter(r => r.status === 'Absent').length,  color: 'text-rose-500',    bg: 'bg-rose-50' },
+            { label: 'Leaves',  value: currentMonthRecords.filter(r => r.status === 'Leave' || r.status === 'Leaves').length, color: 'text-blue-500', bg: 'bg-blue-50' }
           ]);
         }
       } catch (error) {
-        console.error('Error fetching real attendance data:', error);
+        console.error('Error fetching attendance:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchAttendance();
   }, [user, clockedIn]);
 
@@ -156,312 +502,158 @@ const AttendancePage = () => {
   // Live Location Tracking
   useEffect(() => {
     let watchId = null;
-    let lastLat = 0;
-    let lastLng = 0;
-
-    // Check if location access is enabled in settings
+    let lastLat = 0, lastLng = 0;
     const isLocationEnabled = localStorage.getItem('location_access_enabled') !== 'false';
-
-    if (!isLocationEnabled) {
-      setLocationAddress('Location access disabled in settings');
-      return;
-    }
-
+    if (!isLocationEnabled) { setLocationAddress('Location access disabled in settings'); return; }
     const handlePositionSuccess = async (position) => {
       const { latitude, longitude } = position.coords;
-
-      // Only reverse geocode if moved significantly (approx 20 meters)
       const dist = Math.sqrt(Math.pow(latitude - lastLat, 2) + Math.pow(longitude - lastLng, 2));
-
       if (dist > 0.0002 || lastLat === 0) {
-        lastLat = latitude;
-        lastLng = longitude;
-
-        // Fetch new address using shared service
+        lastLat = latitude; lastLng = longitude;
         const address = await getAddressFromCoordinates(latitude, longitude);
-        setLocationAddress(address || "Address Unavailable");
-
-        // Update local storage for other components if needed
-        const locationData = {
-          employeeId: 'EMP001',
-          name: 'Current User',
-          address: address || "Address Unavailable",
+        setLocationAddress(address || 'Address Unavailable');
+        localStorage.setItem('emp_latest_location', JSON.stringify({
+          employeeId: 'EMP001', name: 'Current User',
+          address: address || 'Address Unavailable',
           coords: { lat: latitude, long: longitude },
           timestamp: new Date().toISOString()
-        };
-        localStorage.setItem('emp_latest_location', JSON.stringify(locationData));
+        }));
       }
     };
-
-    const handlePositionError = (error) => {
-      console.error("Location watch error:", error);
-      setLocationAddress('Location access denied');
-    };
-
-    // Start watching position
+    const handlePositionError = () => setLocationAddress('Location access denied');
     watchId = watchPosition(handlePositionSuccess, handlePositionError);
-
-    return () => {
-      if (watchId !== null) clearWatch(watchId);
-    };
+    return () => { if (watchId !== null) clearWatch(watchId); };
   }, []);
 
   const fetchLocation = async () => {
-    // Check if location access is enabled in settings
     const isLocationEnabled = localStorage.getItem('location_access_enabled') !== 'false';
-    if (!isLocationEnabled) {
-      setLocationAddress('Location access disabled in settings');
-      return;
-    }
-
+    if (!isLocationEnabled) { setLocationAddress('Location access disabled in settings'); return; }
     try {
       setLocationAddress('Updating location...');
       const position = await getCurrentPosition();
       const address = await getAddressFromCoordinates(position.coords.latitude, position.coords.longitude);
-      setLocationAddress(address || "Address Unavailable");
-    } catch (error) {
-      console.error("Error manual refreshing location:", error);
-      setLocationAddress('Location access denied');
-    }
+      setLocationAddress(address || 'Address Unavailable');
+    } catch { setLocationAddress('Location access denied'); }
   };
 
-  const onClockAction = () => {
-    handleClockToggle();
-  };
+  const onClockAction = () => handleClockToggle();
 
   const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const formattedDate = currentTime.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Filtered team list
-  const filteredTeamList = teamList.filter(staff => {
-    const searchLower = teamSearch.trim().toLowerCase();
-    const matchesSearch = (staff.name || '').toLowerCase().includes(searchLower) ||
-        (staff.role || '').toLowerCase().includes(searchLower);
-    const matchesFilter = teamFilter === 'All' || staff.status === teamFilter;
-    return matchesSearch && matchesFilter;
-  });
-
-  const getTeamStatusColor = (status) => {
-    switch (status) {
-      case 'Present': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Absent': return 'bg-rose-50 text-rose-600 border-rose-100';
-      case 'Leave': return 'bg-amber-50 text-amber-600 border-amber-100';
-      default: return 'bg-gray-50 text-gray-600';
-    }
+  const userData = {
+    name: user?.name || '',
+    joinDate: user?.joinDate || user?.joiningDate || null,
   };
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#F5F7FA] font-sans selection:bg-blue-100">
       <div className="flex-1 overflow-y-auto pb-32 scrollbar-hide">
         <div className="relative z-30">
-          {/* HEADER BACKGROUND */}
           <div className="bg-[#1C205C] pb-8 rounded-b-[40px] shadow-lg relative overflow-hidden z-0">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
-
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none" />
             <div className="pt-6 px-4">
               <HeaderTopBar title="Attendance" />
               <div className="mt-2 text-center text-blue-100/80 text-sm font-semibold">
-                {activeSegment === 'my' ? 'Manage your daily work hours' : 'Colleague presence directory'}
+                Manage your daily work hours
               </div>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Segment Toggle for Telecallers */}
-        {isTelecaller && (
-          <div className="px-6 mt-6 flex gap-2">
+        {/* STATS GRID */}
+        <div className="px-6 mt-6">
+          <div className="grid grid-cols-2 gap-3">
+            {stats.map((stat, idx) => (
+              <div key={idx} className={`${stat.bg} p-4 rounded-xl flex items-center justify-between border border-transparent hover:border-black/5 transition-all`}>
+                <div>
+                  <p className={`text-xs font-bold uppercase ${stat.color} opacity-70`}>{stat.label}</p>
+                  <p className={`text-2xl font-black ${stat.color} mt-0.5`}>{stat.value}</p>
+                </div>
+                {idx === 0 && <FiCheckCircle className="text-emerald-200" size={24} />}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ACTIVITY LOG */}
+        <div className="px-6 mt-8 flex-1">
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="text-[#1C205C] font-bold text-sm">Activity Log</h3>
             <button
-              onClick={() => setActiveSegment('my')}
-              className={`flex-1 py-3 rounded-xl text-xs font-black shadow-sm transition-all border ${activeSegment === 'my' ? 'bg-[#1C205C] text-white border-[#1C205C]' : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'}`}
+              onClick={() => setShowCalendar(true)}
+              className="flex items-center gap-1.5 text-xs font-bold text-[#1C205C] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-all active:scale-95 border border-blue-100"
             >
-              My Attendance
-            </button>
-            <button
-              onClick={() => setActiveSegment('team')}
-              className={`flex-1 py-3 rounded-xl text-xs font-black shadow-sm transition-all border ${activeSegment === 'team' ? 'bg-[#1C205C] text-white border-[#1C205C]' : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'}`}
-            >
-              Team Attendance
+              <FiCalendar size={12} />
+              This Month
             </button>
           </div>
-        )}
 
-        {activeSegment === 'my' ? (
-          <>
-            {/* STATS GRID */}
-            <div className="px-6 mt-6">
-              <div className="grid grid-cols-2 gap-3">
-                {stats.map((stat, idx) => (
-                  <div key={idx} className={`${stat.bg} p-4 rounded-xl flex items-center justify-between border border-transparent hover:border-black/5 transition-all`}>
-                    <div>
-                      <p className={`text-xs font-bold uppercase ${stat.color} opacity-70`}>{stat.label}</p>
-                      <p className={`text-2xl font-black ${stat.color} mt-0.5`}>{stat.value}</p>
-                    </div>
-                    {idx === 0 && <FiCheckCircle className="text-emerald-200" size={24} />}
-                  </div>
-                ))}
+          <div className="space-y-3">
+            {loading ? (
+              <div className="flex justify-center p-8 bg-white rounded-xl border border-gray-100">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1C205C]" />
               </div>
-            </div>
-
-            <div className="px-6 mt-8 flex-1">
-              <div className="flex justify-between items-center mb-5">
-                <h3 className="text-[#1C205C] font-bold text-sm">Activity Log</h3>
-                <span className="text-xs font-medium text-gray-400">This Month</span>
+            ) : attendanceData.length === 0 ? (
+              <div className="text-center p-8 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400 font-semibold text-sm">
+                No attendance logs found for this period.
               </div>
-
-              <div className="space-y-3">
-                {loading ? (
-                  <div className="flex justify-center p-8 bg-white rounded-xl border border-gray-100">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1C205C]"></div>
-                  </div>
-                ) : attendanceData.length === 0 ? (
-                  <div className="text-center p-8 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400 font-semibold text-sm">
-                    No attendance logs found for this period.
-                  </div>
-                ) : (
-                  attendanceData.map((record, index) => (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      key={index}
-                      className="group bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`
-                                  w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-bold border
-                                  ${record.status === 'Present' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            record.status === 'Absent' ? 'bg-rose-50 text-rose-500 border-rose-100' :
-                              record.status === 'Late' ? 'bg-amber-50 text-amber-500 border-amber-100' :
-                                record.status === 'Leave' || record.status === 'Leaves' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                  record.status === 'Holiday' ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200 font-bold animate-pulse' : 'bg-gray-50 text-gray-400 border-gray-100'}
-                                `}>
-                          <span className="text-xs uppercase">{record.date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                          <span className="text-lg leading-none">{record.date.getDate()}</span>
-                        </div>
-
-                        <div className="text-left">
-                          <p className="text-[#1C205C] font-bold text-sm mb-0.5">{record.status === 'Late' ? 'Present (Late)' : record.status}</p>
-                          <div className="flex items-center gap-3 text-xs text-gray-400 font-medium">
-                            {record.status === 'Holiday' ? (
-                              <span className="text-red-600 font-extrabold tracking-wide">{record.reason || 'Official Holiday'}</span>
-                            ) : (
-                              <span className="flex items-center gap-1"><FiClock size={10} /> {record.checkIn} - {record.checkOut}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          /* TEAM ATTENDANCE / STAFF DIRECTORY SYSTEM */
-          <div className="px-6 mt-6 space-y-4">
-            {/* Search Input */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                className="w-full bg-white text-gray-800 placeholder-gray-400 border border-gray-200 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all font-semibold text-xs shadow-sm"
-                placeholder="Search colleague by name or role..."
-                value={teamSearch}
-                onChange={(e) => setTeamSearch(e.target.value)}
-              />
-            </div>
-
-            {/* Filter Pills */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {['All', 'Present', 'Absent', 'Leave'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setTeamFilter(filter)}
-                  className={`px-4 py-2 rounded-xl text-xs font-black shadow-sm border transition-all ${teamFilter === filter ? 'bg-[#1C205C] text-white border-[#1C205C]' : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50'}`}
+            ) : (
+              attendanceData.map((record, index) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                  key={index}
+                  className="group bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex items-center justify-between"
                 >
-                  {filter}
-                </button>
-              ))}
-            </div>
-
-            {/* Presence Summary */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between gap-3">
-              <div className="flex-1 bg-emerald-50 rounded-xl py-2.5 text-center border border-emerald-100/30">
-                <span className="block text-lg font-black text-emerald-600">{teamCounts.present}</span>
-                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Present</span>
-              </div>
-              <div className="flex-1 bg-rose-50 rounded-xl py-2.5 text-center border border-rose-100/30">
-                <span className="block text-lg font-black text-rose-500">{teamCounts.absent}</span>
-                <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider">Absent</span>
-              </div>
-              <div className="flex-1 bg-amber-50 rounded-xl py-2.5 text-center border border-amber-100/30">
-                <span className="block text-lg font-black text-amber-500">{teamCounts.leave}</span>
-                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">On Leave</span>
-              </div>
-            </div>
-
-            {/* Colleague Presence List */}
-            <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-center mb-1">
-                <h3 className="text-gray-800 font-bold text-xs">Staff List ({filteredTeamList.length})</h3>
-                <button onClick={fetchTeamData} className="text-purple-600 hover:text-purple-800 text-[10px] font-black uppercase tracking-wider">Refresh</button>
-              </div>
-
-              {teamLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1C205C]"></div>
-                </div>
-              ) : filteredTeamList.length > 0 ? (
-                filteredTeamList.map((staff, idx) => (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04 }}
-                    key={staff.id || staff._id || idx}
-                    className="bg-white p-4 rounded-xl border border-gray-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-purple-50 text-[#1C205C] border border-purple-100 flex items-center justify-center font-black text-xs">
-                        {staff.avatar ? (
-                          <img src={staff.avatar} alt={staff.name} className="w-full h-full object-cover rounded-full" />
+                  <div className="flex items-center gap-4">
+                    <div className={`
+                      w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-bold border
+                      ${record.status === 'Present'  ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        record.status === 'Absent'   ? 'bg-rose-50 text-rose-500 border-rose-100' :
+                        record.status === 'Late'     ? 'bg-amber-50 text-amber-500 border-amber-100' :
+                        record.status === 'Leave' || record.status === 'Leaves' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        record.status === 'Holiday'  ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200 animate-pulse' :
+                        'bg-gray-50 text-gray-400 border-gray-100'}
+                    `}>
+                      <span className="text-xs uppercase">{record.date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                      <span className="text-lg leading-none">{record.date.getDate()}</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[#1C205C] font-bold text-sm mb-0.5">
+                        {record.status === 'Late' ? 'Present (Late)' : record.status}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 font-medium">
+                        {record.status === 'Holiday' ? (
+                          <span className="text-red-600 font-extrabold tracking-wide">{record.reason || 'Official Holiday'}</span>
                         ) : (
-                          staff.name ? staff.name.charAt(0).toUpperCase() : 'S'
+                          <span className="flex items-center gap-1"><FiClock size={10} /> {record.checkIn} - {record.checkOut}</span>
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-bold text-[#1C205C] text-xs">{staff.name}</h4>
-                        <p className="text-[10px] text-gray-400 font-medium">{staff.role}</p>
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-black border mt-1 ${getTeamStatusColor(staff.status)}`}>
-                          {staff.status === 'Present' && '● Present'}
-                          {staff.status === 'Absent' && '○ Absent'}
-                          {staff.status === 'Leave' && '◐ On Leave'}
-                        </span>
-                      </div>
                     </div>
-                    {staff.phone && (
-                      <a href={`tel:${staff.phone}`} className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-colors">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                      </a>
-                    )}
-                  </motion.div>
-                ))
-              ) : (
-                <div className="text-center p-8 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400 font-semibold text-xs">
-                  No staff members found matching search filter.
-                </div>
-              )}
-            </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
-        )}
+        </div>
       </div>
+
       <BottomNav />
+
+      {/* Calendar Modal */}
+      <AnimatePresence>
+        {showCalendar && (
+          <AttendanceCalendarModal
+            isOpen={showCalendar}
+            onClose={() => setShowCalendar(false)}
+            userId={user?.id || user?._id}
+            user={userData}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

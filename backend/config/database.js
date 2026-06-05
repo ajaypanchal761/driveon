@@ -32,6 +32,40 @@ export const connectDB = async () => {
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
 
+    // Correct misspelled Accountant role name in MongoDB collections
+    try {
+      const db = mongoose.connection.db;
+      
+      // Update crmroles
+      const roleUpdate = await db.collection('crmroles').updateMany(
+        { roleName: 'Accountanrt/HR' },
+        { $set: { roleName: 'Accountant/HR' } }
+      );
+      if (roleUpdate.modifiedCount > 0) {
+        console.log(`✏️ Corrected misspelled role name in ${roleUpdate.modifiedCount} crmroles documents.`);
+      }
+
+      // Update staffs
+      const staffUpdate1 = await db.collection('staffs').updateMany(
+        { role: 'Accountanrt/HR' },
+        { $set: { role: 'Accountant/HR' } }
+      );
+      if (staffUpdate1.modifiedCount > 0) {
+        console.log(`✏️ Corrected misspelled role name in ${staffUpdate1.modifiedCount} staffs documents.`);
+      }
+
+      // Fallback for singular collection name
+      const staffUpdate2 = await db.collection('staff').updateMany(
+        { role: 'Accountanrt/HR' },
+        { $set: { role: 'Accountant/HR' } }
+      );
+      if (staffUpdate2.modifiedCount > 0) {
+        console.log(`✏️ Corrected misspelled role name in ${staffUpdate2.modifiedCount} staff documents.`);
+      }
+    } catch (err) {
+      console.warn('⚠️ Non-blocking migration warning for role spelling correction:', err.message);
+    }
+
     // Handle connection events
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err.message);
