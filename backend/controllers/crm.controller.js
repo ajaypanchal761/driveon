@@ -3316,8 +3316,8 @@ export const getStaffPayroll = async (req, res) => {
             });
         }
 
-        const absentRate = staff.absentDeduction || globalAbsentDeduction || perDaySalary;
-        const halfDayRate = staff.halfDayDeduction || globalHalfDayDeduction || halfDaySalary;
+        const absentRate = (staff.absentDeduction && staff.absentDeduction > 0) ? staff.absentDeduction : perDaySalary;
+        const halfDayRate = (staff.halfDayDeduction && staff.halfDayDeduction > 0) ? staff.halfDayDeduction : halfDaySalary;
 
         let absentDeduction = absentCount * absentRate;
         let halfDayDeduction = halfDayCount * halfDayRate;
@@ -3343,6 +3343,12 @@ export const getStaffPayroll = async (req, res) => {
         let paidAmount = 0;
         let salaryStatus = 'Pending';
         let remainingAmount = netPayable;
+        let finalAbsentDeduction = absentDeduction;
+        let finalHalfDayDeduction = halfDayDeduction;
+        let finalNotJoinedDeduction = notJoinedDeduction;
+        let finalPendingDeduction = pendingDeduction;
+        let finalExtraWorkAmount = extraWorkAmount;
+        let finalTotalNetPayable = netPayable;
 
         if (salaryRecord) {
             paidAmount = salaryRecord.netPay || 0;
@@ -3350,6 +3356,12 @@ export const getStaffPayroll = async (req, res) => {
 
             if (salaryStatus === 'Paid') {
                 remainingAmount = Math.max(0, netPayable - paidAmount);
+                finalAbsentDeduction = salaryRecord.deductions || 0;
+                finalHalfDayDeduction = 0;
+                finalNotJoinedDeduction = 0;
+                finalPendingDeduction = 0;
+                finalExtraWorkAmount = 0;
+                finalTotalNetPayable = salaryRecord.netPay;
             }
         }
 
@@ -3365,13 +3377,13 @@ export const getStaffPayroll = async (req, res) => {
                 leaveDays: leaveCount,
                 perDaySalary,
                 halfDaySalary,
-                absentDeduction,
-                halfDayDeduction,
-                notJoinedDeduction,
-                pendingDeduction,
-                extraWorkAmount,
+                absentDeduction: finalAbsentDeduction,
+                halfDayDeduction: finalHalfDayDeduction,
+                notJoinedDeduction: finalNotJoinedDeduction,
+                pendingDeduction: finalPendingDeduction,
+                extraWorkAmount: finalExtraWorkAmount,
                 netPayable: remainingAmount,
-                totalNetPayable: netPayable,
+                totalNetPayable: finalTotalNetPayable,
                 paidAmount,
                 salaryStatus,
                 month: targetMonth,
@@ -3753,8 +3765,8 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
             }
 
             // Deductions logic
-            const absentRate = staff.absentDeduction || globalAbsentDeduction || perDaySalary;
-            const halfDayRate = staff.halfDayDeduction || globalHalfDayDeduction || halfDaySalary;
+            const absentRate = (staff.absentDeduction && staff.absentDeduction > 0) ? staff.absentDeduction : perDaySalary;
+            const halfDayRate = (staff.halfDayDeduction && staff.halfDayDeduction > 0) ? staff.halfDayDeduction : halfDaySalary;
 
             let absentDeduction = absentCount * absentRate;
             let halfDayDeduction = halfDayCount * halfDayRate;
@@ -3783,6 +3795,11 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
             let paymentMethod = '-';
             let bankName, accountNumber, ifscCode, upiId;
 
+            let finalAbsentDeduction = absentDeduction;
+            let finalHalfDayDeduction = halfDayDeduction;
+            let finalExtraWorkAmount = extraWorkAmount;
+            let finalTotalNetPayable = totalNetPayable;
+
             if (salaryRecord) {
                 paidAmount = salaryRecord.netPay || 0;
                 salaryStatus = salaryRecord.status || 'Pending';
@@ -3802,6 +3819,10 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
 
                 if (salaryStatus === 'Paid') {
                     remainingAmount = Math.max(0, totalNetPayable + bonus - paidAmount);
+                    finalAbsentDeduction = salaryRecord.deductions || 0;
+                    finalHalfDayDeduction = 0;
+                    finalExtraWorkAmount = 0;
+                    finalTotalNetPayable = salaryRecord.netPay;
                 }
             }
 
@@ -3821,10 +3842,10 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
                 halfDays: halfDayCount,
                 absentDays: absentCount,
                 leaveDays: leaveCount,
-                absentDeduction,
-                halfDayDeduction,
-                extraWorkAmount,
-                totalNetPayable,
+                absentDeduction: finalAbsentDeduction,
+                halfDayDeduction: finalHalfDayDeduction,
+                extraWorkAmount: finalExtraWorkAmount,
+                totalNetPayable: finalTotalNetPayable,
                 netPayable: remainingAmount,
                 paidAmount,
                 salaryStatus,
