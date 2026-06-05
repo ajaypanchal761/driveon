@@ -12,6 +12,72 @@ import { updateUser } from '../../store/slices/userSlice';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
 
+const compressImage = (file) => {
+    return new Promise((resolve) => {
+        if (!file || !file.type.startsWith('image/')) {
+            resolve(file);
+            return;
+        }
+
+        // Only compress if size is larger than 1MB
+        if (file.size <= 1024 * 1024) {
+            resolve(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1200;
+                const MAX_HEIGHT = 1200;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width = Math.round((width * MAX_HEIGHT) / height);
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            const newFileName = (file.name || 'photo.jpg').replace(/\.[^/.]+$/, "") + ".jpg";
+                            const compressedFile = new File([blob], newFileName, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            resolve(file);
+                        }
+                    },
+                    'image/jpeg',
+                    0.8
+                );
+            };
+            img.onerror = () => resolve(file);
+        };
+        reader.onerror = () => resolve(file);
+    });
+};
+
 const ProfilePage = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -62,18 +128,21 @@ const ProfilePage = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Size check (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('File size too large. Maximum size is 5MB.');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('photo', file);
-
         setIsUploading(true);
-        const loadingToast = toast.loading('Uploading profile photo...');
+        const loadingToast = toast.loading('Processing and uploading photo...');
         try {
+            const processedFile = await compressImage(file);
+
+            // Size check on processed/compressed file
+            if (processedFile.size > 5 * 1024 * 1024) {
+                toast.error('File size too large. Maximum size is 5MB.', { id: loadingToast });
+                setIsUploading(false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('photo', processedFile);
+
             const response = await api.post('/auth/staff-upload-photo', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
@@ -190,22 +259,22 @@ const ProfilePage = () => {
                             transition={{ duration: 0.5, type: "spring" }}
                             className="flex flex-col items-center mt-6 text-white"
                         >
+                            <input 
+                                type="file" 
+                                ref={galleryInputRef} 
+                                onChange={handleFileChange} 
+                                accept="image/*" 
+                                className="hidden" 
+                            />
+                            <input 
+                                type="file" 
+                                ref={cameraInputRef} 
+                                onChange={handleFileChange} 
+                                accept="image/*" 
+                                capture="user" 
+                                className="hidden" 
+                            />
                             <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                                <input 
-                                    type="file" 
-                                    ref={galleryInputRef} 
-                                    onChange={handleFileChange} 
-                                    accept="image/*" 
-                                    className="hidden" 
-                                />
-                                <input 
-                                    type="file" 
-                                    ref={cameraInputRef} 
-                                    onChange={handleFileChange} 
-                                    accept="image/*" 
-                                    capture="user" 
-                                    className="hidden" 
-                                />
                                 <div className="w-28 h-28 rounded-full border-[4px] border-white/20 shadow-2xl overflow-hidden p-1.5 bg-white/10 backdrop-blur-md transition-transform duration-300 group-hover:scale-105 relative">
                                     {isUploading ? (
                                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">

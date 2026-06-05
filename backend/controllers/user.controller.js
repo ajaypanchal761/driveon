@@ -382,15 +382,11 @@ export const uploadPhoto = async (req, res) => {
       });
     }
 
-    // Convert multer file to format expected by Cloudinary service
-    const fileForUpload = {
-      buffer: file.buffer,
-      mimetype: file.mimetype,
-      originalname: file.originalname,
-    };
+    // Convert file buffer to base64 Data URI for reliable Cloudinary upload
+    const fileBase64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
     // Upload to Cloudinary
-    const uploadResult = await uploadImage(fileForUpload, {
+    const uploadResult = await uploadImage(fileBase64, {
       folder: 'driveon/profile-photos',
       width: 800,
       height: 800,
@@ -681,15 +677,11 @@ export const uploadRcDocument = async (req, res) => {
       });
     }
 
-    // Convert multer file to format expected by Cloudinary service
-    const fileForUpload = {
-      buffer: file.buffer,
-      mimetype: file.mimetype,
-      originalname: file.originalname,
-    };
+    // Convert file buffer to base64 Data URI for reliable Cloudinary upload
+    const fileBase64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
     // Upload to Cloudinary
-    const uploadResult = await uploadImage(fileForUpload, {
+    const uploadResult = await uploadImage(fileBase64, {
       folder: 'driveon/rc-documents',
       width: 1200,
       crop: 'limit',

@@ -1449,15 +1449,11 @@ export const uploadStaffPhoto = async (req, res) => {
       });
     }
 
-    // Convert file format for Cloudinary
-    const fileForUpload = {
-      buffer: file.buffer,
-      mimetype: file.mimetype,
-      originalname: file.originalname,
-    };
+    // Convert file buffer to base64 Data URI for reliable Cloudinary upload
+    const fileBase64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
     // Upload to Cloudinary
-    const uploadResult = await uploadImage(fileForUpload, {
+    const uploadResult = await uploadImage(fileBase64, {
       folder: 'driveon/staff-avatars',
       width: 800,
       height: 800,
@@ -1516,7 +1512,7 @@ export const uploadStaffPhoto = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while uploading photo',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: error.message,
     });
   }
 };
