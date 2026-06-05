@@ -4,6 +4,7 @@ import { colors } from '../../../module/theme/colors';
 import { adminService } from '../../../services/admin.service';
 import toastUtils from '../../../config/toast';
 import Card from '../../../components/common/Card';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 const ADMIN_PERMISSIONS_LIST = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -58,6 +59,7 @@ const SubAdminsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
   const [editingId, setEditingId] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('admin'); // 'admin' | 'crm'
 
   // Form fields
@@ -99,6 +101,7 @@ const SubAdminsPage = () => {
     });
     setEditingId(null);
     setActiveTab('admin');
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -113,6 +116,7 @@ const SubAdminsPage = () => {
     });
     setEditingId(subadmin.id || subadmin._id);
     setActiveTab('admin');
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -409,15 +413,24 @@ const SubAdminsPage = () => {
                     <label className="block text-sm font-semibold mb-1" style={{ color: colors.textSecondary }}>
                       Password {modalMode === 'edit' && <span className="text-xs font-normal text-gray-500">(Leave blank to keep same)</span>}
                     </label>
-                    <input
-                      type="password"
-                      required={modalMode === 'create'}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Min 6 characters"
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
-                      style={{ borderColor: colors.borderMedium }}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required={modalMode === 'create'}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="Min 6 characters"
+                        className="w-full pl-4 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2"
+                        style={{ borderColor: colors.borderMedium }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
