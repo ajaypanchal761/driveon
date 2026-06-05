@@ -833,6 +833,28 @@ export const createStaff = async (req, res) => {
     try {
         let staffData = { ...req.body };
 
+        // Check for unique phone number
+        if (staffData.phone) {
+            const existingPhone = await Staff.findOne({ phone: staffData.phone });
+            if (existingPhone) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Staff member with phone number ${staffData.phone} already exists`
+                });
+            }
+        }
+
+        // Check for unique email address
+        if (staffData.email) {
+            const existingEmail = await Staff.findOne({ email: staffData.email.toLowerCase() });
+            if (existingEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Staff member with email ${staffData.email} already exists`
+                });
+            }
+        }
+
         // Handle File Uploads via req.files (multiple fields)
         if (req.files) {
             if (req.files['avatar'] && req.files['avatar'][0]) {
@@ -889,6 +911,28 @@ export const updateStaff = async (req, res) => {
         }
 
         const updateData = { ...req.body };
+
+        // Check for unique phone number
+        if (updateData.phone && updateData.phone !== staff.phone) {
+            const existingPhone = await Staff.findOne({ phone: updateData.phone, _id: { $ne: req.params.id } });
+            if (existingPhone) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Staff member with phone number ${updateData.phone} already exists`
+                });
+            }
+        }
+
+        // Check for unique email address
+        if (updateData.email && updateData.email.toLowerCase() !== staff.email?.toLowerCase()) {
+            const existingEmail = await Staff.findOne({ email: updateData.email.toLowerCase(), _id: { $ne: req.params.id } });
+            if (existingEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Staff member with email ${updateData.email} already exists`
+                });
+            }
+        }
 
         // Handle File Uploads via req.files (multiple fields)
         if (req.files) {

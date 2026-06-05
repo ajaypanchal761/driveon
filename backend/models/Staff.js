@@ -26,11 +26,13 @@ const staffSchema = new mongoose.Schema(
         phone: {
             type: String,
             required: [true, 'Phone number is required'],
+            unique: true,
             trim: true,
         },
         email: {
             type: String,
             required: [true, 'Email is required'],
+            unique: true,
             trim: true,
             lowercase: true,
         },

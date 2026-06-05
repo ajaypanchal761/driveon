@@ -19,7 +19,14 @@ const AssignCallerModal = ({ isOpen, onClose, enquiryIds = [], onSuccess, single
     setLoadingStaff(true);
     try {
       const res = await api.get('/crm/staff');
-      if (res.data.success) setStaffList(res.data.data.staff || res.data.data || []);
+      if (res.data.success) {
+        const rawStaff = res.data.data.staff || res.data.data || [];
+        const filteredStaff = rawStaff.filter(staff => {
+          const roleLower = (staff.role || '').toLowerCase();
+          return roleLower.includes('telecaller') || roleLower.includes('caller');
+        });
+        setStaffList(filteredStaff);
+      }
     } catch (e) { console.error('Fetch staff error:', e); }
     finally { setLoadingStaff(false); }
   };

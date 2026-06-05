@@ -107,7 +107,7 @@ const StaffActionMenu = ({ staff, onEdit, onDelete, onChangeStatus, isOpen, onCl
 /**
  * AddStaffModal - Modal for adding new staff members
  */
-const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
+const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, staffList = [] }) => {
   const [step, setStep] = useState(1);
   const modalScrollRef = useRef(null);
   const [salaryMethod, setSalaryMethod] = useState('Monthly');
@@ -233,8 +233,34 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
       newErrors.phone = "Phone number is required";
     } else if (formData.phone.length !== 10) {
       newErrors.phone = "Phone number must be exactly 10 digits";
+    } else {
+      // Check duplicate phone locally (strip non-digits and compare last 10 digits)
+      const rawPhone = formData.phone.replace(/\D/g, '');
+      const duplicatePhone = staffList.some(s => {
+        const sRaw = (s.phone || '').replace(/\D/g, '');
+        return sRaw.slice(-10) === rawPhone.slice(-10) && (!editingStaff || s.id !== editingStaff.id);
+      });
+      if (duplicatePhone) {
+        newErrors.phone = "Phone number already registered for another staff member";
+      }
     }
-    if (!formData.email) newErrors.email = "Email is required";
+
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    } else {
+      // Check duplicate email locally (trim and lowercase)
+      const inputEmail = formData.email.trim().toLowerCase();
+      const duplicateEmail = staffList.some(s => 
+        (s.email || '').trim().toLowerCase() === inputEmail && 
+        (!editingStaff || s.id !== editingStaff.id)
+      );
+      if (duplicateEmail) {
+        newErrors.email = "Email already registered for another staff member";
+      }
+    }
+
     if (!editingStaff && !formData.password) newErrors.password = "Password is required";
     if (!editingStaff && !aadharFile) {
       newErrors.aadhar = "Aadhar card image is required";
@@ -587,6 +613,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff }) => {
 };
 
 const ViewStaffModal = ({ isOpen, onClose, staff }) => {
+  const [showFullImage, setShowFullImage] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -622,9 +650,18 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
 
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] text-2xl font-bold border-2 border-white shadow-sm">
-              {staff.name.charAt(0)}
-            </div>
+            {staff.avatar ? (
+              <img 
+                src={staff.avatar} 
+                alt={staff.name} 
+                onClick={() => setShowFullImage(true)}
+                className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md bg-gray-50 shrink-0 cursor-pointer hover:scale-105 transition-transform duration-200"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] text-2xl font-bold border-2 border-white shadow-sm shrink-0">
+                {staff.name.charAt(0)}
+              </div>
+            )}
             <div>
               <h3 className="text-xl font-bold text-gray-900">{staff.name}</h3>
               <span className="px-2.5 py-1 bg-[#212c40]/10 text-[#212c40] rounded-lg text-xs font-bold uppercase tracking-wide">
@@ -707,6 +744,33 @@ const ViewStaffModal = ({ isOpen, onClose, staff }) => {
           </button>
         </div>
       </motion.div>
+      {/* Lightbox / Full Image View */}
+      {showFullImage && staff.avatar && (
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm cursor-pointer animate-fadeIn"
+          onClick={() => setShowFullImage(false)}
+        >
+          <div 
+            className="relative max-w-xl max-h-[85vh] bg-white rounded-3xl p-3 shadow-2xl flex flex-col items-center cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={staff.avatar} 
+              alt={staff.name} 
+              className="max-w-full max-h-[70vh] rounded-2xl object-contain shadow-sm bg-gray-50"
+            />
+            <div className="text-center font-bold text-gray-800 text-sm mt-3.5 pb-1">
+              {staff.name}'s Profile Photo
+            </div>
+            <button 
+              onClick={() => setShowFullImage(false)}
+              className="absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-full shadow-lg transition-all transform hover:scale-110 active:scale-95"
+            >
+              <MdClose size={20} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   );
@@ -937,7 +1001,8 @@ export const StaffDirectoryPage = () => {
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingStaff(null); }}
         onSubmit={handleAddStaff}
-        editingStaff={editingStaff} // Pass editingStaff if your modal supports it (it seems StaffFormModal does, but AddStaffModal might not. Let's check.)
+        editingStaff={editingStaff}
+        staffList={staffList}
       />
       {/* Note: I am assuming AddStaffModal is the one used. But wait, there is StaffFormModal too. */}
       {/* Looking at original code: <AddStaffModal isOpen={isModalOpen} ... /> line 474. */}
@@ -1046,7 +1111,6 @@ export const StaffDirectoryPage = () => {
                 <th className="p-4">Contact</th>
                 <th className="p-4">Joined</th>
                 <th className="p-4">Salary</th>
-                <th className="p-4">Status</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -1054,8 +1118,23 @@ export const StaffDirectoryPage = () => {
               {filteredStaff.map((staff) => (
                 <tr key={staff.id} className="hover:bg-gray-50 transition-colors group">
                   <td className="p-4">
-                    <div className="font-bold text-gray-900">{staff.name}</div>
-                    <div className="text-xs text-gray-400">ID: STF-{String(staff.id).slice(-4)}</div>
+                    <div className="flex items-center gap-3">
+                      {staff.avatar ? (
+                        <img 
+                          src={staff.avatar} 
+                          alt={staff.name} 
+                          className="w-10 h-10 rounded-full object-cover border border-gray-100 shadow-sm bg-gray-50 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#212c40]/10 flex items-center justify-center text-[#212c40] font-bold text-sm shrink-0">
+                          {staff.name.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-gray-900">{staff.name}</div>
+                        <div className="text-xs text-gray-400">ID: STF-{String(staff.id).slice(-4)}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="p-4">
                     <div className="font-medium text-gray-800">{staff.role}</div>
@@ -1073,9 +1152,6 @@ export const StaffDirectoryPage = () => {
                   </td>
                   <td className="p-4 font-medium text-gray-900">
                     ₹ {(Number(staff.salary || staff.baseSalary || 0) - Number(staff.absentDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="p-4">
-                    {getStatusBadge(staff.status)}
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -1495,7 +1571,6 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
                   <tr>
                     <th className="p-4">Name</th>
                     <th className="p-4">Staff ID</th>
-                    <th className="p-4">Status</th>
                     <th className="p-4 text-right">Action</th>
                   </tr>
                 </thead>
@@ -1503,17 +1578,20 @@ const RoleDetails = ({ role, staffList = [], onBack }) => {
                   {assignedStaff.map(staff => (
                     <tr key={staff.id} className="hover:bg-gray-50/50">
                       <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold">
-                          {staff.name ? staff.name.charAt(0) : 'S'}
-                        </div>
+                        {staff.avatar ? (
+                          <img 
+                            src={staff.avatar} 
+                            alt={staff.name} 
+                            className="w-8 h-8 rounded-full object-cover border border-gray-100 shadow-sm bg-gray-50 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold shrink-0">
+                            {staff.name ? staff.name.charAt(0) : 'S'}
+                          </div>
+                        )}
                         {staff.name}
                       </td>
                       <td className="p-4 text-gray-500 font-medium text-sm">{staff.employeeId || `STF-${staff.id?.slice(-6) || '000'}`}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-1 rounded text-xs font-bold border ${staff.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
-                          {staff.status}
-                        </span>
-                      </td>
                       <td className="p-4 text-right">
                         <button onClick={() => navigate(`/crm/staff/directory?search=${encodeURIComponent(staff.name)}`)} className="text-indigo-600 hover:text-indigo-800 text-sm font-bold">View Profile</button>
                       </td>
@@ -4024,7 +4102,7 @@ export const AttendanceSettingsPage = () => {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-5">
             <div className="flex items-center gap-3 border-b border-gray-100 pb-3">
               <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
-                <MdAttachMoney size={22} />
+                <MdCurrencyRupee size={22} />
               </div>
               <div>
                 <h3 className="font-bold text-gray-900">Salary Deductions</h3>

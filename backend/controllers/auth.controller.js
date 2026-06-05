@@ -1406,3 +1406,120 @@ export const deleteStaffAccount = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Upload staff profile photo
+ * @route   POST /api/auth/staff-upload-photo
+ * @access  Private (Staff)
+ */
+export const uploadStaffPhoto = async (req, res) => {
+  try {
+    const { uploadImage, deleteImage, isConfigured } = await import('../services/cloudinary.service.js');
+
+    // Check if Cloudinary is configured
+    if (!isConfigured()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Image upload service not configured. Please contact administrator.',
+      });
+    }
+
+    // Check if file is provided (multer stores file in req.file)
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a photo file',
+      });
+    }
+
+    const file = req.file;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.',
+      });
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'File size too large. Maximum size is 5MB.',
+      });
+    }
+
+    // Convert file format for Cloudinary
+    const fileForUpload = {
+      buffer: file.buffer,
+      mimetype: file.mimetype,
+      originalname: file.originalname,
+    };
+
+    // Upload to Cloudinary
+    const uploadResult = await uploadImage(fileForUpload, {
+      folder: 'driveon/staff-avatars',
+      width: 800,
+      height: 800,
+      crop: 'limit',
+    });
+
+    const staffId = req.user._id;
+    const staff = await Staff.findById(staffId);
+
+    if (!staff) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found',
+      });
+    }
+
+    // Delete old avatar from Cloudinary if exists
+    if (staff.avatar) {
+      try {
+        const urlParts = staff.avatar.split('/');
+        const uploadIndex = urlParts.slice(0).findIndex(part => part === 'upload');
+        if (uploadIndex !== -1 && urlParts.length > uploadIndex + 2) {
+          const publicIdWithVersion = urlParts.slice(uploadIndex + 2).join('/');
+          const publicId = publicIdWithVersion.split('.')[0]; // Remove extension
+          await deleteImage(publicId);
+        }
+      } catch (deleteError) {
+        console.error('Error deleting old staff avatar:', deleteError);
+      }
+    }
+
+    staff.avatar = uploadResult.secure_url;
+    await staff.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile photo uploaded successfully',
+      data: {
+        avatar: uploadResult.secure_url,
+        user: {
+          id: staff._id,
+          name: staff.name,
+          email: staff.email,
+          role: staff.role,
+          employeeId: staff.employeeId,
+          phone: staff.phone,
+          department: staff.department,
+          avatar: uploadResult.secure_url,
+          joinDate: staff.joinDate,
+          status: staff.status
+        }
+      },
+    });
+  } catch (error) {
+    console.error('Upload staff photo error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while uploading photo',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};

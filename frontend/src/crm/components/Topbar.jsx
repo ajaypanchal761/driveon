@@ -75,7 +75,7 @@ const Topbar = ({ toggleSidebar }) => {
 
   return (
     <header
-      className="bg-white/80 backdrop-blur-md sticky top-0 z-20 h-16 border-b border-gray-200 px-4 flex items-center justify-between shadow-sm md:ml-64 transition-all duration-300"
+      className="bg-white sticky top-0 z-20 h-16 border-b border-gray-200 px-4 flex items-center justify-between shadow-sm md:ml-64 transition-all duration-300"
       style={{ borderColor: premiumColors.border.light }}
     >
       <div className="flex items-center gap-3 md:gap-4">

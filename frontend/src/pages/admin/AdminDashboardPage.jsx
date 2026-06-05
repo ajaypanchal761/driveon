@@ -372,11 +372,11 @@ const AdminDashboardPage = () => {
               {/* Row 1: Title & Legends */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <h3 className="text-lg md:text-xl font-semibold whitespace-nowrap" style={{ color: colors.textPrimary }}>
-                  Normal & Inward Booking Trends & Analytics
+                  In-Out Booking  Analytics
                 </h3>
-                
+
                 {/* Custom Legend like CRM */}
-                <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 whitespace-nowrap">
                     <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div> Total Bookings
                   </div>
@@ -392,18 +392,16 @@ const AdminDashboardPage = () => {
                 <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
                   <button
                     onClick={() => setChartView('monthly')}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      chartView === 'monthly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${chartView === 'monthly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                     style={chartView === 'monthly' ? { backgroundColor: colors.backgroundTertiary } : {}}
                   >
                     Monthly
                   </button>
                   <button
                     onClick={() => setChartView('yearly')}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      chartView === 'yearly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${chartView === 'yearly' ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                     style={chartView === 'yearly' ? { backgroundColor: colors.backgroundTertiary } : {}}
                   >
                     Yearly

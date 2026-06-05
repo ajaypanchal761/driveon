@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { motion } from 'framer-motion';
-import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle, FiHeadphones } from 'react-icons/fi';
+import { FiUser, FiSettings, FiLogOut, FiAward, FiChevronRight, FiBriefcase, FiDollarSign, FiFileText, FiBell, FiShield, FiPhone, FiMail, FiMapPin, FiAlertTriangle, FiHeadphones, FiCamera } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { logoutUser } from '../../store/slices/authSlice';
 import { useEmployee } from '../../context/EmployeeContext';
+import { updateUser } from '../../store/slices/userSlice';
 import HeaderTopBar from '../components/HeaderTopBar';
 import BottomNav from '../components/BottomNav';
 
@@ -15,6 +16,47 @@ const ProfilePage = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { unreadCount } = useEmployee();
+    const fileInputRef = React.useRef(null);
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleAvatarClick = () => {
+        if (!isUploading) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Size check (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File size too large. Maximum size is 5MB.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        setIsUploading(true);
+        const loadingToast = toast.loading('Uploading profile photo...');
+        try {
+            const response = await api.post('/auth/staff-upload-photo', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            if (response.data.success) {
+                toast.success('Profile photo updated successfully', { id: loadingToast });
+                dispatch(updateUser(response.data.data.user));
+            }
+        } catch (error) {
+            console.error('Upload photo error:', error);
+            toast.error(error.response?.data?.message || 'Failed to upload photo', { id: loadingToast });
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const handleLogout = async () => {
         await dispatch(logoutUser());
@@ -98,12 +140,28 @@ const ProfilePage = () => {
                             transition={{ duration: 0.5, type: "spring" }}
                             className="flex flex-col items-center mt-6 text-white"
                         >
-                            <div className="relative group">
-                                <div className="w-28 h-28 rounded-full border-[4px] border-white/20 shadow-2xl overflow-hidden p-1.5 bg-white/10 backdrop-blur-md transition-transform duration-300 group-hover:scale-105">
+                            <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleFileChange} 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                />
+                                <div className="w-28 h-28 rounded-full border-[4px] border-white/20 shadow-2xl overflow-hidden p-1.5 bg-white/10 backdrop-blur-md transition-transform duration-300 group-hover:scale-105 relative">
+                                    {isUploading ? (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+                                        </div>
+                                    ) : (
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 rounded-full">
+                                            <FiCamera className="text-white" size={24} />
+                                        </div>
+                                    )}
                                     <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
                                 </div>
-                                <div className="absolute bottom-2 right-2 bg-emerald-400 w-7 h-7 rounded-full border-[3px] border-[#1C205C] flex items-center justify-center shadow-lg">
-                                    <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                                <div className="absolute bottom-1 right-1 bg-white text-[#1C205C] w-8 h-8 rounded-full border-[3px] border-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300">
+                                    <FiCamera size={14} className="stroke-[2.5]" />
                                 </div>
                             </div>
 
