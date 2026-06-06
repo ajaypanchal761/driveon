@@ -250,16 +250,14 @@ const RegisterPage = () => {
                     to="/terms"
                     className="font-medium hover:underline"
                     style={{ color: theme.colors.primary }}
-                    target="_blank"
                   >
                     Terms and Conditions
                   </Link>
                   {' '}and{' '}
                   <Link
-                    to="/privacy"
+                    to="/privacy-policy"
                     className="font-medium hover:underline"
                     style={{ color: theme.colors.primary }}
-                    target="_blank"
                   >
                     Privacy Policy
                   </Link>

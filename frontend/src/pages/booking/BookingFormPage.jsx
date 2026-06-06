@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
 import carImg2 from '../../assets/car_img2-removebg-preview.png';
@@ -437,7 +437,7 @@ const BookingFormPage = () => {
                     required
                   />
                   <span className="text-sm md:text-base" style={{ color: theme.colors.textSecondary }}>
-                    I agree to the terms and conditions, privacy policy, and rental agreement. I understand that I am responsible for the vehicle during the rental period. <span className="text-red-500 font-semibold">*</span>
+                    I agree to the <Link to="/terms" className="font-semibold hover:underline text-purple-600" onClick={(e) => e.stopPropagation()}>terms and conditions</Link>, <Link to="/privacy-policy" className="font-semibold hover:underline text-purple-600" onClick={(e) => e.stopPropagation()}>privacy policy</Link>, and rental agreement. I understand that I am responsible for the vehicle during the rental period. <span className="text-red-500 font-semibold">*</span>
                   </span>
                 </label>
               </div>

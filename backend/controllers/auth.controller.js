@@ -84,6 +84,19 @@ export const register = async (req, res) => {
     const otp = generateOTP(normalizedPhone).toString();
     const expiresAt = getOTPExpiry(10); // 10 minutes
 
+    // Handle FCM Token if provided during signup
+    const { fcmToken, platform } = req.body;
+    const fcmData = {};
+    if (fcmToken) {
+      if (platform === 'mobile') {
+        fcmData.fcmTokenMobile = fcmToken;
+      } else {
+        fcmData.fcmToken = fcmToken;
+      }
+    }
+
+    const userName = (fullName || name || '').trim();
+
     // Store OTP in database
     await OTP.create({
       identifier: normalizedPhone,
@@ -92,6 +105,14 @@ export const register = async (req, res) => {
       purpose: 'register',
       expiresAt,
       isUsed: false,
+      signupData: {
+        email,
+        phone: normalizedPhone,
+        name: userName,
+        referredBy,
+        heardAbout: heardAbout || '',
+        ...fcmData
+      }
     });
 
     // Send OTP via SMS (will skip for test numbers)
@@ -161,36 +182,8 @@ export const register = async (req, res) => {
 
     console.log(`📱 ===== Registration OTP Send Complete =====\n`);
 
-    // Create user (but not verified yet)
-    // Save name if provided during registration (will be updated during profile completion)
-    const userName = (fullName || name || '').trim();
-    console.log('📝 Registration - Name received:', { fullName, name, userName });
-
-    // Handle FCM Token if provided during signup
-    const { fcmToken, platform } = req.body;
-    const fcmData = {};
     if (fcmToken) {
-      if (platform === 'mobile') {
-        fcmData.fcmTokenMobile = fcmToken;
-      } else {
-        fcmData.fcmToken = fcmToken;
-      }
-    }
-
-    const user = await User.create({
-      email,
-      phone: normalizedPhone,
-      name: userName,
-      referredBy,
-      heardAbout: heardAbout || '',
-      isEmailVerified: false,
-      isPhoneVerified: false,
-      profileComplete: 0, // Will be updated during profile completion
-      ...fcmData // Save FCM token if available
-    });
-
-    if (fcmToken) {
-      console.log(`✅ FCM Token saved during registration for ${normalizedPhone}:`, fcmToken.substring(0, 20) + '...');
+      console.log(`✅ FCM Token captured during registration for ${normalizedPhone}:`, fcmToken.substring(0, 20) + '...');
     } else {
       console.error('\n❌❌❌ CRITICAL: NO FCM TOKEN RECEIVED FROM FRONTEND ❌❌❌');
       console.error('👉 Check Frontend "requestForToken" logic');
@@ -199,14 +192,12 @@ export const register = async (req, res) => {
       console.error('------------------------------------------------------\n');
     }
 
-    console.log('✅ User created with name:', user.name);
-
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully',
       data: {
-        email: user.email,
-        phone: user.phone,
+        email,
+        phone: normalizedPhone,
         otpSent: smsSent,
       },
     });
@@ -524,18 +515,6 @@ export const verifyOTP = async (req, res) => {
       }
     }
 
-    // Find user
-    const user = await User.findOne({
-      $or: [{ email: email || '' }, { phone: phone || '' }],
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
     // Find OTP record (use normalized phone)
     const identifier = normalizedPhone || email;
     const otpRecord = await OTP.findOne({
@@ -566,19 +545,64 @@ export const verifyOTP = async (req, res) => {
     // Check if this is a signup verification (not login)
     const isSignupVerification = otpRecord.purpose === 'register';
 
-    // Check if this is the first verification (both phone and email were unverified before)
-    const wasPhoneVerified = user.isPhoneVerified;
-    const wasEmailVerified = user.isEmailVerified;
-    const isFirstVerification = !wasPhoneVerified && !wasEmailVerified;
+    let user;
+    let isFirstVerification = false;
 
-    // Mark phone/email as verified (use normalized phone)
-    if (normalizedPhone) {
-      user.isPhoneVerified = true;
+    if (isSignupVerification) {
+      const signup = otpRecord.signupData;
+      if (!signup) {
+        return res.status(400).json({
+          success: false,
+          message: 'Signup data not found. Please try registering again.',
+        });
+      }
+
+      // Check if user already exists
+      user = await User.findOne({
+        $or: [{ email: signup.email || '' }, { phone: signup.phone || '' }],
+      });
+
+      if (!user) {
+        user = await User.create({
+          email: signup.email,
+          phone: signup.phone,
+          name: signup.name,
+          referredBy: signup.referredBy,
+          heardAbout: signup.heardAbout || '',
+          isEmailVerified: !!signup.email,
+          isPhoneVerified: !!signup.phone,
+          profileComplete: 0,
+          fcmToken: signup.fcmToken,
+          fcmTokenMobile: signup.fcmTokenMobile,
+        });
+        isFirstVerification = true;
+      } else {
+        if (signup.phone) user.isPhoneVerified = true;
+        if (signup.email) user.isEmailVerified = true;
+        await user.save();
+      }
+    } else {
+      // Find user for login / other actions
+      user = await User.findOne({
+        $or: [{ email: email || '' }, { phone: phone || '' }],
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      // Mark phone/email as verified (use normalized phone)
+      if (normalizedPhone) {
+        user.isPhoneVerified = true;
+      }
+      if (email) {
+        user.isEmailVerified = true;
+      }
+      await user.save();
     }
-    if (email) {
-      user.isEmailVerified = true;
-    }
-    await user.save();
 
     // Send Admin Notification for New Signup
     if (isSignupVerification && isFirstVerification) {

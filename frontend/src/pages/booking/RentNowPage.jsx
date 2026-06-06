@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { theme } from '../../theme/theme.constants';
 import { carService } from '../../services/car.service';
 import { couponService } from '../../services/coupon.service';
@@ -791,7 +791,7 @@ const RentNowPage = () => {
                   required
                 />
                 <span className="text-sm text-gray-700 leading-relaxed">
-                  I agree to the terms and conditions, privacy policy, and rental agreement. I understand that I am responsible for the vehicle during the rental period and will allow live tracking during the trip. <span className="text-red-500 font-semibold">*</span>
+                  I agree to the <Link to="/terms" className="font-semibold hover:underline text-purple-600" onClick={(e) => e.stopPropagation()}>terms and conditions</Link>, <Link to="/privacy-policy" className="font-semibold hover:underline text-purple-600" onClick={(e) => e.stopPropagation()}>privacy policy</Link>, and rental agreement. I understand that I am responsible for the vehicle during the rental period and will allow live tracking during the trip. <span className="text-red-500 font-semibold">*</span>
                 </span>
               </label>
             </div>

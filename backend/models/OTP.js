@@ -30,6 +30,10 @@ const otpSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    signupData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
   },
   {
     timestamps: true,

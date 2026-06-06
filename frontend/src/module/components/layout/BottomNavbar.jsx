@@ -164,9 +164,10 @@ const BottomNavbar = () => {
         }
       `}</style>
       <nav
-        className="fixed bottom-0 left-0 right-0 w-full px-4 pt-3 pb-7 rounded-t-2xl flex items-center justify-around z-50"
+        className="fixed bottom-4 left-4 right-4 px-4 py-3.5 rounded-2xl flex items-center justify-around z-50 shadow-lg"
         style={{ backgroundColor: colors.backgroundTertiary }}
       >
+
         {navItems.map((item) => {
           const active = isActive(item.path);
           return (

@@ -777,7 +777,7 @@ const ModuleRegisterPage = () => {
                         style={{ accentColor: colors.backgroundTertiary }}
                       />
                       <span className="text-sm leading-relaxed" style={{ color: colors.backgroundTertiary }}>
-                        I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>terms and conditions</Link> and <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>privacy policy</Link>. <span className="font-semibold" style={{ color: colors.error }}>*</span>
+                        I agree to the <Link to="/terms" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>terms and conditions</Link> and <Link to="/privacy-policy" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>privacy policy</Link>. <span className="font-semibold" style={{ color: colors.error }}>*</span>
                       </span>
                     </label>
                     {error && error.includes('terms') && (
@@ -1317,7 +1317,7 @@ const ModuleRegisterPage = () => {
                       style={{ accentColor: colors.backgroundTertiary }}
                     />
                     <span className="text-sm leading-relaxed" style={{ color: colors.backgroundTertiary }}>
-                      I agree to the terms and conditions and privacy policy. <span className="font-semibold" style={{ color: colors.error }}>*</span>
+                      I agree to the <Link to="/terms" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>terms and conditions</Link> and <Link to="/privacy-policy" className="font-semibold hover:underline" onClick={(e) => e.stopPropagation()}>privacy policy</Link>. <span className="font-semibold" style={{ color: colors.error }}>*</span>
                     </span>
                   </label>
                   {error && error.includes('terms') && (
