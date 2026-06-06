@@ -739,6 +739,16 @@ const BookNowPage = () => {
 
   // Handle real coupon application
   const handleApplyCoupon = async () => {
+    if (!pickupDate || !dropDate) {
+      toastUtils.error("Please select pickup and drop dates first");
+      return;
+    }
+
+    if (!priceDetails || !priceDetails.totalPrice || isNaN(priceDetails.totalPrice) || priceDetails.totalPrice <= 0) {
+      toastUtils.error("Please select a car and rental dates first to calculate booking price");
+      return;
+    }
+
     if (!couponCode.trim()) {
       toastUtils.error("Please enter a coupon code");
       return;
@@ -768,6 +778,16 @@ const BookNowPage = () => {
 
   // Handle offer application
   const handleApplyOffer = async (offerCodeToApply) => {
+    if (!pickupDate || !dropDate) {
+      toastUtils.error("Please select pickup and drop dates first");
+      return;
+    }
+
+    if (!priceDetails || !priceDetails.totalPrice || isNaN(priceDetails.totalPrice) || priceDetails.totalPrice <= 0) {
+      toastUtils.error("Please select a car and rental dates first to calculate booking price");
+      return;
+    }
+
     try {
       const response = await offerService.validateOffer({
         code: offerCodeToApply,

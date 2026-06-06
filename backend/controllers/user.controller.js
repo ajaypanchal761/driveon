@@ -194,8 +194,8 @@ export const getProfile = async (req, res) => {
  */
 export const updateProfile = async (req, res) => {
   try {
-    const { name, age, gender, address } = req.body;
-    console.log('📝 Update Profile - Received data:', { name, age, gender, address });
+    const { name, email, age, gender, address } = req.body;
+    console.log('📝 Update Profile - Received data:', { name, email, age, gender, address });
 
     const user = await User.findById(req.user._id);
 
@@ -204,6 +204,28 @@ export const updateProfile = async (req, res) => {
         success: false,
         message: 'User not found',
       });
+    }
+
+    // Handle email update (ensure uniqueness and valid format)
+    if (email !== undefined && email !== null && email !== '' && email.trim().toLowerCase() !== user.email?.toLowerCase()) {
+      const trimmedEmail = email.trim().toLowerCase();
+      const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide a valid email address',
+        });
+      }
+      const existingUser = await User.findOne({ email: trimmedEmail, _id: { $ne: user._id } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already in use by another account',
+        });
+      }
+      user.email = trimmedEmail;
+      user.isEmailVerified = false;
+      console.log('✅ Updated email:', user.email);
     }
 
     // Update allowed fields (only update if provided)

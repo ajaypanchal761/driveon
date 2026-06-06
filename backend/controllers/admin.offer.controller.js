@@ -424,9 +424,19 @@ export const validateOffer = async (req, res) => {
       const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const currentDay = daysOfWeek[now.getDay()];
       if (!offer.validDays.includes(currentDay)) {
+        const dayNamesMap = {
+          'Sun': 'Sunday',
+          'Mon': 'Monday',
+          'Tue': 'Tuesday',
+          'Wed': 'Wednesday',
+          'Thu': 'Thursday',
+          'Fri': 'Friday',
+          'Sat': 'Saturday'
+        };
+        const fullDays = offer.validDays.map(d => dayNamesMap[d] || d);
         return res.status(400).json({
           success: false,
-          message: `This offer is only valid on: ${offer.validDays.join(', ')}`,
+          message: `This offer is only valid on ${fullDays.join(', ')}`,
         });
       }
     }

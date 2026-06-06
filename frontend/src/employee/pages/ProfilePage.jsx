@@ -245,19 +245,20 @@ const ProfilePage = () => {
     return (
         <div className="h-screen w-screen overflow-hidden flex flex-col bg-[#F5F7FA] font-sans selection:bg-blue-100">
             <div className="flex-1 overflow-y-auto pb-32 scrollbar-hide">
-                <div className="sticky top-0 z-30">
-                    {/* PREMIUM HEADER SECTION */}
-                    <div className="bg-gradient-to-br from-[#1C205C] via-[#242976] to-[#1a1d4f] pt-6 pb-12 px-6 rounded-b-[48px] shadow-2xl relative overflow-hidden z-0">
-                        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-                        <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-400/10 rounded-full blur-3xl -ml-12 -mb-12 pointer-events-none"></div>
-
-                        <HeaderTopBar title="My Profile" showBack={false} />
+                <div>
+                    {/* WHITE HEADER SECTION */}
+                    <div className="bg-white pt-6 pb-6 px-6 border-b border-gray-150 shadow-sm relative z-0">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="w-9" />
+                            <h1 className="text-lg font-bold text-gray-800 tracking-wide">My Profile</h1>
+                            <div className="w-9" />
+                        </div>
 
                         <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.5, type: "spring" }}
-                            className="flex flex-col items-center mt-6 text-white"
+                            transition={{ duration: 0.4 }}
+                            className="flex items-center gap-6 mt-4"
                         >
                             <input 
                                 type="file" 
@@ -274,35 +275,34 @@ const ProfilePage = () => {
                                 capture="user" 
                                 className="hidden" 
                             />
-                            <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                                <div className="w-28 h-28 rounded-full border-[4px] border-white/20 shadow-2xl overflow-hidden p-1.5 bg-white/10 backdrop-blur-md transition-transform duration-300 group-hover:scale-105 relative">
+                            <div className="relative group cursor-pointer shrink-0" onClick={handleAvatarClick}>
+                                <div className="w-20 h-20 rounded-full border border-gray-100 shadow-md overflow-hidden p-0.5 bg-white transition-transform duration-300 group-hover:scale-105 relative">
                                     {isUploading ? (
                                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                                         </div>
                                     ) : (
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 rounded-full">
-                                            <FiCamera className="text-white" size={24} />
+                                            <FiCamera className="text-white" size={18} />
                                         </div>
                                     )}
                                     <img src={user.avatar} alt="Profile" className="w-full h-full rounded-full object-cover" />
                                 </div>
-                                <div className="absolute bottom-1 right-1 bg-white text-[#1C205C] w-8 h-8 rounded-full border-[3px] border-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300">
-                                    <FiCamera size={14} className="stroke-[2.5]" />
+                                <div className="absolute bottom-0 right-0 bg-white text-gray-700 w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center shadow-md group-hover:scale-110 transition-all duration-300">
+                                    <FiCamera size={11} className="stroke-[2.5]" />
                                 </div>
                             </div>
 
-                            <h2 className="text-3xl font-black mt-4 tracking-tight drop-shadow-md">{user.name}</h2>
-                            <div className="flex items-center gap-2 mt-1.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10">
-                                <FiBriefcase className="text-blue-300" size={14} />
-                                <p className="text-blue-100 text-xs font-bold uppercase tracking-wider">{user.role} • {user.id}</p>
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight leading-none mb-1">{user.name}</h2>
+                                <p className="text-sm text-gray-500 font-medium truncate mb-2">{user.email}</p>
+                                <button
+                                    onClick={() => setShowEditModal(true)}
+                                    className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 active:scale-95 rounded-lg text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-sm shadow-blue-500/10 w-fit"
+                                >
+                                    <FiEdit size={11} className="stroke-[2.5]" /> Edit Profile
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setShowEditModal(true)}
-                                className="mt-3.5 px-5 py-2 bg-white/10 hover:bg-white/20 active:scale-95 border border-white/10 rounded-full text-xs font-bold text-white transition-all flex items-center gap-2 shadow-md shadow-black/5"
-                            >
-                                <FiEdit size={12} className="stroke-[2.5]" /> Edit Profile
-                            </button>
                         </motion.div>
                     </div>
 
@@ -321,7 +321,9 @@ const ProfilePage = () => {
                         <SectionTitle title="Personal Information" />
                         <div className="bg-white rounded-[24px] p-2 shadow-sm border border-gray-100 overflow-hidden">
                             <InfoRow icon={<FiPhone size={18} />} label="Phone Number" value={user.phone} />
-                            <InfoRow icon={<FiMail size={18} />} label="Email Address" value={user.email} isLast />
+                            <InfoRow icon={<FiMail size={18} />} label="Email Address" value={user.email} />
+                            <InfoRow icon={<FiBriefcase size={18} />} label="Role" value={user.role} />
+                            <InfoRow icon={<FiUser size={18} />} label="Staff ID" value={user.id} isLast />
                         </div>
                     </motion.div>
 

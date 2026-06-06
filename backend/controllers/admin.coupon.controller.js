@@ -593,10 +593,17 @@ export const validateCoupon = async (req, res) => {
     const { code, amount, carId } = req.body;
     const userId = req.user._id;
 
-    if (!code || !amount) {
+    if (!code || amount === undefined || amount === null) {
       return res.status(400).json({
         success: false,
         message: 'Coupon code and amount are required',
+      });
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid booking amount greater than 0 is required to apply a coupon',
       });
     }
 

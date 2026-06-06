@@ -411,10 +411,11 @@ api.interceptors.response.use(
       const { status, data } = error.response;
 
       // Handle specific error codes
-      // Don't log expected errors (like user not found for login)
+      // Don't log expected errors (like user not found for login or coupon/offer validations)
       const isExpectedError = status === 400 && (
         data?.message?.toLowerCase().includes('user not found') ||
-        data?.message?.toLowerCase().includes('signup first')
+        data?.message?.toLowerCase().includes('signup first') ||
+        originalRequest.url?.includes('/validate')
       );
 
       if (!isExpectedError) {

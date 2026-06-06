@@ -168,9 +168,19 @@ couponSchema.methods.canBeApplied = function (amount, carId, userId, carType) {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const currentDay = daysOfWeek[now.getDay()];
     if (!this.validDays.includes(currentDay)) {
+      const dayNamesMap = {
+        'Sun': 'Sunday',
+        'Mon': 'Monday',
+        'Tue': 'Tuesday',
+        'Wed': 'Wednesday',
+        'Thu': 'Thursday',
+        'Fri': 'Friday',
+        'Sat': 'Saturday'
+      };
+      const fullDays = this.validDays.map(d => dayNamesMap[d] || d);
       return {
         valid: false,
-        message: `This coupon is only valid on: ${this.validDays.join(', ')}`,
+        message: `This coupon is only valid on ${fullDays.join(', ')}`,
       };
     }
   }
