@@ -104,11 +104,17 @@ const AddCarPage = () => {
     e.target.value = '';
   };
 
-  // Handle RC document selection
+  // Handle RC document selection - images only
   const handleRcDocumentSelect = (e) => {
-    if (e.target.files[0]) {
-      setRcDocument(e.target.files[0]);
+    const file = e.target.files[0];
+    if (!file) return;
+    // Validate: only image files allowed
+    if (!file.type.startsWith('image/')) {
+      toastUtils.error('Only image files are allowed for RC Document. Please upload JPG, PNG, or similar image.');
+      e.target.value = '';
+      return;
     }
+    setRcDocument(file);
   };
 
   // Handle feature toggle
@@ -556,18 +562,18 @@ const AddCarPage = () => {
               </div>
             </Card>
 
-            {/* RC Document */}
             <Card className="p-4 md:p-6">
               <h2 className="text-lg font-semibold mb-4" style={{ color: colors.backgroundTertiary }}>
                 Documents
               </h2>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RC Document (Registration Certificate)
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  RC Document (Registration Certificate) — Image only (JPG, PNG, etc.)
                 </label>
+                <p className="text-xs text-gray-500 mb-2">PDF files are not accepted. Please upload a clear photo/scan of the RC document.</p>
                 <input
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/*"
                   onChange={handleRcDocumentSelect}
                   className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
                   style={{
@@ -577,7 +583,32 @@ const AddCarPage = () => {
                   }}
                 />
                 {rcDocument && (
-                  <p className="text-sm text-gray-600 mt-2">Document: {rcDocument.name}</p>
+                  <div className="mt-3 relative inline-block">
+                    <img
+                      src={URL.createObjectURL(rcDocument)}
+                      alt="RC Document Preview"
+                      className="w-full max-w-xs h-48 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
+                    />
+                    <span className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded">
+                      RC Document
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRcDocument(null);
+                        // Reset input
+                        const input = document.querySelector('input[accept="image/*"][type="file"]:not([multiple])');
+                        if (input) input.value = '';
+                      }}
+                      className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-all flex items-center justify-center z-10 border-2 border-white"
+                      title="Remove document"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1">{rcDocument.name}</p>
+                  </div>
                 )}
               </div>
             </Card>

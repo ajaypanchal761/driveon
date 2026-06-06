@@ -1106,7 +1106,9 @@ const BookingListPage = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: 13 }}>
                     <div><span style={{ color: '#64748b' }}>Amount:</span> <span style={{ fontWeight: 600 }}>₹{paymentDetailsBooking.transactions[0].amount}</span></div>
                     <div><span style={{ color: '#64748b' }}>Method:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{paymentDetailsBooking.transactions[0].paymentMethod || 'Online'}</span></div>
-                    <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Transaction ID:</span> <span style={{ fontWeight: 600 }}>{paymentDetailsBooking.transactions[0].transactionId || 'N/A'}</span></div>
+                    {!(paymentDetailsBooking.transactions[0].paymentMethod?.toLowerCase() === 'cash' || paymentDetailsBooking.transactions[0].transactionId?.startsWith('CASH-')) && (
+                      <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Transaction ID:</span> <span style={{ fontWeight: 600 }}>{paymentDetailsBooking.transactions[0].transactionId || 'N/A'}</span></div>
+                    )}
                     <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Date:</span> <span style={{ fontWeight: 600 }}>{paymentDetailsBooking.transactions[0].paymentDate ? new Date(paymentDetailsBooking.transactions[0].paymentDate).toLocaleString() : new Date(paymentDetailsBooking.bookingDate).toLocaleString()}</span></div>
                   </div>
                 ) : (
@@ -1123,7 +1125,7 @@ const BookingListPage = () => {
                       <div key={idx} style={{ display: 'contents' }}>
                         <div><span style={{ color: '#64748b' }}>Amount:</span> <span style={{ fontWeight: 600 }}>₹{tx.amount}</span></div>
                         <div><span style={{ color: '#64748b' }}>Method:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{tx.paymentMethod}</span></div>
-                        {tx.transactionId && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Transaction ID:</span> <span style={{ fontWeight: 600 }}>{tx.transactionId}</span></div>}
+                        {tx.transactionId && !tx.transactionId.startsWith('CASH-') && tx.paymentMethod?.toLowerCase() !== 'cash' && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Transaction ID:</span> <span style={{ fontWeight: 600 }}>{tx.transactionId}</span></div>}
                         {tx.receivedBy && <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Received By:</span> <span style={{ fontWeight: 600 }}>{tx.receivedBy}</span></div>}
                         <div style={{ gridColumn: '1 / -1', marginBottom: 8 }}><span style={{ color: '#64748b' }}>Date:</span> <span style={{ fontWeight: 600 }}>{tx.paymentDate ? new Date(tx.paymentDate).toLocaleString() : new Date(paymentDetailsBooking.completedDate).toLocaleString()}</span></div>
                       </div>
