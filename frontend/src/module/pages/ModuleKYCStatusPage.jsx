@@ -174,7 +174,7 @@ const ModuleKYCStatusPage = () => {
   // Handle DL Verification
   const handleVerifyDl = async () => {
     if (!dlNumber || !dlDob) {
-      toastUtils.error('DL number and Expiry Date are required');
+      toastUtils.error('DL number and Date of Birth are required');
       return;
     }
 
@@ -331,7 +331,7 @@ const ModuleKYCStatusPage = () => {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="block text-xs font-semibold text-gray-700">Expiry Date (dd/mm/yyyy)</label>
+                          <label className="block text-xs font-semibold text-gray-700">Date of Birth (dd/mm/yyyy)</label>
                           <input
                             type="date"
                             value={dlDob}

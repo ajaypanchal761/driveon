@@ -177,7 +177,7 @@ export const verifyDL = async (req, res) => {
     if (!dlNo || !dateVal) {
       return res.status(400).json({
         success: false,
-        message: 'Valid DL number and Expiry Date are required'
+        message: 'Valid DL number and Date of Birth are required'
       });
     }
 
@@ -218,7 +218,7 @@ export const verifyDL = async (req, res) => {
       }
     }
     
-    console.log(`📡 Attempting DL Verification: ${cleanDlNo} with Expiry Date: ${formattedDob}`);
+    console.log(`📡 Attempting DL Verification: ${cleanDlNo} with Date of Birth: ${formattedDob}`);
     
     try {
       let result = await quickekycService.verifyDL(cleanDlNo, formattedDob);
@@ -233,8 +233,17 @@ export const verifyDL = async (req, res) => {
         const User = (await import('../models/User.js')).default;
         const user = await User.findById(req.user._id);
         user.kycDetails.dl.number = dlNo;
-        user.kycDetails.dl.dob = dateVal; // For backward compatibility, store the expiry date in dob field
-        user.kycDetails.dl.expiryDate = dateVal; // Store in new expiryDate field
+        user.kycDetails.dl.dob = dateVal;
+        
+        // Extract expiry date from QuickEKYC response if available
+        const apiExpiryDate = result.data?.doe ||
+                              result.data?.expiry_date || 
+                              result.data?.validity?.non_transport || 
+                              result.data?.validity?.transport ||
+                              result.data?.expiryDate ||
+                              '';
+        user.kycDetails.dl.expiryDate = apiExpiryDate || dateVal;
+        
         user.kycDetails.dl.verified = true;
         user.kycDetails.dl.verifiedAt = new Date();
         if (result.data?.profile_image || result.data?.photo) {

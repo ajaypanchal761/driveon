@@ -687,7 +687,7 @@ export const verifyFleetDL = async (req, res) => {
         if (!dlNo || !dateVal) {
             return res.status(400).json({
                 success: false,
-                message: 'Valid DL number and Expiry Date are required'
+                message: 'Valid DL number and Date of Birth are required'
             });
         }
 
@@ -727,7 +727,7 @@ export const verifyFleetDL = async (req, res) => {
             }
         }
 
-        console.log(`📡 Fleet Attempting DL Verification: ${cleanDlNo} with Expiry Date: ${formattedDob}`);
+        console.log(`📡 Fleet Attempting DL Verification: ${cleanDlNo} with Date of Birth: ${formattedDob}`);
         
         try {
             let result = await quickekycService.verifyDL(cleanDlNo, formattedDob);

@@ -660,7 +660,7 @@ const ModuleCompleteProfilePage = () => {
 
   const handleVerifyDl = async () => {
     if (!dlNumber || !dlDob) {
-      toastUtils.error('Please enter DL number and Expiry Date');
+      toastUtils.error('Please enter DL number and Date of Birth');
       return;
     }
 
@@ -1177,7 +1177,7 @@ const ModuleCompleteProfilePage = () => {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="block text-xs font-semibold text-gray-700">Enter expiry date</label>
+                          <label className="block text-xs font-semibold text-gray-700">Enter date of birth</label>
                           <div className="flex gap-2">
                             <input
                               type="date"

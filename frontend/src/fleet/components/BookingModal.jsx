@@ -171,10 +171,10 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
       return;
     }
 
-    if (!licenseDob) { setError('Please enter Expiry Date'); return; }
+    if (!licenseDob) { setError('Please enter Date of Birth'); return; }
     const dateRegex = /^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4})$/;
     if (!dateRegex.test(licenseDob)) {
-      setError('Please select a valid expiry date');
+      setError('Please select a valid date of birth');
       alert('Invalid data');
       return;
     }
@@ -188,7 +188,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
         alert('Invalid data');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'DL verification failed. Please check the number and Expiry Date.');
+      setError(err.response?.data?.message || 'DL verification failed. Please check the number and Date of Birth.');
       alert('Invalid data');
     } finally {
       setIsKycLoading(false);
@@ -619,7 +619,7 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: colors.textSecondary }}>Expiry Date</label>
+                    <label className="block text-xs font-medium mb-1" style={{ color: colors.textSecondary }}>Date of Birth</label>
                     <div className="relative">
                       <input
                         type="text"

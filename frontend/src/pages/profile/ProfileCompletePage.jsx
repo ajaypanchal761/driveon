@@ -875,7 +875,7 @@ const ProfileCompletePage = () => {
                           disabled={isKycSubmitting}
                           className="w-full px-3 py-2 text-xs border rounded focus:outline-none"
                         />
-                        <label className="block text-xs text-gray-500 font-medium">Enter expiry date (dd/mm/yyyy)</label>
+                        <label className="block text-xs text-gray-500 font-medium">Enter date of birth (dd/mm/yyyy)</label>
                         <input
                           type="date"
                           value={dlDob}
@@ -886,7 +886,7 @@ const ProfileCompletePage = () => {
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!dlNumber || !dlDob) return toastUtils.error('Enter DL Number & Expiry Date');
+                            if (!dlNumber || !dlDob) return toastUtils.error('Enter DL Number & Date of Birth');
                             setIsKycSubmitting(true);
                             try {
                               const formattedDate = formatDateToDDMMYYYY(dlDob);
