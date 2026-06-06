@@ -4318,8 +4318,14 @@ export const getExpenses = async (req, res) => {
         }
 
         if (search) {
-            query.description = { $regex: search, $options: 'i' };
+            const keywords = search.trim().split(/\s+/).filter(Boolean);
+            if (keywords.length > 0) {
+                query.$and = keywords.map(keyword => ({
+                    description: { $regex: keyword, $options: 'i' }
+                }));
+            }
         }
+
 
         const expenses = await Expense.find(query).sort({ date: -1 });
         

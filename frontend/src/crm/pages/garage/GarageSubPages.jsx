@@ -277,12 +277,15 @@ export const AllGaragesPage = () => {
     };
 
     const trimmedSearch = searchTerm.trim().toLowerCase();
+    const keywords = trimmedSearch.split(/\s+/).filter(Boolean);
     const filteredGarages = garages.filter(garage =>
-        !trimmedSearch ||
-        garage.name.toLowerCase().includes(trimmedSearch) ||
-        garage.location.toLowerCase().includes(trimmedSearch) ||
-        (garage.specialistIn || '').toLowerCase().includes(trimmedSearch)
+        keywords.length === 0 || keywords.every(keyword =>
+            garage.name.toLowerCase().includes(keyword) ||
+            garage.location.toLowerCase().includes(keyword) ||
+            (garage.specialistIn || '').toLowerCase().includes(keyword)
+        )
     );
+
 
     const validate = () => {
         let tempErrors = {};

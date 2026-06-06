@@ -1044,13 +1044,15 @@ export const AllVendorsPage = () => {
 
     const filteredVendors = vendors.filter(vendor => {
         const cleanSearch = searchTerm.trim().toLowerCase();
-        return (
-            vendor.name.toLowerCase().includes(cleanSearch) ||
-            vendor.email.toLowerCase().includes(cleanSearch) ||
-            vendor.phone.toLowerCase().includes(cleanSearch) ||
-            vendor.type.toLowerCase().includes(cleanSearch)
+        const keywords = cleanSearch.split(/\s+/).filter(Boolean);
+        return keywords.length === 0 || keywords.every(keyword =>
+            vendor.name.toLowerCase().includes(keyword) ||
+            (vendor.email || '').toLowerCase().includes(keyword) ||
+            (vendor.phone || '').toLowerCase().includes(keyword) ||
+            (vendor.type || '').toLowerCase().includes(keyword)
         );
     });
+
 
     const validate = () => {
         let tempErrors = {};

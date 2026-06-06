@@ -3354,9 +3354,11 @@ export const SalaryPage = () => {
 
   const filteredSalary = salaryList.filter(item => {
     const trimmedSearch = searchTerm.trim().toLowerCase();
-    const matchesSearch = !trimmedSearch ||
-      item.name.toLowerCase().includes(trimmedSearch) ||
-      item.role.toLowerCase().includes(trimmedSearch);
+    const keywords = trimmedSearch.split(/\s+/).filter(Boolean);
+    const matchesSearch = keywords.length === 0 || keywords.every(keyword =>
+      item.name.toLowerCase().includes(keyword) ||
+      (item.role || '').toLowerCase().includes(keyword)
+    );
 
     let matchesStaff = true;
     if (staffFilter !== 'Staff: All') {
@@ -3364,6 +3366,7 @@ export const SalaryPage = () => {
     }
     return matchesSearch && matchesStaff;
   });
+
 
   const totalPayoutVal = salaryList
     .filter(s => s.salaryStatus === 'Paid')

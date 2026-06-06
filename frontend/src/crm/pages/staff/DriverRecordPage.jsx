@@ -109,13 +109,15 @@ const DriverRecordPage = () => {
 
   const filteredDrivers = drivers.filter(d => {
     const term = searchTerm.trim().toLowerCase();
-    return (
-      (d.name && d.name.toLowerCase().includes(term)) ||
-      (d.employeeId && d.employeeId.toLowerCase().includes(term)) ||
-      (d.email && d.email.toLowerCase().includes(term)) ||
-      (d.phone && d.phone.includes(term))
+    const keywords = term.split(/\s+/).filter(Boolean);
+    return keywords.length === 0 || keywords.every(keyword =>
+      (d.name && d.name.toLowerCase().includes(keyword)) ||
+      (d.employeeId && d.employeeId.toLowerCase().includes(keyword)) ||
+      (d.email && d.email.toLowerCase().includes(keyword)) ||
+      (d.phone && d.phone.includes(keyword))
     );
   });
+
 
   // Open overlay history details
   const handleOpenDetails = (driver) => {
