@@ -18,16 +18,58 @@ const ModuleRegisterPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [referralCode, setReferralCode] = useState('');
-  const [heardAbout, setHeardAbout] = useState(''); // How user heard about DriveOn (optional)
+  const [fullName, setFullName] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('register_form_state');
+      return saved ? (JSON.parse(saved).fullName || '') : '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [email, setEmail] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('register_form_state');
+      return saved ? (JSON.parse(saved).email || '') : '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [phoneNumber, setPhoneNumber] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('register_form_state');
+      return saved ? (JSON.parse(saved).phoneNumber || '') : '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [referralCode, setReferralCode] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('register_form_state');
+      return saved ? (JSON.parse(saved).referralCode || '') : '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [heardAbout, setHeardAbout] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('register_form_state');
+      return saved ? (JSON.parse(saved).heardAbout || '') : '';
+    } catch (e) {
+      return '';
+    }
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [otp, setOtp] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('register_form_state');
+      return saved ? (JSON.parse(saved).termsAccepted || false) : false;
+    } catch (e) {
+      return false;
+    }
+  });
   const [timeLeft, setTimeLeft] = useState(0); // Timer for OTP resend
 
   // Options for "How did you hear about DriveOn?"
@@ -60,6 +102,19 @@ const ModuleRegisterPage = () => {
       setReferralCode(refCode.toUpperCase().trim());
     }
   }, []);
+
+  // Save registration form state to sessionStorage whenever it changes
+  useEffect(() => {
+    const formState = {
+      fullName,
+      email,
+      phoneNumber,
+      referralCode,
+      heardAbout,
+      termsAccepted
+    };
+    sessionStorage.setItem('register_form_state', JSON.stringify(formState));
+  }, [fullName, email, phoneNumber, referralCode, heardAbout, termsAccepted]);
 
   // Handle clicking outside dropdown to close it
   useEffect(() => {
@@ -290,6 +345,7 @@ const ModuleRegisterPage = () => {
 
       // Navigate to profile page after successful registration
       console.log('🔄 Redirecting to profile page...');
+      sessionStorage.removeItem('register_form_state');
       navigate('/profile/complete', { replace: true });
     } catch (error) {
       console.error('❌ Verify OTP Error:', error);

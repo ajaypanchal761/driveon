@@ -3924,8 +3924,8 @@ const CarDetailsPage = () => {
         </div>
 
         {/* Book Now Button - Fixed at Bottom on mobile, static on web (only for mobile/tablet) */}
-        <div className="lg:hidden fixed md:static bottom-0 left-0 right-0 z-50 md:z-auto">
-          <div className="px-4 md:px-6 py-3 md:py-0 md:mt-6" style={{ backgroundColor: colors.backgroundSecondary }}>
+        <div className="lg:hidden fixed md:static bottom-4 left-0 right-0 z-50 md:z-auto">
+          <div className="px-4 md:px-6 py-3 md:py-0 md:mt-6">
             <div className="max-w-7xl mx-auto">
               <button
                 onClick={handleQuickBook}

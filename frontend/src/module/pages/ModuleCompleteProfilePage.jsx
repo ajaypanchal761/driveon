@@ -77,6 +77,49 @@ const ModuleCompleteProfilePage = () => {
     }
   }, [user]);
 
+  // Auto-scroll focused input into view above virtual keyboard on mobile
+  useEffect(() => {
+    const scrollFieldIntoView = (el) => {
+      if (!el) return;
+      // Small delay to let the keyboard open and layout shift settle
+      setTimeout(() => {
+        el.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 300);
+    };
+
+    const handleFocusin = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+        scrollFieldIntoView(e.target);
+      }
+    };
+
+    // Also handle visualViewport resize (fires when keyboard opens/closes on mobile)
+    const handleViewportResize = () => {
+      const focused = document.activeElement;
+      if (!focused) return;
+      const tag = focused.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+        scrollFieldIntoView(focused);
+      }
+    };
+
+    document.addEventListener('focusin', handleFocusin);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+    }
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusin);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportResize);
+      }
+    };
+  }, []);
+
   // Form state - Initialize with user data if available
   const [formData, setFormData] = useState(() => {
     // Initialize with user data if available at mount time
@@ -703,7 +746,7 @@ const ModuleCompleteProfilePage = () => {
 
   return (
     <div
-      className="min-h-screen w-full relative pb-32 md:pb-0"
+      className="min-h-screen w-full relative pb-[140px] md:pb-0"
       style={{ backgroundColor: colors.backgroundSecondary }}
     >
       {/* Header */}
@@ -786,25 +829,20 @@ const ModuleCompleteProfilePage = () => {
 
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>
-                  Phone Number *
+                  Phone Number
                 </label>
                 <input
                   type="tel"
                   value={formData.phone || user?.phone || ''}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder={isLoadingProfile ? "Loading..." : "Enter your phone number"}
-                  disabled={isLoadingProfile}
-                  maxLength={10}
-                  className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none text-base disabled:opacity-50"
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none text-base cursor-not-allowed"
                   style={{
-                    borderColor: errors.phone ? colors.error : colors.borderMedium,
-                    backgroundColor: colors.backgroundSecondary,
-                    color: colors.textPrimary,
+                    borderColor: colors.borderMedium,
+                    backgroundColor: colors.backgroundIcon,
+                    color: colors.textSecondary,
                   }}
                 />
-                {errors.phone && (
-                  <p className="text-xs mt-1" style={{ color: colors.error }}>{errors.phone}</p>
-                )}
+                <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>Phone number cannot be changed as it was set during registration.</p>
               </div>
             </div>
           )}
@@ -1027,40 +1065,42 @@ const ModuleCompleteProfilePage = () => {
                     {!(user?.kycDetails?.aadhaar?.verified || user?.kycDetails?.aadhaar?.isVerified) ? (
                       <div className="space-y-3">
                         {aadhaarStep === 1 ? (
-                          <div className="flex gap-2">
+                          <div className="space-y-2">
                             <input
                               type="text"
                               value={aadhaarNumber}
                               onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, '').slice(0, 12))}
                               placeholder="12-digit Aadhaar Number"
-                              className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
-                              style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                              className="w-full px-4 py-3 rounded-xl border focus:outline-none text-sm"
+                              style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary, color: colors.textPrimary }}
                             />
                             <button
                               onClick={handleSendAadhaarOtp}
                               disabled={isSendingAadhaarOtp || aadhaarNumber.length !== 12}
-                              className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
+                              className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
+                              style={{ backgroundColor: colors.backgroundTertiary }}
                             >
-                              {isSendingAadhaarOtp ? '...' : 'Send OTP via QuickEKYC'}
+                              {isSendingAadhaarOtp ? 'Sending OTP...' : 'Send OTP via QuickEKYC'}
                             </button>
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            <div className="flex gap-2">
+                            <div className="space-y-2">
                               <input
                                 type="text"
                                 value={aadhaarOtp}
                                 onChange={(e) => setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                 placeholder="6-digit OTP"
-                                className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
-                                style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                                className="w-full px-4 py-3 rounded-xl border focus:outline-none text-sm"
+                                style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary, color: colors.textPrimary }}
                               />
                               <button
                                 onClick={handleVerifyAadhaarOtp}
                                 disabled={isVerifyingAadhaar || aadhaarOtp.length !== 6}
-                                className="px-4 py-2 rounded-lg font-bold text-sm bg-green-600 text-white disabled:opacity-50"
+                                className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
+                                style={{ backgroundColor: '#16a34a' }}
                               >
-                                {isVerifyingAadhaar ? '...' : 'Verify via QuickEKYC'}
+                                {isVerifyingAadhaar ? 'Verifying...' : 'Verify via QuickEKYC'}
                               </button>
                             </div>
                             <button 
@@ -1109,22 +1149,23 @@ const ModuleCompleteProfilePage = () => {
                     </div>
 
                     {!(user?.kycDetails?.pan?.verified || user?.kycDetails?.pan?.isVerified) ? (
-                      <div className="flex gap-2">
+                      <div className="space-y-2">
                         <input
                           type="text"
                           value={panNumberInput}
                           onChange={(e) => setPanNumberInput(e.target.value.toUpperCase())}
                           placeholder="PAN Number (ABCDE1234F)"
                           maxLength={10}
-                          className="flex-1 px-4 py-2 rounded-lg border focus:outline-none uppercase"
-                          style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
+                          className="w-full px-4 py-3 rounded-xl border focus:outline-none uppercase text-sm"
+                          style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary, color: colors.textPrimary }}
                         />
                         <button
                           onClick={handleVerifyPan}
                           disabled={isVerifyingPan || panNumberInput.length !== 10}
-                          className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
+                          className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
+                          style={{ backgroundColor: colors.backgroundTertiary }}
                         >
-                          {isVerifyingPan ? '...' : 'Verify via QuickEKYC'}
+                          {isVerifyingPan ? 'Verifying...' : 'Verify via QuickEKYC'}
                         </button>
                       </div>
                     ) : (
@@ -1178,23 +1219,22 @@ const ModuleCompleteProfilePage = () => {
                         </div>
                         <div className="space-y-1">
                           <label className="block text-xs font-semibold text-gray-700">Enter date of birth</label>
-                          <div className="flex gap-2">
-                            <input
-                              type="date"
-                              value={dlDob}
-                              onChange={(e) => setDlDob(e.target.value)}
-                              className="flex-1 px-4 py-2 rounded-lg border focus:outline-none"
-                              style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary }}
-                            />
-                            <button
-                              onClick={handleVerifyDl}
-                              disabled={isVerifyingDl || !dlNumber || !dlDob}
-                              className="px-4 py-2 rounded-lg font-bold text-sm bg-blue-600 text-white disabled:opacity-50"
-                            >
-                              {isVerifyingDl ? '...' : 'Verify via QuickEKYC'}
-                            </button>
-                          </div>
+                          <input
+                            type="date"
+                            value={dlDob}
+                            onChange={(e) => setDlDob(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border focus:outline-none text-sm"
+                            style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundPrimary, color: colors.textPrimary }}
+                          />
                         </div>
+                        <button
+                          onClick={handleVerifyDl}
+                          disabled={isVerifyingDl || !dlNumber || !dlDob}
+                          className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-50"
+                          style={{ backgroundColor: colors.backgroundTertiary }}
+                        >
+                          {isVerifyingDl ? 'Verifying...' : 'Verify via QuickEKYC'}
+                        </button>
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
@@ -1211,7 +1251,7 @@ const ModuleCompleteProfilePage = () => {
         </div>
 
         {/* Navigation Buttons */}
-        <div className="fixed md:relative md:max-w-3xl md:mx-auto bottom-16 left-0 right-0 px-4 md:px-6 lg:px-8 xl:px-12 py-4 md:py-6 bg-white md:bg-transparent border-t md:border-t-0 z-40 md:mt-8" style={{ borderColor: colors.borderMedium }}>
+        <div className="fixed md:relative md:max-w-3xl md:mx-auto bottom-[100px] md:bottom-auto left-0 right-0 px-4 md:px-6 lg:px-8 xl:px-12 py-4 md:py-6 bg-white md:bg-transparent border-t md:border-t-0 z-40 md:mt-8" style={{ borderColor: colors.borderMedium }}>
           <div className="flex gap-3 md:gap-4">
             <button
               type="button"
