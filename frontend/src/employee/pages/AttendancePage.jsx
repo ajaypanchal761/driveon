@@ -97,7 +97,6 @@ const AttendanceCalendarModal = ({ isOpen, onClose, userId, user }) => {
 
   if (!isOpen) return null;
 
-  const joinDate = user?.joinDate ? new Date(user.joinDate) : null;
 
   // Lock: cannot go before current month; can go up to year 2099
   const maxYear = 2099;
@@ -521,9 +520,6 @@ const AttendancePage = () => {
 
           combined.sort((a, b) => b.date - a.date);
           setAttendanceData(combined);
-
-          const currentMonth = new Date().getMonth();
-          const currentYear = new Date().getFullYear();
           const currentMonthRecords = combined.filter(r =>
             r.date.getMonth() === currentMonth && r.date.getFullYear() === currentYear
           );
