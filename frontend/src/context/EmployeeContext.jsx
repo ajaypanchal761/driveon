@@ -4,6 +4,23 @@ import { requestForToken, onMessageListener, isMobileApp } from '../services/fir
 import api from '../services/api';
 import toastUtils from '../config/toast';
 
+const parseWorkHoursToSeconds = (str) => {
+  if (!str || str === '-') return 0;
+  const match = str.match(/(\d+)h\s*(\d+)m/);
+  if (match) {
+    return (parseInt(match[1], 10) * 3600) + (parseInt(match[2], 10) * 60);
+  }
+  const hoursMatch = str.match(/(\d+)h/);
+  if (hoursMatch) {
+    return parseInt(hoursMatch[1], 10) * 3600;
+  }
+  const minsMatch = str.match(/(\d+)m/);
+  if (minsMatch) {
+    return parseInt(minsMatch[1], 10) * 60;
+  }
+  return 0;
+};
+
 const EmployeeContext = createContext();
 
 export const EmployeeProvider = ({ children }) => {
@@ -147,14 +164,22 @@ export const EmployeeProvider = ({ children }) => {
             const inDate = new Date();
             inDate.setHours(hr, mins, 0, 0);
             setStartTime(inDate.getTime());
+            setAccumulatedSeconds(0);
           } else if (todayRecord.inTime && todayRecord.outTime && todayRecord.outTime !== '-') {
             setClockedIn(false);
             setCheckedOutToday(true);
             setStartTime(null);
+            if (todayRecord.workHours) {
+              const seconds = parseWorkHoursToSeconds(todayRecord.workHours);
+              setAccumulatedSeconds(seconds);
+            } else {
+              setAccumulatedSeconds(0);
+            }
           } else {
             setClockedIn(false);
             setCheckedOutToday(false);
             setStartTime(null);
+            setAccumulatedSeconds(0);
           }
         } else {
           // No record today - check if current time is past office end time
@@ -185,6 +210,7 @@ export const EmployeeProvider = ({ children }) => {
           setClockedIn(false);
           setCheckedOutToday(false);
           setStartTime(null);
+          setAccumulatedSeconds(0);
         }
       }
     } catch (error) {
