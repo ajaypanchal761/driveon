@@ -1151,7 +1151,7 @@ export const StaffDirectoryPage = () => {
                     {staff.joinDate}
                   </td>
                   <td className="p-4 font-medium text-gray-900">
-                    ₹ {(Number(staff.salary || staff.baseSalary || 0) - Number(staff.absentDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    ₹ {(Number(staff.salary || staff.baseSalary || 0) - Number(staff.absentDeduction || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -3396,7 +3396,7 @@ export const SalaryPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Active Payroll</span>
-              <h3 className="text-2xl font-black text-[#1C205C] mt-1">₹ {(totalPayoutVal + pendingPayoutVal).toLocaleString('en-IN')}</h3>
+              <h3 className="text-2xl font-black text-[#1C205C] mt-1">₹ {(totalPayoutVal + pendingPayoutVal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
               <MdCurrencyRupee size={24} />
@@ -3405,7 +3405,7 @@ export const SalaryPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Paid This Month</span>
-              <h3 className="text-2xl font-black text-green-600 mt-1">₹ {totalPayoutVal.toLocaleString('en-IN')}</h3>
+              <h3 className="text-2xl font-black text-green-600 mt-1">₹ {totalPayoutVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="p-3 bg-green-50 text-green-600 rounded-xl">
               <MdCheckCircle size={24} />
@@ -3414,7 +3414,7 @@ export const SalaryPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pending Payouts</span>
-              <h3 className="text-2xl font-black text-orange-600 mt-1">₹ {pendingPayoutVal.toLocaleString('en-IN')}</h3>
+              <h3 className="text-2xl font-black text-orange-600 mt-1">₹ {pendingPayoutVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
             </div>
             <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
               <MdAccessTime size={24} />
@@ -3501,20 +3501,20 @@ export const SalaryPage = () => {
                             </div>
                           ) : (
                             <>
-                              <span>P: <strong className="text-green-600">{item.presentDays}</strong> | A: <strong className="text-red-500">{item.absentDays}</strong> | H: <strong className="text-orange-500">{item.halfDays}</strong></span>
+                              <span>P: <strong className="text-green-600">{item.presentDays}</strong> | A: <strong className="text-red-500">{item.absentDays}</strong> | H: <strong className="text-orange-500">{item.halfDays}</strong> | L: <strong className="text-purple-500">{item.leaveDays || 0}</strong></span>
                               <span className="text-[10px] text-gray-400">Total Work Days: {item.workingDays}</span>
                             </>
                           )}
                         </div>
                       </td>
                       <td className="p-4 text-gray-700 font-semibold">
-                        ₹ {item.baseSalary.toLocaleString('en-IN')}
+                        ₹ {item.baseSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 text-red-500 font-medium">
-                        - ₹ {((item.absentDeduction || 0) + (item.halfDayDeduction || 0) + (item.leaveDeduction || 0) + (item.notJoinedDeduction || 0) + (item.pendingDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        - ₹ {((item.absentDeduction || 0) + (item.halfDayDeduction || 0) + (item.leaveDeduction || 0) + (item.notJoinedDeduction || 0) + (item.pendingDeduction || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 font-bold text-[#1C205C]">
-                        ₹ {item.salaryStatus === 'Paid' ? (item.paidAmount).toLocaleString('en-IN') : (item.netPayable).toLocaleString('en-IN')}
+                        ₹ {item.salaryStatus === 'Paid' ? (item.paidAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (item.netPayable).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4">
                         {item.salaryStatus === 'Paid' ? (
@@ -3589,21 +3589,55 @@ export const SalaryPage = () => {
               <form onSubmit={handlePaySubmit} className="p-6 space-y-4">
                 {/* Details Breakdown */}
                 <div className="bg-[#1C205C]/5 p-4 rounded-2xl border border-[#1C205C]/10 text-sm space-y-2">
+                  <div className="flex justify-between items-center border-b border-gray-200/60 pb-2 mb-2">
+                    <span className="text-gray-600 font-semibold text-xs uppercase tracking-wider">Attendance Status:</span>
+                    <span className="text-xs font-semibold">
+                      P: <strong className="text-green-600 font-bold">{payingItem.presentDays}</strong> |{' '}
+                      A: <strong className="text-red-500 font-bold">{payingItem.absentDays}</strong> |{' '}
+                      H: <strong className="text-orange-500 font-bold">{payingItem.halfDays}</strong> |{' '}
+                      L: <strong className="text-purple-500 font-bold">{payingItem.leaveDays || 0}</strong>
+                    </span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium">Base Salary:</span>
-                    <span className="font-bold text-gray-900">₹ {payingItem.baseSalary.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-gray-900">₹ {payingItem.baseSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium">Overtime Incentives:</span>
-                    <span className="font-bold text-green-600">+ ₹ {payingItem.extraWorkAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="font-bold text-green-600">+ ₹ {payingItem.extraWorkAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium">Attendance Deductions:</span>
-                    <span className="font-bold text-red-500">- ₹ {((payingItem.absentDeduction || 0) + (payingItem.halfDayDeduction || 0) + (payingItem.leaveDeduction || 0) + (payingItem.notJoinedDeduction || 0) + (payingItem.pendingDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="font-bold text-red-500">- ₹ {((payingItem.absentDeduction || 0) + (payingItem.halfDayDeduction || 0) + (payingItem.leaveDeduction || 0) + (payingItem.notJoinedDeduction || 0) + (payingItem.pendingDeduction || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+
+                  {/* Deductions Breakdown */}
+                  {((payingItem.absentDeduction || 0) > 0 || (payingItem.halfDayDeduction || 0) > 0 || (payingItem.leaveDeduction || 0) > 0) && (
+                    <div className="pl-3 py-1 border-l-2 border-red-200 space-y-1 text-xs text-gray-500">
+                      {(payingItem.absentDeduction || 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span>• Absent ({payingItem.absentDays} days):</span>
+                          <span>- ₹ {payingItem.absentDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {(payingItem.halfDayDeduction || 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span>• Half Day ({payingItem.halfDays} days):</span>
+                          <span>- ₹ {payingItem.halfDayDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {(payingItem.leaveDeduction || 0) > 0 && (
+                        <div className="flex justify-between">
+                          <span>• Leaves (Exceeded limit of {payingItem.freeLeavesPerMonth || 0} by {Math.max(0, payingItem.leaveDays - (payingItem.freeLeavesPerMonth || 0))} days):</span>
+                          <span>- ₹ {payingItem.leaveDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base">
                     <span className="text-gray-800">Standard Net Payable:</span>
-                    <span className="text-[#1C205C]">₹ {payingItem.totalNetPayable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="text-[#1C205C]">₹ {payingItem.totalNetPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -3708,7 +3742,7 @@ export const SalaryPage = () => {
                   <div>
                     <span className="text-xs text-gray-400 font-bold uppercase">Final Deposit Amount</span>
                     <h3 className="text-2xl font-black text-green-600">
-                      ₹ {Math.max(0, payingItem.totalNetPayable + (Number(customBonus) || 0) - (Number(customDeduction) || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      ₹ {Math.max(0, payingItem.totalNetPayable + (Number(customBonus) || 0) - (Number(customDeduction) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </h3>
                   </div>
                   <button
@@ -3830,6 +3864,7 @@ export const AttendanceSettingsPage = () => {
     absentDeduction: 500,
     lateGracePeriod: 15,
     overtimeRate: 0,
+    freeLeavesPerMonth: 0,
   });
 
   // State for Holidays Calendar
@@ -3918,6 +3953,7 @@ export const AttendanceSettingsPage = () => {
             absentDeduction: settingsRes.data.data.absentDeduction !== undefined ? settingsRes.data.data.absentDeduction : 500,
             lateGracePeriod: settingsRes.data.data.lateGracePeriod !== undefined ? settingsRes.data.data.lateGracePeriod : 15,
             overtimeRate: settingsRes.data.data.overtimeRate !== undefined ? settingsRes.data.data.overtimeRate : 0,
+            freeLeavesPerMonth: settingsRes.data.data.freeLeavesPerMonth !== undefined ? settingsRes.data.data.freeLeavesPerMonth : 0,
           });
         }
 
@@ -4193,6 +4229,27 @@ export const AttendanceSettingsPage = () => {
                   />
                 </div>
                 <p className="text-xs text-gray-400 mt-1.5">Applied for each hour worked beyond the standard office hours.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Free Leaves Per Month (Days)</label>
+                <div className="relative rounded-xl shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-gray-500 sm:text-sm font-medium">📅</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-semibold text-gray-800"
+                    placeholder="e.g. 2"
+                    value={settings.freeLeavesPerMonth}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      freeLeavesPerMonth: Number(e.target.value) || 0
+                    })}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Employees get this many paid leave days per month — no deduction. Leaves beyond this limit are deducted at per-day salary rate.</p>
               </div>
             </div>
           </div>

@@ -3166,6 +3166,7 @@ export const getStaffPayroll = async (req, res) => {
         let globalSettings = await Setting.findOne({ key: 'attendance_settings' });
         const globalAbsentDeduction = globalSettings?.value?.absentDeduction || 0;
         const globalHalfDayDeduction = globalSettings?.value?.halfDayDeduction || 0;
+        const globalFreeLeavesPerMonth = globalSettings?.value?.freeLeavesPerMonth !== undefined ? globalSettings.value.freeLeavesPerMonth : 0;
 
         // Compute days from records
         let presentCount = 0;
@@ -3312,12 +3313,19 @@ export const getStaffPayroll = async (req, res) => {
             });
         }
 
-        const absentRate = (staff.absentDeduction && staff.absentDeduction > 0) ? staff.absentDeduction : perDaySalary;
-        const halfDayRate = (staff.halfDayDeduction && staff.halfDayDeduction > 0) ? staff.halfDayDeduction : halfDaySalary;
+        // Priority: staff-specific override → global setting flat rate → per-day salary
+        const absentRate = (staff.absentDeduction && staff.absentDeduction > 0)
+            ? staff.absentDeduction
+            : (globalAbsentDeduction > 0 ? globalAbsentDeduction : perDaySalary);
+        const halfDayRate = (staff.halfDayDeduction && staff.halfDayDeduction > 0)
+            ? staff.halfDayDeduction
+            : (globalHalfDayDeduction > 0 ? globalHalfDayDeduction : halfDaySalary);
 
         let absentDeduction = absentCount * absentRate;
         let halfDayDeduction = halfDayCount * halfDayRate;
-        let leaveDeduction = leaveCount * perDaySalary;
+        const billableLeaves = Math.max(0, leaveCount - globalFreeLeavesPerMonth);
+        // Leave deduction uses same flat rate as absent (from settings)
+        let leaveDeduction = billableLeaves * absentRate;
         let notJoinedDeduction = 0;
         let pendingDeduction = 0;
 
@@ -3375,6 +3383,8 @@ export const getStaffPayroll = async (req, res) => {
                 halfDays: halfDayCount,
                 absentDays: absentCount,
                 leaveDays: leaveCount,
+                freeLeavesPerMonth: globalFreeLeavesPerMonth,
+                billableLeaveDays: Math.max(0, leaveCount - globalFreeLeavesPerMonth),
                 perDaySalary,
                 halfDaySalary,
                 absentDeduction: finalAbsentDeduction,
@@ -3587,6 +3597,7 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
         const globalAbsentDeduction = globalSettings?.value?.absentDeduction || 0;
         const globalHalfDayDeduction = globalSettings?.value?.halfDayDeduction || 0;
         const globalOvertimeRate = globalSettings?.value?.overtimeRate || 0;
+        const globalFreeLeavesPerMonth = globalSettings?.value?.freeLeavesPerMonth !== undefined ? globalSettings.value.freeLeavesPerMonth : 0;
 
         const monthNames = ["January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"];
@@ -3762,12 +3773,19 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
             }
 
             // Deductions logic
-            const absentRate = (staff.absentDeduction && staff.absentDeduction > 0) ? staff.absentDeduction : perDaySalary;
-            const halfDayRate = (staff.halfDayDeduction && staff.halfDayDeduction > 0) ? staff.halfDayDeduction : halfDaySalary;
+            // Priority: staff-specific override → global setting flat rate → per-day salary
+            const absentRate = (staff.absentDeduction && staff.absentDeduction > 0)
+                ? staff.absentDeduction
+                : (globalAbsentDeduction > 0 ? globalAbsentDeduction : perDaySalary);
+            const halfDayRate = (staff.halfDayDeduction && staff.halfDayDeduction > 0)
+                ? staff.halfDayDeduction
+                : (globalHalfDayDeduction > 0 ? globalHalfDayDeduction : halfDaySalary);
 
             let absentDeduction = absentCount * absentRate;
             let halfDayDeduction = halfDayCount * halfDayRate;
-            let leaveDeduction = leaveCount * perDaySalary;
+            const billableLeaves = Math.max(0, leaveCount - globalFreeLeavesPerMonth);
+            // Leave deduction uses same flat rate as absent (from settings)
+            let leaveDeduction = billableLeaves * absentRate;
             let notJoinedDeduction = 0;
             let pendingDeduction = 0;
 
@@ -3847,6 +3865,8 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
                 halfDays: halfDayCount,
                 absentDays: absentCount,
                 leaveDays: leaveCount,
+                freeLeavesPerMonth: globalFreeLeavesPerMonth,
+                billableLeaveDays: Math.max(0, leaveCount - globalFreeLeavesPerMonth),
                 absentDeduction: finalAbsentDeduction,
                 halfDayDeduction: finalHalfDayDeduction,
                 leaveDeduction: finalLeaveDeduction,
@@ -4387,7 +4407,8 @@ export const getAttendanceSettings = async (req, res) => {
                     halfDayDeduction: 250,
                     absentDeduction: 500,
                     lateGracePeriod: 15,
-                    overtimeRate: 0
+                    overtimeRate: 0,
+                    freeLeavesPerMonth: 0
                 }
             };
         }
@@ -4405,7 +4426,7 @@ export const getAttendanceSettings = async (req, res) => {
  */
 export const updateAttendanceSettings = async (req, res) => {
     try {
-        const { officeStartTime, officeEndTime, halfDayDeduction, absentDeduction, lateGracePeriod, overtimeRate } = req.body;
+        const { officeStartTime, officeEndTime, halfDayDeduction, absentDeduction, lateGracePeriod, overtimeRate, freeLeavesPerMonth } = req.body;
         
         if (!officeStartTime || !officeEndTime) {
             return res.status(400).json({ success: false, message: 'Office start and end times are required' });
@@ -4417,7 +4438,8 @@ export const updateAttendanceSettings = async (req, res) => {
             halfDayDeduction: Number(halfDayDeduction) || 0,
             absentDeduction: Number(absentDeduction) || 0,
             lateGracePeriod: lateGracePeriod !== undefined ? Number(lateGracePeriod) : 15,
-            overtimeRate: overtimeRate !== undefined ? Number(overtimeRate) : 0
+            overtimeRate: overtimeRate !== undefined ? Number(overtimeRate) : 0,
+            freeLeavesPerMonth: freeLeavesPerMonth !== undefined ? Number(freeLeavesPerMonth) : 0
         };
 
         const setting = await Setting.findOneAndUpdate(
