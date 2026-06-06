@@ -592,17 +592,31 @@ const SearchPage = () => {
           .map((seats) => String(seats))
           .sort((a, b) => parseInt(a) - parseInt(b));
 
-        // Extract unique locations
-        const uniqueLocations = Array.from(
-          new Set(
-            cars
-              .map((car) => {
-                const loc = car.location?.city || car.location?.address || car.location || '';
-                return loc.trim();
-              })
-              .filter(Boolean)
-          )
-        ).sort();
+        // Helper to capitalize city names
+        const capitalizeCity = (city) => {
+          if (!city) return '';
+          return city
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+            .trim();
+        };
+
+        // Extract unique locations case-insensitively
+        const uniqueLocationsMap = new Map();
+        cars.forEach((car) => {
+          const loc = car.location?.city || car.location?.address || car.location || '';
+          if (loc.trim()) {
+            const normalized = capitalizeCity(loc);
+            const key = normalized.toLowerCase();
+            if (!uniqueLocationsMap.has(key)) {
+              uniqueLocationsMap.set(key, normalized);
+            }
+          }
+        });
+        const uniqueLocations = Array.from(uniqueLocationsMap.values()).sort();
+
 
         // Extract unique ratings and create rating options
         const allRatings = cars

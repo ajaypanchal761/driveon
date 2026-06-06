@@ -18,6 +18,16 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
+const formatDateToDisplay = (dateStr) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('/')) return dateStr;
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+};
+
 const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -151,15 +161,38 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
 
   const verifyDlKyc = async () => {
     setError('');
-    if (!licenseNumber.trim()) { setError('Please enter a valid Driving License number'); return; }
-    if (!licenseDob) { setError('Please enter Date of Birth'); return; }
+    const cleanLicenseNumber = licenseNumber.trim();
+    if (!cleanLicenseNumber) { setError('Please enter a valid Driving License number'); return; }
+
+    const dlRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}-[0-9]{4}-[0-9]{7}$/;
+    if (!dlRegex.test(cleanLicenseNumber)) {
+      setError('Please enter driving license in correct format: e.g. MP41N-2021-0522258');
+      alert('Invalid data');
+      return;
+    }
+
+    if (!licenseDob) { setError('Please enter Expiry Date'); return; }
+    const dateRegex = /^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}-\d{2}-\d{4})$/;
+    if (!dateRegex.test(licenseDob)) {
+      setError('Please select a valid expiry date');
+      alert('Invalid data');
+      return;
+    }
+
     setIsKycLoading(true);
     try {
-      const response = await api.post('/fleet/kyc/dl/verify', { dlNo: licenseNumber, dob: licenseDob });
+      const response = await api.post('/fleet/kyc/dl/verify', { dlNo: cleanLicenseNumber, dob: licenseDob, expiryDate: licenseDob });
       if (response.data.success) setIsDlVerified(true);
-      else setError(response.data.message || 'Driving License verification failed. Please check details.');
-    } catch (err) { setError(err.response?.data?.message || 'DL verification failed. Please check the number and DOB.'); }
-    finally { setIsKycLoading(false); }
+      else {
+        setError(response.data.message || 'Driving License verification failed. Please check details.');
+        alert('Invalid data');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'DL verification failed. Please check the number and Expiry Date.');
+      alert('Invalid data');
+    } finally {
+      setIsKycLoading(false);
+    }
   };
 
   const verifyPanKyc = async () => {
@@ -542,14 +575,14 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
             <div>
               <label className="block text-sm font-medium mb-1" style={labelStyle}>From Date & Time <span style={{ color: colors.accentRed }}>*</span></label>
               <div className="flex gap-2">
-                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="flex-1 min-w-0 rounded-lg border px-3 py-2 outline-none text-sm" style={inputStyle} />
+                <input type="date" lang="en-IN" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="flex-1 min-w-0 rounded-lg border px-3 py-2 outline-none text-sm" style={inputStyle} />
                 <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-36 rounded-lg border px-3 py-2 outline-none text-sm" style={inputStyle} />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" style={labelStyle}>To Date & Time <span style={{ color: colors.accentRed }}>*</span></label>
               <div className="flex gap-2">
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="flex-1 min-w-0 rounded-lg border px-3 py-2 outline-none text-sm" style={inputStyle} />
+                <input type="date" lang="en-IN" value={toDate} onChange={(e) => setToDate(e.target.value)} className="flex-1 min-w-0 rounded-lg border px-3 py-2 outline-none text-sm" style={inputStyle} />
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-36 rounded-lg border px-3 py-2 outline-none text-sm" style={inputStyle} />
               </div>
             </div>
@@ -582,18 +615,32 @@ const BookingModal = ({ open, onClose, car, existingBookings, onConfirm }) => {
                       onChange={(e) => setLicenseNumber(e.target.value.toUpperCase())}
                       className="w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
                       style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary, color: colors.textPrimary }}
-                      placeholder="e.g. DL-1420110012345"
+                      placeholder="e.g. MP41N-2026-0186258"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: colors.textSecondary }}>Date of Birth</label>
-                    <input
-                      type="date"
-                      value={licenseDob}
-                      onChange={(e) => setLicenseDob(e.target.value)}
-                      className="w-full rounded-lg border px-3 py-1.5 text-sm outline-none"
-                      style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary, color: colors.textPrimary }}
-                    />
+                    <label className="block text-xs font-medium mb-1" style={{ color: colors.textSecondary }}>Expiry Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value={licenseDob ? formatDateToDisplay(licenseDob) : ''}
+                        placeholder="DD/MM/YYYY"
+                        className="w-full rounded-lg border px-3 py-1.5 text-sm outline-none cursor-pointer"
+                        style={{ borderColor: colors.borderMedium, backgroundColor: colors.backgroundSecondary, color: colors.textPrimary }}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: colors.textSecondary }}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="date"
+                        value={licenseDob || ''}
+                        onChange={(e) => setLicenseDob(e.target.value)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
                   </div>
                 </div>
                 <Button

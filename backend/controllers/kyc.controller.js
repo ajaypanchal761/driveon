@@ -174,15 +174,23 @@ export const verifyDL = async (req, res) => {
     const { dlNo, dob, expiryDate } = req.body;
     const dateVal = expiryDate || dob;
     
-    // Clean DL Number: Remove spaces and special characters
-    const cleanDlNo = dlNo ? dlNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
-
-    if (!cleanDlNo || !dateVal) {
+    if (!dlNo || !dateVal) {
       return res.status(400).json({
         success: false,
         message: 'Valid DL number and Expiry Date are required'
       });
     }
+
+    const dlRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}-[0-9]{4}-[0-9]{7}$/;
+    if (!dlRegex.test(dlNo.trim().toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter driving license in correct format: e.g. MP41N-2021-0130258'
+      });
+    }
+
+    // Clean DL Number: Remove spaces and special characters
+    const cleanDlNo = dlNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
     // Parse the date (which is in dd/mm/yyyy format)
     let formattedDob = dateVal;

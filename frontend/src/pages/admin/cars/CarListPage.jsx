@@ -122,7 +122,7 @@ const CarListPage = () => {
             availability: car.isInActiveRepair 
               ? 'undermaintenance' 
               : (car.isCurrentlyBooked ? 'booked' : 'available'),
-            ownerId: (car.ownerInfo?.ownerId || car.owner?._id || car.owner?.id || car.owner)?.toString() || '',
+            ownerId: (car.owner?._id || car.owner?.id || car.owner || car.ownerInfo?.ownerId)?.toString() || '',
             ownerName: car.ownerInfo?.name || car.owner?.name || 'Unknown',
             ownerEmail: car.ownerInfo?.email || car.owner?.email || '',
             location: car.location?.city || car.location || 'Unknown',
@@ -249,7 +249,7 @@ const CarListPage = () => {
     // Inward owner filter — only applies to inward cars
     if (filters.owner !== 'all') {
       filtered = filtered.filter(
-        (car) => car.source === 'inward' && (car.ownerId?.toString() || '') === filters.owner
+        (car) => car.source === 'inward' && (car.ownerName || '').toLowerCase().trim() === filters.owner.toLowerCase().trim()
       );
     }
 
@@ -262,7 +262,7 @@ const CarListPage = () => {
 
     // Location filter
     if (filters.location !== 'all') {
-      filtered = filtered.filter((car) => car.location === filters.location);
+      filtered = filtered.filter((car) => (car.location || '').toLowerCase().trim() === filters.location.toLowerCase().trim());
     }
 
     // Car Type filter
@@ -406,22 +406,39 @@ const CarListPage = () => {
     return names[type] || type;
   };
 
-  // Get unique locations (filter out null/undefined)
-  const locations = Array.from(
-    new Set(
-      cars
-        .map((car) => car.location)
-        .filter((location) => location != null && location !== '')
-    )
-  );
+  // Helper to capitalize city names
+  const capitalizeCity = (city) => {
+    if (!city) return '';
+    return city
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+      .trim();
+  };
 
-  // Get unique inward owners (source === 'inward', keyed by ownerId)
+  // Get unique locations (filter out null/undefined) case-insensitively
+  const uniqueLocationsMap = new Map();
+  cars.forEach((car) => {
+    const rawLoc = car.location || '';
+    if (rawLoc.trim()) {
+      const normalized = capitalizeCity(rawLoc);
+      const key = normalized.toLowerCase();
+      if (!uniqueLocationsMap.has(key)) {
+        uniqueLocationsMap.set(key, normalized);
+      }
+    }
+  });
+  const locations = Array.from(uniqueLocationsMap.values());
+
+  // Get unique inward owners (source === 'inward', keyed by ownerName case-insensitively)
   const ownersMap = new Map();
   cars.forEach((car) => {
-    if (car.source === 'inward' && car.ownerId && car.ownerName) {
-      if (!ownersMap.has(car.ownerId)) {
-        ownersMap.set(car.ownerId, {
-          id: car.ownerId,
+    if (car.source === 'inward' && car.ownerName && car.ownerName !== 'Unknown') {
+      const key = car.ownerName.trim().toLowerCase();
+      if (!ownersMap.has(key)) {
+        ownersMap.set(key, {
+          id: car.ownerName,
           name: car.ownerName,
         });
       }
@@ -709,8 +726,13 @@ const CarListPage = () => {
                       <h3 className="font-semibold text-gray-900 mb-1">
                         {car.brand} {car.model} {car.year ? `(${car.year})` : ''}
                       </h3>
-                      <p className="text-sm text-gray-500 mb-2">
-                        {getCarTypeName(car.carType)} • {car.location}
+                      <p className="text-sm text-gray-500 mb-2 flex items-center flex-wrap gap-2">
+                        <span>{getCarTypeName(car.carType)} • {car.location}</span>
+                        {car.registrationNumber && (
+                          <span className="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase border border-gray-300 tracking-wider font-mono">
+                            {car.registrationNumber}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">

@@ -149,17 +149,26 @@ const AddOutwardCarPage = () => {
 
   // Filter cars based on search query
   const filteredCars = useMemo(() => {
-    if (!searchQuery.trim()) return cars;
-    const q = searchQuery.toLowerCase();
-    return cars.filter(
-      (c) =>
-        (c.name || '').toLowerCase().includes(q) ||
-        (c.brand || '').toLowerCase().includes(q) ||
-        (c.model || '').toLowerCase().includes(q) ||
-        (c.ownerName || '').toLowerCase().includes(q) ||
-        (c.location || '').toLowerCase().includes(q) ||
-        (c.carNumber || '').toLowerCase().includes(q)
-    );
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+    if (!trimmedQuery) return cars;
+    const keywords = trimmedQuery.split(/\s+/).filter(Boolean);
+    return cars.filter((c) => {
+      const name = (c.name || '').toLowerCase();
+      const brand = (c.brand || '').toLowerCase();
+      const model = (c.model || '').toLowerCase();
+      const ownerName = (c.ownerName || '').toLowerCase();
+      const location = (c.location || '').toLowerCase();
+      const carNumber = (c.carNumber || c.registrationNumber || '').toLowerCase();
+
+      return keywords.every((keyword) =>
+        name.includes(keyword) ||
+        brand.includes(keyword) ||
+        model.includes(keyword) ||
+        ownerName.includes(keyword) ||
+        location.includes(keyword) ||
+        carNumber.includes(keyword)
+      );
+    });
   }, [cars, searchQuery]);
 
   const resetForm = () => {
