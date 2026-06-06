@@ -163,6 +163,19 @@ couponSchema.methods.canBeApplied = function (amount, carId, userId, carType) {
     return { valid: false, message: `This coupon has expired on ${endDate}` };
   }
 
+  // Check valid days of week
+  if (this.validDays && this.validDays.length > 0) {
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const currentDay = daysOfWeek[now.getDay()];
+    if (!this.validDays.includes(currentDay)) {
+      return {
+        valid: false,
+        message: `This coupon is only valid on: ${this.validDays.join(', ')}`,
+      };
+    }
+  }
+
+
   // Check minimum amount (only if set)
   if (this.minAmount > 0 && amount < this.minAmount) {
     return {

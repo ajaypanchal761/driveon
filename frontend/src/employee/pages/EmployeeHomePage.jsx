@@ -265,6 +265,14 @@ const EmployeeHomePage = () => {
             }));
             const holidaysList = holidaysRes.data?.success ? holidaysRes.data.data : [];
             const combined = [...formatted];
+            
+            // Build holidays map for quick lookup
+            const holidaysMap = {};
+            holidaysList.forEach(h => {
+              holidaysMap[new Date(h.date).toDateString()] = h.reason;
+            });
+
+            // Process holidays on combined list
             holidaysList.forEach(h => {
               const hDate = new Date(h.date);
               const exists = combined.some(r => r.date.toDateString() === hDate.toDateString());
@@ -276,10 +284,34 @@ const EmployeeHomePage = () => {
               }
             });
 
-            // Filter records for the current month
+            // Add implicit absent days for current month up to yesterday/today
             const now = new Date();
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth();
+            const todayDate = new Date();
+            todayDate.setHours(0,0,0,0);
+
+            const joinDate = user.joiningDate || user.joinDate || user.createdAt || new Date();
+            const startOfJoin = new Date(joinDate);
+            startOfJoin.setHours(0,0,0,0);
+
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+              const compDate = new Date(currentYear, currentMonth, day);
+              compDate.setHours(0,0,0,0);
+
+              if (compDate < todayDate) {
+                const dayOfWeek = compDate.getDay();
+                const dateStr = compDate.toDateString();
+                const hasRecord = combined.some(r => r.date.toDateString() === dateStr);
+
+                if (!hasRecord && dayOfWeek !== 0 && compDate >= startOfJoin && !holidaysMap[dateStr]) {
+                  combined.push({ date: compDate, status: 'Absent' });
+                }
+              }
+            }
+
+            // Filter records for the current month
             const currentMonthRecords = combined.filter(r => {
               return r.date.getFullYear() === currentYear && r.date.getMonth() === currentMonth;
             });

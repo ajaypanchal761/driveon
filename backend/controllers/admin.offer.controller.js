@@ -18,6 +18,7 @@ export const createOffer = async (req, res) => {
       validityStart,
       validityEnd,
       isActive,
+      validDays,
     } = req.body;
 
     // Validation
@@ -82,9 +83,11 @@ export const createOffer = async (req, res) => {
       isFirstTimeOnly: isFirstTimeOnly || false,
       validityStart: startDate,
       validityEnd: endDate,
+      validDays: validDays || [],
       isActive: isActive !== undefined ? isActive : true,
       createdBy: (req.admin || req.user)?._id,
     });
+
 
     res.status(201).json({
       success: true,
@@ -343,10 +346,18 @@ export const getActiveOffers = async (req, res) => {
     });
     const isFirstTime = bookingsCount === 0;
 
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const currentDay = daysOfWeek[now.getDay()];
+
     const query = {
       isActive: true,
       validityStart: { $lte: now },
       validityEnd: { $gte: now },
+      $or: [
+        { validDays: { $exists: false } },
+        { validDays: { $size: 0 } },
+        { validDays: currentDay },
+      ],
     };
 
     // If NOT a first time user, filter out first-time-only offers
@@ -407,6 +418,19 @@ export const validateOffer = async (req, res) => {
         message: 'This offer has expired',
       });
     }
+
+    // Check valid days of week
+    if (offer.validDays && offer.validDays.length > 0) {
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const currentDay = daysOfWeek[now.getDay()];
+      if (!offer.validDays.includes(currentDay)) {
+        return res.status(400).json({
+          success: false,
+          message: `This offer is only valid on: ${offer.validDays.join(', ')}`,
+        });
+      }
+    }
+
 
     // Check first-time-only logic
     if (offer.isFirstTimeOnly) {

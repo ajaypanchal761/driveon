@@ -681,27 +681,51 @@ export const verifyFleetAadhaarOTP = async (req, res) => {
 // Verify Driving License
 export const verifyFleetDL = async (req, res) => {
     try {
-        const { dlNo, dob } = req.body;
+        const { dlNo, dob, expiryDate } = req.body;
+        const dateVal = expiryDate || dob;
         
         const cleanDlNo = dlNo ? dlNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
 
-        if (!cleanDlNo || !dob) {
+        if (!cleanDlNo || !dateVal) {
             return res.status(400).json({
                 success: false,
-                message: 'Valid DL number and Date of Birth are required'
+                message: 'Valid DL number and Expiry Date are required'
             });
         }
 
-        let formattedDob = dob;
-        console.log(`📡 Fleet Attempting DL Verification: ${cleanDlNo} with DOB: ${formattedDob}`);
+        // Parse the date (which is in dd/mm/yyyy format)
+        let formattedDob = dateVal;
+        let alternateDob = dateVal;
+
+        if (dateVal && dateVal.includes('/')) {
+            const parts = dateVal.split('/');
+            if (parts.length === 3) {
+                // parts[0] is DD, parts[1] is MM, parts[2] is YYYY
+                formattedDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+                alternateDob = `${parts[0]}-${parts[1]}-${parts[2]}`; // DD-MM-YYYY
+            }
+        } else if (dateVal && dateVal.includes('-')) {
+            const parts = dateVal.split('-');
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    // YYYY-MM-DD
+                    formattedDob = dateVal;
+                    alternateDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+                } else {
+                    // DD-MM-YYYY
+                    formattedDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+                    alternateDob = dateVal;
+                }
+            }
+        }
+
+        console.log(`📡 Fleet Attempting DL Verification: ${cleanDlNo} with Expiry Date: ${formattedDob}`);
         
         try {
             let result = await quickekycService.verifyDL(cleanDlNo, formattedDob);
             
             if (result.status === 'error' && result.message?.toLowerCase().includes('date of birth')) {
-                const parts = dob.split('-');
-                const alternateDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
-                console.log(`🔄 Fleet Retrying with alternate DOB format: ${alternateDob}`);
+                console.log(`🔄 Fleet Retrying with alternate date format: ${alternateDob}`);
                 result = await quickekycService.verifyDL(cleanDlNo, alternateDob);
             }
 
@@ -723,9 +747,7 @@ export const verifyFleetDL = async (req, res) => {
             
             if (apiError.message?.toLowerCase().includes('date of birth')) {
                 try {
-                    const parts = dob.split('-');
-                    const lastResortDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                    const lastResult = await quickekycService.verifyDL(cleanDlNo, lastResortDob);
+                    const lastResult = await quickekycService.verifyDL(cleanDlNo, alternateDob);
                     if (lastResult.status === 'success') {
                         return res.status(200).json({ success: true, message: 'Verified on retry', data: lastResult.data });
                     }

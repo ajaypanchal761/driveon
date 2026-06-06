@@ -450,8 +450,18 @@ export const getCarSpecificCoupons = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    // Filter out coupons that have reached usage limit
-    const validCoupons = coupons.filter(coupon => coupon.usedCount < coupon.usageLimit);
+    // Filter out coupons that have reached usage limit or are not valid for the current day
+    const validCoupons = coupons.filter(coupon => {
+      if (coupon.usedCount >= coupon.usageLimit) return false;
+
+      if (coupon.validDays && coupon.validDays.length > 0) {
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const currentDay = daysOfWeek[now.getDay()];
+        return coupon.validDays.includes(currentDay);
+      }
+      return true;
+    });
+
 
     // Format response
     const formattedCoupons = validCoupons.map(coupon => {

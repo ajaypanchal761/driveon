@@ -3151,7 +3151,7 @@ export const SalaryPage = () => {
         month: monthIndex,
         year: Number(selectedYear),
         baseSalary: payingItem.baseSalary,
-        deductions: payingItem.absentDeduction + payingItem.halfDayDeduction + deductionVal,
+        deductions: (payingItem.absentDeduction || 0) + (payingItem.halfDayDeduction || 0) + (payingItem.leaveDeduction || 0) + (payingItem.notJoinedDeduction || 0) + (payingItem.pendingDeduction || 0) + deductionVal,
         bonus: bonusVal,
         note: adjustmentNote,
         paymentMethod,
@@ -3280,11 +3280,33 @@ export const SalaryPage = () => {
     doc.setFont("helvetica", "bold");
     doc.text("Deductions (Debit)", 120, 115);
     doc.setFont("helvetica", "normal");
-    doc.text("Absent Days Loss:", 125, 125);
-    doc.text(`- ${formatCurrency(item.absentDeduction || 0)}`, 190, 125, { align: 'right' });
 
-    doc.text("Half Day Absences:", 125, 133);
-    doc.text(`- ${formatCurrency(item.halfDayDeduction || 0)}`, 190, 133, { align: 'right' });
+    let deductY = 125;
+    if (item.salaryStatus === 'Paid') {
+      doc.text("Total Deductions:", 125, deductY);
+      doc.text(`- ${formatCurrency(item.absentDeduction || 0)}`, 190, deductY, { align: 'right' });
+    } else {
+      if (item.absentDeduction > 0) {
+        doc.text("Absent Days Loss:", 125, deductY);
+        doc.text(`- ${formatCurrency(item.absentDeduction)}`, 190, deductY, { align: 'right' });
+        deductY += 7;
+      }
+      if (item.leaveDeduction > 0) {
+        doc.text("Leave Days Loss:", 125, deductY);
+        doc.text(`- ${formatCurrency(item.leaveDeduction)}`, 190, deductY, { align: 'right' });
+        deductY += 7;
+      }
+      if (item.halfDayDeduction > 0) {
+        doc.text("Half Day Absences:", 125, deductY);
+        doc.text(`- ${formatCurrency(item.halfDayDeduction)}`, 190, deductY, { align: 'right' });
+        deductY += 7;
+      }
+      const otherDeductions = (item.notJoinedDeduction || 0) + (item.pendingDeduction || 0);
+      if (otherDeductions > 0) {
+        doc.text("Other Deductions:", 125, deductY);
+        doc.text(`- ${formatCurrency(otherDeductions)}`, 190, deductY, { align: 'right' });
+      }
+    }
 
     doc.setLineWidth(0.2);
     doc.line(20, 149, 190, 149);
@@ -3489,7 +3511,7 @@ export const SalaryPage = () => {
                         ₹ {item.baseSalary.toLocaleString('en-IN')}
                       </td>
                       <td className="p-4 text-red-500 font-medium">
-                        - ₹ {(item.absentDeduction + item.halfDayDeduction).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        - ₹ {((item.absentDeduction || 0) + (item.halfDayDeduction || 0) + (item.leaveDeduction || 0) + (item.notJoinedDeduction || 0) + (item.pendingDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                       </td>
                       <td className="p-4 font-bold text-[#1C205C]">
                         ₹ {item.salaryStatus === 'Paid' ? (item.paidAmount).toLocaleString('en-IN') : (item.netPayable).toLocaleString('en-IN')}
@@ -3577,7 +3599,7 @@ export const SalaryPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium">Attendance Deductions:</span>
-                    <span className="font-bold text-red-500">- ₹ {(payingItem.absentDeduction + payingItem.halfDayDeduction).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className="font-bold text-red-500">- ₹ {((payingItem.absentDeduction || 0) + (payingItem.halfDayDeduction || 0) + (payingItem.leaveDeduction || 0) + (payingItem.notJoinedDeduction || 0) + (payingItem.pendingDeduction || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base">
                     <span className="text-gray-800">Standard Net Payable:</span>

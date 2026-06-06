@@ -51,6 +51,13 @@ const offerSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Valid days of week (empty = all days)
+    validDays: [{
+      type: String,
+      enum: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    }],
+
+
     // Expiry and Validity
     validityStart: {
       type: Date,

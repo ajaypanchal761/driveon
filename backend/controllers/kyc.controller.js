@@ -171,32 +171,53 @@ export const verifyPAN = async (req, res) => {
  */
 export const verifyDL = async (req, res) => {
   try {
-    const { dlNo, dob } = req.body;
+    const { dlNo, dob, expiryDate } = req.body;
+    const dateVal = expiryDate || dob;
     
     // Clean DL Number: Remove spaces and special characters
     const cleanDlNo = dlNo ? dlNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() : '';
 
-    if (!cleanDlNo || !dob) {
+    if (!cleanDlNo || !dateVal) {
       return res.status(400).json({
         success: false,
-        message: 'Valid DL number and Date of Birth are required'
+        message: 'Valid DL number and Expiry Date are required'
       });
     }
 
-    // QuickEKYC DL API is very picky about DOB format. 
-    // We will try YYYY-MM-DD first (standard), then DD-MM-YYYY if it fails.
-    let formattedDob = dob; // Default is YYYY-MM-DD from frontend
+    // Parse the date (which is in dd/mm/yyyy format)
+    let formattedDob = dateVal;
+    let alternateDob = dateVal;
+
+    if (dateVal && dateVal.includes('/')) {
+      const parts = dateVal.split('/');
+      if (parts.length === 3) {
+        // parts[0] is DD, parts[1] is MM, parts[2] is YYYY
+        formattedDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+        alternateDob = `${parts[0]}-${parts[1]}-${parts[2]}`; // DD-MM-YYYY
+      }
+    } else if (dateVal && dateVal.includes('-')) {
+      const parts = dateVal.split('-');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          formattedDob = dateVal;
+          alternateDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+        } else {
+          // DD-MM-YYYY
+          formattedDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+          alternateDob = dateVal;
+        }
+      }
+    }
     
-    console.log(`📡 Attempting DL Verification: ${cleanDlNo} with DOB: ${formattedDob}`);
+    console.log(`📡 Attempting DL Verification: ${cleanDlNo} with Expiry Date: ${formattedDob}`);
     
     try {
       let result = await quickekycService.verifyDL(cleanDlNo, formattedDob);
       
       // If failed, try alternate format automatically
       if (result.status === 'error' && result.message?.toLowerCase().includes('date of birth')) {
-        const parts = dob.split('-');
-        const alternateDob = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
-        console.log(`🔄 Retrying with alternate DOB format: ${alternateDob}`);
+        console.log(`🔄 Retrying with alternate date format: ${alternateDob}`);
         result = await quickekycService.verifyDL(cleanDlNo, alternateDob);
       }
 
@@ -204,7 +225,8 @@ export const verifyDL = async (req, res) => {
         const User = (await import('../models/User.js')).default;
         const user = await User.findById(req.user._id);
         user.kycDetails.dl.number = dlNo;
-        user.kycDetails.dl.dob = dob;
+        user.kycDetails.dl.dob = dateVal; // For backward compatibility, store the expiry date in dob field
+        user.kycDetails.dl.expiryDate = dateVal; // Store in new expiryDate field
         user.kycDetails.dl.verified = true;
         user.kycDetails.dl.verifiedAt = new Date();
         if (result.data?.profile_image || result.data?.photo) {
@@ -232,11 +254,8 @@ export const verifyDL = async (req, res) => {
       // Last resort retry on catch if it was a format error
       if (apiError.message?.toLowerCase().includes('date of birth')) {
         try {
-          const parts = dob.split('-');
-          const lastResortDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          const lastResult = await quickekycService.verifyDL(cleanDlNo, lastResortDob);
+          const lastResult = await quickekycService.verifyDL(cleanDlNo, alternateDob);
           if (lastResult.status === 'success') {
-            // ... copy success logic if needed, but let's keep it simple for now
             return res.status(200).json({ success: true, message: 'Verified on retry', data: lastResult.data });
           }
         } catch (e) {}

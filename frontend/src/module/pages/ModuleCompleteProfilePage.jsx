@@ -9,6 +9,22 @@ import BottomNavbar from '../components/layout/BottomNavbar';
 import { colors } from '../theme/colors';
 import { kycService } from '../../services/kyc.service';
 
+const formatDateToDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    return dateStr;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return dateStr;
+};
+
 /**
  * ModuleCompleteProfilePage Component
  * Multi-step form to complete user profile (100% required for booking)
@@ -644,13 +660,14 @@ const ModuleCompleteProfilePage = () => {
 
   const handleVerifyDl = async () => {
     if (!dlNumber || !dlDob) {
-      toastUtils.error('Please enter DL number and Date of Birth');
+      toastUtils.error('Please enter DL number and Expiry Date');
       return;
     }
 
     setIsVerifyingDl(true);
     try {
-      const response = await kycService.verifyDL(dlNumber, dlDob);
+      const formattedDate = formatDateToDDMMYYYY(dlDob);
+      const response = await kycService.verifyDL(dlNumber, formattedDate);
       if (response.success) {
         toastUtils.success('Driving License verified successfully!');
         const profileRes = await userService.getProfile();

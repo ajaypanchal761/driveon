@@ -143,7 +143,7 @@
 /* Mobile Bottom Navbar Spacing */
 @media (max-width: 767px) {
   body {
-    padding-bottom: 64px;
+    padding-bottom: 80px;
     /* Space for bottom navbar */
   }
 }

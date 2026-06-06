@@ -170,6 +170,7 @@ const userSchema = new mongoose.Schema(
       dl: {
         number: String,
         dob: String,
+        expiryDate: String,
         verified: { type: Boolean, default: false },
         verifiedAt: Date,
         image: String

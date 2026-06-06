@@ -164,6 +164,7 @@ export const getProfile = async (req, res) => {
             dl: {
               idNumber: user.kycDetails?.dl?.number || '',
               dob: user.kycDetails?.dl?.dob || '',
+              expiryDate: user.kycDetails?.dl?.expiryDate || '',
               isVerified: user.kycDetails?.dl?.verified || false,
               verifiedAt: user.kycDetails?.dl?.verifiedAt || null,
             }
@@ -306,6 +307,7 @@ export const updateProfile = async (req, res) => {
             dl: {
               idNumber: user.kycDetails?.dl?.number || '',
               dob: user.kycDetails?.dl?.dob || '',
+              expiryDate: user.kycDetails?.dl?.expiryDate || '',
               isVerified: user.kycDetails?.dl?.verified || false,
               verifiedAt: user.kycDetails?.dl?.verifiedAt || null,
             }

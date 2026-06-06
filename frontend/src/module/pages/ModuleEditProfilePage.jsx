@@ -171,7 +171,7 @@ const ModuleEditProfilePage = () => {
   // Upload profile photo
   const handlePhotoUpload = async () => {
     if (!profilePhoto) {
-      return; // No new photo to upload
+      return null;
     }
 
     setIsUploading(true);
@@ -181,15 +181,21 @@ const ModuleEditProfilePage = () => {
 
       const response = await userService.uploadPhoto(formData);
 
-      if (response.profilePhoto || response.photo || response.url) {
-        const photoUrl = response.profilePhoto || response.photo || response.url;
+      // Extract photo URL safely
+      const photoUrl = response.data?.profilePhoto || response.profilePhoto || response.data?.user?.profilePhoto || response.photo || response.url;
+
+      if (photoUrl) {
         setPhotoPreview(photoUrl);
         setProfilePhoto(null);
-        toastUtils.success('Profile photo updated successfully');
+        toastUtils.success('Profile photo uploaded successfully');
+        return photoUrl;
+      } else {
+        throw new Error('No photo URL received from server');
       }
     } catch (error) {
       console.error('Error uploading photo:', error);
       toastUtils.error('Failed to upload profile photo');
+      throw error;
     } finally {
       setIsUploading(false);
     }
@@ -205,8 +211,9 @@ const ModuleEditProfilePage = () => {
     setIsSaving(true);
     try {
       // Upload photo first if there's a new one
+      let uploadedUrl = null;
       if (profilePhoto) {
-        await handlePhotoUpload();
+        uploadedUrl = await handlePhotoUpload();
       }
 
       // Prepare update data
@@ -226,12 +233,15 @@ const ModuleEditProfilePage = () => {
         // Update Redux store
         const updatedUser = response?.data?.user || response?.data?.data?.user || response?.user;
         if (updatedUser) {
+          if (uploadedUrl) {
+            updatedUser.profilePhoto = uploadedUrl;
+          }
           dispatch(updateUser(updatedUser));
         } else {
           dispatch(updateUser({
             ...user,
             ...updateData,
-            profilePhoto: photoPreview || user?.profilePhoto,
+            profilePhoto: uploadedUrl || photoPreview || user?.profilePhoto,
           }));
         }
 

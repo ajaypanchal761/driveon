@@ -3133,16 +3133,12 @@ export const getStaffPayroll = async (req, res) => {
         // Calculate total days in the month
         const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
-        // Calculate working days (exclude Sundays)
-        let workingDays = 0;
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
-            if (dayOfWeek !== 0) workingDays++; // Skip Sundays
-        }
+        // Calculate working days (set to total days in month)
+        let workingDays = daysInMonth;
 
         // Calculations
-        // Per Day Salary (Base / Working Days) - Do not round
-        const perDaySalary = workingDays > 0 ? (baseSalary / workingDays) : 0;
+        // Per Day Salary (Base / Days in Month) - Do not round
+        const perDaySalary = daysInMonth > 0 ? (baseSalary / daysInMonth) : 0;
 
         // Half Day Salary (Per Day / 2) - Do not round
         const halfDaySalary = perDaySalary / 2;
@@ -3321,17 +3317,19 @@ export const getStaffPayroll = async (req, res) => {
 
         let absentDeduction = absentCount * absentRate;
         let halfDayDeduction = halfDayCount * halfDayRate;
-        let notJoinedDeduction = notJoinedCount * perDaySalary;
-        let pendingDeduction = pendingCount * perDaySalary;
+        let leaveDeduction = leaveCount * perDaySalary;
+        let notJoinedDeduction = 0;
+        let pendingDeduction = 0;
 
         if (isDriverRole && staff.salaryMethod === 'Per Trip') {
             absentDeduction = 0;
             halfDayDeduction = 0;
+            leaveDeduction = 0;
             notJoinedDeduction = 0;
             pendingDeduction = 0;
         }
 
-        const netPayable = baseSalary - absentDeduction - halfDayDeduction - notJoinedDeduction - pendingDeduction + extraWorkAmount;
+        const netPayable = baseSalary - absentDeduction - halfDayDeduction - leaveDeduction - notJoinedDeduction - pendingDeduction + extraWorkAmount;
 
         // Check if salary already paid for this month
         const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -3345,6 +3343,7 @@ export const getStaffPayroll = async (req, res) => {
         let remainingAmount = netPayable;
         let finalAbsentDeduction = absentDeduction;
         let finalHalfDayDeduction = halfDayDeduction;
+        let finalLeaveDeduction = leaveDeduction;
         let finalNotJoinedDeduction = notJoinedDeduction;
         let finalPendingDeduction = pendingDeduction;
         let finalExtraWorkAmount = extraWorkAmount;
@@ -3358,6 +3357,7 @@ export const getStaffPayroll = async (req, res) => {
                 remainingAmount = Math.max(0, netPayable - paidAmount);
                 finalAbsentDeduction = salaryRecord.deductions || 0;
                 finalHalfDayDeduction = 0;
+                finalLeaveDeduction = 0;
                 finalNotJoinedDeduction = 0;
                 finalPendingDeduction = 0;
                 finalExtraWorkAmount = 0;
@@ -3379,6 +3379,7 @@ export const getStaffPayroll = async (req, res) => {
                 halfDaySalary,
                 absentDeduction: finalAbsentDeduction,
                 halfDayDeduction: finalHalfDayDeduction,
+                leaveDeduction: finalLeaveDeduction,
                 notJoinedDeduction: finalNotJoinedDeduction,
                 pendingDeduction: finalPendingDeduction,
                 extraWorkAmount: finalExtraWorkAmount,
@@ -3642,15 +3643,11 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
 
             const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
 
-            // Calculate working days (exclude Sundays)
-            let workingDays = 0;
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dayOfWeek = new Date(targetYear, targetMonth, d).getDay();
-                if (dayOfWeek !== 0) workingDays++;
-            }
+            // Calculate working days (set to total days in month)
+            let workingDays = daysInMonth;
 
             // Calculations
-            const perDaySalary = workingDays > 0 ? (baseSalary / workingDays) : 0;
+            const perDaySalary = daysInMonth > 0 ? (baseSalary / daysInMonth) : 0;
             const halfDaySalary = perDaySalary / 2;
 
             // Fetch Attendance Records
@@ -3770,17 +3767,19 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
 
             let absentDeduction = absentCount * absentRate;
             let halfDayDeduction = halfDayCount * halfDayRate;
-            let notJoinedDeduction = notJoinedCount * perDaySalary;
-            let pendingDeduction = pendingCount * perDaySalary;
+            let leaveDeduction = leaveCount * perDaySalary;
+            let notJoinedDeduction = 0;
+            let pendingDeduction = 0;
 
             if (isDriverRole && staff.salaryMethod === 'Per Trip') {
                 absentDeduction = 0;
                 halfDayDeduction = 0;
+                leaveDeduction = 0;
                 notJoinedDeduction = 0;
                 pendingDeduction = 0;
             }
 
-            const totalNetPayable = baseSalary - absentDeduction - halfDayDeduction - notJoinedDeduction - pendingDeduction + extraWorkAmount;
+            const totalNetPayable = baseSalary - absentDeduction - halfDayDeduction - leaveDeduction - notJoinedDeduction - pendingDeduction + extraWorkAmount;
 
             // Check saved payroll record
             const salaryRecord = await Salary.findOne({ staff: staff._id, month: monthString });
@@ -3797,6 +3796,9 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
 
             let finalAbsentDeduction = absentDeduction;
             let finalHalfDayDeduction = halfDayDeduction;
+            let finalLeaveDeduction = leaveDeduction;
+            let finalNotJoinedDeduction = notJoinedDeduction;
+            let finalPendingDeduction = pendingDeduction;
             let finalExtraWorkAmount = extraWorkAmount;
             let finalTotalNetPayable = totalNetPayable;
 
@@ -3821,6 +3823,9 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
                     remainingAmount = Math.max(0, totalNetPayable + bonus - paidAmount);
                     finalAbsentDeduction = salaryRecord.deductions || 0;
                     finalHalfDayDeduction = 0;
+                    finalLeaveDeduction = 0;
+                    finalNotJoinedDeduction = 0;
+                    finalPendingDeduction = 0;
                     finalExtraWorkAmount = 0;
                     finalTotalNetPayable = salaryRecord.netPay;
                 }
@@ -3844,6 +3849,9 @@ export const getMonthlyCalculatedPayroll = async (req, res) => {
                 leaveDays: leaveCount,
                 absentDeduction: finalAbsentDeduction,
                 halfDayDeduction: finalHalfDayDeduction,
+                leaveDeduction: finalLeaveDeduction,
+                notJoinedDeduction: finalNotJoinedDeduction,
+                pendingDeduction: finalPendingDeduction,
                 extraWorkAmount: finalExtraWorkAmount,
                 totalNetPayable: finalTotalNetPayable,
                 netPayable: remainingAmount,

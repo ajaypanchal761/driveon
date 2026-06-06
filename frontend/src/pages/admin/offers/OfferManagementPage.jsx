@@ -37,6 +37,7 @@ const OfferManagementPage = () => {
     isFirstTimeOnly: false,
     validityStart: '',
     validityEnd: '',
+    validDays: [],
     isActive: true,
   });
 
@@ -101,6 +102,7 @@ const OfferManagementPage = () => {
       isFirstTimeOnly: false,
       validityStart: '',
       validityEnd: '',
+      validDays: [],
       isActive: true,
     });
     setSelectedOffer(null);
@@ -124,6 +126,7 @@ const OfferManagementPage = () => {
       isFirstTimeOnly: offer.isFirstTimeOnly || false,
       validityStart: formatDate(offer.validityStart),
       validityEnd: formatDate(offer.validityEnd),
+      validDays: offer.validDays || [],
       isActive: offer.isActive !== undefined ? offer.isActive : true,
     });
     setShowOfferModal(true);
@@ -150,6 +153,7 @@ const OfferManagementPage = () => {
         isFirstTimeOnly: offerForm.isFirstTimeOnly,
         validityStart: offerForm.validityStart,
         validityEnd: offerForm.validityEnd,
+        validDays: offerForm.validDays || [],
         isActive: offerForm.isActive,
       };
 
@@ -376,6 +380,14 @@ const OfferManagementPage = () => {
                         {new Date(offer.validityStart).toLocaleDateString()} - {new Date(offer.validityEnd).toLocaleDateString()}
                       </span>
                     </div>
+                    {offer.validDays && offer.validDays.length > 0 && (
+                      <div>
+                        <span className="text-gray-500 block text-xs">Valid Days</span>
+                        <span className="text-purple-700 font-semibold">
+                          {offer.validDays.join(', ')}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -504,6 +516,33 @@ const OfferManagementPage = () => {
                 <label htmlFor="firstTimeOnly" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Valid for First-Time Bookings Only
                 </label>
+              </div>
+
+              {/* Valid Days Selection (Optional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valid Days (Optional - leave empty for all days)</label>
+                <div className="flex flex-wrap gap-2">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+                    const isSelected = offerForm.validDays?.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setOfferForm({ ...offerForm, validDays: offerForm.validDays.filter(d => d !== day) });
+                          } else {
+                            setOfferForm({ ...offerForm, validDays: [...(offerForm.validDays || []), day] });
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${isSelected ? 'text-white border-purple-600' : 'text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                        style={isSelected ? { backgroundColor: colors.backgroundTertiary, borderColor: colors.backgroundTertiary } : {}}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -37,6 +37,12 @@ const AttendanceCalendarModal = ({ isOpen, onClose, userId, user }) => {
   const [fetchingMonth, setFetchingMonth] = useState(false);
   const [showPicker, setShowPicker] = useState(false); // month/year picker panel
 
+  const selectMonthYear = (m, y) => {
+    setCalMonth(m);
+    setCalYear(y);
+    setShowPicker(false);
+  };
+
   // Fetch attendance + holidays whenever the selected month/year changes
   useEffect(() => {
     if (!isOpen || !userId) return;
@@ -120,28 +126,28 @@ const AttendanceCalendarModal = ({ isOpen, onClose, userId, user }) => {
   // Picker: allow current month up to Dec 2099
   const pickerMaxYear = 2099;
 
-  const selectMonthYear = (m, y) => {
-    setCalMonth(m);
-    setCalYear(y);
-    setShowPicker(false);
-  };
+  const joinDate = user?.joinDate || user?.joiningDate || user?.createdAt || null;
+  const startOfJoin = joinDate ? new Date(joinDate) : null;
+  if (startOfJoin) startOfJoin.setHours(0,0,0,0);
 
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const firstDay    = new Date(calYear, calMonth, 1).getDay();
 
-  // Build grid — all future dates (including future months) show Pending
+  // Build grid
   const grid = [];
   for (let i = 0; i < firstDay; i++) grid.push({ isEmpty: true });
   for (let d = 1; d <= daysInMonth; d++) {
     const cellDate = new Date(calYear, calMonth, d);
+    cellDate.setHours(0,0,0,0);
     const dateStr  = cellDate.toDateString();
     const record   = monthData.find(r => r.date.toDateString() === dateStr);
 
     let status = 'Pending';
     let checkIn = '--:--', checkOut = '--:--', reason = '';
 
-    if (cellDate > today) {
-      // Future date — always Pending, no record lookup
+    if (startOfJoin && cellDate < startOfJoin) {
+      status = 'Not Joined';
+    } else if (cellDate > today) {
       status = 'Pending';
     } else if (record) {
       status   = record.status;
@@ -150,17 +156,19 @@ const AttendanceCalendarModal = ({ isOpen, onClose, userId, user }) => {
       reason   = record.reason   || '';
     } else if (cellDate.getDay() === 0) {
       status = 'Weekend';
+    } else {
+      // Past day, not joined, not holiday, not weekend -> Absent
+      status = 'Absent';
     }
-    // else: past weekday with no record → stays 'Pending'
 
     grid.push({ isEmpty: false, day: d, status, checkIn, checkOut, reason, date: cellDate });
   }
 
-  // Stats
-  const presentCount = monthData.filter(r => r.status === 'Present').length;
-  const lateCount    = monthData.filter(r => r.status === 'Late').length;
-  const absentCount  = monthData.filter(r => r.status === 'Absent').length;
-  const leaveCount   = monthData.filter(r => r.status === 'Leave' || r.status === 'Leaves').length;
+  // Stats computed from grid
+  const presentCount = grid.filter(item => !item.isEmpty && item.status === 'Present').length;
+  const lateCount    = grid.filter(item => !item.isEmpty && item.status === 'Late').length;
+  const absentCount  = grid.filter(item => !item.isEmpty && item.status === 'Absent').length;
+  const leaveCount   = grid.filter(item => !item.isEmpty && (item.status === 'Leave' || item.status === 'Leaves')).length;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center" onClick={onClose}>
@@ -459,6 +467,13 @@ const AttendancePage = () => {
           }));
           const holidaysList = holidaysRes.data?.success ? holidaysRes.data.data : [];
           const combined = [...formatted];
+
+          // Build holidays map for quick lookup
+          const holidaysMap = {};
+          holidaysList.forEach(h => {
+            holidaysMap[new Date(h.date).toDateString()] = h.reason;
+          });
+
           holidaysList.forEach(h => {
             const hDate = new Date(h.date);
             const exists = combined.some(r => r.date.toDateString() === hDate.toDateString());
@@ -470,6 +485,40 @@ const AttendancePage = () => {
               combined[idx].reason = h.reason;
             }
           });
+
+          // Add implicit absent days for the current month up to yesterday/today
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth();
+          const todayDate = new Date();
+          todayDate.setHours(0,0,0,0);
+
+          const joinDate = user?.joiningDate || user?.joinDate || user?.createdAt || new Date();
+          const startOfJoin = new Date(joinDate);
+          startOfJoin.setHours(0,0,0,0);
+
+          const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+          for (let day = 1; day <= daysInMonth; day++) {
+            const compDate = new Date(currentYear, currentMonth, day);
+            compDate.setHours(0,0,0,0);
+
+            if (compDate < todayDate) {
+              const dayOfWeek = compDate.getDay();
+              const dateStr = compDate.toDateString();
+              const hasRecord = combined.some(r => r.date.toDateString() === dateStr);
+
+              if (!hasRecord && dayOfWeek !== 0 && compDate >= startOfJoin && !holidaysMap[dateStr]) {
+                combined.push({
+                  date: compDate,
+                  status: 'Absent',
+                  checkIn: '--:--',
+                  checkOut: '--:--',
+                  hours: '-'
+                });
+              }
+            }
+          }
+
           combined.sort((a, b) => b.date - a.date);
           setAttendanceData(combined);
 

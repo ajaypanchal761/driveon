@@ -436,9 +436,22 @@ export const createBooking = async (req, res) => {
         if (offer) {
           const now = new Date();
           if (now >= offer.validityStart && now <= offer.validityEnd) {
+            // Check valid days of week
+            if (offer.validDays && offer.validDays.length > 0) {
+              const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              const currentDay = daysOfWeek[now.getDay()];
+              if (!offer.validDays.includes(currentDay)) {
+                return res.status(400).json({
+                  success: false,
+                  message: `This offer is only valid on: ${offer.validDays.join(', ')}`,
+                });
+              }
+            }
+
             // Check first-time-only criteria
             let canApply = true;
             if (offer.isFirstTimeOnly) {
+
               const bookingsCount = await Booking.countDocuments({
                 user: userId,
                 status: { $ne: 'cancelled' },

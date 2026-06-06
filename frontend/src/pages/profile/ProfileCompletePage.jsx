@@ -11,6 +11,22 @@ import toastUtils from '../../config/toast';
 import { theme } from '../../theme/theme.constants';
 import kycService from '../../services/kyc.service';
 
+const formatDateToDDMMYYYY = (dateStr) => {
+  if (!dateStr) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    return dateStr;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+    const [day, month, year] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return dateStr;
+};
+
 
 /**
  * Profile Completion Schema
@@ -859,6 +875,7 @@ const ProfileCompletePage = () => {
                           disabled={isKycSubmitting}
                           className="w-full px-3 py-2 text-xs border rounded focus:outline-none"
                         />
+                        <label className="block text-xs text-gray-500 font-medium">Enter expiry date (dd/mm/yyyy)</label>
                         <input
                           type="date"
                           value={dlDob}
@@ -869,10 +886,11 @@ const ProfileCompletePage = () => {
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!dlNumber || !dlDob) return toastUtils.error('Enter DL Number & DOB');
+                            if (!dlNumber || !dlDob) return toastUtils.error('Enter DL Number & Expiry Date');
                             setIsKycSubmitting(true);
                             try {
-                              const res = await kycService.verifyDL(dlNumber, dlDob);
+                              const formattedDate = formatDateToDDMMYYYY(dlDob);
+                              const res = await kycService.verifyDL(dlNumber, formattedDate);
                               if (res.success) {
                                 toastUtils.success('DL verified!');
                                 const profileRes = await userService.getProfile();
