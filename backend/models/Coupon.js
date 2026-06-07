@@ -153,13 +153,21 @@ couponSchema.methods.canBeApplied = function (amount, carId, userId, carType) {
   }
 
   // Check validity dates
+  const formatDate = (date) => {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   if (now < this.validityStart) {
-    const startDate = new Date(this.validityStart).toLocaleDateString();
+    const startDate = formatDate(this.validityStart);
     return { valid: false, message: `This coupon is not yet valid. It will be available from ${startDate}` };
   }
 
   if (now > this.validityEnd) {
-    const endDate = new Date(this.validityEnd).toLocaleDateString();
+    const endDate = formatDate(this.validityEnd);
     return { valid: false, message: `This coupon has expired on ${endDate}` };
   }
 

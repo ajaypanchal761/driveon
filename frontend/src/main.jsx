@@ -1,5 +1,6 @@
 // Import error handler first to suppress browser extension errors
 import './utils/errorHandler';
+import './utils/datePatch';
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

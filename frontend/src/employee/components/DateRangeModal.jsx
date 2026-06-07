@@ -26,7 +26,7 @@ const DateRangeModal = ({ isOpen, onClose, onApply }) => {
   };
 
   const formatDateDisplay = (date) => {
-    return date ? format(date, 'yyyy/MM/dd') : 'YYYY/MM/DD';
+    return date ? format(date, 'dd/MM/yyyy') : 'DD/MM/YYYY';
   };
 
   return (

@@ -35,6 +35,25 @@ const formatTime12Hour = (time24) => {
   return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
 };
 
+const formatDateStr = (dateStr) => {
+  if (!dateStr) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  try {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return String(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return String(dateStr);
+  }
+};
+
 const getTodayStr = () => {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(
@@ -255,13 +274,13 @@ const BookingDetailsModal = ({ open, booking, cars = [], onClose }) => {
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
                         <span className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: colors.textSecondary }}>Pickup</span>
-                        <span className="block text-sm font-bold" style={{ color: colors.textPrimary }}>{booking.fromDate}</span>
+                        <span className="block text-sm font-bold" style={{ color: colors.textPrimary }}>{formatDateStr(booking.fromDate)}</span>
                         <span className="block text-sm font-medium" style={{ color: colors.textSecondary }}>{booking.startTime ? formatTime12Hour(booking.startTime) : 'Time N/A'}</span>
                       </div>
                       <div className="text-2xl text-gray-300">→</div>
                       <div className="flex-1">
                         <span className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: colors.textSecondary }}>Drop-off</span>
-                        <span className="block text-sm font-bold" style={{ color: colors.textPrimary }}>{booking.toDate}</span>
+                        <span className="block text-sm font-bold" style={{ color: colors.textPrimary }}>{formatDateStr(booking.toDate)}</span>
                         <span className="block text-sm font-medium" style={{ color: colors.textSecondary }}>{booking.endTime ? formatTime12Hour(booking.endTime) : 'Time N/A'}</span>
                       </div>
                     </div>
@@ -459,7 +478,7 @@ const FleetBookingsPage = () => {
                     </div>
 
                     <p className="text-sm" style={{ color: colors.textSecondary }}>
-                      Dates: <span style={{ color: colors.textPrimary }}>{b.fromDate} {b.startTime ? `(${formatTime12Hour(b.startTime)})` : ''} {ARROW} {b.toDate} {b.endTime ? `(${formatTime12Hour(b.endTime)})` : ''}</span>
+                      Dates: <span style={{ color: colors.textPrimary }}>{formatDateStr(b.fromDate)} {b.startTime ? `(${formatTime12Hour(b.startTime)})` : ''} {ARROW} {formatDateStr(b.toDate)} {b.endTime ? `(${formatTime12Hour(b.endTime)})` : ''}</span>
                     </p>
 
                     <div className="flex flex-wrap items-center gap-2">

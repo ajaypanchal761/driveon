@@ -534,6 +534,16 @@ export const getActiveBookings = async (req, res) => {
             .populate('car', 'brand model registrationNumber images')
             .sort({ 'tripEnd.date': 1 });
 
+        const formatDateStr = (dStr) => {
+            if (!dStr) return '—';
+            const d = new Date(dStr);
+            if (isNaN(d.getTime())) return '—';
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}/${month}/${year}`;
+        };
+
         const formatted = bookings.map(b => ({
             id: b._id,
             vehicle: `${b.car.brand} ${b.car.model}`,
@@ -541,7 +551,7 @@ export const getActiveBookings = async (req, res) => {
             regNumber: b.car.registrationNumber,
             customer: b.user.name,
             phone: b.user.phone,
-            dateRange: `${new Date(b.tripStart.date).toLocaleDateString()} - ${new Date(b.tripEnd.date).toLocaleDateString()}`,
+            dateRange: `${formatDateStr(b.tripStart.date)} - ${formatDateStr(b.tripEnd.date)}`,
             status: 'Ongoing',
             amount: b.pricing.finalPrice
         }));
@@ -575,6 +585,16 @@ export const getUpcomingBookings = async (req, res) => {
             .populate('car', 'brand model registrationNumber images')
             .sort({ 'tripStart.date': 1 });
 
+        const formatDateStr = (dStr) => {
+            if (!dStr) return '—';
+            const d = new Date(dStr);
+            if (isNaN(d.getTime())) return '—';
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}/${month}/${year}`;
+        };
+
         const formatted = bookings.map(b => {
             const now = new Date();
             const start = new Date(b.tripStart.date);
@@ -594,7 +614,7 @@ export const getUpcomingBookings = async (req, res) => {
                 regNumber: b.car.registrationNumber,
                 customer: b.user.name,
                 phone: b.user.phone,
-                dateRange: `${new Date(b.tripStart.date).toLocaleDateString()} - ${new Date(b.tripEnd.date).toLocaleDateString()}`,
+                dateRange: `${formatDateStr(b.tripStart.date)} - ${formatDateStr(b.tripEnd.date)}`,
                 status: b.status.charAt(0).toUpperCase() + b.status.slice(1),
                 startsIn: startsIn,
                 amount: b.pricing.finalPrice

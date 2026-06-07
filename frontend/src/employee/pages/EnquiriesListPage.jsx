@@ -107,7 +107,7 @@ const EnquiriesListPage = () => {
             name: enq.name,
             phone: enq.phone,
             status: enq.status,
-            date: enq.createdAt ? format(new Date(enq.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+            date: enq.createdAt ? format(new Date(enq.createdAt), 'dd/MM/yyyy') : format(new Date(), 'dd/MM/yyyy'),
             createdAt: enq.createdAt, // Keep original for date usage if needed
             car: enq.carInterested?.brand ? `${enq.carInterested.brand} ${enq.carInterested.model}` : (typeof enq.carInterested === 'string' ? enq.carInterested : ''),
             note: enq.note || ''
@@ -156,7 +156,7 @@ const EnquiriesListPage = () => {
 
     // 2. Date Filter
     if (dateFilter.start && dateFilter.end) {
-      const enquiryDate = startOfDay(new Date(enquiry.date)); // Simple parsing for now
+      const enquiryDate = startOfDay(new Date(enquiry.createdAt || enquiry.date)); // Simple parsing for now
       const start = startOfDay(dateFilter.start);
       const end = endOfDay(dateFilter.end);
 
