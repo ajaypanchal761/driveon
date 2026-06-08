@@ -121,6 +121,10 @@ const ModuleGuarantorPage = () => {
           bookingStatus: item.bookingStatus,
           reversedAt: item.reversedAt ? new Date(item.reversedAt) : null,
           reversalReason: item.reversalReason,
+          isAdjustment: item.isAdjustment || item.userName === 'Admin Adjustment',
+          isUsedPoints: item.isUsedPoints,
+          adjustmentType: item.adjustmentType,
+          reason: item.reason,
         }));
         console.log('✅ Setting history with', history.length, 'items');
         setPointsHistory(history);
@@ -414,22 +418,6 @@ const ModuleGuarantorPage = () => {
                       </>
                     )}
                   </div>
-
-                  {/* Use Points Button */}
-                  <button
-                    onClick={() => {
-                      toastUtils.info('Points can be used during booking checkout');
-                      navigate('/search');
-                    }}
-                    className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-98"
-                    style={{
-                      backgroundColor: colors.backgroundSecondary,
-                      color: colors.backgroundTertiary,
-                      boxShadow: `0 4px 12px rgba(0, 0, 0, 0.15)`
-                    }}
-                  >
-                    Use Points for Booking
-                  </button>
                 </div>
               </div>
 
@@ -470,27 +458,37 @@ const ModuleGuarantorPage = () => {
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
-                                Points from {transaction.userName} guarantor
+                                {transaction.isAdjustment ? 'Admin Adjustment' : `Points from ${transaction.userName} guarantor`}
                               </p>
-                              <p className="text-xs font-mono" style={{ color: colors.textSecondary }}>
-                                Booking: {transaction.bookingId}
-                              </p>
+                              {transaction.isAdjustment ? (
+                                <p className="text-xs italic" style={{ color: colors.textSecondary }}>
+                                  Reason: {transaction.reason || 'No reason specified'}
+                                </p>
+                              ) : (
+                                <p className="text-xs font-mono" style={{ color: colors.textSecondary }}>
+                                  Booking: {transaction.bookingId}
+                                </p>
+                              )}
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-bold" 
-                                 style={{ color: transaction.status === 'reversed' ? colors.error : colors.success }}>
+                                 style={{ color: (transaction.status === 'reversed' || transaction.pointsEarned < 0) ? colors.error : colors.success }}>
                                 {(() => {
                                   const pts = Number(transaction.pointsEarned);
-                                  const sign = transaction.status === 'reversed' ? '-' : '+';
-                                  if (pts % 1 === 0) return `${sign}${pts.toLocaleString()}`;
+                                  const isNegative = pts < 0 || transaction.status === 'reversed';
+                                  const absPts = Math.abs(pts);
+                                  const sign = isNegative ? '-' : '+';
+                                  if (absPts % 1 === 0) return `${sign}${absPts.toLocaleString()}`;
                                   // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
-                                  const decimals = pts.toString().split('.')[1]?.length || 0;
-                                  return `${sign}${decimals <= 3 ? pts.toFixed(decimals) : pts.toFixed(3)}`;
+                                  const decimals = absPts.toString().split('.')[1]?.length || 0;
+                                  return `${sign}${decimals <= 3 ? absPts.toFixed(decimals) : absPts.toFixed(3)}`;
                                 })()}
                               </p>
-                              <p className="text-xs" style={{ color: colors.textSecondary }}>
-                                ₹{transaction.bookingAmount.toLocaleString()} booking
-                              </p>
+                              {transaction.bookingAmount !== null && transaction.bookingAmount !== undefined && (
+                                <p className="text-xs" style={{ color: colors.textSecondary }}>
+                                  ₹{transaction.bookingAmount.toLocaleString()} booking
+                                </p>
+                              )}
                               {transaction.totalGuarantors > 1 && (
                                 <p className="text-xs" style={{ color: colors.textTertiary }}>
                                   {transaction.totalGuarantors} guarantors
@@ -512,24 +510,26 @@ const ModuleGuarantorPage = () => {
                                   Reversed: {transaction.reversalReason}
                                 </p>
                               )}
-                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
-                                backgroundColor: transaction.status === 'reversed' 
-                                  ? colors.error + '20' 
-                                  : transaction.bookingStatus === 'completed' 
-                                    ? colors.success + '20' 
-                                    : colors.warning + '20',
-                                color: transaction.status === 'reversed' 
-                                  ? colors.error 
-                                  : transaction.bookingStatus === 'completed' 
-                                    ? colors.success 
-                                    : colors.warning
-                              }}>
-                                {transaction.status === 'reversed' 
-                                  ? 'Reversed' 
-                                  : transaction.bookingStatus === 'completed' 
-                                    ? 'Completed' 
-                                    : transaction.bookingStatus || 'Active'}
-                              </span>
+                              {!transaction.isAdjustment && (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
+                                  backgroundColor: transaction.status === 'reversed' 
+                                    ? colors.error + '20' 
+                                    : transaction.bookingStatus === 'completed' 
+                                      ? colors.success + '20' 
+                                      : colors.warning + '20',
+                                  color: transaction.status === 'reversed' 
+                                    ? colors.error 
+                                    : transaction.bookingStatus === 'completed' 
+                                      ? colors.success 
+                                      : colors.warning
+                                }}>
+                                  {transaction.status === 'reversed' 
+                                    ? 'Reversed' 
+                                    : transaction.bookingStatus === 'completed' 
+                                      ? 'Completed' 
+                                      : transaction.bookingStatus || 'Active'}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -759,56 +759,79 @@ const ModuleGuarantorPage = () => {
 
               {/* Transaction Details */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">User Name</span>
-                  <span className="text-sm font-semibold text-gray-900">{selectedTransaction.userName}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">User Email</span>
-                  <span className="text-sm text-gray-900">{selectedTransaction.userEmail || 'N/A'}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">Booking ID</span>
-                  <span className="text-sm font-mono font-semibold text-gray-900">{selectedTransaction.bookingId}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">Booking Amount</span>
-                  <span className="text-sm font-semibold text-gray-900">₹{selectedTransaction.bookingAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">10% Pool Amount</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {(() => {
-                      const amt = Number(selectedTransaction.totalPoolAmount);
-                      if (amt % 1 === 0) return `₹${amt.toLocaleString()}`;
-                      // Show exact decimals: 10.5, 10.25, 10.125 (up to 3 decimal places for exact values)
-                      const decimals = amt.toString().split('.')[1]?.length || 0;
-                      return `₹${decimals <= 3 ? amt.toFixed(decimals) : amt.toFixed(3)}`;
-                    })()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">Total Guarantors</span>
-                  <span className="text-sm font-semibold text-gray-900">{selectedTransaction.totalGuarantors}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">Points Per Guarantor</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {(() => {
-                      const pts = selectedTransaction.totalPoolAmount && selectedTransaction.totalGuarantors
-                        ? selectedTransaction.totalPoolAmount / selectedTransaction.totalGuarantors
-                        : selectedTransaction.pointsEarned;
-                      const numPts = Number(pts);
-                      if (numPts % 1 === 0) return numPts.toLocaleString();
-                      // Show exact decimals: 5.25, 2.625, 10.5 (up to 3 decimal places for exact values)
-                      const decimals = numPts.toString().split('.')[1]?.length || 0;
-                      return decimals <= 3 ? numPts.toFixed(decimals) : numPts.toFixed(3);
-                    })()}
-                  </span>
-                </div>
+                {selectedTransaction.isAdjustment ? (
+                  <>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">Transaction Type</span>
+                      <span className="text-sm font-semibold text-gray-900">Admin Adjustment</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">Adjustment Type</span>
+                      <span className="text-sm font-semibold text-gray-900 capitalize">{selectedTransaction.adjustmentType || 'N/A'}</span>
+                    </div>
+                    <div className="flex flex-col py-2 border-b border-gray-100 gap-1 text-left">
+                      <span className="text-sm font-medium text-gray-600">Reason</span>
+                      <span className="text-sm text-gray-900 bg-gray-50 p-2.5 rounded-lg border border-gray-200">{selectedTransaction.reason || 'No reason specified'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">User Name</span>
+                      <span className="text-sm font-semibold text-gray-900">{selectedTransaction.userName}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">User Email</span>
+                      <span className="text-sm text-gray-900">{selectedTransaction.userEmail || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">Booking ID</span>
+                      <span className="text-sm font-mono font-semibold text-gray-900">{selectedTransaction.bookingId}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">Booking Amount</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {selectedTransaction.bookingAmount !== null && selectedTransaction.bookingAmount !== undefined
+                          ? `₹${selectedTransaction.bookingAmount.toLocaleString()}`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">10% Pool Amount</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {(() => {
+                          const amt = Number(selectedTransaction.totalPoolAmount);
+                          if (isNaN(amt)) return 'N/A';
+                          if (amt % 1 === 0) return `₹${amt.toLocaleString()}`;
+                          const decimals = amt.toString().split('.')[1]?.length || 0;
+                          return `₹${decimals <= 3 ? amt.toFixed(decimals) : amt.toFixed(3)}`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">Total Guarantors</span>
+                      <span className="text-sm font-semibold text-gray-900">{selectedTransaction.totalGuarantors || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-600">Points Per Guarantor</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {(() => {
+                          const pts = selectedTransaction.totalPoolAmount && selectedTransaction.totalGuarantors
+                            ? selectedTransaction.totalPoolAmount / selectedTransaction.totalGuarantors
+                            : selectedTransaction.pointsEarned;
+                          const numPts = Number(pts);
+                          if (isNaN(numPts)) return 'N/A';
+                          if (numPts % 1 === 0) return numPts.toLocaleString();
+                          const decimals = numPts.toString().split('.')[1]?.length || 0;
+                          return decimals <= 3 ? numPts.toFixed(decimals) : numPts.toFixed(3);
+                        })()}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center justify-between py-2 border-b border-gray-100">
                   <span className="text-sm font-medium text-gray-600">Transaction Date</span>
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-gray-900 text-right">
                     {new Date(selectedTransaction.date).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'long',
@@ -818,27 +841,29 @@ const ModuleGuarantorPage = () => {
                     })}
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">Status</span>
-                  <span className="text-xs px-3 py-1 rounded-full font-medium" style={{
-                    backgroundColor: selectedTransaction.status === 'reversed' 
-                      ? colors.error + '20' 
-                      : selectedTransaction.bookingStatus === 'completed' 
-                        ? colors.success + '20' 
-                        : colors.warning + '20',
-                    color: selectedTransaction.status === 'reversed' 
-                      ? colors.error 
-                      : selectedTransaction.bookingStatus === 'completed' 
-                        ? colors.success 
-                        : colors.warning
-                  }}>
-                    {selectedTransaction.status === 'reversed' 
-                      ? 'Reversed' 
-                      : selectedTransaction.bookingStatus === 'completed' 
-                        ? 'Completed' 
-                        : selectedTransaction.bookingStatus || 'Active'}
-                  </span>
-                </div>
+                {!selectedTransaction.isAdjustment && (
+                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                    <span className="text-sm font-medium text-gray-600">Status</span>
+                    <span className="text-xs px-3 py-1 rounded-full font-medium" style={{
+                      backgroundColor: selectedTransaction.status === 'reversed' 
+                        ? colors.error + '20' 
+                        : selectedTransaction.bookingStatus === 'completed' 
+                          ? colors.success + '20' 
+                          : colors.warning + '20',
+                      color: selectedTransaction.status === 'reversed' 
+                        ? colors.error 
+                        : selectedTransaction.bookingStatus === 'completed' 
+                          ? colors.success 
+                          : colors.warning
+                    }}>
+                      {selectedTransaction.status === 'reversed' 
+                        ? 'Reversed' 
+                        : selectedTransaction.bookingStatus === 'completed' 
+                          ? 'Completed' 
+                          : selectedTransaction.bookingStatus || 'Active'}
+                    </span>
+                  </div>
+                )}
                 {selectedTransaction.status === 'reversed' && selectedTransaction.reversedAt && (
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="text-sm font-medium text-gray-600">Reversed Date</span>

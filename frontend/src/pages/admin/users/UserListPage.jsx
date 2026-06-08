@@ -67,6 +67,8 @@ const UserListPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDetail, setShowUserDetail] = useState(false);
   const [activeGuarantorIds, setActiveGuarantorIds] = useState([]);
+  const [showAdjustCoinsModal, setShowAdjustCoinsModal] = useState(false);
+  const [adjustingUser, setAdjustingUser] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -310,6 +312,11 @@ const UserListPage = () => {
         toastUtils.error(error.response?.data?.message || 'Failed to delete user');
       }
     }
+  };
+
+  const handleAdjustCoinsClick = (user) => {
+    setAdjustingUser(user);
+    setShowAdjustCoinsModal(true);
   };
 
   const handleViewUser = (user) => {
@@ -579,6 +586,7 @@ const UserListPage = () => {
                 <tr>
                   <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">User</th>
                   <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Contact</th>
+                  <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Coins</th>
                   <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">KYC Status</th>
                   <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Account Status</th>
                   <th scope="col" className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Actions</th>
@@ -624,6 +632,20 @@ const UserListPage = () => {
                         <span className="text-sm text-gray-600 font-medium">
                           {user.phone || '—'}
                         </span>
+                      </td>
+
+                      {/* Coins Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdjustCoinsClick(user);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-yellow-800 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 transition-colors shadow-sm cursor-pointer"
+                          title="Click to adjust coins"
+                        >
+                          🪙 {Math.floor(user.points || 0)}
+                        </button>
                       </td>
 
                       {/* KYC Status Column */}
@@ -780,6 +802,26 @@ const UserListPage = () => {
             setSelectedUser(null);
           }}
           onAction={handleUserAction}
+        />
+      )}
+
+      {/* Adjust Coins Modal */}
+      {showAdjustCoinsModal && adjustingUser && (
+        <AdjustCoinsModal
+          user={adjustingUser}
+          onClose={() => {
+            setShowAdjustCoinsModal(false);
+            setAdjustingUser(null);
+          }}
+          onSuccess={(updatedUser) => {
+            // Update the user's coins in the local users list state
+            setUsers((prevUsers) =>
+              prevUsers.map((u) => (getUserId(u) === getUserId(updatedUser) ? updatedUser : u))
+            );
+            if (selectedUser && getUserId(selectedUser) === getUserId(updatedUser)) {
+              setSelectedUser(updatedUser);
+            }
+          }}
         />
       )}
     </div>
@@ -1208,6 +1250,198 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
             Close
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Adjust Coins Modal Component
+ */
+const AdjustCoinsModal = ({ user, onClose, onSuccess }) => {
+  const [type, setType] = useState('credit'); // credit, debit
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      toastUtils.error('Please enter a valid positive number');
+      return;
+    }
+
+    if (!reason.trim()) {
+      toastUtils.error('Please enter a reason for the adjustment');
+      return;
+    }
+
+    if (type === 'debit' && (user.points || 0) < numAmount) {
+      toastUtils.error(`Insufficient points. User only has 🪙${Math.floor(user.points || 0)} coins.`);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const response = await adminService.adjustUserPoints(user._id || user.id, {
+        type,
+        amount: numAmount,
+        reason: reason.trim()
+      });
+
+      if (response.success) {
+        toastUtils.success(response.message || `Successfully adjusted coins.`);
+        onSuccess(response.data.user);
+        onClose();
+      } else {
+        toastUtils.error(response.message || 'Failed to adjust coins');
+      }
+    } catch (err) {
+      console.error('Error adjusting coins:', err);
+      toastUtils.error(err.response?.data?.message || 'Failed to adjust coins');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-100 transform scale-100 transition-all duration-300 animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-800 to-indigo-950 px-6 py-4 text-white flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold flex items-center gap-1.5">
+              <span>Adjust Guarantor Coins</span>
+            </h2>
+            <p className="text-[11px] text-purple-100 opacity-90 mt-0.5 font-medium">
+              For {user.name || 'User'} ({formatUserId(user._id || user.id)})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/80 hover:text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Current balance display */}
+          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 flex justify-between items-center">
+            <span className="text-xs font-semibold text-yellow-800">Current Coins Balance</span>
+            <span className="text-sm font-bold text-yellow-900 flex items-center gap-1">
+              🪙 {Math.floor(user.points || 0)}
+            </span>
+          </div>
+
+          {/* Type Selector (Credit/Debit tabs) */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Adjustment Type</label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setType('credit')}
+                className={`py-1.5 text-xs font-bold rounded-md transition-all ${
+                  type === 'credit'
+                    ? 'bg-white text-green-700 shadow-sm border border-green-100 font-extrabold'
+                    : 'text-gray-600 hover:text-gray-955'
+                }`}
+              >
+                🟢 Credit (+)
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('debit')}
+                className={`py-1.5 text-xs font-bold rounded-md transition-all ${
+                  type === 'debit'
+                    ? 'bg-white text-red-700 shadow-sm border border-red-100 font-extrabold'
+                    : 'text-gray-600 hover:text-gray-955'
+                }`}
+              >
+                🔴 Debit (-)
+              </button>
+            </div>
+          </div>
+
+          {/* Amount Input */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Coins Amount</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm">🪙</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                required
+                placeholder="Enter points (e.g. 50)"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent font-semibold"
+              />
+            </div>
+          </div>
+
+          {/* Reason input */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">Reason / Remarks</label>
+            <textarea
+              required
+              rows="3"
+              placeholder="e.g. Approved adjustment, Customer care correction, etc."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none"
+            ></textarea>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="pt-2 flex gap-3 justify-end border-t border-gray-100">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 text-xs font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className={`px-4 py-2 text-xs font-bold text-white rounded-lg transition-colors flex items-center gap-1.5 shadow-md ${
+                type === 'credit'
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              } disabled:opacity-50`}
+            >
+              {submitting ? (
+                <>
+                  <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <span>Confirm {type === 'credit' ? 'Credit' : 'Debit'}</span>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

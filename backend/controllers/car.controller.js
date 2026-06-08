@@ -390,8 +390,20 @@ export const getCarById = async (req, res) => {
             features: outCar.features || []
           };
 
-          Object.assign(car, carData);
-          await car.save();
+          let hasChanged = false;
+          for (const key of Object.keys(carData)) {
+            if (key === 'location') {
+              if (car.location?.city !== carData.location.city) hasChanged = true;
+            } else if (key === 'features') {
+              if (car.features?.length !== carData.features.length) hasChanged = true;
+            } else if (car[key] !== carData[key]) {
+              hasChanged = true;
+            }
+          }
+          if (hasChanged) {
+            await Car.updateOne({ _id: carId }, { $set: carData });
+            Object.assign(car, carData);
+          }
         }
       } catch (syncErr) {
         console.error('Detail sync error in getCarById:', syncErr);
@@ -406,9 +418,13 @@ export const getCarById = async (req, res) => {
       });
     }
 
-    // Increment views
-    car.views += 1;
-    await car.save();
+    // Increment views atomically
+    try {
+      await Car.updateOne({ _id: carId }, { $inc: { views: 1 } });
+      car.views += 1;
+    } catch (viewErr) {
+      console.error('Error incrementing car views:', viewErr);
+    }
 
     res.status(200).json({
       success: true,

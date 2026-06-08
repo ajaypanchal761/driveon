@@ -1284,6 +1284,10 @@ const CarDetailsPage = () => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [bookingPurpose, setBookingPurpose] = useState(''); // 'job', 'business', 'student'
+  // Coins / Points discount
+  const [availableCoins, setAvailableCoins] = useState(0);
+  const [coinsApplied, setCoinsApplied] = useState(false);
+  const [loadingCoins, setLoadingCoins] = useState(false);
 
   const [personalDetails, setPersonalDetails] = useState({
     name: '',
@@ -1389,6 +1393,25 @@ const CarDetailsPage = () => {
 
     fetchServices();
   }, []);
+
+  // Fetch user coins/points balance
+  useEffect(() => {
+    const fetchCoins = async () => {
+      if (!isAuthenticated) return;
+      try {
+        setLoadingCoins(true);
+        const response = await userService.getGuarantorPoints();
+        const pointsData = response?.data || response || {};
+        setAvailableCoins(Math.floor(pointsData.points || 0));
+      } catch (err) {
+        console.error('Error fetching coins:', err);
+        setAvailableCoins(0);
+      } finally {
+        setLoadingCoins(false);
+      }
+    };
+    fetchCoins();
+  }, [isAuthenticated]);
 
   // Booking confirmation modal state
   const [showBookingConfirmationModal, setShowBookingConfirmationModal] = useState(false);
@@ -1519,11 +1542,14 @@ const CarDetailsPage = () => {
 
     // Apply coupon discount
     const discount = couponDiscount || 0;
-    const finalPriceBeforeRound = Math.max(0, totalPrice - discount);
-    const finalPrice = finalPriceBeforeRound;
+    const priceAfterCoupon = Math.max(0, totalPrice - discount);
 
-    // Payment options - Round to avoid decimals
-    const advancePayment = finalPriceBeforeRound * (advancePercentage / 100);
+    // Apply coins discount (1 coin = ₹1, applied after coupon)
+    const calculatedCoinsDiscount = coinsApplied ? Math.min(availableCoins, priceAfterCoupon) : 0;
+    const finalPrice = Math.max(0, priceAfterCoupon - calculatedCoinsDiscount);
+
+    // Payment options
+    const advancePayment = finalPrice * (advancePercentage / 100);
     const remainingPayment = finalPrice - advancePayment;
 
     return {
@@ -1532,6 +1558,7 @@ const CarDetailsPage = () => {
       totalPrice: totalPrice,
       addOnServicesTotal: addOnServicesTotal,
       discount: discount,
+      coinsDiscount: calculatedCoinsDiscount,
       finalPrice: finalPrice,
       advancePayment: advancePayment,
       remainingPayment: remainingPayment,
@@ -1543,6 +1570,8 @@ const CarDetailsPage = () => {
     addOnServices,
     addOnServicesPrices,
     couponDiscount,
+    coinsApplied,
+    availableCoins,
     paymentOption,
     advancePercentage,
     getCarPrice,
@@ -1801,6 +1830,7 @@ const CarDetailsPage = () => {
       specialRequests: specialRequests || "",
       couponCode: appliedCoupon?.code || null,
       couponDiscount: couponDiscount,
+      pointsUsed: coinsApplied ? (finalPriceDetails.coinsDiscount || 0) : 0,
       // Additional details for verification and reporting
       bookingPurpose: "personal",
       personalDetails: personalDetails,
@@ -1891,6 +1921,31 @@ const CarDetailsPage = () => {
             couponCode: bookingPayload.couponCode,
             couponDiscount: bookingPayload.couponDiscount,
             paymentOption: bookingPayload.paymentOption,
+            discount: (finalPriceDetails.discount || 0) + (finalPriceDetails.coinsDiscount || 0),
+            offerDiscount: finalPriceDetails.offerDiscount || 0,
+            pointsDiscount: finalPriceDetails.coinsDiscount || 0,
+            pointsUsed: coinsApplied ? (finalPriceDetails.coinsDiscount || 0) : 0,
+
+            // Add nested pricing object for the PDF generator & active/completed pages compatibility
+            pricing: {
+              basePrice: finalPriceDetails.basePrice || 0,
+              totalPrice: finalPriceDetails.totalPrice || 0,
+              advancePayment: finalPriceDetails.advancePayment || 0,
+              remainingPayment: finalPriceDetails.remainingPayment || 0,
+              weekendMultiplier: finalPriceDetails.weekendMultiplier || 0,
+              holidayMultiplier: finalPriceDetails.holidayMultiplier || 0,
+              timeOfDayMultiplier: finalPriceDetails.timeOfDayMultiplier || 0,
+              demandSurge: finalPriceDetails.demandSurge || 0,
+              discount: (finalPriceDetails.discount || 0) + (finalPriceDetails.coinsDiscount || 0),
+              couponCode: bookingPayload.couponCode,
+              couponDiscount: bookingPayload.couponDiscount,
+              offerCode: bookingPayload.offerCode,
+              offerDiscount: finalPriceDetails.offerDiscount || 0,
+              finalPrice: finalPriceDetails.finalPrice || 0,
+              addOnServicesTotal: finalPriceDetails.addOnServicesTotal || 0,
+              pointsUsed: coinsApplied ? (finalPriceDetails.coinsDiscount || 0) : 0,
+              pointsDiscount: finalPriceDetails.coinsDiscount || 0,
+            },
 
             // Status information
             status: booking?.status || "pending",
@@ -2565,6 +2620,46 @@ const CarDetailsPage = () => {
                 </button>
               </div>
 
+              {/* Coins Wallet */}
+              {availableCoins > 0 && (
+                <div
+                  className="rounded-xl p-4 mb-0"
+                  style={{ background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF3CC 100%)', border: '1.5px solid #F6C90E' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ backgroundColor: '#F6C90E' }}>
+                        🪙
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold" style={{ color: '#7C5C00' }}>
+                          {loadingCoins ? 'Loading...' : `${Math.floor(availableCoins)} Coins Available`}
+                        </p>
+                        <p className="text-xs" style={{ color: '#A07800' }}>1 Coin = ₹1 Discount</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCoinsApplied(prev => !prev)}
+                      className="px-5 py-2 rounded-xl font-bold text-sm transition-all"
+                      style={{
+                        backgroundColor: coinsApplied ? '#EF4444' : '#F6C90E',
+                        color: coinsApplied ? '#fff' : '#7C5C00',
+                        boxShadow: coinsApplied ? '0 2px 8px rgba(239,68,68,0.3)' : '0 2px 8px rgba(246,201,14,0.4)'
+                      }}
+                    >
+                      {coinsApplied ? 'Remove' : 'Use'}
+                    </button>
+                  </div>
+                  {coinsApplied && (
+                    <div className="mt-3 pt-3 border-t flex items-center justify-between" style={{ borderColor: '#F6C90E' }}>
+                      <span className="text-xs font-semibold" style={{ color: '#7C5C00' }}>Coins Discount Applied</span>
+                      <span className="text-sm font-bold" style={{ color: '#16A34A' }}>-₹{(finalPriceDetails.coinsDiscount || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Coupon Code */}
               <div>
                 <h3 className="text-sm font-bold mb-2" style={{ color: colors.textPrimary }}>Coupon Code</h3>
@@ -2623,8 +2718,14 @@ const CarDetailsPage = () => {
                     )}
                     {finalPriceDetails.discount > 0 && (
                       <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
-                        <span>Discount</span>
+                        <span>Coupon Discount</span>
                         <span className="font-semibold" style={{ color: colors.success }}>-Rs. {formatDecimal(finalPriceDetails.discount)}</span>
+                      </div>
+                    )}
+                    {finalPriceDetails.coinsDiscount > 0 && (
+                      <div className="flex justify-between text-sm" style={{ color: colors.textSecondary }}>
+                        <span>🪙 Coins Discount</span>
+                        <span className="font-semibold" style={{ color: '#CA8A04' }}>-Rs. {formatDecimal(finalPriceDetails.coinsDiscount)}</span>
                       </div>
                     )}
                     <div className="border-t pt-1.5 mt-1.5" style={{ borderColor: colors.borderMedium }}>

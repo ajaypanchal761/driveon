@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
 import Coupon from '../models/Coupon.js';
 import Offer from '../models/Offer.js';
-import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
+import { reverseGuarantorPoints, refundUsedBookingPoints } from '../utils/guarantorPoints.js';
 import { sendPushNotification } from '../services/firebase.service.js';
 
 /**
@@ -354,11 +354,12 @@ export const updateBooking = async (req, res) => {
           booking.paymentStatus = 'failed';
         }
 
-        // Reverse guarantor points for cancelled booking
+        // Reverse guarantor points and refund used booking points for cancelled booking
         try {
           await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled by admin');
+          await refundUsedBookingPoints(booking);
         } catch (pointsError) {
-          console.error('Error reversing guarantor points:', pointsError);
+          console.error('Error reversing guarantor points / refunding booking points:', pointsError);
           // Don't fail booking cancellation if points reversal fails
         }
 

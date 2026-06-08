@@ -24,6 +24,7 @@ import {
   getStaffRoles,
   sendRoleNotification,
   getSentNotifications,
+  adjustUserPoints,
 } from '../controllers/admin.controller.js';
 import {
   getAllCars,
@@ -167,6 +168,10 @@ router.put('/users/:userId/status', authenticateAdmin, updateUserStatus);
 // Delete User - PROTECTED
 // Route: DELETE /api/admin/users/:userId
 router.delete('/users/:userId', authenticateAdmin, deleteUser);
+
+// Adjust User Coins (Credit/Debit) - PROTECTED
+// Route: POST /api/admin/users/:userId/adjust-points
+router.post('/users/:userId/adjust-points', authenticateAdmin, adjustUserPoints);
 
 
 // ============================================

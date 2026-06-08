@@ -6,7 +6,7 @@ import Coupon from '../models/Coupon.js';
 import Offer from '../models/Offer.js';
 import AddOnServices from '../models/AddOnServices.js';
 import { processReferralTripCompletion } from './referral.controller.js';
-import { reverseGuarantorPoints } from '../utils/guarantorPoints.js';
+import { reverseGuarantorPoints, refundUsedBookingPoints } from '../utils/guarantorPoints.js';
 import { sendPushNotification, sendAdminNotification } from '../services/firebase.service.js';
 import { createAdminNotification } from './notification.controller.js';
 
@@ -96,6 +96,7 @@ export const createBooking = async (req, res) => {
       couponCode,
       offerCode,
       addOnServices, // Optional: { driver: 0, bodyguard: 0, gunmen: 0, bouncer: 0 }
+      pointsUsed,
     } = req.body;
 
     const userId = req.user._id;
@@ -520,6 +521,35 @@ export const createBooking = async (req, res) => {
       }
     }
 
+    // Handle points discount if provided
+    let pointsDiscount = 0;
+    const pointsToUse = Number(pointsUsed) || 0;
+    const user = await User.findById(userId);
+
+    if (pointsToUse > 0) {
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+      if ((user.points || 0) < pointsToUse) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient coins balance. Available: ${user.points || 0}`,
+        });
+      }
+
+      pointsDiscount = Math.min(pointsToUse, totalPrice);
+      totalPrice = Math.max(0, totalPrice - pointsDiscount);
+
+      console.log('✅ Points applied:', {
+        pointsToUse,
+        discount: pointsDiscount,
+        newTotal: totalPrice,
+      });
+    }
+
     // Calculate advance payment (dynamic % for advance option)
     const Setting = (await import('../models/Setting.js')).default;
     const dbSetting = await Setting.findOne({ key: 'advancePaymentPercentage' });
@@ -581,17 +611,19 @@ export const createBooking = async (req, res) => {
       totalDays,
       pricing: {
         basePrice,
-        totalPrice: totalPrice + couponDiscount + offerDiscount, // Original total before discount
+        totalPrice: totalPrice + couponDiscount + offerDiscount + pointsDiscount, // Original total before discount
         advancePayment,
         remainingPayment,
         weekendMultiplier,
         timeOfDayMultiplier: 0,
-        discount: couponDiscount + offerDiscount,
+        discount: couponDiscount + offerDiscount + pointsDiscount,
         finalPrice,
         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
         offerCode: appliedOffer ? appliedOffer.code : undefined,
         offerDiscount: offerDiscount,
         addOnServicesTotal,
+        pointsUsed: pointsToUse,
+        pointsDiscount: pointsDiscount,
       },
       addOnServices: addOnServicesData,
       paymentOption: paymentOption || 'full',
@@ -629,6 +661,14 @@ export const createBooking = async (req, res) => {
       if (appliedCoupon) {
         await appliedCoupon.incrementUsage();
         console.log('✅ Coupon usage incremented:', appliedCoupon.code);
+      }
+
+      // Deduct used points from user's account
+      if (pointsToUse > 0) {
+        user.points = Math.max(0, (user.points || 0) - pointsToUse);
+        user.totalPointsUsed = (user.totalPointsUsed || 0) + pointsToUse;
+        await user.save();
+        console.log(`✅ Deducted ${pointsToUse} points from user ${user._id}. New balance: ${user.points}`);
       }
     } catch (saveError) {
       console.error('❌ Booking save error:', saveError);
@@ -917,12 +957,13 @@ export const updateBookingStatus = async (req, res) => {
       notificationTitle = "Booking Cancelled";
       notificationBody = "Booking Cancelled. Refund initiated.";
 
-      // Reverse guarantor points for cancelled booking
+      // Reverse guarantor points and refund used booking points for cancelled booking
       try {
         await reverseGuarantorPoints(booking._id.toString(), cancellationReason || 'Booking cancelled');
+        await refundUsedBookingPoints(booking);
       } catch (pointsError) {
-        console.error('Error reversing guarantor points:', pointsError);
-        // Don't fail booking cancellation if points reversal fails
+        console.error('Error reversing guarantor points / refunding booking points:', pointsError);
+        // Don't fail booking cancellation if points reversal or refund fails
       }
 
       // Sync cancellation to OutwardBooking if it exists

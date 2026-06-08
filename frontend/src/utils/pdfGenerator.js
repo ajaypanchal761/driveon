@@ -350,15 +350,17 @@ export const generateBookingPDF = (bookingData) => {
 
   // ========== DISCOUNTS & PROMOTIONS APPLIED ==========
   const offerDiscount = bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0;
-  const couponDiscount = Math.max(0, totalDiscount - offerDiscount);
+  const pointsDiscount = bookingData.pricing?.pointsDiscount || 0;
+  const couponDiscount = Math.max(0, totalDiscount - offerDiscount - pointsDiscount);
   const couponCode = bookingData.pricing?.couponCode || bookingData.couponCode;
   const offerCode = bookingData.pricing?.offerCode || bookingData.offerCode;
 
-  const hasDiscounts = couponDiscount > 0 || offerDiscount > 0;
+  const hasDiscounts = couponDiscount > 0 || offerDiscount > 0 || pointsDiscount > 0;
   
   if (hasDiscounts) {
     yPosition = pricingBoxY + pricingBoxHeight + 5;
-    const discountBoxHeight = (couponDiscount > 0 && offerDiscount > 0) ? 20 : 15;
+    const discountLines = (couponDiscount > 0 ? 1 : 0) + (offerDiscount > 0 ? 1 : 0) + (pointsDiscount > 0 ? 1 : 0);
+    const discountBoxHeight = 10 + (discountLines * 5.5);
     
     doc.setFillColor(...lightGray);
     doc.roundedRect(margin, yPosition - 5, contentWidth, discountBoxHeight, 2, 2, 'F');
@@ -375,6 +377,7 @@ export const generateBookingPDF = (bookingData) => {
 
     let discountY = yPosition + 8;
     const successColor = [22, 163, 74]; // green-600
+    const goldColor = [161, 98, 7]; // gold/amber (#A16207)
 
     if (couponDiscount > 0) {
       doc.setFontSize(8.5);
@@ -397,6 +400,18 @@ export const generateBookingPDF = (bookingData) => {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...successColor);
       doc.text(`-${formatCurrency(offerDiscount)}`, margin + contentWidth - 5, discountY, { align: 'right' });
+      discountY += 5.5;
+    }
+
+    if (pointsDiscount > 0) {
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkGray);
+      doc.text('Coins Discount:', margin + 5, discountY);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...goldColor);
+      doc.text(`-${formatCurrency(pointsDiscount)}`, margin + contentWidth - 5, discountY, { align: 'right' });
     }
   }
 

@@ -163,6 +163,22 @@ export const adminService = {
     }
   },
 
+  /**
+   * Adjust User Guarantor Coins (Admin)
+   * @param {String} userId - User ID
+   * @param {Object} data - { type: 'credit'|'debit', amount: Number, reason: String }
+   * @returns {Promise}
+   */
+  adjustUserPoints: async (userId, data) => {
+    try {
+      const response = await api.post(`/admin/users/${userId}/adjust-points`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Adjust user points service error:', error);
+      throw error;
+    }
+  },
+
 
   /**
    * Get All Cars (Admin)

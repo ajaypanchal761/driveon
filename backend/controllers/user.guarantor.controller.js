@@ -388,12 +388,30 @@ export const getGuarantorPoints = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    // Format points history
-    // Recalculate points from booking amount to ensure exact decimals (no rounding)
-    const history = pointsRecords.map((record) => {
+    // Format guarantor points history
+    const guarantorHistory = pointsRecords.map((record) => {
+      if (record.isAdjustment || !record.booking) {
+        return {
+          id: record._id.toString(),
+          bookingId: 'N/A',
+          userName: 'Admin Adjustment',
+          userEmail: '',
+          bookingAmount: null,
+          totalPoolAmount: null,
+          totalGuarantors: null,
+          pointsEarned: record.pointsAllocated, // Can be positive or negative
+          date: record.createdAt,
+          status: record.status,
+          bookingStatus: 'N/A',
+          isAdjustment: true,
+          adjustmentType: record.adjustmentType || (record.pointsAllocated >= 0 ? 'credit' : 'debit'),
+          reason: record.reason || 'Admin Adjustment',
+        };
+      }
+
       // Recalculate exact points from booking amount to avoid rounding issues
-      const exactTotalPool = record.bookingAmount * 0.1; // 10% of booking amount (exact)
-      const exactPointsPerGuarantor = exactTotalPool / record.totalGuarantors; // Exact division
+      const exactTotalPool = (record.bookingAmount || 0) * 0.1; // 10% of booking amount (exact)
+      const exactPointsPerGuarantor = record.totalGuarantors ? (exactTotalPool / record.totalGuarantors) : record.pointsAllocated; // Exact division
       
       return {
         id: record._id.toString(),
@@ -409,26 +427,48 @@ export const getGuarantorPoints = async (req, res) => {
         bookingStatus: record.booking?.status || 'unknown',
         reversedAt: record.reversedAt,
         reversalReason: record.reversalReason,
+        isAdjustment: false,
       };
     });
 
-    // Calculate total active points (excluding reversed) - recalculate from booking amounts for exact decimals
-    const activePoints = pointsRecords
-      .filter((r) => r.status === 'active')
-      .reduce((sum, r) => {
-        // Recalculate exact points from booking amount to avoid rounding issues
-        const exactTotalPool = r.bookingAmount * 0.1; // 10% of booking amount (exact)
-        const exactPointsPerGuarantor = exactTotalPool / r.totalGuarantors; // Exact division
-        return sum + exactPointsPerGuarantor;
-      }, 0);
+    // Get bookings where this user used points
+    const usedPointsBookings = await Booking.find({
+      user: userId,
+      'pricing.pointsUsed': { $gt: 0 }
+    });
 
-    // Use activePoints calculated from records (exact decimals) instead of user.points (might be rounded)
-    // This ensures we always show the exact decimal value
+    // Format spent points history
+    const spentHistory = usedPointsBookings.map((b) => {
+      const isRefunded = b.status === 'cancelled';
+      return {
+        id: b._id.toString() + '-used',
+        bookingId: b.bookingId || 'N/A',
+        userName: isRefunded ? 'Points Refunded' : 'Booking Discount',
+        userEmail: '',
+        bookingAmount: b.pricing?.finalPrice || b.pricing?.totalPrice || 0,
+        totalPoolAmount: null,
+        totalGuarantors: null,
+        pointsEarned: isRefunded ? b.pricing.pointsUsed : -b.pricing.pointsUsed,
+        date: b.updatedAt || b.createdAt,
+        status: isRefunded ? 'reversed' : 'active',
+        bookingStatus: b.status,
+        isAdjustment: false,
+        isUsedPoints: true,
+      };
+    });
+
+    // Combine and sort history by date descending
+    const history = [...guarantorHistory, ...spentHistory].sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
+
+    // Use user.points directly as the available balance.
+    // This resolves discrepancies with external sources (referrals) and checkouts.
     res.json({
       success: true,
       data: {
-        points: activePoints, // Use calculated activePoints instead of user.points for exact decimals
-        activePoints,
+        points: user.points || 0,
+        activePoints: user.points || 0,
         totalPointsEarned: user.totalPointsEarned || 0,
         history,
       },

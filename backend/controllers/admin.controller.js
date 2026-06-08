@@ -8,6 +8,7 @@ import OutwardBooking from '../models/OutwardBooking.js';
 import Offer from '../models/Offer.js';
 import Coupon from '../models/Coupon.js';
 import AddOnServices from '../models/AddOnServices.js';
+import GuarantorPoints from '../models/GuarantorPoints.js';
 import mongoose from 'mongoose';
 import { generateAdminTokenPair, verifyAdminRefreshToken } from '../utils/adminJwtUtils.js';
 import { sendPushNotification, sendPushToToken, sendStaffPushNotification } from '../services/firebase.service.js';
@@ -2313,6 +2314,110 @@ export const getSentNotifications = async (req, res) => {
       success: false,
       message: 'Server error fetching sent notifications',
       error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Adjust User Guarantor Coins (Credit/Debit)
+ * @route   POST /api/admin/users/:userId/adjust-points
+ * @access  Private (Admin)
+ */
+export const adjustUserPoints = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { type, amount, reason } = req.body;
+
+    console.log('🪙 Adjust user points request:', { userId, type, amount, reason });
+
+    // Validate inputs
+    if (!type || !['credit', 'debit'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid adjustment type. Must be credit or debit.',
+      });
+    }
+
+    const numericAmount = Number(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount must be a positive number.',
+      });
+    }
+
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Reason is required.',
+      });
+    }
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    const currentPoints = user.points || 0;
+
+    if (type === 'debit') {
+      if (currentPoints < numericAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient balance. User has 🪙${Math.floor(currentPoints)} but attempting to debit 🪙${numericAmount}.`,
+        });
+      }
+      user.points = currentPoints - numericAmount;
+      user.totalPointsUsed = (user.totalPointsUsed || 0) + numericAmount;
+    } else {
+      user.points = currentPoints + numericAmount;
+      user.totalPointsEarned = (user.totalPointsEarned || 0) + numericAmount;
+    }
+
+    await user.save();
+
+    // Create the GuarantorPoints adjustment log
+    const adjustmentLog = new GuarantorPoints({
+      guarantor: userId,
+      pointsAllocated: type === 'credit' ? numericAmount : -numericAmount,
+      status: 'active',
+      isAdjustment: true,
+      adjustmentType: type,
+      reason: reason.trim(),
+      adminUser: req.user._id,
+    });
+
+    await adjustmentLog.save();
+
+    // Format user for response
+    const userObj = user.toObject();
+    userObj.id = userObj._id;
+    if (userObj.isPhoneVerified && userObj.isEmailVerified) {
+      userObj.kycStatus = 'verified';
+    } else {
+      userObj.kycStatus = 'pending';
+    }
+    if (!userObj.accountStatus) {
+      userObj.accountStatus = 'active';
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully ${type}ed 🪙${numericAmount} points.`,
+      data: {
+        user: userObj,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Adjust user points error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error adjusting user points.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

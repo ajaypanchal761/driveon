@@ -183,6 +183,8 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
   const offerCode = booking.pricing?.offerCode || booking.offerCode;
   const couponDetails = booking.pricing?.couponDetails;
   const offerDetails = booking.pricing?.offerDetails;
+  const pointsDiscount = booking.pricing?.pointsDiscount || 0;
+  const pointsUsed = booking.pricing?.pointsUsed || 0;
 
   const advancePaid = (booking.paymentOption === 'advance' || (booking.pricing?.advancePayment && booking.pricing.advancePayment > 0))
     ? (booking.pricing?.advancePayment || booking.advancePayment || 0)
@@ -595,6 +597,17 @@ const BookingDetailsModal = ({ booking, onClose, onCancel }) => {
                   </div>
                 );
               })()}
+
+              {pointsDiscount > 0 && (
+                <div className="flex items-center justify-between text-xs pl-1 mt-1">
+                  <p className="font-semibold" style={{ color: '#CA8A04' }}>
+                    🪙 Coins Discount ({pointsUsed} coins)
+                  </p>
+                  <p className="font-bold" style={{ color: '#CA8A04' }}>
+                    -₹{pointsDiscount.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: colors.backgroundSecondary }}>
                 <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>

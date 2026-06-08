@@ -64,3 +64,30 @@ export const reverseGuarantorPoints = async (bookingId, reason = 'Booking cancel
   }
 };
 
+/**
+ * Refund points used for booking discount when the booking is cancelled
+ * @param {object} booking - Booking document
+ * @returns {Promise<void>}
+ */
+export const refundUsedBookingPoints = async (booking) => {
+  try {
+    const pointsUsed = booking.pricing?.pointsUsed || 0;
+    if (pointsUsed <= 0) return;
+
+    console.log(`🔄 Refunding ${pointsUsed} points to user ${booking.user} for cancelled booking ${booking._id}`);
+
+    const user = await User.findById(booking.user);
+    if (user) {
+      const oldPoints = user.points || 0;
+      user.points = oldPoints + pointsUsed;
+      user.totalPointsUsed = Math.max(0, (user.totalPointsUsed || 0) - pointsUsed);
+      await user.save();
+      console.log(`✅ Refunded ${pointsUsed} points to user. Old balance: ${oldPoints}, New balance: ${user.points}`);
+    } else {
+      console.error(`❌ User not found for refunding points: ${booking.user}`);
+    }
+  } catch (error) {
+    console.error('❌ Error refunding used booking points:', error);
+  }
+};
+

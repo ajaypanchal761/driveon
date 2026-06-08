@@ -861,12 +861,13 @@ export const cancelOutwardBooking = async (req, res) => {
                 standardBooking.paymentStatus = 'failed';
             }
 
-            // Reverse guarantor points
+            // Reverse guarantor points and refund used booking points
             try {
-                const { reverseGuarantorPoints } = await import('../utils/guarantorPoints.js');
+                const { reverseGuarantorPoints, refundUsedBookingPoints } = await import('../utils/guarantorPoints.js');
                 await reverseGuarantorPoints(standardBooking._id.toString(), 'Cancelled via Fleet portal');
+                await refundUsedBookingPoints(standardBooking);
             } catch (pointsError) {
-                console.error('Error reversing guarantor points during fleet cancellation:', pointsError);
+                console.error('Error reversing guarantor points/refunding booking points during fleet cancellation:', pointsError);
             }
 
             await standardBooking.save();

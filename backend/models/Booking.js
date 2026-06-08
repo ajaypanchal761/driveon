@@ -159,6 +159,14 @@ const bookingSchema = new mongoose.Schema(
         default: 0,
         min: [0, 'Add-on services total cannot be negative'],
       },
+      pointsUsed: {
+        type: Number,
+        default: 0,
+      },
+      pointsDiscount: {
+        type: Number,
+        default: 0,
+      },
     },
 
     // Add-On Services (Optional)

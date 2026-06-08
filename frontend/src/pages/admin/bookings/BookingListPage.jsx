@@ -1331,7 +1331,9 @@ const BookingDetailModal = ({ booking, addOnPrices = {}, onClose, onApprove, onR
                   const basePrice = dbBasePrice || Math.max(0, Math.round(calculatedCarTotal / (booking.days || 1)));
                   const discount = booking.originalData?.pricing?.discount || 0;
                   const offerDiscount = booking.originalData?.pricing?.offerDiscount || 0;
-                  const couponDiscount = Math.max(0, discount - offerDiscount);
+                  const pointsDiscount = booking.originalData?.pricing?.pointsDiscount || 0;
+                  const pointsUsed = booking.originalData?.pricing?.pointsUsed || 0;
+                  const couponDiscount = Math.max(0, discount - offerDiscount - pointsDiscount);
                   const couponCode = booking.originalData?.pricing?.couponCode;
                   const offerCode = booking.originalData?.pricing?.offerCode;
 
@@ -1407,6 +1409,12 @@ const BookingDetailModal = ({ booking, addOnPrices = {}, onClose, onApprove, onR
                             </div>
                           );
                         })()}
+                        {pointsDiscount > 0 && (
+                          <div className="flex justify-between text-sm py-1 border-b border-gray-200" style={{ color: '#A16207' }}>
+                            <span>🪙 Coins Discount ({pointsUsed} coins)</span>
+                            <span className="font-semibold">-₹{pointsDiscount.toLocaleString()}</span>
+                          </div>
+                        )}
 
                         {/* Total Amount */}
                         <div className="pt-2">

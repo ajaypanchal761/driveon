@@ -11,7 +11,7 @@ const guarantorPointsSchema = new mongoose.Schema(
     booking: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Booking',
-      required: [true, 'Booking is required'],
+      required: false,
       index: true,
     },
 
@@ -27,37 +27,32 @@ const guarantorPointsSchema = new mongoose.Schema(
     guarantorRequest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'GuarantorRequest',
-      required: true,
+      required: false,
       index: true,
     },
 
     // Booking amount (at time of points allocation)
     bookingAmount: {
       type: Number,
-      required: true,
-      min: 0,
+      required: false,
     },
 
     // Total guarantor pool (10% of booking amount)
     totalPoolAmount: {
       type: Number,
-      required: true,
-      min: 0,
+      required: false,
     },
 
     // Number of guarantors at time of allocation
     totalGuarantors: {
       type: Number,
-      required: true,
-      min: 1,
-      max: 5,
+      required: false,
     },
 
-    // Points allocated to this specific guarantor
+    // Points allocated to this specific guarantor (negative for debit adjustments)
     pointsAllocated: {
       type: Number,
       required: true,
-      min: 0,
     },
 
     // Points status
@@ -82,6 +77,24 @@ const guarantorPointsSchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
     },
+
+    // Custom adjustment fields
+    isAdjustment: {
+      type: Boolean,
+      default: false,
+    },
+    adjustmentType: {
+      type: String,
+      enum: ['credit', 'debit'],
+    },
+    reason: {
+      type: String,
+      trim: true,
+    },
+    adminUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+    },
   },
   {
     timestamps: true,
@@ -94,8 +107,14 @@ guarantorPointsSchema.index({ booking: 1, status: 1 });
 
 guarantorPointsSchema.index({ createdAt: -1 });
 
-// Prevent duplicate points for same booking and guarantor
-guarantorPointsSchema.index({ booking: 1, guarantor: 1, status: 1 }, { unique: true, sparse: true });
+// Prevent duplicate points for same booking and guarantor (only for normal booking allocations, not adjustments)
+guarantorPointsSchema.index(
+  { booking: 1, guarantor: 1, status: 1 },
+  { 
+    unique: true, 
+    partialFilterExpression: { isAdjustment: false } 
+  }
+);
 
 const GuarantorPoints = mongoose.model('GuarantorPoints', guarantorPointsSchema);
 

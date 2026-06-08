@@ -91,7 +91,8 @@ const CompletedBookingDetailsPage = () => {
             pricing: bookingData.pricing || null,
             totalDiscount: bookingData.pricing?.discount || bookingData.discount || 0,
             offerDiscount: bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0,
-            couponDiscount: Math.max(0, (bookingData.pricing?.discount || bookingData.discount || 0) - (bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0)),
+            pointsDiscount: bookingData.pricing?.pointsDiscount || 0,
+            couponDiscount: Math.max(0, (bookingData.pricing?.discount || bookingData.discount || 0) - (bookingData.pricing?.offerDiscount || bookingData.offerDiscount || 0) - (bookingData.pricing?.pointsDiscount || 0)),
             couponCode: bookingData.pricing?.couponCode || bookingData.couponCode,
             offerCode: bookingData.pricing?.offerCode || bookingData.offerCode,
             couponDetails: bookingData.pricing?.couponDetails || null,
@@ -356,6 +357,12 @@ const CompletedBookingDetailsPage = () => {
                     </div>
                   );
                 })()}
+                {booking.pointsDiscount > 0 && (
+                  <div className="flex justify-between items-center text-xs md:text-sm font-medium" style={{ color: '#A16207' }}>
+                    <span>🪙 Coins Discount</span>
+                    <span>-₹{booking.pointsDiscount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                   <span className="text-sm md:text-base text-gray-800 font-semibold">Total Amount</span>
                   <span className="text-lg md:text-xl font-bold text-gray-950">₹{((booking.totalPrice - booking.totalDiscount) || 0).toLocaleString('en-IN')}</span>
@@ -444,6 +451,12 @@ const CompletedBookingDetailsPage = () => {
                        </div>
                      );
                    })()}
+                   {booking.pointsDiscount > 0 && (
+                     <div className="flex justify-between font-semibold" style={{ color: '#A16207' }}>
+                       <span>🪙 Coins Discount</span>
+                       <span>-₹{booking.pointsDiscount.toLocaleString('en-IN')}</span>
+                     </div>
+                   )}
                   <div className="flex justify-between pt-2 md:pt-3 border-t border-gray-200 font-semibold">
                     <span className="text-gray-900 font-bold">Total</span>
                     <span className="text-gray-900 font-bold">₹{(booking.totalPrice - booking.totalDiscount).toLocaleString('en-IN')}</span>
