@@ -14,6 +14,7 @@ import ReturningCarBanner from "../components/common/ReturningCarBanner";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
 import { couponService } from "../../services/coupon.service";
+import { bannerService } from "../../services/banner.service";
 import { useLocation } from "../../hooks/useLocation";
 import { useFavorites } from '../../context/FavoritesContext';
 
@@ -73,6 +74,7 @@ const ModuleTestPage = () => {
   const [bestCars, setBestCars] = useState([]);
   const [totalCarsCount, setTotalCarsCount] = useState(0);
   const [featuredCar, setFeaturedCar] = useState(null);
+  const [activeBanners, setActiveBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Banner Scroll Logic
@@ -624,15 +626,13 @@ const ModuleTestPage = () => {
 
         // Fetch best cars (latest/featured cars)
         const bestCarsResponse = await carService.getCars({
-          limit: 2,
-          sortBy: "averageRating",
-          sortOrder: "desc",
+          isFeatured: true,
           status: "active",
           isAvailable: true,
+          limit: 100,
         });
         if (bestCarsResponse.success && bestCarsResponse.data?.cars) {
           const bestCarsData = bestCarsResponse.data.cars
-            .slice(0, 2)
             .map((car, index) => transformCarData(car, index));
           setBestCars(bestCarsData);
 
@@ -640,6 +640,16 @@ const ModuleTestPage = () => {
           if (bestCarsResponse.data.cars.length > 0) {
             setFeaturedCar(transformCarData(bestCarsResponse.data.cars[0], 0));
           }
+        }
+
+        // Fetch active banners
+        try {
+          const bannersResponse = await bannerService.getActiveBanners();
+          if (bannersResponse.success && bannersResponse.data?.banners) {
+            setActiveBanners(bannersResponse.data.banners);
+          }
+        } catch (bannerErr) {
+          console.error("Error fetching active banners in mobile page:", bannerErr);
         }
 
         // Fetch all cars to extract filter options
@@ -1340,28 +1350,21 @@ const ModuleTestPage = () => {
                     </div>
                   ))
                   : brands.concat(brands).map((brand, index) => (
-                    <motion.button
+                    <div
                       key={`${brand.id}-${index}`}
-                      type="button"
-                      className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
-                      onClick={() => {
-                        const brandName = brand.displayName || brand.name || '';
-                        navigate(`/brand/${encodeURIComponent(brandName)}`);
-                      }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      className="flex flex-col items-center gap-2 shrink-0 group"
                     >
-                      <div className="w-20 h-20 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center p-4 transition-all duration-300 group-hover:bg-white group-hover:shadow-md group-hover:border-indigo-100">
+                      <div className="w-20 h-20 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center p-4 transition-all duration-300">
                         <img
                           src={brand.logo}
                           alt={brand.name}
-                          className="w-full h-full object-contain filter grayscale contrast-125 opacity-70 group-hover:grayscale-0 group-hover:contrast-100 group-hover:opacity-100 transition-all duration-300"
+                          className="w-full h-full object-contain filter grayscale contrast-125 opacity-70 transition-all duration-300"
                         />
                       </div>
-                      <span className="text-xs font-bold text-gray-500 group-hover:text-[#1C205C] transition-colors">
+                      <span className="text-xs font-bold text-gray-500 transition-colors">
                         {brand.name}
                       </span>
-                    </motion.button>
+                    </div>
                   ))}
               </div>
             </div>
@@ -1406,23 +1409,15 @@ const ModuleTestPage = () => {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-black">Best Cars</h2>
-              <motion.button
-                type="button"
-                className="text-sm text-gray-600 font-semibold"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/search")}
-              >
-                View All
-              </motion.button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            {/* Car Cards Slide 1 (Top Slider) - Alternating index % 2 === 0 */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0 mb-4">
               {isLoading
-                ? Array.from({ length: 4 }).map((_, index) => (
+                ? Array.from({ length: 2 }).map((_, index) => (
                   <div
-                    key={`skel-best-${index}`}
-                    className="w-full rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm"
+                    key={`skel-best-top-${index}`}
+                    className="w-[170px] min-w-[170px] flex-shrink-0 rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm"
                   >
                     <div className="w-full h-28 md:h-40 bg-gray-200 animate-pulse" />
                     <div className="p-2 md:p-3">
@@ -1438,10 +1433,196 @@ const ModuleTestPage = () => {
                     </div>
                   </div>
                 ))
-                : (filteredBestCars.length ? filteredBestCars : bestCars).map((car, index) => (
+                : (filteredBestCars.length ? filteredBestCars : bestCars)
+                    .filter((_, idx) => idx % 2 === 0)
+                    .map((car, index) => (
                   <motion.div
                     key={car.id}
-                    className="w-full rounded-xl overflow-hidden cursor-pointer"
+                    className="w-[170px] min-w-[170px] flex-shrink-0 rounded-xl overflow-hidden cursor-pointer"
+                    style={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e5e7eb",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
+                    whileHover={{
+                      scale: 1.03,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                    }}
+                    onClick={() => navigate(`/car-details/${car.id}`)}
+                  >
+                    <div
+                      className="relative w-full h-28 md:h-40 flex items-center justify-center rounded-t-xl overflow-hidden"
+                      style={{ backgroundColor: "#f0f0f0" }}
+                    >
+                      <motion.img
+                        alt={car.name}
+                        src={car.image}
+                        className="w-full h-full object-contain z-10"
+                        style={{ opacity: 1 }}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1.25, opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        whileHover={{ scale: 1.35, rotate: 2 }}
+                      />
+                      <button
+                        className="absolute -top-1 left-1.5 md:-top-1 md:left-3 z-10 md:w-10 md:h-10 md:rounded-full md:bg-white md:bg-opacity-80 md:flex md:items-center md:justify-center touch-target"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const wasFav = toggleFavorite(car);
+                          if (wasFav) {
+                            setAnimatingStates((prev) => ({
+                              ...prev,
+                              [car.id]: true,
+                            }));
+                            setTimeout(() => {
+                              setAnimatingStates((prev) => ({
+                                ...prev,
+                                [car.id]: false,
+                              }));
+                            }, 800);
+                          }
+                        }}
+                      >
+                        <div className="like-button-container" style={{ width: '24px', height: '24px' }}>
+                          <div className="sparkles-container">
+                            {[...Array(8)].map((_, i) => (
+                              <span 
+                                key={i} 
+                                className={`sparkle-burst ${animatingStates[car.id] ? 'active' : ''}`} 
+                                style={{ '--angle': `${i * 45}deg` }} 
+                              />
+                            ))}
+                          </div>
+
+                          <svg
+                            className={`w-5 h-5 md:w-6 md:h-6 transition-colors duration-200 ${
+                              isFavorite(car.id) 
+                                ? "text-red-500 heart-icon liked" 
+                                : "text-white md:text-gray-700 heart-icon"
+                            }`}
+                            fill={isFavorite(car.id) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                            style={{ overflow: 'visible' }}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                          </svg>
+                        </div>
+                      </button>
+                    </div>
+                    <div className="p-2 md:p-3 lg:p-4">
+                      <h3 className="text-xs md:text-sm lg:text-base font-bold text-black mb-1 md:mb-1.5">
+                        {car.name}
+                      </h3>
+                      <div className="flex items-center gap-1 mb-1 md:mb-1.5">
+                        <span className="text-xs md:text-sm font-semibold text-black">
+                          {car.rating}
+                        </span>
+                        <svg
+                          className="w-3.5 h-3.5 md:w-4 md:h-4"
+                          fill="#FF6B35"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex items-center gap-1 mb-1.5 md:mb-2">
+                        <svg
+                          className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        <span className="text-[10px] md:text-xs text-gray-500">
+                          {car.location}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5 md:mt-2">
+                        <div className="flex items-center gap-1">
+                          <svg
+                            className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
+                            />
+                          </svg>
+                          <span className="text-[10px] md:text-xs text-gray-500">
+                            {car.seats}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] md:text-xs text-gray-500">
+                            {car.price}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              }
+            </div>
+
+            {/* Car Cards Slide 2 (Bottom Slider) - Alternating index % 2 === 1 */}
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-0 mb-6">
+              {isLoading
+                ? Array.from({ length: 2 }).map((_, index) => (
+                  <div
+                    key={`skel-best-bottom-${index}`}
+                    className="w-[170px] min-w-[170px] flex-shrink-0 rounded-xl overflow-hidden bg-white border border-gray-100 shadow-sm"
+                  >
+                    <div className="w-full h-28 md:h-40 bg-gray-200 animate-pulse" />
+                    <div className="p-2 md:p-3">
+                      <div className="w-3/4 h-4 bg-gray-200 animate-pulse rounded mb-2" />
+                      <div className="flex gap-2 mb-2">
+                        <div className="w-8 h-3 bg-gray-200 animate-pulse rounded" />
+                        <div className="w-12 h-3 bg-gray-200 animate-pulse rounded" />
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <div className="w-12 h-3 bg-gray-200 animate-pulse rounded" />
+                        <div className="w-16 h-3 bg-gray-200 animate-pulse rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))
+                : (filteredBestCars.length ? filteredBestCars : bestCars)
+                    .filter((_, idx) => idx % 2 === 1)
+                    .map((car, index) => (
+                  <motion.div
+                    key={car.id}
+                    className="w-[170px] min-w-[170px] flex-shrink-0 rounded-xl overflow-hidden cursor-pointer"
                     style={{
                       backgroundColor: "#ffffff",
                       border: "1px solid #e5e7eb",
@@ -1599,38 +1780,12 @@ const ModuleTestPage = () => {
             </div>
           </motion.div>
 
-          {/* META ROW */}
-          {!isLoading && (
-            <div className="flex items-center justify-between mt-1 px-1">
-              <span className="text-xs text-gray-500">
-                {totalCarsCount || 0} available
-              </span>
-              <button
-                type="button"
-                className="flex items-center gap-1 text-xs text-gray-600"
-              >
-                <span>Popular</span>
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
 
-          {/* FEATURED CAR CARD */}
-          {(isLoading || activeFeaturedCar) && (
+
+          {/* FEATURED CAR CARD replaced with Advertising Banners */}
+          {(isLoading || (activeBanners && activeBanners.length > 0)) && (
             <motion.div
-              className="px-1"
+              className="px-1 mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
@@ -1638,63 +1793,48 @@ const ModuleTestPage = () => {
               {isLoading ? (
                 <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100">
                   <div className="w-full h-48 bg-gray-200 animate-pulse" />
-                  <div className="px-4 pt-3 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <div className="w-32 h-5 bg-gray-200 animate-pulse rounded" />
-                        <div className="w-20 h-4 bg-gray-200 animate-pulse rounded" />
-                      </div>
-                      <div className="w-12 h-6 bg-gray-200 animate-pulse rounded-full" />
-                    </div>
-                  </div>
                 </div>
               ) : (
-                <motion.div
-                  className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 cursor-pointer"
-                  whileHover={{
-                    scale: 1.02,
-                    boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-                  }}
-                  transition={{ duration: 0.3 }}
-                  onClick={() => navigate(`/car-details/${activeFeaturedCar.id}`)}
-                >
-                  <div className="w-full h-48 bg-gray-100 overflow-hidden">
-                    <motion.img
-                      src={activeFeaturedCar.image}
-                      alt={activeFeaturedCar.name}
-                      className="w-full h-full object-cover"
-                      whileHover={{ scale: 1.1 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                  </div>
-                  <div className="px-4 pt-3 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-900">
-                          {activeFeaturedCar.name}
-                        </h3>
-                        <p className="mt-1 text-xs font-semibold text-gray-700">
-                          {activeFeaturedCar.price}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-md"
-                          style={{ backgroundColor: colors.backgroundTertiary }}
-                        >
-                          <svg
-                            className="w-3 h-3 text-yellow-400"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
+                <div className="relative rounded-3xl overflow-hidden shadow-xl border border-gray-100">
+                  <Swiper
+                    modules={[Pagination, Autoplay]}
+                    spaceBetween={0}
+                    slidesPerView={1}
+                    pagination={activeBanners.length > 1 ? {
+                      clickable: true,
+                    } : false}
+                    autoplay={activeBanners.length > 1 ? {
+                      delay: 4500,
+                      disableOnInteraction: false,
+                    } : false}
+                    speed={500}
+                    loop={activeBanners.length > 1}
+                    className="w-full h-48"
+                  >
+                    {activeBanners.map((banner, index) => {
+                      const targetCarId = banner.linkedCar?._id || banner.linkedCar;
+                      return (
+                        <SwiperSlide key={banner._id || index} className="!w-full">
+                          <div
+                            className={`w-full h-full relative ${targetCarId ? 'cursor-pointer' : ''}`}
+                            onClick={() => {
+                              if (targetCarId) {
+                                navigate(`/car-details/${targetCarId}`);
+                              }
+                            }}
                           >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                          <span>{activeFeaturedCar.rating}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+                            <img
+                              src={banner.image}
+                              alt={banner.title}
+                              className="w-full h-full object-cover"
+                              draggable={false}
+                            />
+                          </div>
+                        </SwiperSlide>
+                      );
+                    })}
+                  </Swiper>
+                </div>
               )}
             </motion.div>
           )}
@@ -1725,7 +1865,7 @@ const ModuleTestPage = () => {
               {(filteredNearbyCars.length ? filteredNearbyCars : nearbyCars).map((car, index) => (
                 <motion.div
                   key={car.id}
-                  className="min-w-[280px] flex-shrink-0"
+                  className="w-[170px] min-w-[170px] flex-shrink-0"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}

@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import BottomNavbar from '../components/layout/BottomNavbar';
 import SearchCarCard from '../components/common/SearchCarCard';
 import { colors } from '../theme/colors';
+import { carService } from '../../services/car.service';
 
-// Import car images (mock data)
+// Import car images for fallback
 import carImg1 from '../../assets/car_img1-removebg-preview.png';
 import carImg2 from '../../assets/car_img2.png';
 import carImg4 from '../../assets/car_img4-removebg-preview.png';
@@ -13,33 +14,111 @@ import carImg5 from '../../assets/car_img5-removebg-preview.png';
 import carImg6 from '../../assets/car_img6-removebg-preview.png';
 import carImg8 from '../../assets/car_img8.png';
 
-// All cars data with brand information
-const allCars = [
-  { id: 1, name: 'Ferrari-FF', brand: 'Ferrari', model: 'FF', image: carImg1, rating: '5.0', location: 'Washington DC', price: 'Rs. 200', carType: 'Sports' },
-  { id: 2, name: 'Tesla Model S', brand: 'Tesla', model: 'Model S', image: carImg6, rating: '5.0', location: 'Chicago, USA', price: 'Rs. 100', carType: 'Electric' },
-  { id: 3, name: 'BMW 3 Series', brand: 'BMW', model: '3 Series', image: carImg8, rating: '5.0', location: 'New York', price: 'Rs. 150', carType: 'Classic' },
-  { id: 4, name: 'Lamborghini Aventador', brand: 'Lamborghini', model: 'Aventador', image: carImg4, rating: '4.9', location: 'New York', price: 'Rs. 250', carType: 'Sports' },
-  { id: 5, name: 'BMW M2 GTS', brand: 'BMW', model: 'M2 GTS', image: carImg5, rating: '5.0', location: 'Los Angeles', price: 'Rs. 150', carType: 'Coupe' },
-  { id: 6, name: 'Porsche 911', brand: 'Porsche', model: '911', image: carImg2, rating: '4.8', location: 'Miami, USA', price: 'Rs. 300', carType: 'Sports' },
-  { id: 7, name: 'Audi e-tron', brand: 'Audi', model: 'e-tron', image: carImg4, rating: '4.7', location: 'San Francisco, USA', price: 'Rs. 180', carType: 'Electric' },
-  { id: 8, name: 'Nissan GT-R', brand: 'Nissan', model: 'GT-R', image: carImg4, rating: '4.9', location: 'Los Angeles', price: 'Rs. 200', carType: 'Sports' },
-  { id: 9, name: 'Honda Civic', brand: 'Honda', model: 'Civic', image: carImg8, rating: '4.8', location: 'Chicago, USA', price: 'Rs. 120', carType: 'Classic' },
-  { id: 10, name: 'Toyota Camry', brand: 'Toyota', model: 'Camry', image: carImg1, rating: '4.9', location: 'New York', price: 'Rs. 130', carType: 'Classic' },
-  { id: 11, name: 'Kia Sportage', brand: 'Kia', model: 'Sportage', image: carImg5, rating: '4.7', location: 'Miami, USA', price: 'Rs. 110', carType: 'Classic' },
-  { id: 12, name: 'Audi A4', brand: 'Audi', model: 'A4', image: carImg4, rating: '4.8', location: 'San Francisco, USA', price: 'Rs. 170', carType: 'Classic' },
-  { id: 13, name: 'Ferrari F8', brand: 'Ferrari', model: 'F8', image: carImg1, rating: '5.0', location: 'Los Angeles', price: 'Rs. 350', carType: 'Sports' },
-  { id: 14, name: 'Lamborghini Huracan', brand: 'Lamborghini', model: 'Huracan', image: carImg4, rating: '5.0', location: 'Miami, USA', price: 'Rs. 400', carType: 'Sports' },
-];
-
 const BrandPage = () => {
   const { brandName } = useParams();
   const navigate = useNavigate();
+  const [cars, setCars] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredCars = useMemo(() => {
-    if (!brandName) return [];
-    return allCars.filter(car => 
-      car.brand.toLowerCase() === brandName.toLowerCase()
-    );
+  const fallbackCarImages = [carImg1, carImg6, carImg8, carImg4, carImg5];
+
+  const transformCarData = (car, index = 0) => {
+    let carImage = fallbackCarImages[index % fallbackCarImages.length];
+    let carImages = [];
+
+    if (car.images && car.images.length > 0) {
+      carImages = car.images
+        .map(img => {
+          if (typeof img === 'string') return img;
+          return img?.url || img?.path || null;
+        })
+        .filter(Boolean);
+
+      carImages = [...new Set(carImages)];
+      const primaryImage = car.images.find((img) => img.isPrimary);
+      const matchedImage = primaryImage ? (primaryImage.url || primaryImage.path || primaryImage) : (carImages[0] || carImage);
+      if (typeof matchedImage === 'string') {
+        carImage = matchedImage.startsWith('http') ? matchedImage : `${import.meta.env.VITE_API_BASE_URL || ''}${matchedImage}`;
+      }
+    } else if (car.image) {
+      const matchedImage = typeof car.image === 'string' ? car.image : (car.image?.url || car.image?.path);
+      if (typeof matchedImage === 'string') {
+        carImage = matchedImage.startsWith('http') ? matchedImage : `${import.meta.env.VITE_API_BASE_URL || ''}${matchedImage}`;
+      }
+    }
+
+    // Normalize fuel type
+    const normalizedFuelType = car.fuelType
+      ? car.fuelType.toLowerCase() === 'petrol'
+        ? 'Petrol'
+        : car.fuelType.toLowerCase() === 'diesel'
+          ? 'Diesel'
+          : car.fuelType.toLowerCase() === 'electric'
+            ? 'Electric'
+            : car.fuelType.toLowerCase() === 'hybrid'
+              ? 'Hybrid'
+              : car.fuelType.charAt(0).toUpperCase() + car.fuelType.slice(1).toLowerCase()
+      : '';
+
+    // Normalize transmission
+    const normalizedTransmission = car.transmission
+      ? car.transmission.toLowerCase() === 'automatic'
+        ? 'Automatic'
+        : car.transmission.toLowerCase() === 'manual'
+          ? 'Manual'
+          : car.transmission.toLowerCase() === 'cvt'
+            ? 'CVT'
+            : car.transmission.charAt(0).toUpperCase() + car.transmission.slice(1).toLowerCase()
+      : '';
+
+    return {
+      id: car._id || car.id,
+      name: `${car.brand} ${car.model}`,
+      brand: car.brand,
+      model: car.model,
+      image: carImage,
+      images: carImages,
+      rating: car.averageRating ? car.averageRating.toFixed(1) : '5.0',
+      location: car.location?.city || car.location?.address || 'Location',
+      price: `Rs. ${car.pricePerDay || 0}`,
+      pricePerDay: car.pricePerDay || 0,
+      fuelType: normalizedFuelType,
+      transmission: normalizedTransmission,
+      color: car.color || '',
+      carType: car.carType || car.bodyType || '',
+      features: car.features || [],
+      seats: car.seatingCapacity || car.seats || 4,
+      seatingCapacity: car.seatingCapacity || car.seats || 4,
+      bookings: car.bookings || car.bookingsMap || [],
+    };
+  };
+
+  useEffect(() => {
+    const fetchCarsByBrand = async () => {
+      if (!brandName) return;
+      try {
+        setIsLoading(true);
+        const response = await carService.getCars({
+          brand: brandName,
+          status: 'active',
+          limit: 100,
+        });
+
+        if (response.success && response.data?.cars) {
+          const transformed = response.data.cars.map((car, index) => transformCarData(car, index));
+          setCars(transformed);
+        } else {
+          setCars([]);
+        }
+      } catch (err) {
+        console.error('Error fetching cars by brand:', err);
+        setCars([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCarsByBrand();
   }, [brandName]);
 
   return (
@@ -69,14 +148,19 @@ const BrandPage = () => {
           </svg>
         </button>
         <h1 className="text-base font-semibold text-black">
-          {brandName} ({filteredCars.length})
+          {brandName} ({isLoading ? '...' : cars.length})
         </h1>
         <div className="w-8 h-8" /> {/* Placeholder for alignment */}
       </header>
 
       {/* Main Content */}
       <main className="flex-1 px-4 pb-28">
-        {filteredCars.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
+            <p className="text-gray-500 text-center">Loading cars...</p>
+          </div>
+        ) : cars.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <svg
               className="w-16 h-16 text-gray-400 mb-4"
@@ -98,7 +182,7 @@ const BrandPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {filteredCars.map((car, index) => (
+            {cars.map((car, index) => (
               <motion.div
                 key={car.id}
                 initial={{ opacity: 0, scale: 0.9 }}

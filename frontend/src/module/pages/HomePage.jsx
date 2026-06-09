@@ -16,6 +16,7 @@ import { colors } from "../theme/colors";
 import { useAppSelector } from "../../hooks/redux";
 import { carService } from "../../services/car.service";
 import { commonService } from "../../services/common.service";
+import { bannerService } from "../../services/banner.service";
 
 // Import car images
 import carImg1 from "../../assets/car_img1-removebg-preview.png";
@@ -86,6 +87,7 @@ const HomePage = () => {
   const cachedFeaturedCar = getCachedData('driveon_featured_car', null);
   const cachedPromoBanner = getCachedData('driveon_promo_banner', { title: "", subtitle: "" });
   const cachedBannerOverlay = getCachedData('driveon_banner_overlay', { title: "", subtitle: "" });
+  const cachedActiveBanners = getCachedData('driveon_active_banners', []);
 
   // Cars state - fetched from API
   const [bestCars, setBestCars] = useState(cachedBestCars);
@@ -107,6 +109,9 @@ const HomePage = () => {
 
   // Featured car for AVAILABLE section
   const [featuredCar, setFeaturedCar] = useState(cachedFeaturedCar);
+
+  // Active Banners state
+  const [activeBanners, setActiveBanners] = useState(cachedActiveBanners);
 
   // Promotional banner data
   const [promotionalBanner, setPromotionalBanner] = useState(cachedPromoBanner);
@@ -486,7 +491,7 @@ const HomePage = () => {
     // 3. Fetch Featured Car
     const fetchFeatured = async () => {
       try {
-        const response = await carService.getCars({ limit: 1, featured: true, status: 'active', isAvailable: true });
+        const response = await carService.getCars({ limit: 1, isFeatured: true, status: 'active', isAvailable: true });
         let car = null;
         if (response.success && response.data?.cars?.length > 0) {
           car = response.data.cars[0];
@@ -504,6 +509,19 @@ const HomePage = () => {
         }
       } catch (e) {
         console.error('Error fetching featured car:', e);
+      }
+    };
+
+    // Fetch Active Banners
+    const fetchActiveBanners = async () => {
+      try {
+        const response = await bannerService.getActiveBanners();
+        if (response.success && response.data?.banners) {
+          setActiveBanners(response.data.banners);
+          localStorage.setItem('driveon_active_banners', JSON.stringify(response.data.banners));
+        }
+      } catch (e) {
+        console.error('Error fetching active banners:', e);
       }
     };
 
@@ -544,18 +562,30 @@ const HomePage = () => {
     // 6. Fetch Latest/Best/Nearby Cars
     const fetchLatestCars = async () => {
       try {
-        const response = await carService.getCars({ limit: 5, sortBy: 'createdAt', sortOrder: 'desc', status: 'active', isAvailable: true });
-        if (response.success && response.data?.cars) {
-          const cars = response.data.cars;
-          const bestCarsData = cars.slice(0, 2).map((car, index) => transformCarData(car, index));
-          const nearbyCarsData = cars.slice(2, 5).map((car, index) => transformCarData(car, index + 2));
-          
-          setBestCars(bestCarsData);
-          setNearbyCars(nearbyCarsData);
-          
-          localStorage.setItem('driveon_best_cars', JSON.stringify(bestCarsData));
-          localStorage.setItem('driveon_nearby_cars', JSON.stringify(nearbyCarsData));
+        const [bestResponse, nearbyResponse] = await Promise.all([
+          carService.getCars({ isFeatured: true, status: 'active', isAvailable: true, limit: 100 }),
+          carService.getCars({ limit: 10, sortBy: 'createdAt', sortOrder: 'desc', status: 'active', isAvailable: true })
+        ]);
+
+        let bestCarsData = [];
+        if (bestResponse.success && bestResponse.data?.cars) {
+          bestCarsData = bestResponse.data.cars.map((car, index) => transformCarData(car, index));
         }
+
+        let nearbyCarsData = [];
+        if (nearbyResponse.success && nearbyResponse.data?.cars) {
+          const bestCarIds = new Set(bestCarsData.map(c => c.id));
+          nearbyCarsData = nearbyResponse.data.cars
+            .filter(car => !bestCarIds.has(car._id || car.id))
+            .slice(0, 5)
+            .map((car, index) => transformCarData(car, index + bestCarsData.length));
+        }
+
+        setBestCars(bestCarsData);
+        setNearbyCars(nearbyCarsData);
+
+        localStorage.setItem('driveon_best_cars', JSON.stringify(bestCarsData));
+        localStorage.setItem('driveon_nearby_cars', JSON.stringify(nearbyCarsData));
       } catch (e) {
         console.error('Error fetching latest cars:', e);
       } finally {
@@ -567,6 +597,7 @@ const HomePage = () => {
     fetchBrands();
     fetchFaqs();
     fetchFeatured();
+    fetchActiveBanners();
     fetchPromoBanner();
     fetchBannerOverlayData();
     fetchLatestCars();
@@ -1198,12 +1229,6 @@ const HomePage = () => {
                 <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-black">
                   Best Cars
                 </h2>
-                <button
-                  className="text-sm text-gray-500 font-medium"
-                  onClick={() => navigate("/search")}
-                >
-                  View All
-                </button>
               </div>
             </div>
 
@@ -1223,58 +1248,60 @@ const HomePage = () => {
                 marginBottom: "-80px",
               }}
             >
-              {/* Car Cards Grid - 2 columns on mobile */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {bestCars.map((car, index) => (
-                  <CarCard key={car.id} car={car} index={index} />
+              {/* Car Cards Slide 1 (Top Slider) - Alternating index % 2 === 0 */}
+              <div className="flex gap-3 md:gap-4 lg:gap-5 overflow-x-auto scrollbar-hide -mx-0 mb-4">
+                {bestCars.filter((_, idx) => idx % 2 === 0).map((car, idx) => (
+                  <div
+                    key={car.id}
+                    className="w-[170px] min-w-[170px] flex-shrink-0"
+                  >
+                    <CarCard car={car} index={idx * 2} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Car Cards Slide 2 (Bottom Slider) - Alternating index % 2 === 1 */}
+              <div className="flex gap-3 md:gap-4 lg:gap-5 overflow-x-auto scrollbar-hide -mx-0 mb-6">
+                {bestCars.filter((_, idx) => idx % 2 === 1).map((car, idx) => (
+                  <div
+                    key={car.id}
+                    className="w-[170px] min-w-[170px] flex-shrink-0"
+                  >
+                    <CarCard car={car} index={idx * 2 + 1} />
+                  </div>
                 ))}
               </div>
 
               {/* Banner Section - Between Best Cars and Nearby - Mobile Only */}
-              {featuredCar && (
-                <div className="mb-3">
-                  {/* Header Above Banner */}
-                  <div className="flex items-center justify-between mb-3 md:mb-4">
-                    <div className="flex items-baseline gap-2">
-                      <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black">
-                        AVAILABLE
-                      </h2>
-                    </div>
-                  </div>
-
+              {activeBanners && activeBanners.length > 0 && (
+                <div className="mb-6">
                   {/* Banner Card - Clickable */}
                   <div
                     className="relative rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer hover:opacity-95 transition-opacity"
                     style={{ backgroundColor: colors.backgroundSecondary }}
-                    onClick={() => navigate(`/car-details/${featuredCar.id}`, { state: { car: featuredCar } })}
                   >
-                    {/* Banner Image Carousel - Use featuredCar images */}
-                    {featuredCar.images && featuredCar.images.length > 0 ? (
-                      <Swiper
-                        modules={[Pagination, Keyboard, Mousewheel, Autoplay]}
-                        spaceBetween={0}
-                        slidesPerView={1}
-                        onSwiper={(swiper) => {
-                          bannerCarouselSwiperRef.current = swiper;
-                        }}
-                        pagination={{
-                          el: ".banner-carousel-pagination",
-                          clickable: true,
-                          renderBullet: (index, className) => {
-                            return `<span class="${className}" style="width: 8px; height: 1.5px; background: rgba(255,255,255,0.5); border-radius: 2px; margin: 0 2px; display: inline-block; transition: all 0.3s;"></span>`;
-                          },
-                        }}
-                        autoplay={{
-                          delay: 3000,
-                          disableOnInteraction: false,
-                        }}
-                        keyboard={{ enabled: true }}
-                        mousewheel={{ forceToAxis: true, sensitivity: 1 }}
-                        speed={500}
-                        loop={featuredCar.images.length > 1}
-                        className="w-full h-40 md:h-44 lg:h-48"
-                        onSlideChange={(swiper) => {
-                          // Update custom pagination dots
+                    <Swiper
+                      modules={[Pagination, Keyboard, Mousewheel, Autoplay]}
+                      spaceBetween={0}
+                      slidesPerView={1}
+                      pagination={activeBanners.length > 1 ? {
+                        el: ".banner-carousel-pagination",
+                        clickable: true,
+                        renderBullet: (index, className) => {
+                          return `<span class="${className}" style="width: 8px; height: 1.5px; background: rgba(255,255,255,0.5); border-radius: 2px; margin: 0 2px; display: inline-block; transition: all 0.3s;"></span>`;
+                        },
+                      } : false}
+                      autoplay={activeBanners.length > 1 ? {
+                        delay: 4500,
+                        disableOnInteraction: false,
+                      } : false}
+                      keyboard={{ enabled: true }}
+                      mousewheel={{ forceToAxis: true, sensitivity: 1 }}
+                      speed={500}
+                      loop={activeBanners.length > 1}
+                      className="w-full h-40 md:h-44 lg:h-48"
+                      onSlideChange={(swiper) => {
+                        if (activeBanners.length > 1) {
                           const paginationEl = document.querySelector(
                             ".banner-carousel-pagination"
                           );
@@ -1292,81 +1319,38 @@ const HomePage = () => {
                               }
                             });
                           }
-                        }}
-                      >
-                        {featuredCar.images.map((image, index) => {
-                          const imageUrl = typeof image === 'string' ? image : (image?.url || image?.path || image);
-                          return (
-                            <SwiperSlide key={`featured-${index}`} className="!w-full">
-                              <div className="min-w-full h-full relative">
-                                <img
-                                  src={imageUrl}
-                                  alt={`${featuredCar.name} - Image ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                  draggable={false}
-                                />
-                                {/* Text Overlay */}
-                                <div className="absolute inset-0 flex items-center justify-start px-4 md:px-6 lg:px-8 hidden">
-                                  <div className="z-10">
-                                    <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-white mb-1 md:mb-2">
-                                      {bannerOverlay.title}
-                                    </h3>
-                                    <p className="text-xs md:text-sm lg:text-base text-white/90">
-                                      {bannerOverlay.subtitle}
-                                    </p>
-                                  </div>
-                                </div>
-                                {/* Gradient Overlay for better text readability */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
-                              </div>
-                            </SwiperSlide>
-                          );
-                        })}
-                      </Swiper>
-                    ) : (
-                      // Fallback: Single image if no images array
-                      <div className="w-full h-40 md:h-44 lg:h-48 relative">
-                        <img
-                          src={featuredCar.image}
-                          alt={featuredCar.name}
-                          className="w-full h-full object-cover"
-                          draggable={false}
-                        />
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent"></div>
-                      </div>
-                    )}
+                        }
+                      }}
+                    >
+                      {activeBanners.map((banner, index) => {
+                        const targetCarId = banner.linkedCar?._id || banner.linkedCar;
+                        return (
+                          <SwiperSlide key={banner._id || index} className="!w-full">
+                            <div
+                              className="w-full h-full relative"
+                              onClick={() => {
+                                if (targetCarId) {
+                                  navigate(`/car-details/${targetCarId}`);
+                                }
+                              }}
+                            >
+                              <img
+                                src={banner.image}
+                                alt={banner.title}
+                                className="w-full h-full object-cover"
+                                draggable={false}
+                              />
+                            </div>
+                          </SwiperSlide>
+                        );
+                      })}
+                    </Swiper>
 
                     {/* Long Dots Indicator - Only show if multiple images */}
-                    {featuredCar.images && featuredCar.images.length > 1 && (
+                    {activeBanners.length > 1 && (
                       <div className="banner-carousel-pagination absolute bottom-3 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-20"></div>
                     )}
                   </div>
-
-                  {/* Car Info Below Banner - Clickable */}
-                  {featuredCar && (
-                    <div
-                      className="mt-3 cursor-pointer"
-                      onClick={() => navigate(`/car-details/${featuredCar.id}`, { state: { car: featuredCar } })}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-xl font-bold text-black">{featuredCar.name || `${featuredCar.brand} ${featuredCar.model}`}</h3>
-                        <div className="flex items-center gap-1">
-                          <svg
-                            className="w-5 h-5"
-                            fill={colors.accentOrange}
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                          <span className="text-base font-semibold text-black">
-                            {featuredCar.rating || "5.0"}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-500">Rs. {featuredCar.price || featuredCar.pricePerDay || 800} / day</p>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1391,7 +1375,7 @@ const HomePage = () => {
                   {nearbyCars.map((car, index) => (
                     <div
                       key={car.id}
-                      className="min-w-[280px] md:min-w-[320px] lg:min-w-[360px] flex-shrink-0"
+                      className="w-[170px] min-w-[170px] flex-shrink-0"
                     >
                       <CarCard car={car} index={bestCars.length + index} />
                     </div>
@@ -1415,10 +1399,27 @@ const HomePage = () => {
                 </button>
               </div>
 
-              {/* Car Cards Grid - 2 on tablet, 2 on desktop, 3 on xl - Wider cards for web view */}
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-3 md:gap-4 lg:gap-5 xl:gap-6">
-                {bestCars.map((car, index) => (
-                  <CarCard key={car.id} car={car} index={index} />
+              {/* Web View Slider 1 (Top Slider) - Alternating index % 2 === 0 */}
+              <div className="flex gap-3 md:gap-4 lg:gap-5 xl:gap-6 overflow-x-auto scrollbar-hide -mx-0 mb-6">
+                {bestCars.filter((_, idx) => idx % 2 === 0).map((car, idx) => (
+                  <div
+                    key={car.id}
+                    className="min-w-[280px] md:min-w-[300px] lg:min-w-[320px] xl:min-w-[360px] 2xl:min-w-[400px] flex-shrink-0"
+                  >
+                    <CarCard car={car} index={idx * 2} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Web View Slider 2 (Bottom Slider) - Alternating index % 2 === 1 */}
+              <div className="flex gap-3 md:gap-4 lg:gap-5 xl:gap-6 overflow-x-auto scrollbar-hide -mx-0 mb-6">
+                {bestCars.filter((_, idx) => idx % 2 === 1).map((car, idx) => (
+                  <div
+                    key={car.id}
+                    className="min-w-[280px] md:min-w-[300px] lg:min-w-[320px] xl:min-w-[360px] 2xl:min-w-[400px] flex-shrink-0"
+                  >
+                    <CarCard car={car} index={idx * 2 + 1} />
+                  </div>
                 ))}
               </div>
             </div>

@@ -11,6 +11,7 @@ import {
 } from '../controllers/common.controller.js';
 import { getAddOnServicesPrices, getCustomAddOnServices, getAddOnServices } from '../controllers/addonServices.controller.js';
 import { getPolicyByKey } from '../controllers/policy.controller.js';
+import { getActiveBanners } from '../controllers/banner.controller.js';
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.get('/settings', getPublicSettings);
 router.get('/banners/hero', getHeroBanners);
 router.get('/banners/promotional', getPromotionalBanner);
 router.get('/banners/overlay', getBannerOverlay);
+router.get('/banners/active', getActiveBanners);
 router.get('/faqs', getFAQs);
 router.get('/places/search', searchPlaces);
 router.get('/addon-services', getAddOnServices);

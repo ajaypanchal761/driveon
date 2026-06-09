@@ -64,127 +64,133 @@ const BookNowPage = () => {
     }
   }, [isAuthenticated, id, navigate, location.state]);
 
-  // Get car data from navigation state, session cache, or use mock data as fallback
-  const getCarData = () => {
-    // First, try to get car from navigation state (when coming from search or car details)
-    if (location.state?.car) {
-      const stateCar = location.state.car;
-      return {
-        id: stateCar.id || stateCar._id || id,
-        name:
-          stateCar.name ||
-          `${stateCar.brand || ""} ${stateCar.model || ""}`.trim(),
-        brand: stateCar.brand,
-        model: stateCar.model,
-        image: stateCar.image || stateCar.images?.[0] || carImg1,
-        images: stateCar.images || [stateCar.image || carImg1],
-        price: extractPrice(stateCar.price || stateCar.pricePerDay || 0),
-        pricePerDay: extractPrice(stateCar.pricePerDay || stateCar.price || 0),
-        seats: stateCar.seats || 4,
-        transmission: stateCar.transmission || "Automatic",
-        fuelType: stateCar.fuelType || "Petrol",
-        rating: stateCar.rating || stateCar.averageRating || 5.0,
-        location: stateCar.location || "Location",
-      };
-    }
+  const [car, setCar] = useState(null);
+  const [isCarLoading, setIsCarLoading] = useState(true);
 
-    // Next, try to get cached car from sessionStorage (set in CarCard/CarDetails)
-    if (typeof window !== "undefined") {
-      try {
-        const raw = sessionStorage.getItem("driveon:selectedCar");
-        if (raw) {
-          const cached = JSON.parse(raw);
-          const matchesRoute =
-            cached && (cached.id === id || cached._id === id);
-          if (cached && (matchesRoute || !id)) {
-            return {
-              id: cached.id || cached._id || id,
-              name:
-                cached.name ||
-                `${cached.brand || ""} ${cached.model || ""}`.trim(),
-              brand: cached.brand,
-              model: cached.model,
-              image: cached.image || cached.images?.[0] || carImg1,
-              images: cached.images || [cached.image || carImg1],
-              price: extractPrice(cached.price || cached.pricePerDay || 0),
-              pricePerDay: extractPrice(
-                cached.pricePerDay || cached.price || 0
-              ),
-              seats: cached.seats || 4,
-              transmission: cached.transmission || "Automatic",
-              fuelType: cached.fuelType || "Petrol",
-              rating: cached.rating || cached.averageRating || 5.0,
-              location: cached.location || "Location",
-            };
-          }
-        }
-      } catch (err) {
-        // ignore cache errors
+  useEffect(() => {
+    const loadCar = async () => {
+      // 1. Try navigation state
+      if (location.state?.car) {
+        const stateCar = location.state.car;
+        const normalized = {
+          id: stateCar.id || stateCar._id || id,
+          name: stateCar.name || `${stateCar.brand || ""} ${stateCar.model || ""}`.trim(),
+          brand: stateCar.brand,
+          model: stateCar.model,
+          image: stateCar.image || stateCar.images?.[0] || carImg1,
+          images: stateCar.images || [stateCar.image || carImg1],
+          price: extractPrice(stateCar.price || stateCar.pricePerDay || 0),
+          pricePerDay: extractPrice(stateCar.pricePerDay || stateCar.price || 0),
+          seats: stateCar.seats || 4,
+          transmission: stateCar.transmission || "Automatic",
+          fuelType: stateCar.fuelType || "Petrol",
+          rating: stateCar.rating || stateCar.averageRating || 5.0,
+          location: stateCar.location || "Location",
+          registrationNumber: stateCar.registrationNumber,
+        };
+        setCar(normalized);
+        setIsCarLoading(false);
+        return;
       }
-    }
 
-    // Fallback to mock data if no state car
-    const cars = {
-      1: {
-        id: 1,
-        name: "Ferrari-FF",
-        image: carImg1,
-        price: 200,
-        seats: 4,
-        transmission: "Automatic",
-        fuelType: "Petrol",
-        rating: 5.0,
-        location: "Washington DC",
-      },
-      2: {
-        id: 2,
-        name: "Tesla Model S",
-        image: carImg6,
-        price: 100,
-        seats: 5,
-        transmission: "Automatic",
-        fuelType: "Electric",
-        rating: 5.0,
-        location: "Chicago, USA",
-      },
-      3: {
-        id: 3,
-        name: "BMW",
-        image: carImg8,
-        price: 150,
-        seats: 5,
-        transmission: "Automatic",
-        fuelType: "Petrol",
-        rating: 5.0,
-        location: "New York",
-      },
-      4: {
-        id: 4,
-        name: "Lamborghini Aventador",
-        image: carImg4,
-        price: 250,
-        seats: 2,
-        transmission: "Automatic",
-        fuelType: "Petrol",
-        rating: 4.9,
-        location: "New York",
-      },
-      5: {
-        id: 5,
-        name: "BMW GTS3 M2",
-        image: carImg5,
-        price: 150,
-        seats: 5,
-        transmission: "Automatic",
-        fuelType: "Petrol",
-        rating: 5.0,
-        location: "Los Angeles",
-      },
+      // 2. Try sessionStorage cache
+      if (typeof window !== "undefined") {
+        try {
+          const raw = sessionStorage.getItem("driveon:selectedCar");
+          if (raw) {
+            const cached = JSON.parse(raw);
+            const matchesRoute = cached && (cached.id === id || cached._id === id);
+            if (cached && (matchesRoute || !id)) {
+              const normalized = {
+                id: cached.id || cached._id || id,
+                name: cached.name || `${cached.brand || ""} ${cached.model || ""}`.trim(),
+                brand: cached.brand,
+                model: cached.model,
+                image: cached.image || cached.images?.[0] || carImg1,
+                images: cached.images || [cached.image || carImg1],
+                price: extractPrice(cached.price || cached.pricePerDay || 0),
+                pricePerDay: extractPrice(cached.pricePerDay || cached.price || 0),
+                seats: cached.seats || 4,
+                transmission: cached.transmission || "Automatic",
+                fuelType: cached.fuelType || "Petrol",
+                rating: cached.rating || cached.averageRating || 5.0,
+                location: cached.location || "Location",
+                registrationNumber: cached.registrationNumber,
+              };
+              setCar(normalized);
+              setIsCarLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to parse cached car details", err);
+        }
+      }
+
+      // 3. Fetch from API if id is valid ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id || "");
+      if (id && isValidObjectId) {
+        try {
+          setIsCarLoading(true);
+          const response = await api.get(`/cars/${id}`);
+          if (response.data?.success && response.data?.data?.car) {
+            const apiCar = response.data.data.car;
+            
+            // Resolve primary image
+            let carImage = carImg1;
+            let carImages = [];
+            if (apiCar.images && Array.isArray(apiCar.images) && apiCar.images.length > 0) {
+              const primary = apiCar.images.find(img => img.isPrimary);
+              const matchedUrl = primary ? (primary.url || primary.path) : (apiCar.images[0]?.url || apiCar.images[0]?.path || carImg1);
+              carImage = matchedUrl.startsWith('http') ? matchedUrl : `${import.meta.env.VITE_API_BASE_URL || ''}${matchedUrl}`;
+              carImages = apiCar.images.map(img => {
+                const url = typeof img === 'string' ? img : (img?.url || img?.path);
+                return url ? (url.startsWith('http') ? url : `${import.meta.env.VITE_API_BASE_URL || ''}${url}`) : null;
+              }).filter(Boolean);
+            } else if (apiCar.primaryImage) {
+              const matchedUrl = apiCar.primaryImage;
+              carImage = matchedUrl.startsWith('http') ? matchedUrl : `${import.meta.env.VITE_API_BASE_URL || ''}${matchedUrl}`;
+              carImages = [carImage];
+            } else if (apiCar.image) {
+              const matchedUrl = apiCar.image;
+              carImage = matchedUrl.startsWith('http') ? matchedUrl : `${import.meta.env.VITE_API_BASE_URL || ''}${matchedUrl}`;
+              carImages = [carImage];
+            }
+
+            const normalized = {
+              id: apiCar._id || apiCar.id,
+              name: `${apiCar.brand || ''} ${apiCar.model || ''}`.trim() || 'Car',
+              brand: apiCar.brand,
+              model: apiCar.model,
+              image: carImage,
+              images: carImages,
+              price: apiCar.pricePerDay || 0,
+              pricePerDay: apiCar.pricePerDay || 0,
+              seats: apiCar.seatingCapacity || 4,
+              transmission: apiCar.transmission === 'automatic' ? 'Automatic' : apiCar.transmission === 'manual' ? 'Manual' : 'Automatic',
+              fuelType: apiCar.fuelType === 'electric' ? 'Electric' : apiCar.fuelType === 'diesel' ? 'Diesel' : 'Petrol',
+              rating: apiCar.averageRating || 5.0,
+              location: typeof apiCar.location === 'string' ? apiCar.location : apiCar.location?.city || 'Location',
+              registrationNumber: apiCar.registrationNumber,
+            };
+            setCar(normalized);
+          } else {
+            setCar(null);
+          }
+        } catch (error) {
+          console.error("Error fetching car in BookNowPage:", error);
+          setCar(null);
+        } finally {
+          setIsCarLoading(false);
+        }
+      } else {
+        setCar(null);
+        setIsCarLoading(false);
+      }
     };
-    return cars[id] || cars["1"];
-  };
 
-  const car = getCarData();
+    loadCar();
+  }, [id, location.state]);
 
   // Page load animation state - animations trigger only once on mount
   const [isPageLoaded, setIsPageLoaded] = useState(false);
@@ -1187,6 +1193,40 @@ const BookNowPage = () => {
       setSubmitWarning(serverMessage);
     }
   };
+
+  if (isCarLoading) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.backgroundTertiary || '#1C205C' }}></div>
+          <p className="text-gray-600">Loading car details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!car) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundColor: colors.backgroundPrimary }}
+      >
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Unable to load car details.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 rounded-lg text-white"
+            style={{ backgroundColor: colors.backgroundTertiary }}
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

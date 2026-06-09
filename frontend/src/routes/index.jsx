@@ -139,6 +139,9 @@ const AdminSettingsPage = lazy(() =>
 const AdminNotificationsPage = lazy(() =>
   import("../pages/admin/notifications/AdminNotificationsPage")
 );
+const BannerManagementPage = lazy(() =>
+  import("../pages/admin/banners/BannerManagementPage")
+);
 const AdminProfilePage = lazy(() =>
   import("../pages/admin/profile/AdminProfilePage")
 );
@@ -756,6 +759,10 @@ const router = createBrowserRouter([
           {
             path: "/admin/notifications",
             element: <AdminNotificationsPage />,
+          },
+          {
+            path: "/admin/banners",
+            element: <BannerManagementPage />,
           },
           {
             path: "/admin/settings",

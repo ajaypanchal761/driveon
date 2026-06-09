@@ -132,464 +132,7 @@ const CarDetailsPage = () => {
   const cancellationRefWeb = useRef(null);
   const inclusionExclusionRefWeb = useRef(null);
   const faqsRefWeb = useRef(null);
-
-  // Mock car data - used only when no initial car is provided and API data isn't available
-  // Structure matches document.txt requirements: Model, Brand, Seats, Transmission, Fuel Type, Color, Features, Rating, Reviews, Owner Details, Price
-  const getCarData = () => {
-    const cars = {
-      '1': {
-        id: 1,
-        brand: 'Ferrari',
-        model: 'FF',
-        name: 'Ferrari-FF', // For display compatibility
-        image: carImg1,
-        images: [carImg1],
-        rating: 5.0,
-        reviewsCount: 100,
-        location: 'Washington DC',
-        seats: 4,
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        color: 'Red',
-        carType: 'Sports',
-        year: 2020,
-        price: 200,
-        pricePerDay: 200,
-        description: 'A car with high specs that are rented at an affordable price.',
-        owner: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 4.9
-        },
-        host: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Sunroof',
-          'Autopilot',
-          'Premium Sound System'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '4 Seats' },
-          { icon: 'engine', label: 'Engine', value: '670 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '250km/h' },
-          { icon: 'autopilot', label: 'Autopilot', value: 'Available' },
-          { icon: 'charge', label: 'Fuel Economy', value: '12 km/l' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, reliable, and the service was quick and efficient.'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, r and the service was quick'
-          }
-        ]
-      },
-      '2': {
-        id: 2,
-        brand: 'Tesla',
-        model: 'Model S',
-        name: 'Tesla Model S',
-        image: carImg6,
-        images: [carImg6],
-        rating: 5.0,
-        reviewsCount: 125,
-        location: 'Chicago, USA',
-        seats: 5,
-        transmission: 'Automatic',
-        fuelType: 'Electric',
-        color: 'White',
-        carType: 'Sedan',
-        year: 2023,
-        price: 100,
-        pricePerDay: 100,
-        description: 'A car with high specs that are rented at an affordable price.',
-        owner: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 5.0
-        },
-        host: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Autopilot',
-          'Supercharging',
-          'Premium Sound System'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '5 Seats' },
-          { icon: 'engine', label: 'Power', value: '670 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '250km/h' },
-          { icon: 'autopilot', label: 'Autopilot', value: 'Available' },
-          { icon: 'charge', label: 'Range', value: '405 Miles' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, reliable, and the service was quick and efficient.'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, r and the service was quick'
-          }
-        ]
-      },
-      '3': {
-        id: 3,
-        brand: 'BMW',
-        model: '3 Series',
-        name: 'BMW 3 Series',
-        image: carImg8,
-        images: [carImg8],
-        rating: 5.0,
-        reviewsCount: 125,
-        location: 'New York',
-        seats: 5,
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        color: 'Black',
-        carType: 'Sedan',
-        year: 2022,
-        price: 150,
-        pricePerDay: 150,
-        description: 'A car with high specs that are rented at an affordable price.',
-        owner: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 4.8
-        },
-        host: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Sunroof',
-          'Backup Camera',
-          'Parking Sensors'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '5 Seats' },
-          { icon: 'engine', label: 'Engine', value: '330 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '250km/h' },
-          { icon: 'autopilot', label: 'Technology', value: 'iDrive' },
-          { icon: 'charge', label: 'Fuel Economy', value: '15 km/l' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, reliable, and the service was quick and efficient.'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, r and the service was quick'
-          }
-        ]
-      },
-      '4': {
-        id: 4,
-        brand: 'Lamborghini',
-        model: 'Aventador',
-        name: 'Lamborghini Aventador',
-        image: carImg4,
-        images: [carImg4],
-        rating: 4.9,
-        reviewsCount: 80,
-        location: 'New York',
-        seats: 2,
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        color: 'Yellow',
-        carType: 'Sports',
-        year: 2021,
-        price: 250,
-        pricePerDay: 250,
-        description: 'A car with high specs that are rented at an affordable price.',
-        owner: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 4.9
-        },
-        host: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Premium Sound System',
-          'Sport Mode',
-          'Launch Control'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '2 Seats' },
-          { icon: 'engine', label: 'Engine', value: '730 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '350km/h' },
-          { icon: 'autopilot', label: 'Drive Mode', value: 'Sport' },
-          { icon: 'charge', label: 'Fuel Economy', value: '8 km/l' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '4.9',
-            comment: 'The rental car was clean, reliable, and the service was quick and efficient.'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '4.9',
-            comment: 'The rental car was clean, r and the service was quick'
-          }
-        ]
-      },
-      '5': {
-        id: 5,
-        brand: 'BMW',
-        model: 'M2 GTS',
-        name: 'BMW M2 GTS',
-        image: carImg5,
-        images: [carImg5],
-        rating: 5.0,
-        reviewsCount: 95,
-        location: 'Los Angeles',
-        seats: 5,
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        color: 'Blue',
-        carType: 'Sports',
-        year: 2023,
-        price: 150,
-        pricePerDay: 150,
-        description: 'A car with high specs that are rented at an affordable price.',
-        owner: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 5.0
-        },
-        host: {
-          name: 'Hela Quintin',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Sunroof',
-          'Sport Mode',
-          'Premium Sound System'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '5 Seats' },
-          { icon: 'engine', label: 'Engine', value: '450 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '280km/h' },
-          { icon: 'autopilot', label: 'Drive Mode', value: 'Sport' },
-          { icon: 'charge', label: 'Fuel Economy', value: '12 km/l' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, reliable, and the service was quick and efficient.'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The rental car was clean, r and the service was quick'
-          }
-        ]
-      },
-      'bmw-i7': {
-        id: 'bmw-i7',
-        brand: 'BMW',
-        model: 'i7',
-        name: 'BMW i7',
-        image: carBanImg3,
-        images: [carBanImg3],
-        rating: 5.0,
-        reviewsCount: 150,
-        location: 'New York',
-        seats: 5,
-        transmission: 'Automatic',
-        fuelType: 'Electric',
-        color: 'Silver',
-        carType: 'Luxury',
-        year: 2024,
-        price: 800,
-        pricePerDay: 800,
-        description: 'Experience luxury and innovation with the BMW i7. This premium electric sedan combines cutting-edge technology with exceptional comfort and performance.',
-        owner: {
-          name: 'BMW Premium',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 5.0
-        },
-        host: {
-          name: 'BMW Premium',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Sunroof',
-          'Autopilot',
-          'Premium Sound System',
-          'Wireless Charging',
-          'Massage Seats'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '5 Seats' },
-          { icon: 'engine', label: 'Power', value: '544 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '250km/h' },
-          { icon: 'autopilot', label: 'Technology', value: 'Electric Drive' },
-          { icon: 'charge', label: 'Range', value: '625 km' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The BMW i7 exceeded all expectations. Luxurious, powerful, and incredibly smooth ride.'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'Best luxury car rental experience. The electric drive is silent and powerful.'
-          }
-        ]
-      },
-      'audi-r8': {
-        id: 'audi-r8',
-        brand: 'Audi',
-        model: 'R8 Performance',
-        name: 'Audi R8 Performance',
-        image: carBanImg1,
-        rating: 5.0,
-        reviewsCount: 120,
-        location: 'Los Angeles, USA',
-        seats: 2,
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        color: 'Silver',
-        carType: 'Sports',
-        year: 2023,
-        price: 800,
-        pricePerDay: 800,
-        description: 'Experience the ultimate in performance and luxury with the Audi R8 Performance. A supercar that combines breathtaking speed with everyday usability.',
-        owner: {
-          name: 'Audi Premium',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true,
-          rating: 5.0
-        },
-        host: {
-          name: 'Audi Premium',
-          profilePic: 'https://via.placeholder.com/50',
-          verified: true
-        },
-        features: [
-          'Air Conditioning',
-          'GPS Navigation',
-          'Bluetooth',
-          'USB Charging',
-          'Leather Seats',
-          'Sport Mode',
-          'Launch Control',
-          'Premium Sound System',
-          'Carbon Fiber Accents',
-          'Quattro All-Wheel Drive'
-        ],
-        featureIcons: [
-          { icon: 'seat', label: 'Capacity', value: '2 Seats' },
-          { icon: 'engine', label: 'Engine', value: '602 HP' },
-          { icon: 'speed', label: 'Max Speed', value: '330km/h' },
-          { icon: 'autopilot', label: 'Drive Mode', value: 'Performance' },
-          { icon: 'charge', label: 'Fuel Economy', value: '10 km/l' },
-          { icon: 'parking', label: 'Parking', value: 'Auto Parking' }
-        ],
-        reviews: [
-          {
-            name: 'Mr. Jack',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'The Audi R8 Performance is absolutely incredible. Fast, comfortable, and turns heads everywhere. Best rental experience ever!'
-          },
-          {
-            name: 'Robert',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'Amazing supercar! The performance is mind-blowing and the service was top-notch. Highly recommend!'
-          },
-          {
-            name: 'Sarah',
-            profilePic: 'https://via.placeholder.com/40',
-            rating: '5.0',
-            comment: 'Dream car experience! The R8 Performance exceeded all expectations. Smooth ride and incredible acceleration.'
-          }
-        ]
-      }
-    };
-    return cars[id] || cars['1'];
-  };
+  // Mock car data removed - fetches dynamically from API
 
   // Helper function to clean and normalize car images
   // Returns all unique images from API (same as admin side)
@@ -718,56 +261,6 @@ const CarDetailsPage = () => {
   const effectiveInitialCar = normalizedInitialCar || normalizedStoredCar;
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id || '');
 
-  // Always ensure we have a valid baseCar (fallback to mock data if needed)
-  const getBaseCarData = () => {
-    try {
-      const mockCar = normalizeCarImages(getCarData());
-      if (mockCar && (!mockCar.reviews || !Array.isArray(mockCar.reviews))) {
-        mockCar.reviews = [];
-      }
-      return mockCar;
-    } catch (error) {
-      console.error('Error getting base car data:', error);
-      // Return minimal valid car object
-      return {
-        id: id || '1',
-        _id: id || '1',
-        brand: '',
-        model: '',
-        name: 'Car',
-        image: carImg1,
-        images: [carImg1],
-        rating: 0,
-        reviewsCount: 0,
-        reviews: [],
-        location: '',
-        locationObject: {},
-        seats: 4,
-        seatingCapacity: 4,
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        year: new Date().getFullYear(),
-        color: '',
-        carType: '',
-        mileage: null,
-        engineCapacity: '',
-        horsepower: null,
-        pricePerDay: 0,
-        price: 0,
-        description: '',
-        features: [],
-        owner: null,
-        host: null,
-      };
-    }
-  };
-
-  const shouldUseMockBase = !effectiveInitialCar && (!id || !isValidObjectId);
-  const baseCar = shouldUseMockBase ? getBaseCarData() : null;
-  // Ensure baseCar has reviews initialized
-  if (baseCar && (!baseCar.reviews || !Array.isArray(baseCar.reviews))) {
-    baseCar.reviews = [];
-  }
   // Ensure normalizedInitialCar has reviews initialized
   const initialCarWithReviews = effectiveInitialCar
     ? (effectiveInitialCar.reviews && Array.isArray(effectiveInitialCar.reviews)
@@ -775,7 +268,7 @@ const CarDetailsPage = () => {
       : { ...effectiveInitialCar, reviews: [] })
     : null;
   const shouldFetchFromApi = !!id && isValidObjectId && !effectiveInitialCar;
-  const [car, setCar] = useState(initialCarWithReviews || baseCar);
+  const [car, setCar] = useState(initialCarWithReviews);
   // Only show loader when we have to fetch real data from backend
   const [isLoading, setIsLoading] = useState(shouldFetchFromApi);
   const [advancePercentage, setAdvancePercentage] = useState(20);
@@ -933,12 +426,12 @@ const CarDetailsPage = () => {
           }
         } else {
           // API returned success but no car data - show error state
-          setCar(baseCar ? { ...baseCar, id: id, _id: id } : null);
+          setCar(null);
         }
       } catch (error) {
         console.error('Error fetching car details:', error);
-        // On error, prefer showing error state instead of static mock for real cars
-        setCar(baseCar ? { ...baseCar, id: id, _id: id } : null);
+        // On error, prefer showing error state
+        setCar(null);
       } finally {
         setIsLoading(false);
       }
@@ -953,7 +446,7 @@ const CarDetailsPage = () => {
     const fetchReviews = async () => {
       try {
         // Use car ID from params or car object
-        const carId = id || car?._id || car?.id || baseCar?._id || baseCar?.id;
+        const carId = id || car?._id || car?.id;
         if (!carId) {
           return;
         }
@@ -2195,8 +1688,8 @@ const CarDetailsPage = () => {
   };
 
   // Show loading state only if we're actively loading and have no car data
-  // Don't show loader if we have initial car from navigation state, stored car, or baseCar
-  if (isLoading && !car && !effectiveInitialCar && !baseCar) {
+  // Don't show loader if we have initial car from navigation state or stored car
+  if (isLoading && !car && !effectiveInitialCar) {
     return (
       <div
         className="min-h-screen w-full flex items-center justify-center"
@@ -2211,8 +1704,8 @@ const CarDetailsPage = () => {
   }
 
   // If no car data at all (shouldn't happen with fallback, but just in case)
-  // But only show error if we don't have initial car or baseCar
-  if (!car && !effectiveInitialCar && !baseCar) {
+  // But only show error if we don't have initial car
+  if (!car && !effectiveInitialCar) {
     return (
       <div
         className="min-h-screen w-full flex items-center justify-center"

@@ -95,6 +95,13 @@ import {
 } from '../controllers/addonServices.controller.js';
 import { authenticateAdmin } from '../middleware/admin.middleware.js';
 import { getPolicies, getPolicyByKey, updatePolicy } from '../controllers/policy.controller.js';
+import {
+  getAllBannersAdmin,
+  createBanner,
+  updateBanner,
+  deleteBanner,
+  toggleBannerStatus,
+} from '../controllers/banner.controller.js';
 
 const router = express.Router();
 
@@ -470,6 +477,39 @@ router.get('/subadmins', authenticateAdmin, getSubAdmins);
 router.post('/subadmins', authenticateAdmin, createSubAdmin);
 router.put('/subadmins/:id', authenticateAdmin, updateSubAdmin);
 router.delete('/subadmins/:id', authenticateAdmin, deleteSubAdmin);
+
+// ============================================
+// BANNER MANAGEMENT ROUTES - PROTECTED
+// ============================================
+router.get('/banners', authenticateAdmin, getAllBannersAdmin);
+router.post('/banners', authenticateAdmin, async (req, res, next) => {
+  const upload = req.app.locals.upload;
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'File upload error',
+      });
+    }
+    next();
+  });
+}, createBanner);
+
+router.put('/banners/:id', authenticateAdmin, async (req, res, next) => {
+  const upload = req.app.locals.upload;
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'File upload error',
+      });
+    }
+    next();
+  });
+}, updateBanner);
+
+router.delete('/banners/:id', authenticateAdmin, deleteBanner);
+router.patch('/banners/:id/toggle', authenticateAdmin, toggleBannerStatus);
 
 export default router;
 
